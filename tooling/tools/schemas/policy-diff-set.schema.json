@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/policy-diff-set-v1alpha1.schema.json",
+  "type": "object",
+  "required": ["schema", "comparison", "before", "after", "summary", "subjects"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "compliance.example/policy-diff-set/v1alpha1"},
+    "comparison": {"$ref": "#/$defs/comparison"},
+    "before": {"$ref": "#/$defs/directoryContext"},
+    "after": {"$ref": "#/$defs/directoryContext"},
+    "summary": {"$ref": "#/$defs/summary"},
+    "subjects": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/subjectChange"}
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nonEmptyString": {"type": "string", "minLength": 1},
+    "subjectId": {"type": "string", "minLength": 3, "pattern": "^[^/]+/.+$"},
+    "comparison": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["status", "reason"],
+          "additionalProperties": false,
+          "properties": {
+            "status": {"const": "complete"},
+            "reason": {"const": "valid-plan-sets"}
+          }
+        },
+        {
+          "type": "object",
+          "required": ["status", "reason"],
+          "additionalProperties": false,
+          "properties": {
+            "status": {"const": "incomplete"},
+            "reason": {"const": "invalid-subject-plans"}
+          }
+        }
+      ]
+    },
+    "directoryContext": {
+      "type": "object",
+      "required": ["path", "plan_count"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {"$ref": "#/$defs/nonEmptyString"},
+        "plan_count": {"type": "integer", "minimum": 1}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "changed", "total_subjects", "added", "removed", "modified",
+        "unchanged", "incomplete"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "changed": {"type": "boolean"},
+        "total_subjects": {"type": "integer", "minimum": 1},
+        "added": {"type": "integer", "minimum": 0},
+        "removed": {"type": "integer", "minimum": 0},
+        "modified": {"type": "integer", "minimum": 0},
+        "unchanged": {"type": "integer", "minimum": 0},
+        "incomplete": {"type": "integer", "minimum": 0}
+      }
+    },
+    "planSummary": {
+      "type": "object",
+      "required": [
+        "path", "plan_id", "subject_type", "policy_revision",
+        "inventory_revision", "assignment_revision", "resolution", "coverage",
+        "active_controls", "excluded_controls", "requirements"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {"$ref": "#/$defs/nonEmptyString"},
+        "plan_id": {"$ref": "#/$defs/digest"},
+        "subject_type": {"$ref": "#/$defs/nonEmptyString"},
+        "policy_revision": {"$ref": "#/$defs/digest"},
+        "inventory_revision": {"$ref": "#/$defs/digest"},
+        "assignment_revision": {"$ref": "#/$defs/digest"},
+        "resolution": {"enum": ["valid", "invalid"]},
+        "coverage": {"enum": ["assigned", "unassigned", "inactive", "invalid"]},
+        "active_controls": {"type": "integer", "minimum": 0},
+        "excluded_controls": {"type": "integer", "minimum": 0},
+        "requirements": {"type": "integer", "minimum": 0}
+      }
+    },
+    "policyDiff": {
+      "type": "object",
+      "required": ["schema", "subject_id", "comparison", "summary"],
+      "properties": {
+        "schema": {"const": "compliance.example/policy-diff/v1alpha1"},
+        "subject_id": {"$ref": "#/$defs/subjectId"},
+        "comparison": {"type": "object"},
+        "summary": {"type": "object"}
+      }
+    },
+    "subjectChange": {
+      "type": "object",
+      "required": ["subject_id", "change", "before", "after", "diff"],
+      "additionalProperties": false,
+      "properties": {
+        "subject_id": {"$ref": "#/$defs/subjectId"},
+        "change": {
+          "enum": ["added", "removed", "modified", "unchanged", "incomplete"]
+        },
+        "before": {
+          "oneOf": [{"$ref": "#/$defs/planSummary"}, {"type": "null"}]
+        },
+        "after": {
+          "oneOf": [{"$ref": "#/$defs/planSummary"}, {"type": "null"}]
+        },
+        "diff": {
+          "oneOf": [{"$ref": "#/$defs/policyDiff"}, {"type": "null"}]
+        }
+      }
+    }
+  }
+}

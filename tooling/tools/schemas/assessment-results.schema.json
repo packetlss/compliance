@@ -1,0 +1,268 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/assessment-results-v1.schema.json",
+  "type": "object",
+  "required": [
+    "schema", "assessment_id", "evaluated_at", "plan_id", "policy_revision",
+    "inventory_revision", "assignment_revision", "subject_id", "summary",
+    "requirement_summary", "requirement_baseline_summary", "results",
+    "requirement_assessments", "requirement_baseline_assessments"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "compliance.example/assessment-results/v1"},
+    "assessment_id": {"type": "string", "minLength": 1},
+    "evaluated_at": {"type": "string", "format": "date-time"},
+    "plan_id": {"$ref": "#/$defs/digest"},
+    "policy_revision": {"$ref": "#/$defs/digest"},
+    "inventory_revision": {"$ref": "#/$defs/digest"},
+    "assignment_revision": {"$ref": "#/$defs/digest"},
+    "waiver_revision": {"$ref": "#/$defs/digest"},
+    "subject_id": {"type": "string", "minLength": 3, "pattern": "^[^/]+/.+$"},
+    "summary": {"$ref": "#/$defs/resultSummary"},
+    "requirement_summary": {"$ref": "#/$defs/resultSummary"},
+    "requirement_baseline_summary": {"$ref": "#/$defs/resultSummary"},
+    "results": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/controlResult"}
+    },
+    "requirement_assessments": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/requirementAssessment"}
+    },
+    "requirement_baseline_assessments": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/requirementBaselineAssessment"}
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "reference": {
+      "type": "string",
+      "minLength": 3,
+      "pattern": "^.+@.+$"
+    },
+    "nonEmptyString": {"type": "string", "minLength": 1},
+    "status": {
+      "enum": ["pass", "fail", "unknown", "not_applicable", "error", "waived"]
+    },
+    "checkStatus": {
+      "enum": ["pass", "fail", "unknown", "not_applicable", "error", "waived", "missing"]
+    },
+    "externalRefs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/nonEmptyString"}
+    },
+    "resultSummary": {
+      "type": "object",
+      "required": ["pass", "fail", "unknown", "not_applicable", "error", "waived"],
+      "additionalProperties": false,
+      "properties": {
+        "pass": {"type": "integer", "minimum": 0},
+        "fail": {"type": "integer", "minimum": 0},
+        "unknown": {"type": "integer", "minimum": 0},
+        "not_applicable": {"type": "integer", "minimum": 0},
+        "error": {"type": "integer", "minimum": 0},
+        "waived": {"type": "integer", "minimum": 0}
+      }
+    },
+    "checkSummary": {
+      "type": "object",
+      "required": ["pass", "fail", "unknown", "not_applicable", "error", "waived", "missing"],
+      "additionalProperties": false,
+      "properties": {
+        "pass": {"type": "integer", "minimum": 0},
+        "fail": {"type": "integer", "minimum": 0},
+        "unknown": {"type": "integer", "minimum": 0},
+        "not_applicable": {"type": "integer", "minimum": 0},
+        "error": {"type": "integer", "minimum": 0},
+        "waived": {"type": "integer", "minimum": 0},
+        "missing": {"type": "integer", "minimum": 0}
+      }
+    },
+    "controlResult": {
+      "type": "object",
+      "required": [
+        "control_id", "instance_id", "subject_id", "plan_id",
+        "inventory_revision", "assignment_revision", "status", "severity",
+        "reason", "expected", "observed", "evidence_ids", "remediation",
+        "external_refs", "alignment", "policy_revision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "control_id": {"$ref": "#/$defs/nonEmptyString"},
+        "instance_id": {"$ref": "#/$defs/nonEmptyString"},
+        "subject_id": {"type": "string", "minLength": 3, "pattern": "^[^/]+/.+$"},
+        "plan_id": {"$ref": "#/$defs/digest"},
+        "inventory_revision": {"$ref": "#/$defs/digest"},
+        "assignment_revision": {"$ref": "#/$defs/digest"},
+        "waiver_revision": {"$ref": "#/$defs/digest"},
+        "status": {"$ref": "#/$defs/status"},
+        "severity": {"enum": ["info", "low", "medium", "high", "critical"]},
+        "reason": {"$ref": "#/$defs/nonEmptyString"},
+        "expected": {"type": "object", "additionalProperties": true},
+        "observed": {"type": "object", "additionalProperties": true},
+        "evidence_ids": {
+          "type": "array", "uniqueItems": true,
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        },
+        "remediation": {"type": "string"},
+        "external_refs": {"$ref": "#/$defs/externalRefs"},
+        "alignment": {"enum": ["unaltered", "additional", "tailored", "deviated", "substituted", "annotated", "realization", "unmapped"]},
+        "policy_revision": {"$ref": "#/$defs/digest"},
+        "waiver": {"$ref": "#/$defs/appliedWaiver"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "waived"}}},
+          "then": {"required": ["waiver", "waiver_revision"]},
+          "else": {"not": {"required": ["waiver"]}}
+        }
+      ]
+    },
+    "appliedWaiver": {
+      "type": "object",
+      "required": [
+        "id", "digest", "subject_id", "instance_id", "valid_from",
+        "expires_at", "rationale", "owner", "approval_ref", "approved_by",
+        "approved_at", "underlying_status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"$ref": "#/$defs/nonEmptyString"},
+        "digest": {"$ref": "#/$defs/digest"},
+        "subject_id": {"type": "string", "minLength": 3, "pattern": "^[^/]+/.+$"},
+        "instance_id": {"$ref": "#/$defs/nonEmptyString"},
+        "valid_from": {"type": "string", "format": "date-time"},
+        "expires_at": {"type": "string", "format": "date-time"},
+        "rationale": {"$ref": "#/$defs/nonEmptyString"},
+        "owner": {"$ref": "#/$defs/nonEmptyString"},
+        "approval_ref": {"$ref": "#/$defs/nonEmptyString"},
+        "approved_by": {"$ref": "#/$defs/nonEmptyString"},
+        "approved_at": {"type": "string", "format": "date-time"},
+        "underlying_status": {"const": "fail"}
+      }
+    },
+    "determination": {
+      "type": "object",
+      "required": ["rationale", "approval_ref", "review_after"],
+      "additionalProperties": false,
+      "properties": {
+        "rationale": {"$ref": "#/$defs/nonEmptyString"},
+        "approval_ref": {"$ref": "#/$defs/nonEmptyString"},
+        "review_after": {"type": "string", "format": "date"}
+      }
+    },
+    "adoption": {
+      "type": "object",
+      "required": ["status", "method", "owner"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"enum": ["implemented", "not_implemented", "not_applicable"]},
+        "method": {"enum": ["automated", "hybrid", "manual", "none"]},
+        "owner": {"$ref": "#/$defs/nonEmptyString"},
+        "implementation_ref": {"$ref": "#/$defs/nonEmptyString"},
+        "determination": {"$ref": "#/$defs/determination"}
+      }
+    },
+    "policyLocator": {
+      "type": "object",
+      "required": ["policy_source", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "policy_source": {"$ref": "#/$defs/nonEmptyString"},
+        "path": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "realizationPin": {
+      "type": "object",
+      "required": ["realization", "digest"],
+      "additionalProperties": false,
+      "properties": {
+        "realization": {"$ref": "#/$defs/reference"},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "realization": {
+      "type": "object",
+      "required": ["reference", "digest", "classification", "policy_sources"],
+      "additionalProperties": false,
+      "properties": {
+        "reference": {"$ref": "#/$defs/reference"},
+        "digest": {"$ref": "#/$defs/digest"},
+        "classification": {"enum": ["internal", "confidential", "restricted"]},
+        "policy_sources": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": {"$ref": "#/$defs/policyLocator"}
+        },
+        "based_on": {"$ref": "#/$defs/realizationPin"}
+      }
+    },
+    "checkResult": {
+      "type": "object",
+      "required": ["instance_id", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "instance_id": {"$ref": "#/$defs/nonEmptyString"},
+        "status": {"$ref": "#/$defs/checkStatus"}
+      }
+    },
+    "requirementAssessment": {
+      "type": "object",
+      "required": [
+        "requirement", "requirement_digest", "external_refs", "adoption",
+        "technical_instance_ids", "status", "reason", "check_summary"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "requirement": {"$ref": "#/$defs/reference"},
+        "requirement_digest": {"$ref": "#/$defs/digest"},
+        "external_refs": {"$ref": "#/$defs/externalRefs"},
+        "adoption": {"$ref": "#/$defs/adoption"},
+        "technical_instance_ids": {
+          "type": "array", "uniqueItems": true,
+          "items": {"$ref": "#/$defs/nonEmptyString"}
+        },
+        "realization": {"$ref": "#/$defs/realization"},
+        "status": {"$ref": "#/$defs/status"},
+        "reason": {"$ref": "#/$defs/nonEmptyString"},
+        "check_summary": {"$ref": "#/$defs/checkSummary"},
+        "checks": {
+          "type": "array", "uniqueItems": true,
+          "items": {"$ref": "#/$defs/checkResult"}
+        }
+      }
+    },
+    "requirementState": {
+      "type": "object",
+      "required": ["requirement", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "requirement": {"$ref": "#/$defs/reference"},
+        "status": {"$ref": "#/$defs/checkStatus"}
+      }
+    },
+    "requirementBaselineAssessment": {
+      "type": "object",
+      "required": ["baseline", "digest", "status", "reason", "requirements"],
+      "additionalProperties": false,
+      "properties": {
+        "baseline": {"$ref": "#/$defs/reference"},
+        "digest": {"$ref": "#/$defs/digest"},
+        "status": {"$ref": "#/$defs/status"},
+        "reason": {"$ref": "#/$defs/nonEmptyString"},
+        "requirements": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": {"$ref": "#/$defs/requirementState"}
+        }
+      }
+    }
+  }
+}

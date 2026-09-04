@@ -1,0 +1,85 @@
+{
+  "schema": "compliance.example/feature-coverage/v1alpha1",
+  "scenarios": {
+    "linux-hardening-rollout": {
+      "role": "verification",
+      "project": "linux-hardening-rollout",
+      "features": [
+        "cli.config.validate",
+        "cli.policy.validate",
+        "cli.waiver.validate",
+        "cli.waiver.list",
+        "cli.waiver.explain",
+        "cli.plan.render",
+        "cli.assessment.run",
+        "cli.assessment.explain",
+        "collector.mock-api",
+        "policy.invalid-resolution",
+        "waiver.application",
+        "waiver.filters",
+        "requirements.all-of",
+        "requirements.missing-evidence"
+      ]
+    },
+    "production-cloud-and-saas": {
+      "role": "development",
+      "project": "mock-fleet",
+      "features": [
+        "cli.config.show",
+        "cli.inventory.validate",
+        "cli.inventory.list",
+        "cli.inventory.graph",
+        "cli.inventory.explain",
+        "cli.plan.show",
+        "cli.assessment.status",
+        "cli.assessment.groups",
+        "cli.assessment.frameworks",
+        "inventory.multi-parent-dag",
+        "evidence.contracts",
+        "evidence.schema-enforcement",
+        "assessment.framework-alignment",
+        "assessment.filters",
+        "output.json-contracts"
+      ]
+    },
+    "restricted-iam": {
+      "role": "boundary",
+      "project": "iam-realization",
+      "features": [
+        "policy.multi-source-realization",
+        "requirements.realization-roll-up"
+      ]
+    },
+    "workspace-composition": {
+      "role": "boundary",
+      "project": null,
+      "features": [
+        "cli.config.list"
+      ]
+    },
+    "policy-release-promotion": {
+      "role": "development",
+      "project": null,
+      "features": [
+        "cli.policy.diff",
+        "cli.policy.diff-set"
+      ]
+    },
+    "synthetic-policy-edges": {
+      "role": "development",
+      "project": null,
+      "features": [
+        "policy.overlay-provenance",
+        "policy.overlay-substitute",
+        "policy.seal-enforcement"
+      ]
+    },
+    "cross-project-coverage": {
+      "role": "development",
+      "project": null,
+      "features": [
+        "policy.control-implementations"
+      ]
+    }
+  }
+}

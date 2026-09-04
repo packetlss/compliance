@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/config/project-config-v1alpha1.schema.json",
+  "title": "Compliance project configuration",
+  "type": "object",
+  "required": ["schema", "paths"],
+  "oneOf": [
+    {"required": ["policySources"]},
+    {
+      "properties": {
+        "paths": {"required": ["policies"]}
+      }
+    }
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "compliance.example/project-config/v1alpha1"},
+    "policySources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/policySource"}
+    },
+    "paths": {
+      "type": "object",
+      "required": [
+        "inventory",
+        "assignments",
+        "evidence",
+        "plan",
+        "results",
+        "waivers",
+        "resourceSchema"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "inventory": {
+          "$ref": "#/$defs/path",
+          "description": "Inventory resource file or directory. Canonical projects use inventory/."
+        },
+        "assignments": {
+          "$ref": "#/$defs/path",
+          "description": "Policy assignment resource file or directory. Canonical projects use assignments/."
+        },
+        "policies": {
+          "$ref": "#/$defs/path",
+          "description": "Policy catalog root; it may be shared by several projects."
+        },
+        "evidence": {
+          "$ref": "#/$defs/path",
+          "description": "Evidence directory. Canonical projects use generated/evidence/."
+        },
+        "plan": {
+          "$ref": "#/$defs/path",
+          "description": "Plan output file or per-subject directory. Canonical projects use generated/plans/."
+        },
+        "results": {
+          "$ref": "#/$defs/path",
+          "description": "Result output file or per-subject directory. Canonical projects use generated/results/."
+        },
+        "waivers": {
+          "$ref": "#/$defs/path",
+          "description": "Reviewed waiver resource file or directory. Canonical projects use waivers/."
+        },
+        "resourceSchema": {
+          "$ref": "#/$defs/path",
+          "description": "JSON Schema used to validate inventory and assignment resources."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": ".*\\S.*"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "policySource": {
+      "type": "object",
+      "required": ["name", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$"
+        },
+        "path": {"$ref": "#/$defs/path"},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}

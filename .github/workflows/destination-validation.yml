@@ -12,20 +12,67 @@ permissions:
 jobs:
   component-validation:
     name: component-validation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - name: Checkout destination source
-        uses: actions/checkout@v4
-      - name: Validate repository bootstrap contract
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Load validation toolchain pins
+        id: versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          source toolchain/versions.env
+          {
+            echo "python=$PYTHON_VERSION"
+            echo "uv=$UV_VERSION"
+            echo "opa=$OPA_VERSION"
+            echo "opa_sha256=$OPA_LINUX_AMD64_STATIC_SHA256"
+          } >> "$GITHUB_OUTPUT"
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ steps.versions.outputs.python }}
+          architecture: x64
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: ${{ steps.versions.outputs.uv }}
+      - name: Install pinned OPA
+        shell: bash
+        env:
+          OPA_VERSION: ${{ steps.versions.outputs.opa }}
+          OPA_SHA256: ${{ steps.versions.outputs.opa_sha256 }}
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 3 \
+            --output /tmp/opa \
+            "https://github.com/open-policy-agent/opa/releases/download/v${OPA_VERSION}/opa_linux_amd64_static"
+          printf '%s  %s\n' "$OPA_SHA256" /tmp/opa | sha256sum --check --strict -
+          sudo install -m 0755 /tmp/opa /usr/local/bin/opa
+          opa version
+      - name: Validate destination repository contract
         shell: bash
         run: bash scripts/validate-repository.sh
+      - name: Validate tooling component
+        shell: bash
+        env:
+          COMPLIANCE_TOOLING_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash tooling/scripts/validate-tooling.sh
 
   verification-scenarios:
     name: verification-scenarios
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout destination source
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - name: Enforce scenario validation handoff
         shell: bash
         run: |
@@ -38,16 +85,69 @@ jobs:
 
   installed-release-provenance:
     name: installed-release-provenance
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - name: Checkout destination source
-        uses: actions/checkout@v4
-      - name: Enforce installed-release validation handoff
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Load validation toolchain pins
+        id: versions
         shell: bash
         run: |
-          if [[ ! -d tooling ]]; then
-            echo "bootstrap-inapplicable: tooling is not materialized yet"
-            exit 0
+          set -euo pipefail
+          source toolchain/versions.env
+          {
+            echo "python=$PYTHON_VERSION"
+            echo "uv=$UV_VERSION"
+          } >> "$GITHUB_OUTPUT"
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ steps.versions.outputs.python }}
+          architecture: x64
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: ${{ steps.versions.outputs.uv }}
+      - name: Validate standalone installed package
+        shell: bash
+        run: bash tooling/scripts/validate-package.sh
+      - name: Validate content-addressed locked artifacts
+        shell: bash
+        run: bash tooling/scripts/validate-locked-artifacts-package.sh
+      - name: Validate annotated release tag gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          head_sha="$(git rev-parse HEAD)"
+          git -c user.name=release-validation \
+              -c user.email=release-validation@example.invalid \
+              tag -a v0.2.0-ci.1 -m "release validation" "$head_sha"
+          resolved="$(bash tooling/scripts/validate-release-tag.sh v0.2.0-ci.1)"
+          [[ "$resolved" == "$head_sha" ]]
+
+          git tag v0.2.0-lightweight "$head_sha"
+          if bash tooling/scripts/validate-release-tag.sh v0.2.0-lightweight; then
+            echo "::error::lightweight release tag was accepted"
+            exit 1
           fi
-          echo "tooling exists but real installed-release provenance validation has not been wired by its migration issue" >&2
-          exit 1
+
+          git -c user.name=release-validation \
+              -c user.email=release-validation@example.invalid \
+              tag -a v0.2.0-other -m "wrong source" HEAD^
+          if bash tooling/scripts/validate-release-tag.sh v0.2.0-other; then
+            echo "::error::release tag pointing at a different commit was accepted"
+            exit 1
+          fi
+      - name: Validate provider-neutral release preparation
+        shell: bash
+        env:
+          COMPLIANCE_TOOLING_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash tooling/scripts/validate-release-preparation.sh
+      - name: Validate local generic policy-source conformance
+        shell: bash
+        run: bash tooling/scripts/validate-policy-release-compatibility.sh
