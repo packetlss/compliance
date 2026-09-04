@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/waivers/resource-v1alpha1.schema.json",
+  "title": "Compliance waiver resource",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {"const": "compliance.example/v1alpha1"},
+    "kind": {"const": "Waiver"},
+    "metadata": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$",
+          "maxLength": 253
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "required": [
+        "subjectRef", "controlRef", "validFrom", "expiresAt",
+        "rationale", "owner", "approval"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "subjectRef": {
+          "type": "object",
+          "required": ["id"],
+          "additionalProperties": false,
+          "properties": {
+            "id": {"type": "string", "minLength": 3, "pattern": "^[^/]+/.+$"}
+          }
+        },
+        "controlRef": {
+          "type": "object",
+          "required": ["instanceId"],
+          "additionalProperties": false,
+          "properties": {
+            "instanceId": {"type": "string", "minLength": 1}
+          }
+        },
+        "validFrom": {"type": "string", "format": "date-time"},
+        "expiresAt": {"type": "string", "format": "date-time"},
+        "rationale": {"type": "string", "minLength": 1},
+        "owner": {"type": "string", "minLength": 1},
+        "approval": {
+          "type": "object",
+          "required": ["reference", "approvedBy", "approvedAt"],
+          "additionalProperties": false,
+          "properties": {
+            "reference": {"type": "string", "minLength": 1},
+            "approvedBy": {"type": "string", "minLength": 1},
+            "approvedAt": {"type": "string", "format": "date-time"}
+          }
+        }
+      }
+    }
+  }
+}

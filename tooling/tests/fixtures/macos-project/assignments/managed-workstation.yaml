@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=../../../../schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: PolicyAssignment
+metadata:
+  name: managed-workstation-assignment
+spec:
+  targetRef:
+    kind: InventoryGroup
+    name: managed-workstations
+  baselineRefs:
+    - name: managed-workstation
+      revision: "1"

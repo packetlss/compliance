@@ -23,7 +23,7 @@ These Git revisions identify reviewed source snapshots used to plan migration. T
 
 | Logical source domain | Historical repository | Reviewed pre-consolidation source commit | Migration status |
 | --- | --- | --- | --- |
-| tooling/runtime and tooling-owned schemas | `packetlss-labs/compliance-tooling` | `bf9d71037a494f0f0a991003193f669aa811b94c` | not moved |
+| tooling/runtime and tooling-owned schemas | `packetlss-labs/compliance-tooling` | `bf9d71037a494f0f0a991003193f669aa811b94c` | relocation proposed by `packetlss/compliance#5`; authority remains at the historical source until the destination PR is merged and cut over |
 | reusable control-library policy source | `packetlss-labs/compliance-control-library` | `7e563657de47f4ce9774854c95bcd00dc26f13be` | not moved |
 | verification-only policy source | `packetlss-labs/compliance-verification-policy` | `18e2b91751c53f5e78fd73edb552b7a4c32c762c` | not moved |
 | ordinary development projects | `packetlss-labs/compliance-development-projects` | `fa0eb99dc472a041e57c38103913c81753b963ab` | not moved |
@@ -45,3 +45,18 @@ For each later source migration, update this ledger with:
 - historical release location when that component has published releases.
 
 A pure enclosing-root relocation must preserve the applicable tooling or policy-source content identity. If it does not, the migration must stop and return to architecture rather than treating a new digest as routine migration metadata.
+
+## Tooling relocation
+
+- source repository: `packetlss-labs/compliance-tooling`
+- final source revision: `bf9d71037a494f0f0a991003193f669aa811b94c`
+- destination issue: `packetlss/compliance#5`
+- destination pull request: `packetlss/compliance#6`
+- destination root: `tooling/`
+- digest algorithm: `compliance.example/tooling-source-tree-digest/v1alpha1`
+- source digest before relocation: `sha256:93dce066b7eae3b63518d3011e21c977a4d52f5aa6963a48ea34161ef37c9f22`
+- source digest after relocation: `sha256:93dce066b7eae3b63518d3011e21c977a4d52f5aa6963a48ea34161ef37c9f22`
+- equality result: exact equality; the same root-relative canonical paths and bytes produce the same digest under the old repository root and destination `tooling/` root
+- destination authority commit: pending the reviewed PR's human squash merge and explicit tooling-domain cutover
+- current authority before cutover: `packetlss-labs/compliance-tooling` at the source revision above
+- historical releases: Git tags, GitHub Releases, wheels, manifests, checksums, and hosted assets remain at `packetlss-labs/compliance-tooling`

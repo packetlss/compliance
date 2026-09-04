@@ -18,6 +18,15 @@ require_file README.md
 require_file docs/adr/README.md
 require_file docs/history/pre-consolidation.md
 require_file toolchain/versions.env
+require_file tooling/AGENTS.md
+require_file tooling/pyproject.toml
+require_file tooling/uv.lock
+require_file tooling/scripts/ci-versions.env
+require_file tooling/scripts/validate-tooling.sh
+require_file tooling/scripts/validate-package.sh
+require_file tooling/scripts/validate-locked-artifacts-package.sh
+require_file tooling/scripts/validate-release-preparation.sh
+require_file tooling/scripts/validate-policy-release-compatibility.sh
 
 [[ ! -e pyproject.toml ]] || fail "repository root must not be a Python project"
 [[ ! -e uv.lock ]] || fail "repository root must not own a uv lock"
@@ -30,9 +39,14 @@ OPA_LINUX_AMD64_STATIC_SHA256=9903e5125ac281104f2c4b7371d10cc3b74a98933743fcbfc1
 actual_toolchain="$(cat toolchain/versions.env)"
 [[ "$actual_toolchain" == "$expected_toolchain" ]] || fail "toolchain/versions.env does not match the accepted migration toolchain"
 
-# Stage 2 contains no migrated source. A later source-migration PR must update this
-# validator atomically when it introduces one of these roots.
-for source_root in tooling policy-sources projects verification; do
+# The retained tooling-local pins are digest-preserving migration content, not a
+# second repository-level toolchain owner. Require them to match the root pins.
+tooling_toolchain="$(grep -v '^[[:space:]]*#' tooling/scripts/ci-versions.env | sed '/^[[:space:]]*$/d')"
+[[ "$tooling_toolchain" == "$expected_toolchain" ]] || fail "tooling-local pins differ from the repository toolchain"
+
+# Tooling is the only source domain introduced by migration stage 3. Later
+# source-migration PRs must update this validator atomically for their roots.
+for source_root in policy-sources projects verification; do
   [[ ! -e "$source_root" ]] || fail "source root '$source_root' appeared before its bounded migration stage updated repository validation"
 done
 
@@ -51,4 +65,4 @@ if [[ -d .github/workflows ]]; then
   fi
 fi
 
-printf 'repository bootstrap validation passed\n'
+printf 'repository validation passed\n'

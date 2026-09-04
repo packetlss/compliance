@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/releases/tooling-release-manifest-v2.schema.json",
+  "title": "Compliance tooling content-addressed release manifest",
+  "type": "object",
+  "required": [
+    "schema",
+    "distribution",
+    "cli",
+    "version",
+    "source",
+    "artifact",
+    "testedOpaVersion"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "compliance.example/tooling-release-manifest/v2"},
+    "distribution": {"const": "compliance-tooling"},
+    "cli": {"const": "compliance"},
+    "version": {"$ref": "#/$defs/semver"},
+    "source": {
+      "type": "object",
+      "required": ["digest", "digestAlgorithm"],
+      "additionalProperties": false,
+      "properties": {
+        "digest": {"$ref": "#/$defs/digest"},
+        "digestAlgorithm": {
+          "const": "compliance.example/tooling-source-tree-digest/v1alpha1"
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["kind", "filename", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {"const": "python-wheel"},
+        "filename": {
+          "type": "string",
+          "pattern": "^compliance_tooling-[0-9A-Za-z.+-]+-py3-none-any\\.whl$"
+        },
+        "sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "testedOpaVersion": {"$ref": "#/$defs/semver"},
+    "sourceMetadata": {
+      "type": "object",
+      "required": ["gitTag", "gitCommit"],
+      "additionalProperties": false,
+      "properties": {
+        "gitTag": {
+          "type": "string",
+          "pattern": "^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$"
+        },
+        "gitCommit": {"$ref": "#/$defs/gitSha"}
+      }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "gitSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$"
+    }
+  }
+}

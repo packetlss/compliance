@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=../../../../../schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: Subject
+metadata:
+  name: tooling-macos-fixture
+  labels:
+    company: internal
+    managed: "true"
+    os: macos
+    persona: developer
+  annotations:
+    compliance.example/description: Tooling-owned synthetic macOS test subject
+spec:
+  id: workstation/tooling-macos-fixture
+  type: macos-workstation
+  lifecycle: active
+  source:
+    name: tooling-test-fixture
+    externalId: tooling-macos-fixture
+    observedAt: "2026-08-23T10:00:00Z"

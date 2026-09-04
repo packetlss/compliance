@@ -1,0 +1,12 @@
+"""Private RFC 8785/JCS serialization for semantic identity hashing."""
+
+from __future__ import annotations
+
+from typing import Any
+
+import rfc8785
+
+
+def canonical_json_bytes(value: Any) -> bytes:
+    """Return the RFC 8785/JCS UTF-8 representation of a JSON value."""
+    return rfc8785.dumps(value)

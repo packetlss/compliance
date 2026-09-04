@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/config/workspace-config-v1alpha1.schema.json",
+  "title": "Compliance workspace configuration",
+  "type": "object",
+  "required": ["schema", "defaultProject", "projects"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "compliance.example/workspace-config/v1alpha1"},
+    "defaultProject": {"$ref": "#/$defs/projectName"},
+    "projects": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/projectName"},
+      "additionalProperties": {"$ref": "#/$defs/projectReference"}
+    }
+  },
+  "$defs": {
+    "projectName": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "projectReference": {
+      "type": "object",
+      "required": ["config"],
+      "additionalProperties": false,
+      "properties": {
+        "config": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": ".*\\S.*"
+        }
+      }
+    }
+  }
+}

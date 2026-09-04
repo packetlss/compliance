@@ -1,0 +1,6 @@
+{
+  "schema": "compliance.example/tooling-release-metadata/v2",
+  "source_digest": null,
+  "source_digest_algorithm": "compliance.example/tooling-source-tree-digest/v1alpha1",
+  "tested_opa_version": "1.18.2"
+}
