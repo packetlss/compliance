@@ -25,7 +25,7 @@ These Git revisions identify reviewed source snapshots used to plan migration. T
 | --- | --- | --- | --- |
 | tooling/runtime and tooling-owned schemas | `packetlss-labs/compliance-tooling` | `bf9d71037a494f0f0a991003193f669aa811b94c` | moved by `packetlss/compliance#5` / PR #6; `packetlss/compliance@e1a0a0ccf472528ef027f8a2f6464bc7cf17a7d6` is authoritative for tooling |
 | reusable control-library policy source | `packetlss-labs/compliance-control-library` | `7e563657de47f4ce9774854c95bcd00dc26f13be` | moved by `packetlss/compliance#9` / PR #11; `packetlss/compliance@a0b94b5a175816252a36e6c7f0e067c0e4ddf79e` is authoritative for `shared-library` |
-| verification-only policy source | `packetlss-labs/compliance-verification-policy` | `18e2b91751c53f5e78fd73edb552b7a4c32c762c` | staged by `packetlss/compliance#10` / PR #14; historical source remains authoritative until merge and cutover |
+| verification-only policy source | `packetlss-labs/compliance-verification-policy` | `18e2b91751c53f5e78fd73edb552b7a4c32c762c` | moved by `packetlss/compliance#10` / PR #14; `packetlss/compliance@33bbcf7b5ca71f83c46dae4ecd16ccc5a8840244` is authoritative for `verification-policy` |
 | ordinary development projects | `packetlss-labs/compliance-development-projects` | `fa0eb99dc472a041e57c38103913c81753b963ab` | not moved |
 | synthetic IAM/private-boundary proof | `packetlss-labs/compliance-project-iam-realization` | `9d75575989031e06484629ee6a68e90497c1f5d9` | not moved |
 | canonical verification scenarios/integration | `packetlss-labs/compliance-verification-scenarios` | `92876dee8c081d6f51976391114c84dbdfd34f81` | not moved |
@@ -93,7 +93,7 @@ A pure enclosing-root relocation must preserve the applicable tooling or policy-
 - source digest before relocation: `sha256:4e4bec94fa7b73056989074ae51c03671bd254fa63c89d4e7d324d13a4313da4`
 - source digest after relocation: `sha256:4e4bec94fa7b73056989074ae51c03671bd254fa63c89d4e7d324d13a4313da4`
 - equality result: exact equality; the same policy-root-relative paths and bytes produce the same digest under the historical repository `policies/` root and destination `policy-sources/verification-policy/policies/` root
-- destination authority commit: pending merge and cutover record
-- current cutover state: source is materialized for review, but `packetlss-labs/compliance-verification-policy` remains authoritative until the destination migration PR is merged and the cutover is explicitly recorded
-- historical source/release provenance: `packetlss-labs/compliance-verification-policy`; its Git history, tags, GitHub Releases, manifests, archives, checksums, and hosted assets remain immutable pre-consolidation records
+- destination authority commit: `33bbcf7b5ca71f83c46dae4ecd16ccc5a8840244`
+- current `verification-policy` authority: `packetlss/compliance` under `policy-sources/verification-policy/policies/`
+- historical source/release provenance: `packetlss-labs/compliance-verification-policy`; its Git history, tags, GitHub Releases, manifests, archives, checksums, and hosted assets remain immutable pre-consolidation records and it is no longer the active `verification-policy` source authority
 - current lifecycle: source-only; no independent version or release cadence, descriptor/archive producer, tag validator, hosted publisher, or replacement release ceremony
