@@ -1,0 +1,15 @@
+{
+  "subject": {
+    "id": "host/standard-app-01",
+    "type": "linux-host"
+  },
+  "type": "linux.packages/v1",
+  "collector": {
+    "id": "mock-api/linux-packages",
+    "version": "1.0.0"
+  },
+  "payload": {
+    "ecosystem": "linux-native",
+    "packages": []
+  }
+}

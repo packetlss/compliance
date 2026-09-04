@@ -1,0 +1,23 @@
+{
+  "subject": {"id": "cloud-account/aws-111122223333", "type": "aws-account"},
+  "type": "aws.account.configuration/v1",
+  "collector": {"id": "mock/aws-account-api", "version": "0.1.0"},
+  "payload": {
+    "account": {"id": "111122223333", "home_region": "eu-north-1"},
+    "root_user": {"mfa_enabled": true},
+    "cloudtrail": {
+      "multi_region_enabled": false,
+      "retention_days": 120,
+      "log_file_validation_enabled": true
+    },
+    "security_contact": {"configured": false},
+    "collection": {
+      "simulated_api_calls": [
+        "iam:GetAccountSummary",
+        "cloudtrail:DescribeTrails",
+        "logs:DescribeLogGroups",
+        "account:GetAlternateContact"
+      ]
+    }
+  }
+}

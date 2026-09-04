@@ -44,6 +44,16 @@ require_file policy-sources/verification-policy/scripts/check-source-boundary.py
 require_file policy-sources/verification-policy/scripts/validate-verification-policy.sh
 require_file policy-sources/verification-policy/tests/test_verification_policy_source.py
 require_file policy-sources/verification-policy/policies/baselines/managed-workstation.json
+require_file projects/AGENTS.md
+require_file projects/README.md
+require_file projects/.gitignore
+require_file projects/mock-fleet/compliance.yaml
+require_file projects/server-personas/compliance.yaml
+require_file scripts/validate-development-projects.sh
+require_file scripts/development-projects/validation_inputs.py
+require_file scripts/development-projects/validate-all-development-projects.sh
+require_file tests/development-projects/test_validation_inputs.py
+require_file validation/development-projects/compliance.yaml
 
 [[ ! -e pyproject.toml ]] || fail "repository root must not be a Python project"
 [[ ! -e uv.lock ]] || fail "repository root must not own a uv lock"
@@ -63,9 +73,8 @@ tooling_toolchain="$(grep -v '^[[:space:]]*#' tooling/scripts/ci-versions.env | 
 verification_toolchain="$(grep -v '^[[:space:]]*#' policy-sources/verification-policy/scripts/ci-versions.env | sed '/^[[:space:]]*$/d')"
 [[ "$verification_toolchain" == "$expected_toolchain" ]] || fail "verification-policy pins differ from the repository toolchain"
 
-# Migration stage 4b permits exactly the independently named shared-library and
-# verification-policy producers. Later source-migration PRs must update this
-# validator atomically for their own explicit roots.
+# Migration stage 5 permits exactly the independently named shared-library and
+# verification-policy producers plus the two ordinary project roots.
 [[ -d policy-sources/control-library/policies ]] \
   || fail "shared-library semantic policy root is missing"
 [[ -d policy-sources/verification-policy/policies ]] \
@@ -87,9 +96,17 @@ unexpected_policy_source="$(
 [[ ! -e policy-sources/verification-policy/scripts/tooling-contract.env ]] \
   || fail "verification-policy validation must consume co-located component roots"
 
-for source_root in projects verification; do
-  [[ ! -e "$source_root" ]] || fail "source root '$source_root' appeared before its bounded migration stage updated repository validation"
-done
+unexpected_project_entry="$(
+  find projects -mindepth 1 -maxdepth 1 \
+    ! -name .gitignore ! -name AGENTS.md ! -name README.md \
+    ! -name mock-fleet ! -name server-personas -print -quit
+)"
+[[ -z "$unexpected_project_entry" ]] \
+  || fail "unapproved ordinary project entry appeared: $unexpected_project_entry"
+[[ ! -e validation/dependencies.json ]] \
+  || fail "historical repository-coordinate project dependency manifest must not be active"
+[[ ! -e verification ]] \
+  || fail "source root 'verification' appeared before its bounded migration stage updated repository validation"
 
 if [[ -d .github/workflows ]]; then
   if grep -R -nE 'COMPLIANCE_CI_|PERSONAL_ACCESS_TOKEN|GH_PAT' .github/workflows; then

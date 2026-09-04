@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: InventoryGroup
+metadata:
+  name: cloud-services
+spec:
+  parentRefs:
+    - name: company-assets
+  selector:
+    matchLabels:
+      hosting: cloud

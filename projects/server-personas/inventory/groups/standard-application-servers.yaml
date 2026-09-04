@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: InventoryGroup
+metadata:
+  name: standard-application-servers
+spec:
+  parentRefs:
+    - name: linux-servers
+  selector:
+    matchLabels:
+      server-persona: standard-application

@@ -73,6 +73,11 @@ jobs:
         env:
           COMPLIANCE_VERIFICATION_POLICY_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: bash policy-sources/verification-policy/scripts/validate-verification-policy.sh
+      - name: Validate ordinary development projects
+        shell: bash
+        env:
+          COMPLIANCE_DEVELOPMENT_PROJECTS_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/validate-development-projects.sh
 
   verification-scenarios:
     name: verification-scenarios
