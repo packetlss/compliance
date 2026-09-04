@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=../../../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: Subject
+metadata:
+  name: standard-app-01
+  labels:
+    company: internal
+    platform: linux
+    iam-profile: company-linux
+    server-persona: standard-application
+  annotations:
+    compliance.example/description: Synthetic standard Linux application server
+spec:
+  id: host/standard-app-01
+  type: linux-host
+  lifecycle: active
+  source:
+    name: mock-server-inventory
+    externalId: standard-app-01
+    observedAt: "2026-08-28T10:00:00Z"
+    revision: mock-snapshot-1
+  attributes:
+    operatingSystem: linux

@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=../../tooling/tools/schemas/workspace-config.schema.json
+schema: compliance.example/workspace-config/v1alpha1
+defaultProject: linux-hardening-rollout
+projects:
+  linux-hardening-rollout:
+    config: projects/linux-hardening-rollout/compliance.yaml

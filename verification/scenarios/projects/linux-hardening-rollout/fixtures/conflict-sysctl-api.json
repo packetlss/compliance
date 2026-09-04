@@ -1,0 +1,11 @@
+{
+  "subject": {"id": "host/persona-conflict-01", "type": "linux-host"},
+  "type": "linux.sysctl/v1",
+  "collector": {"id": "mock-api/linux-sysctl", "version": "1.0.0"},
+  "payload": {
+    "settings": [
+      {"key": "kernel.randomize_va_space", "value": "2"},
+      {"key": "net.ipv4.ip_forward", "value": "1"}
+    ]
+  }
+}
