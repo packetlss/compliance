@@ -120,7 +120,7 @@ A pure enclosing-root relocation must preserve the applicable tooling or policy-
 - final source revision: `9d75575989031e06484629ee6a68e90497c1f5d9`
 - source-main re-verification: GitHub `main` resolved to the same revision immediately before relocation on 2026-09-04
 - destination issue: `packetlss/compliance#20`
-- destination pull request: pending creation from the focused issue #20 branch
+- destination pull request: `packetlss/compliance#25`
 - destination fixture root: `verification/fixtures/iam-private-boundary/`
 - semantic private-source name: `environment-private`
 - retained private-policy subtree: `verification/fixtures/iam-private-boundary/policy/`
