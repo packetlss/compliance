@@ -79,8 +79,14 @@ Historical component/workspace repositories retain their Git history, issues, pu
 
 Historical release discoverability is checked through GitHub before archive actions. Release existence never becomes a current compatibility promise by itself.
 
-## Cutover gate
+## Sole-authority cutover
 
-The PR for destination issue #40 may be squash-merged automatically only when all three stable contexts are green on its exact reviewed head and the diff remains documentation/readiness/authority-only.
+Destination PR #45 was reviewed as a documentation/readiness/authority-only change and all three stable CI contexts succeeded on exact PR head `433bdd3edd23683800f4ab2e8ce9a2c9bb95f037` before merge.
 
-The merge commit of that PR is the sole-authority cutover event. A post-merge provenance-only reconciliation records its exact commit before historical repository archival begins.
+The sole-authority cutover became effective when PR #45 was squash-merged as:
+
+- `packetlss/compliance@c1f9584263ea39d012a832f61b33c9643e3d60be`
+
+From that commit onward, `packetlss/compliance` is the sole authoritative non-sensitive compliance development and documentation repository. Historical component repositories and `packetlss-labs/compliance-workspace` are provenance-only retirement surfaces; real private environment repositories remain separate.
+
+This commit is Git/review provenance for the authority transition, not semantic runtime identity.
