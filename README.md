@@ -3,9 +3,11 @@
 This private repository is the selected destination for consolidated non-sensitive compliance development under accepted `packetlss-labs/compliance-workspace` ADR 0008.
 
 Authority transfers by source domain during the staged cutover coordinated by
-`packetlss-labs/compliance-workspace#69`. Destination `tooling/` is authoritative;
-each remaining `packetlss-labs/*` repository stays authoritative for its source
-domain until its explicit migration stage is merged and cut over.
+`packetlss-labs/compliance-workspace#69`. Destination `tooling/` and the
+independently named `shared-library` root under
+`policy-sources/control-library/` are authoritative. Each remaining
+`packetlss-labs/*` repository stays authoritative for its source domain until its
+explicit migration stage is merged and cut over.
 
 The target development composition remains:
 
@@ -17,10 +19,11 @@ Repository layout is not semantic identity. Tooling and policy-source content id
 
 ## Current phase
 
-The repository currently contains the authoritative `tooling/` component. Migration
-issue #9 stages the independently named `shared-library` producer beneath
-`policy-sources/control-library/`; that source domain does not transfer authority
-until the migration PR is merged and the cutover is explicitly recorded.
+The repository currently contains authoritative tooling and reusable control-library
+source. Migration issue #10 stages the independently named, source-only
+`verification-policy` producer beneath `policy-sources/verification-policy/`.
+That source domain does not transfer authority until its migration PR is merged
+and the cutover is explicitly recorded.
 
 Normal development after the initial bootstrap commit follows:
 

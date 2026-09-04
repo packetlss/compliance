@@ -1,0 +1,62 @@
+{
+  "apiVersion": "compliance.example/v1",
+  "kind": "BaselineOverlay",
+  "metadata": {
+    "id": "company.macos-policy",
+    "revision": 1
+  },
+  "spec": {
+    "extends": [
+      {
+        "baseline": "benchmark.example.macos-hardening@2026.1",
+        "digest": "sha256:5141284a00bc0ba31fd865ea0befda3be4f44746d9da53e572d0634874a5eaf7"
+      }
+    ],
+    "operations": [
+      {
+        "op": "tailor",
+        "target": "benchmark.example.macos.minimum-version",
+        "expected_parent_fingerprint": "sha256:ae4e9613d237011e8594f9620c85eb0dd933fdd25dc6fbb2e0f82179fbecfd80",
+        "parameters": {
+          "minimum": "26.0.0"
+        },
+        "deviation": {
+          "id": "DEV-MAC-001",
+          "classification": "support-policy",
+          "rationale": "Company policy supports the current major macOS release rather than requiring the benchmark example's later point release.",
+          "approval_ref": "company-policy/macos-support-lifecycle",
+          "review_after": "2027-01-31"
+        }
+      },
+      {
+        "op": "exclude",
+        "target": "benchmark.example.macos.audit-formula-required",
+        "expected_parent_fingerprint": "sha256:2ffd5f051c35c6e526c9f3de6fd6d0a9875b4952c85cf9f49470f844653b2672",
+        "deviation": {
+          "id": "DEV-MAC-002",
+          "classification": "alternative-company-control",
+          "rationale": "The illustrative benchmark audit formula is not part of the approved company workstation tooling.",
+          "approval_ref": "company-policy/endpoint-monitoring",
+          "review_after": "2027-01-31"
+        }
+      },
+      {
+        "op": "seal",
+        "target": "benchmark.example.macos.gatekeeper-enabled",
+        "expected_parent_fingerprint": "sha256:c0c124fe5d840dabdeeca93f87e60e818841780321966728dbeedac1990684ba",
+        "blocked_operations": ["tailor", "exclude", "substitute"],
+        "reason": "Use-case overlays may not weaken the company Gatekeeper requirement."
+      },
+      {
+        "op": "add",
+        "control": {
+          "instance_id": "company.macos.opa-required",
+          "implementation": "macos.homebrew.formulae_required",
+          "parameters": {
+            "required": ["opa"]
+          }
+        }
+      }
+    ]
+  }
+}

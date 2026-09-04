@@ -37,6 +37,13 @@ require_file policy-sources/control-library/tests/test_policy_resources.py
 require_file policy-sources/control-library/tests/test_policy_release.py
 require_file policy-sources/control-library/policies/controls/common/result.rego
 require_file policy-sources/control-library/policies/schemas/policy/control.schema.json
+require_file policy-sources/verification-policy/AGENTS.md
+require_file policy-sources/verification-policy/README.md
+require_file policy-sources/verification-policy/scripts/ci-versions.env
+require_file policy-sources/verification-policy/scripts/check-source-boundary.py
+require_file policy-sources/verification-policy/scripts/validate-verification-policy.sh
+require_file policy-sources/verification-policy/tests/test_verification_policy_source.py
+require_file policy-sources/verification-policy/policies/baselines/managed-workstation.json
 
 [[ ! -e pyproject.toml ]] || fail "repository root must not be a Python project"
 [[ ! -e uv.lock ]] || fail "repository root must not own a uv lock"
@@ -53,14 +60,19 @@ actual_toolchain="$(cat toolchain/versions.env)"
 # second repository-level toolchain owner. Require them to match the root pins.
 tooling_toolchain="$(grep -v '^[[:space:]]*#' tooling/scripts/ci-versions.env | sed '/^[[:space:]]*$/d')"
 [[ "$tooling_toolchain" == "$expected_toolchain" ]] || fail "tooling-local pins differ from the repository toolchain"
+verification_toolchain="$(grep -v '^[[:space:]]*#' policy-sources/verification-policy/scripts/ci-versions.env | sed '/^[[:space:]]*$/d')"
+[[ "$verification_toolchain" == "$expected_toolchain" ]] || fail "verification-policy pins differ from the repository toolchain"
 
-# Migration stage 4a permits exactly the independently named shared-library
-# producer under policy-sources/control-library/. Later source-migration PRs
-# must update this validator atomically for their own explicit roots.
+# Migration stage 4b permits exactly the independently named shared-library and
+# verification-policy producers. Later source-migration PRs must update this
+# validator atomically for their own explicit roots.
 [[ -d policy-sources/control-library/policies ]] \
   || fail "shared-library semantic policy root is missing"
+[[ -d policy-sources/verification-policy/policies ]] \
+  || fail "verification-policy semantic policy root is missing"
 unexpected_policy_source="$(
-  find policy-sources -mindepth 1 -maxdepth 1 ! -name control-library -print -quit
+  find policy-sources -mindepth 1 -maxdepth 1 \
+    ! -name control-library ! -name verification-policy -print -quit
 )"
 [[ -z "$unexpected_policy_source" ]] \
   || fail "unapproved policy source root appeared: $unexpected_policy_source"
@@ -68,6 +80,12 @@ unexpected_policy_source="$(
   || fail "nested historical workflow metadata must not become active destination CI"
 [[ ! -e policy-sources/control-library/scripts/tooling-contract.env ]] \
   || fail "control-library validation must consume the co-located tooling root"
+[[ ! -e policy-sources/verification-policy/.github ]] \
+  || fail "nested historical workflow metadata must not become active destination CI"
+[[ ! -e policy-sources/verification-policy/release ]] \
+  || fail "verification policy must remain source-only without a release producer"
+[[ ! -e policy-sources/verification-policy/scripts/tooling-contract.env ]] \
+  || fail "verification-policy validation must consume co-located component roots"
 
 for source_root in projects verification; do
   [[ ! -e "$source_root" ]] || fail "source root '$source_root' appeared before its bounded migration stage updated repository validation"

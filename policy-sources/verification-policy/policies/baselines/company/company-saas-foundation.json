@@ -1,0 +1,55 @@
+{
+  "apiVersion": "compliance.example/v1",
+  "kind": "BaselineOverlay",
+  "metadata": {"id": "company.saas-foundation", "revision": 1},
+  "spec": {
+    "extends": [
+      {
+        "baseline": "profile.csa-ccm.saas-foundations@4.1-profile1",
+        "digest": "sha256:222d1f926572e3d06c7bb2590a97b548d4ba194e8cc50e1c440d52f0e57b32e6"
+      }
+    ],
+    "operations": [
+      {
+        "op": "tailor",
+        "target": "csa-ccm.saas.audit-log-retention",
+        "expected_parent_fingerprint": "sha256:9e0b8b178a36c83bc9437b52bc47ddae2864eb9e33453c2b29143e079af23cf2",
+        "parameters": {
+          "section": "audit_log",
+          "setting": "retention_days",
+          "minimum": 180
+        },
+        "deviation": {
+          "id": "DEV-SAAS-001",
+          "classification": "vendor-capability",
+          "rationale": "The contracted SaaS tier retains 180 days in-product; longer retention is handled by the company's external audit export.",
+          "approval_ref": "risk-register/SAAS-AUDIT-RETENTION",
+          "review_after": "2027-08-23"
+        }
+      },
+      {
+        "op": "annotate",
+        "target": "csa-ccm.saas.mfa-enforced",
+        "expected_parent_fingerprint": "sha256:7a95e2a1f8069301925ce4c8eb0f41d3dd4e3311aab62d25d2fce8bc2809a090",
+        "annotations": {
+          "severity": "critical",
+          "remediation": "Enforce MFA for every interactive tenant account, including accounts outside the company SSO domain."
+        }
+      },
+      {
+        "op": "add",
+        "control": {
+          "instance_id": "company.saas.guest-access-disabled",
+          "implementation": "saas.tenant.setting_equals",
+          "severity": "high",
+          "remediation": "Disable guest access in the tenant security administration page.",
+          "parameters": {
+            "section": "guest_access",
+            "setting": "allowed",
+            "expected": false
+          }
+        }
+      }
+    ]
+  }
+}

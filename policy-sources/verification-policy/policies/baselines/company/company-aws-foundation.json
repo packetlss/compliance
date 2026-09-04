@@ -1,0 +1,55 @@
+{
+  "apiVersion": "compliance.example/v1",
+  "kind": "BaselineOverlay",
+  "metadata": {"id": "company.aws-foundation", "revision": 1},
+  "spec": {
+    "extends": [
+      {
+        "baseline": "profile.csa-ccm.aws-foundations@4.1-profile1",
+        "digest": "sha256:67821b30a468fb64d888dabfbbcb4296d1e96be20846998e8f60289c70132d8a"
+      }
+    ],
+    "operations": [
+      {
+        "op": "tailor",
+        "target": "csa-ccm.aws.audit-log-retention",
+        "expected_parent_fingerprint": "sha256:a64da4f2b648ca7982f18942c08e9bfa25c4bcb7871b365d0bccd0f19a74e186",
+        "parameters": {
+          "section": "cloudtrail",
+          "setting": "retention_days",
+          "minimum": 90
+        },
+        "deviation": {
+          "id": "DEV-AWS-001",
+          "classification": "centralized-retention-architecture",
+          "rationale": "The account keeps 90 days searchable locally while the central immutable archive retains audit data for at least 365 days.",
+          "approval_ref": "company-policy/cloud-audit-retention",
+          "review_after": "2027-08-23"
+        }
+      },
+      {
+        "op": "annotate",
+        "target": "csa-ccm.aws.multi-region-audit-trail",
+        "expected_parent_fingerprint": "sha256:59e86a40c2faa888b88ffd3d79b690546c4ee9f4c3953aa67c4f5bdaeec1c92d",
+        "annotations": {
+          "severity": "critical",
+          "remediation": "Enable the organization CloudTrail for all enabled Regions through the approved landing-zone deployment."
+        }
+      },
+      {
+        "op": "add",
+        "control": {
+          "instance_id": "company.aws.security-contact-configured",
+          "implementation": "aws.account.setting_equals",
+          "severity": "medium",
+          "remediation": "Configure the AWS account SECURITY alternate contact using the approved security operations address.",
+          "parameters": {
+            "section": "security_contact",
+            "setting": "configured",
+            "expected": true
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "ControlRequirement",
+  "metadata": {
+    "id": "company.iam.role-based-access",
+    "revision": 1,
+    "origin": {
+      "type": "company-control-objective",
+      "name": "Company identity and access management standard"
+    }
+  },
+  "spec": {
+    "title": "Access is granted through centrally governed roles",
+    "statement": "Interactive access to governed systems must be authorized through centrally governed role or group membership and must not depend on unmanaged subject-local authorization.",
+    "rationale": "Central role governance makes access reviewable, consistently revocable, and attributable to an approved identity lifecycle.",
+    "external_refs": [
+      "example-regulatory-framework:IAM-01"
+    ]
+  }
+}

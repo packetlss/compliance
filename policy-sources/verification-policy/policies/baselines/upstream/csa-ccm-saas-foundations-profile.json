@@ -1,0 +1,48 @@
+{
+  "apiVersion": "compliance.example/v1",
+  "kind": "Baseline",
+  "metadata": {
+    "id": "profile.csa-ccm.saas-foundations",
+    "revision": "4.1-profile1",
+    "origin": {
+      "type": "framework-derived-profile",
+      "name": "Illustrative SaaS automation profile mapped to CSA CCM v4.1",
+      "source": "https://cloudsecurityalliance.org/artifacts/cloud-controls-matrix-v4-1",
+      "notice": "This small technical profile is not the CSA CCM catalog and does not assert certification or full framework coverage."
+    }
+  },
+  "spec": {
+    "controls": [
+      {
+        "instance_id": "csa-ccm.saas.sso-enforced",
+        "implementation": "saas.tenant.setting_equals",
+        "external_refs": ["CSA-CCM-v4.1:IAM-domain"],
+        "parameters": {
+          "section": "authentication",
+          "setting": "sso_enforced",
+          "expected": true
+        }
+      },
+      {
+        "instance_id": "csa-ccm.saas.mfa-enforced",
+        "implementation": "saas.tenant.setting_equals",
+        "external_refs": ["CSA-CCM-v4.1:IAM-domain"],
+        "parameters": {
+          "section": "authentication",
+          "setting": "mfa_enforced",
+          "expected": true
+        }
+      },
+      {
+        "instance_id": "csa-ccm.saas.audit-log-retention",
+        "implementation": "saas.tenant.number_at_least",
+        "external_refs": ["CSA-CCM-v4.1:LOG-domain"],
+        "parameters": {
+          "section": "audit_log",
+          "setting": "retention_days",
+          "minimum": 365
+        }
+      }
+    ]
+  }
+}
