@@ -1,6 +1,6 @@
 # Compliance repository instructions
 
-This repository is the authoritative development repository for consolidated non-sensitive compliance source.
+This repository is the **sole authoritative development and documentation repository for consolidated non-sensitive compliance source**.
 
 ## Durable authority
 
@@ -12,7 +12,7 @@ Before implementation, read the applicable bounded GitHub issue, this file, and 
 - `docs/CONTRACT_MATURITY.md`
 - accepted ADRs in `docs/adr/`
 
-Historical `packetlss-labs/compliance-workspace` and former component repositories remain design/migration/release provenance only. Their current repository topology, gitlinks, issue numbers, or workflow assumptions are not normative when they conflict with destination documentation/current source.
+Historical `packetlss-labs/compliance-workspace` and former component repositories remain design/migration/release provenance only. Their repository topology, gitlinks, issue numbers, workflow assumptions, and historical copies of architecture documents are not current authority when they differ from destination state.
 
 Preserve these invariants:
 
@@ -87,10 +87,16 @@ Stable validation contexts are:
 
 Provider branch protection/rulesets/required-status enforcement are optional operational hardening under ADR 0008; project workflow and reviewed CI evidence remain required regardless of provider enforcement.
 
+## Historical repositories
+
+The former `packetlss-labs` component repositories and `compliance-workspace` are provenance-only retirement surfaces. Active future work is owned by destination issues #31–#38. Do not start new implementation in a historical repository or refresh the retired workspace topology.
+
+Historical commits, issues, pull requests, tags, Releases, and hosted assets must remain discoverable and must not be rewritten or republished merely because source authority moved here.
+
 ## Retirement exception
 
 Destination #29 temporarily authorizes automatic routine retirement work only when the action is bounded documentation/routing/provenance/mechanical cleanup, changes no semantics/release identity/trust boundary/public contract, exact-head applicable CI is green, the reviewed diff matches its issue contract, and no active work/history is lost.
 
 Any architectural finding, persistent functional CI failure, unexpected historical source change, unroutable active work, provenance-loss risk, unavailable required archive/settings operation, or firewall dependency stops retirement and requires human intervention.
 
-This retirement exception does not authorize automatic semantic implementation or change the normal human final-merge rule for product work.
+This retirement exception does not authorize automatic semantic implementation or change the normal human final-merge rule for product work. It ends when #29 retirement is complete.
