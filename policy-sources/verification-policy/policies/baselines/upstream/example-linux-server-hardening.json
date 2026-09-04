@@ -1,0 +1,36 @@
+{
+  "apiVersion": "compliance.example/v1",
+  "kind": "Baseline",
+  "metadata": {
+    "id": "benchmark.example.linux-server-hardening",
+    "revision": "2026.1",
+    "origin": {
+      "type": "external-benchmark",
+      "name": "Illustrative Linux Server Hardening Benchmark"
+    }
+  },
+  "spec": {
+    "controls": [
+      {
+        "instance_id": "benchmark.example.linux-server.aslr",
+        "implementation": "linux.sysctl.required",
+        "external_refs": ["illustrative-linux-benchmark:1.1"],
+        "parameters": {
+          "settings": [
+            {"key": "kernel.randomize_va_space", "value": "2"}
+          ]
+        }
+      },
+      {
+        "instance_id": "benchmark.example.linux-server.ip-forwarding-disabled",
+        "implementation": "linux.sysctl.required",
+        "external_refs": ["illustrative-linux-benchmark:1.2"],
+        "parameters": {
+          "settings": [
+            {"key": "net.ipv4.ip_forward", "value": "0"}
+          ]
+        }
+      }
+    ]
+  }
+}

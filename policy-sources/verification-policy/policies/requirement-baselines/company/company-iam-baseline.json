@@ -1,0 +1,21 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "RequirementBaseline",
+  "metadata": {
+    "id": "company.identity-access-objectives",
+    "revision": 1,
+    "origin": {
+      "type": "company-baseline",
+      "name": "Company identity and access objectives"
+    }
+  },
+  "spec": {
+    "requirements": [
+      {
+        "requirement": "company.iam.role-based-access@1",
+        "digest": "sha256:5c661573bc770c5eb2cb131a6a08b3b6bcc99a30d19ceabb1836ec5c68dd1a0e",
+        "required": true
+      }
+    ]
+  }
+}

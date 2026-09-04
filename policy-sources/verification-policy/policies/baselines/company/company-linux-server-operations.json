@@ -1,0 +1,22 @@
+{
+  "apiVersion": "compliance.example/v1",
+  "kind": "Baseline",
+  "metadata": {
+    "id": "company.linux-server-operations",
+    "version": 1
+  },
+  "spec": {
+    "controls": [
+      {
+        "instance_id": "company.linux-server.audit-package",
+        "implementation": "linux.packages.required",
+        "parameters": {
+          "ecosystem": "linux-native",
+          "required": [
+            {"id": "auditd"}
+          ]
+        }
+      }
+    ]
+  }
+}

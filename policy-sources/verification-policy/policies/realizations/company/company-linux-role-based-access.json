@@ -1,0 +1,63 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "ControlRealization",
+  "metadata": {
+    "id": "company.linux.central-role-access",
+    "revision": 1,
+    "classification": "internal"
+  },
+  "spec": {
+    "requirement": {
+      "requirement": "company.iam.role-based-access@1",
+      "digest": "sha256:5c661573bc770c5eb2cb131a6a08b3b6bcc99a30d19ceabb1836ec5c68dd1a0e"
+    },
+    "applies_to": {
+      "subject_types": ["linux-host"],
+      "match_labels": {"iam-profile": "company-linux"}
+    },
+    "adoption": {
+      "status": "implemented",
+      "method": "automated",
+      "owner": "company-iam-team",
+      "implementation_ref": "company-architecture/linux-central-access-v1"
+    },
+    "checks": [
+      {
+        "instance_id": "company.linux.rbac.sssd-installed",
+        "implementation": "linux.access.setting_equals",
+        "severity": "high",
+        "remediation": "Install SSSD using the company-approved package source.",
+        "parameters": {"section": "packages", "setting": "sssd_installed", "expected": true}
+      },
+      {
+        "instance_id": "company.linux.rbac.sssd-domain-configured",
+        "implementation": "linux.access.setting_equals",
+        "severity": "critical",
+        "remediation": "Connect SSSD to the approved company IAM domain.",
+        "parameters": {"section": "sssd", "setting": "domain", "expected": "company.example"}
+      },
+      {
+        "instance_id": "company.linux.rbac.ssh-central-group-required",
+        "implementation": "linux.access.setting_equals",
+        "severity": "critical",
+        "remediation": "Restrict interactive SSH access to the approved company IAM group.",
+        "parameters": {"section": "ssh", "setting": "allowed_groups", "expected": ["company-linux-operators"]}
+      },
+      {
+        "instance_id": "company.linux.rbac.unmanaged-local-login-absent",
+        "implementation": "linux.access.setting_equals",
+        "severity": "critical",
+        "remediation": "Remove interactive authorization from unmanaged local accounts or enroll the identity in central IAM.",
+        "parameters": {"section": "accounts", "setting": "unmanaged_interactive_accounts", "expected": []}
+      }
+    ],
+    "satisfaction": {
+      "allOf": [
+        "company.linux.rbac.sssd-installed",
+        "company.linux.rbac.sssd-domain-configured",
+        "company.linux.rbac.ssh-central-group-required",
+        "company.linux.rbac.unmanaged-local-login-absent"
+      ]
+    }
+  }
+}
