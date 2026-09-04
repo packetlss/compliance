@@ -51,7 +51,7 @@ A pure enclosing-root relocation must preserve the applicable tooling or policy-
 - source repository: `packetlss-labs/compliance-tooling`
 - final source revision: `bf9d71037a494f0f0a991003193f669aa811b94c`
 - destination issue: `packetlss/compliance#5`
-- destination pull request: pending assignment
+- destination pull request: `packetlss/compliance#6`
 - destination root: `tooling/`
 - digest algorithm: `compliance.example/tooling-source-tree-digest/v1alpha1`
 - source digest before relocation: `sha256:93dce066b7eae3b63518d3011e21c977a4d52f5aa6963a48ea34161ef37c9f22`
