@@ -68,6 +68,7 @@ require_file verification/fixtures/iam-private-boundary/policy/realizations/rest
 require_file scripts/validate-iam-private-boundary.sh
 require_file scripts/iam-private-boundary/validation_inputs.py
 require_file scripts/iam-private-boundary/assert-iam-private-boundary.py
+require_file scripts/iam-private-boundary/run-direct-rollup.py
 require_file tests/iam-private-boundary/test_validation_inputs.py
 
 [[ ! -e pyproject.toml ]] || fail "repository root must not be a Python project"

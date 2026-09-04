@@ -89,7 +89,7 @@ tooling_run python tooling/collectors/mock-api/collect.py \
   --results "$RUN_ROOT/results" > "$RUN_ROOT/explain.txt"
 
 printf '\n== IAM direct deterministic roll-up ==\n'
-tooling_run python -m tools.control_realization \
+tooling_run python "$SCRIPT_ROOT/run-direct-rollup.py" \
   --requirement "$VERIFICATION_ROOT/requirements/company/company-role-based-access.json" \
   --realization "$PRIVATE_ROOT/realizations/restricted/restricted-linux-role-based-access.json" \
   --base-realization "$VERIFICATION_ROOT/realizations/company/company-linux-role-based-access.json" \
