@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: Subject
+metadata:
+  name: mock-acme-projects
+  labels:
+    company: internal
+    criticality: high
+    environment: production
+    hosting: cloud
+    provider: acme-projects
+    service-model: saas
+  annotations:
+    compliance.example/description: Synthetic project-management SaaS tenant for development
+spec:
+  id: saas/acme-projects/company
+  type: saas-tenant
+  lifecycle: active
+  source:
+    name: mock-saas-catalog
+    externalId: tenant-company
+    observedAt: "2026-08-23T12:00:00Z"
+    revision: mock-snapshot-1
+  attributes:
+    tenantUrl: https://company.invalid
+    dataResidency: eu

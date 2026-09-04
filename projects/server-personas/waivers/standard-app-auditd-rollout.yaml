@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../../../tooling/schemas/waivers/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: Waiver
+metadata:
+  name: standard-app-01-auditd-rollout
+spec:
+  subjectRef:
+    id: host/standard-app-01
+  controlRef:
+    instanceId: company.linux-server.audit-package
+  validFrom: "2026-08-01T00:00:00Z"
+  expiresAt: "2026-12-01T00:00:00Z"
+  rationale: The replacement image is awaiting its approved audit package rollout.
+  owner: platform-operations
+  approval:
+    reference: risk-acceptance/RA-2026-042
+    approvedBy: security-risk-owner
+    approvedAt: "2026-07-31T14:00:00Z"

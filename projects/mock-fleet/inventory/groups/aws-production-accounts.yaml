@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: InventoryGroup
+metadata:
+  name: aws-production-accounts
+spec:
+  parentRefs:
+    - name: aws-accounts
+    - name: production-services
+  selector:
+    matchLabels:
+      provider: aws
+      environment: production

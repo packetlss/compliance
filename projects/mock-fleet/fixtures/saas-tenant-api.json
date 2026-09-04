@@ -1,0 +1,17 @@
+{
+  "subject": {"id": "saas/acme-projects/company", "type": "saas-tenant"},
+  "type": "saas.tenant.configuration/v1",
+  "collector": {"id": "mock/acme-projects-api", "version": "0.1.0"},
+  "payload": {
+    "tenant": {"id": "tenant-company", "provider": "acme-projects", "data_residency": "eu"},
+    "authentication": {"sso_enforced": true, "mfa_enforced": false},
+    "audit_log": {"retention_days": 180, "export_enabled": true},
+    "guest_access": {"allowed": false},
+    "collection": {
+      "simulated_api_calls": [
+        "GET /v1/tenant/security",
+        "GET /v1/tenant/audit-log"
+      ]
+    }
+  }
+}

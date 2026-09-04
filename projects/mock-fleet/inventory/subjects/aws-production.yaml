@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: Subject
+metadata:
+  name: mock-aws-production
+  labels:
+    company: internal
+    environment: production
+    hosting: cloud
+    provider: aws
+    service-model: iaas
+  annotations:
+    compliance.example/description: Synthetic AWS account for development
+spec:
+  id: cloud-account/aws-111122223333
+  type: aws-account
+  lifecycle: active
+  source:
+    name: mock-aws-organizations
+    externalId: "111122223333"
+    observedAt: "2026-08-23T12:00:00Z"
+    revision: mock-snapshot-1
+  attributes:
+    accountId: "111122223333"
+    organizationUnit: Production
+    managementAccount: false
+    homeRegion: eu-north-1

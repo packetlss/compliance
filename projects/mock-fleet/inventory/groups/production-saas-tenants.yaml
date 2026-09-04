@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: InventoryGroup
+metadata:
+  name: production-saas-tenants
+spec:
+  parentRefs:
+    - name: saas-tenants
+    - name: production-services
+  selector:
+    matchLabels:
+      service-model: saas
+      environment: production

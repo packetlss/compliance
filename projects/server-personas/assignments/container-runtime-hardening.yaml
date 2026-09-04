@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: PolicyAssignment
+metadata:
+  name: container-runtime-hardening
+spec:
+  targetRef:
+    kind: InventoryGroup
+    name: container-runtime-servers
+  baselineRefs:
+    - name: company.container-runtime-host
+      revision: "1"

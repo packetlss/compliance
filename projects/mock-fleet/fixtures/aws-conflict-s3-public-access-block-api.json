@@ -1,0 +1,14 @@
+{
+  "subject": {"id": "cloud-account/aws-444455556666", "type": "aws-account"},
+  "type": "aws.s3.account-public-access-block/v1",
+  "collector": {"id": "mock/aws-s3control-api", "version": "0.1.0"},
+  "payload": {
+    "block_public_acls": true,
+    "block_public_policy": true,
+    "ignore_public_acls": true,
+    "restrict_public_buckets": true,
+    "collection": {
+      "simulated_api_calls": ["s3control:GetPublicAccessBlock"]
+    }
+  }
+}

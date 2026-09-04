@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: PolicyAssignment
+metadata:
+  name: company-aws-foundation
+spec:
+  targetRef:
+    kind: InventoryGroup
+    name: aws-production-accounts
+  baselineRefs:
+    - name: company.aws-foundation
+      revision: "1"
+    - name: company.aws-s3-public-access
+      revision: "1"

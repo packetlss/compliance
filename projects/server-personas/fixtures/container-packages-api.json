@@ -1,0 +1,18 @@
+{
+  "subject": {
+    "id": "host/container-app-01",
+    "type": "linux-host"
+  },
+  "type": "linux.packages/v1",
+  "collector": {
+    "id": "mock-api/linux-packages",
+    "version": "1.0.0"
+  },
+  "payload": {
+    "ecosystem": "linux-native",
+    "packages": [
+      {"id": "auditd", "version": "3.1.2"},
+      {"id": "containerd", "version": "2.1.4"}
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: PolicyAssignment
+metadata:
+  name: company-saas-foundation
+spec:
+  targetRef:
+    kind: InventoryGroup
+    name: production-saas-tenants
+  baselineRefs:
+    - name: company.saas-foundation
+      revision: "1"
