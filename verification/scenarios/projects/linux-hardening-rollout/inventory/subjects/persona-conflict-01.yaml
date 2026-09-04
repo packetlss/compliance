@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=../../../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: Subject
+metadata:
+  name: persona-conflict-01
+  labels:
+    company: internal
+    platform: linux
+    iam-profile: company-linux
+    server-persona: standard-application
+    feature-container-runtime: enabled
+  annotations:
+    compliance.example/description: Synthetic host with contradictory persona classification
+spec:
+  id: host/persona-conflict-01
+  type: linux-host
+  lifecycle: active
+  source:
+    name: mock-server-inventory
+    externalId: persona-conflict-01
+    observedAt: "2026-08-28T10:00:00Z"
+    revision: mock-snapshot-1
+  attributes:
+    operatingSystem: linux

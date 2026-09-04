@@ -6,7 +6,7 @@ of in-core configuration generation it contains 20 CLI leaves and 18 domain
 features.
 
 The complete composed suite is owned by
-[`compliance-verification-scenarios`](https://github.com/packetlss-labs/compliance-verification-scenarios).
+the canonical destination scenario root at `verification/scenarios/`.
 That currently separate repository coordinate is transitional integration
 metadata; its scenario-gate ownership and isolated project contracts survive
 source consolidation under workspace
@@ -72,7 +72,7 @@ without collecting evidence or evaluating controls:
 - `incomplete` — an intentional assignment conflict; expected exit `2`.
 
 ```sh
-uv run python compliance-tooling/examples/prepare_policy_diff_set.py
+uv run --project tooling python tooling/examples/prepare_policy_diff_set.py
 ```
 
 Pass `--output /tmp/compliance-policy-diff-demo` to retain the snapshots.

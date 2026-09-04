@@ -1,0 +1,12 @@
+# Copied to the temporary integration root; paths are relative to that root.
+schema: compliance.example/workspace-config/v1alpha1
+defaultProject: linux-hardening-rollout
+projects:
+  linux-hardening-rollout:
+    config: verification/scenarios/projects/linux-hardening-rollout/compliance.yaml
+  mock-fleet:
+    config: projects/mock-fleet/compliance.yaml
+  server-personas:
+    config: projects/server-personas/compliance.yaml
+  iam-realization:
+    config: verification/fixtures/iam-private-boundary/compliance.yaml

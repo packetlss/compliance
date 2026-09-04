@@ -1,0 +1,3 @@
+projects/*/generated/
+__pycache__/
+*.pyc

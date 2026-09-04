@@ -20,13 +20,13 @@ Repository layout is not semantic identity. Tooling and policy-source content id
 ## Current phase
 
 The repository currently contains authoritative tooling, reusable
-control-library source, source-only verification policy, and the ordinary
-`mock-fleet` and `server-personas` projects. Migration issue #20 stages the
-synthetic IAM private-boundary proof under
-`verification/fixtures/iam-private-boundary/`. That fixture source domain does
-not transfer authority until its migration PR is merged and the cutover is
-explicitly recorded. Real private environment inputs remain outside this
-repository.
+control-library source, source-only verification policy, the ordinary
+`mock-fleet` and `server-personas` projects, and the synthetic IAM
+private-boundary proof under `verification/fixtures/iam-private-boundary/`.
+Migration issue #21 stages the canonical composed scenarios under
+`verification/scenarios/`; scenario authority remains with the historical
+repository until the migration PR is merged and the cutover is explicitly
+recorded. Real private environment inputs remain outside this repository.
 
 Normal development after the initial bootstrap commit follows:
 

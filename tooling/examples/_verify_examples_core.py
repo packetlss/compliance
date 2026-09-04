@@ -33,11 +33,11 @@ except ImportError:  # Direct execution by path.
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 WORKSPACE_CONFIG = WORKSPACE_ROOT / "compliance.yaml"
-MOCK_COLLECTOR = WORKSPACE_ROOT / "compliance-tooling/collectors/mock-api/collect.py"
+MOCK_COLLECTOR = WORKSPACE_ROOT / "tooling/collectors/mock-api/collect.py"
 FEATURE_COVERAGE_PATH = Path(__file__).resolve().with_name("feature-coverage.json")
 LINUX_ROLLOUT_ROOT = (
     WORKSPACE_ROOT
-    / "compliance-verification-scenarios/projects/linux-hardening-rollout"
+    / "verification/scenarios/projects/linux-hardening-rollout"
 )
 EXAMPLE_INSTANT = "2026-09-01T00:00:00Z"
 MOCK_FLEET_PRIMARY_AWS_SUBJECT = "cloud-account/aws-111122223333"
@@ -675,13 +675,13 @@ class ExampleRunner:
 
         # The tooling-owned macOS fixture preserves semantic overlay-lineage
         # coverage without coupling the executable suite to a boundary project.
-        macos_fixture = WORKSPACE_ROOT / "compliance-tooling/tests/fixtures/macos-project"
+        macos_fixture = WORKSPACE_ROOT / "tooling/tests/fixtures/macos-project"
         mock_config = load_config(WORKSPACE_CONFIG, "mock-fleet")
         macos_subject, macos_groups, macos_assignments = load_inventory_inputs(
             macos_fixture / "inventory",
             macos_fixture / "assignments",
             "workstation/tooling-macos-fixture",
-            WORKSPACE_ROOT / "compliance-tooling/schemas/inventory/resource.schema.json",
+            WORKSPACE_ROOT / "tooling/schemas/inventory/resource.schema.json",
         )
         macos_document = render_plan(
             macos_subject,
@@ -1058,7 +1058,7 @@ class ExampleRunner:
         declared_implementations = {
             self._read(path)["metadata"]["id"]
             for path in (
-                WORKSPACE_ROOT / "compliance-control-library/policies/controls"
+                WORKSPACE_ROOT / "policy-sources/control-library/policies/controls"
             ).glob("**/control.json")
         }
         planned_implementations: set[str] = set()

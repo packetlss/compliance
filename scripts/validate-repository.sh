@@ -70,6 +70,19 @@ require_file scripts/iam-private-boundary/validation_inputs.py
 require_file scripts/iam-private-boundary/assert-iam-private-boundary.py
 require_file scripts/iam-private-boundary/run-direct-rollup.py
 require_file tests/iam-private-boundary/test_validation_inputs.py
+require_file verification/scenarios/AGENTS.md
+require_file verification/scenarios/README.md
+require_file verification/scenarios/.gitignore
+require_file verification/scenarios/compliance.yaml
+require_file verification/scenarios/integration/README.md
+require_file verification/scenarios/integration/compliance.yaml
+require_file verification/scenarios/projects/linux-hardening-rollout/compliance.yaml
+require_file verification/scenarios/scripts/ci-versions.env
+require_file verification/scenarios/scripts/integration.py
+require_file verification/scenarios/scripts/test_integration.py
+require_file verification/scenarios/scripts/assert-linux-hardening-rollout.py
+require_file verification/scenarios/scripts/validate-scenarios.sh
+require_file scripts/validate-verification-scenarios.sh
 
 [[ ! -e pyproject.toml ]] || fail "repository root must not be a Python project"
 [[ ! -e uv.lock ]] || fail "repository root must not own a uv lock"
@@ -88,6 +101,8 @@ tooling_toolchain="$(grep -v '^[[:space:]]*#' tooling/scripts/ci-versions.env | 
 [[ "$tooling_toolchain" == "$expected_toolchain" ]] || fail "tooling-local pins differ from the repository toolchain"
 verification_toolchain="$(grep -v '^[[:space:]]*#' policy-sources/verification-policy/scripts/ci-versions.env | sed '/^[[:space:]]*$/d')"
 [[ "$verification_toolchain" == "$expected_toolchain" ]] || fail "verification-policy pins differ from the repository toolchain"
+scenario_toolchain="$(grep -v '^[[:space:]]*#' verification/scenarios/scripts/ci-versions.env | sed '/^[[:space:]]*$/d')"
+[[ "$scenario_toolchain" == "$expected_toolchain" ]] || fail "scenario pins differ from the repository toolchain"
 
 # Migration stage 6a permits exactly the independently named shared-library and
 # verification-policy producers, two ordinary project roots, and the approved
@@ -126,7 +141,7 @@ unexpected_project_entry="$(
 [[ -d verification/fixtures/iam-private-boundary ]] \
   || fail "approved IAM private-boundary fixture is missing"
 unexpected_verification_entry="$(
-  find verification -mindepth 1 -maxdepth 1 ! -name fixtures -print -quit
+  find verification -mindepth 1 -maxdepth 1 ! -name fixtures ! -name scenarios -print -quit
 )"
 [[ -z "$unexpected_verification_entry" ]] \
   || fail "unapproved verification root appeared: $unexpected_verification_entry"
@@ -136,8 +151,14 @@ unexpected_fixture_entry="$(
 )"
 [[ -z "$unexpected_fixture_entry" ]] \
   || fail "unapproved verification fixture appeared: $unexpected_fixture_entry"
-[[ ! -e verification/scenarios ]] \
-  || fail "verification/scenarios must remain absent until its bounded migration stage"
+[[ -d verification/scenarios ]] \
+  || fail "canonical verification scenario root is missing"
+[[ ! -e verification/scenarios/.github ]] \
+  || fail "nested historical scenario workflow metadata must not become active destination CI"
+[[ ! -e verification/scenarios/integration/components.json ]] \
+  || fail "historical scenario repository-coordinate manifest must not remain active"
+[[ ! -e verification/scenarios/projects/linux-hardening-rollout/generated ]] \
+  || fail "generated scenario evidence, plans, and results must remain untracked"
 [[ ! -e verification/fixtures/iam-private-boundary/.github ]] \
   || fail "nested historical IAM workflow metadata must not become active destination CI"
 [[ ! -e verification/fixtures/iam-private-boundary/generated ]] \
@@ -177,6 +198,18 @@ if [[ -d .github/workflows ]]; then
   if grep -R -nE '^[[:space:]]+paths(-ignore)?:' .github/workflows; then
     fail "required destination checks must report on every PR; workflow path filters are not allowed"
   fi
+fi
+
+active_validation_paths=(.github/workflows scripts verification/scenarios/scripts)
+if grep -R --exclude='validate-repository.sh' -nE \
+  'COMPLIANCE_CI_|PERSONAL_ACCESS_TOKEN|GH_PAT|GH_TOKEN|actions/create-github-app-token|packetlss-labs/compliance-' \
+  "${active_validation_paths[@]}"; then
+  fail "active validation must not retain historical sibling acquisition or credentials"
+fi
+if grep -R --exclude='validate-repository.sh' -nE \
+  '(^|[[:space:]])git[[:space:]]+clone([[:space:]]|$)' \
+  "${active_validation_paths[@]}"; then
+  fail "active validation must not clone historical component repositories"
 fi
 
 printf 'repository validation passed\n'

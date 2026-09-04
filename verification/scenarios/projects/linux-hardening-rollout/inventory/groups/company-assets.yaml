@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=../../../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: InventoryGroup
+metadata:
+  name: company-assets
+spec:
+  selector:
+    matchLabels:
+      company: internal

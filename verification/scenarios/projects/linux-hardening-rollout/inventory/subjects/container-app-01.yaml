@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=../../../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: Subject
+metadata:
+  name: container-app-01
+  labels:
+    company: internal
+    platform: linux
+    iam-profile: company-linux
+    feature-container-runtime: enabled
+  annotations:
+    compliance.example/description: Synthetic Linux container runtime host
+spec:
+  id: host/container-app-01
+  type: linux-host
+  lifecycle: active
+  source:
+    name: mock-server-inventory
+    externalId: container-app-01
+    observedAt: "2026-08-28T10:00:00Z"
+    revision: mock-snapshot-1
+  attributes:
+    operatingSystem: linux
