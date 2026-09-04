@@ -27,7 +27,7 @@ These Git revisions identify reviewed source snapshots used to plan migration. T
 | reusable control-library policy source | `packetlss-labs/compliance-control-library` | `7e563657de47f4ce9774854c95bcd00dc26f13be` | moved by `packetlss/compliance#9` / PR #11; `packetlss/compliance@a0b94b5a175816252a36e6c7f0e067c0e4ddf79e` is authoritative for `shared-library` |
 | verification-only policy source | `packetlss-labs/compliance-verification-policy` | `18e2b91751c53f5e78fd73edb552b7a4c32c762c` | moved by `packetlss/compliance#10` / PR #14; `packetlss/compliance@33bbcf7b5ca71f83c46dae4ecd16ccc5a8840244` is authoritative for `verification-policy` |
 | ordinary development projects | `packetlss-labs/compliance-development-projects` | `fa0eb99dc472a041e57c38103913c81753b963ab` | moved by `packetlss/compliance#16` / PR #18; `packetlss/compliance@812b8162b04ac8d8f903e18831e4e4cfbaaf9274` is authoritative for ordinary development projects |
-| synthetic IAM/private-boundary proof | `packetlss-labs/compliance-project-iam-realization` | `9d75575989031e06484629ee6a68e90497c1f5d9` | staged by `packetlss/compliance#20`; authority remains historical until the migration PR merges and cutover is recorded |
+| synthetic IAM/private-boundary proof | `packetlss-labs/compliance-project-iam-realization` | `9d75575989031e06484629ee6a68e90497c1f5d9` | moved by `packetlss/compliance#20` / PR #25; `packetlss/compliance@ba92703c576abf5a75fbbc7d980915fd20b84e3c` is authoritative for the synthetic IAM/private-boundary fixture |
 | canonical verification scenarios/integration | `packetlss-labs/compliance-verification-scenarios` | `92876dee8c081d6f51976391114c84dbdfd34f81` | not moved |
 
 ## Historical provenance rule
@@ -133,7 +133,7 @@ A pure enclosing-root relocation must preserve the applicable tooling or policy-
 - explicit runtime source set: `shared-library`, `verification-policy`, and `environment-private`; each is independently named and rooted, with no source-order precedence or aggregate policy traversal
 - restricted realization boundary: `restricted.linux.central-role-access@1` remains only in the fixture private-policy subtree and its temporary `environment-private` copy; it is absent from `shared-library` and `verification-policy`
 - generated-state boundary: evidence, plans, assessment results, direct roll-up output, caches, and the temporary private materialization are removed after validation and remain untracked
-- destination authority commit: pending merge and explicit cutover
-- current synthetic-fixture authority: `packetlss-labs/compliance-project-iam-realization` until the destination migration PR is merged and cutover is recorded
-- historical source location: `packetlss-labs/compliance-project-iam-realization`; its Git history, issues, pull requests, and source revision remain pre-consolidation provenance
+- destination authority commit: `ba92703c576abf5a75fbbc7d980915fd20b84e3c`
+- current synthetic-fixture authority: `packetlss/compliance` under `verification/fixtures/iam-private-boundary/`
+- historical source location: `packetlss-labs/compliance-project-iam-realization`; its Git history, issues, pull requests, and source revision remain pre-consolidation provenance and it is no longer the active synthetic IAM/private-boundary fixture authority
 - real private environments: not represented by this synthetic fixture; real private inventory, evidence, realizations, parameters, credentials, secrets, provider state, plans, results, and operational data remain in separate authorized repositories and execution contexts
