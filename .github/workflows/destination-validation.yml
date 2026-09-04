@@ -1,0 +1,53 @@
+name: Destination validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  component-validation:
+    name: component-validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout destination source
+        uses: actions/checkout@v4
+      - name: Validate repository bootstrap contract
+        shell: bash
+        run: bash scripts/validate-repository.sh
+
+  verification-scenarios:
+    name: verification-scenarios
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout destination source
+        uses: actions/checkout@v4
+      - name: Enforce scenario validation handoff
+        shell: bash
+        run: |
+          if [[ ! -d verification/scenarios ]]; then
+            echo "bootstrap-inapplicable: verification/scenarios is not materialized yet"
+            exit 0
+          fi
+          echo "verification/scenarios exists but real scenario validation has not been wired by its migration issue" >&2
+          exit 1
+
+  installed-release-provenance:
+    name: installed-release-provenance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout destination source
+        uses: actions/checkout@v4
+      - name: Enforce installed-release validation handoff
+        shell: bash
+        run: |
+          if [[ ! -d tooling ]]; then
+            echo "bootstrap-inapplicable: tooling is not materialized yet"
+            exit 0
+          fi
+          echo "tooling exists but real installed-release provenance validation has not been wired by its migration issue" >&2
+          exit 1

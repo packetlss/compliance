@@ -16,7 +16,7 @@ These Git revisions identify reviewed source snapshots used to plan migration. T
 ## Accepted architecture migration source
 
 - repository: `packetlss-labs/compliance-workspace`
-- accepted post-ADR-0008 source commit: `193f0330cae7535409e526fc4de60d6343efadc9`
+- accepted source commit including the ADR 0008 governance amendment: `098ef18c1384b34c532f705b3f5b3d1a25bd638f`
 - historical architecture/issues/PRs remain in the original workspace repository until it is archived after cutover
 
 ## Component source snapshots
