@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: PolicyAssignment
+metadata:
+  name: restricted-linux-identity-access
+spec:
+  targetRef:
+    kind: InventoryGroup
+    name: restricted-linux-systems
+  baselineRefs:
+    - name: company.identity-access-objectives
+      revision: "1"

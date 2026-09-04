@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=../../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: Subject
+metadata:
+  name: restricted-linux-01
+  labels:
+    company: internal
+    environment: restricted
+    iam-profile: restricted-linux
+  annotations:
+    compliance.example/description: Synthetic restricted Linux host for realization development
+spec:
+  id: host/restricted-linux-01
+  type: linux-host
+  lifecycle: active
+  source:
+    name: mock-linux-inventory
+    externalId: restricted-linux-01
+    observedAt: "2026-08-23T12:00:00Z"
+    revision: mock-snapshot-1
+  attributes:
+    operatingSystem: linux
+    purpose: restricted-production-service

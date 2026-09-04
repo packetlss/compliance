@@ -54,6 +54,22 @@ require_file scripts/development-projects/validation_inputs.py
 require_file scripts/development-projects/validate-all-development-projects.sh
 require_file tests/development-projects/test_validation_inputs.py
 require_file validation/development-projects/compliance.yaml
+require_file verification/fixtures/iam-private-boundary/AGENTS.md
+require_file verification/fixtures/iam-private-boundary/README.md
+require_file verification/fixtures/iam-private-boundary/.gitignore
+require_file verification/fixtures/iam-private-boundary/compliance.yaml
+require_file verification/fixtures/iam-private-boundary/assignments/identity-access-objectives.yaml
+require_file verification/fixtures/iam-private-boundary/fixtures/linux-access-api.json
+require_file verification/fixtures/iam-private-boundary/fixtures/technical-results-failing.json
+require_file verification/fixtures/iam-private-boundary/inventory/groups/company-assets.yaml
+require_file verification/fixtures/iam-private-boundary/inventory/groups/restricted-linux-systems.yaml
+require_file verification/fixtures/iam-private-boundary/inventory/subjects/restricted-linux.yaml
+require_file verification/fixtures/iam-private-boundary/policy/realizations/restricted/restricted-linux-role-based-access.json
+require_file scripts/validate-iam-private-boundary.sh
+require_file scripts/iam-private-boundary/validation_inputs.py
+require_file scripts/iam-private-boundary/assert-iam-private-boundary.py
+require_file scripts/iam-private-boundary/run-direct-rollup.py
+require_file tests/iam-private-boundary/test_validation_inputs.py
 
 [[ ! -e pyproject.toml ]] || fail "repository root must not be a Python project"
 [[ ! -e uv.lock ]] || fail "repository root must not own a uv lock"
@@ -73,8 +89,10 @@ tooling_toolchain="$(grep -v '^[[:space:]]*#' tooling/scripts/ci-versions.env | 
 verification_toolchain="$(grep -v '^[[:space:]]*#' policy-sources/verification-policy/scripts/ci-versions.env | sed '/^[[:space:]]*$/d')"
 [[ "$verification_toolchain" == "$expected_toolchain" ]] || fail "verification-policy pins differ from the repository toolchain"
 
-# Migration stage 5 permits exactly the independently named shared-library and
-# verification-policy producers plus the two ordinary project roots.
+# Migration stage 6a permits exactly the independently named shared-library and
+# verification-policy producers, two ordinary project roots, and the approved
+# synthetic IAM fixture. environment-private exists only as a temporary,
+# independently copied execution root.
 [[ -d policy-sources/control-library/policies ]] \
   || fail "shared-library semantic policy root is missing"
 [[ -d policy-sources/verification-policy/policies ]] \
@@ -105,8 +123,46 @@ unexpected_project_entry="$(
   || fail "unapproved ordinary project entry appeared: $unexpected_project_entry"
 [[ ! -e validation/dependencies.json ]] \
   || fail "historical repository-coordinate project dependency manifest must not be active"
-[[ ! -e verification ]] \
-  || fail "source root 'verification' appeared before its bounded migration stage updated repository validation"
+[[ -d verification/fixtures/iam-private-boundary ]] \
+  || fail "approved IAM private-boundary fixture is missing"
+unexpected_verification_entry="$(
+  find verification -mindepth 1 -maxdepth 1 ! -name fixtures -print -quit
+)"
+[[ -z "$unexpected_verification_entry" ]] \
+  || fail "unapproved verification root appeared: $unexpected_verification_entry"
+unexpected_fixture_entry="$(
+  find verification/fixtures -mindepth 1 -maxdepth 1 \
+    ! -name iam-private-boundary -print -quit
+)"
+[[ -z "$unexpected_fixture_entry" ]] \
+  || fail "unapproved verification fixture appeared: $unexpected_fixture_entry"
+[[ ! -e verification/scenarios ]] \
+  || fail "verification/scenarios must remain absent until its bounded migration stage"
+[[ ! -e verification/fixtures/iam-private-boundary/.github ]] \
+  || fail "nested historical IAM workflow metadata must not become active destination CI"
+[[ ! -e verification/fixtures/iam-private-boundary/generated ]] \
+  || fail "generated IAM evidence, plans, and results must remain untracked"
+[[ ! -e external-sources ]] \
+  || fail "environment-private must exist only as a separate temporary validation root"
+
+restricted_in_central="$(
+  grep -R -l --fixed-strings 'restricted.linux.central-role-access' \
+    policy-sources/control-library/policies \
+    policy-sources/verification-policy/policies || true
+)"
+[[ -z "$restricted_in_central" ]] || {
+  printf '%s\n' "$restricted_in_central" >&2
+  fail "restricted IAM realization must not be copied into central policy sources"
+}
+
+unexpected_sensitive_file="$(
+  find verification/fixtures/iam-private-boundary -type f \
+    \( -name '*.pem' -o -name '*.key' -o -name '*.p12' -o -name '*.tfstate' \
+       -o -name '.env' -o -name 'credentials' -o -name 'secrets.*' \) \
+    -print -quit
+)"
+[[ -z "$unexpected_sensitive_file" ]] \
+  || fail "sensitive or provider-state file entered the synthetic IAM fixture: $unexpected_sensitive_file"
 
 if [[ -d .github/workflows ]]; then
   if grep -R -nE 'COMPLIANCE_CI_|PERSONAL_ACCESS_TOKEN|GH_PAT' .github/workflows; then

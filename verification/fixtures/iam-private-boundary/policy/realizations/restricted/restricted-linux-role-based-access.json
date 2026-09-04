@@ -1,0 +1,87 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "ControlRealization",
+  "metadata": {
+    "id": "restricted.linux.central-role-access",
+    "revision": 1,
+    "classification": "restricted"
+  },
+  "spec": {
+    "based_on": {
+      "realization": "company.linux.central-role-access@1",
+      "digest": "sha256:d43c39fffaabf54b0f58d9799594b5ee3933875d20f4bd1e5742d38ce7d7f42f"
+    },
+    "requirement": {
+      "requirement": "company.iam.role-based-access@1",
+      "digest": "sha256:5c661573bc770c5eb2cb131a6a08b3b6bcc99a30d19ceabb1836ec5c68dd1a0e"
+    },
+    "applies_to": {
+      "subject_types": [
+        "linux-host"
+      ],
+      "match_labels": {
+        "iam-profile": "restricted-linux"
+      }
+    },
+    "adoption": {
+      "status": "implemented",
+      "method": "automated",
+      "owner": "restricted-environment-iam-team",
+      "implementation_ref": "restricted-architecture/linux-central-access-v3"
+    },
+    "checks": [
+      {
+        "instance_id": "restricted.linux.rbac.sssd-installed",
+        "implementation": "linux.access.setting_equals",
+        "severity": "high",
+        "remediation": "Install SSSD using the environment-approved package source.",
+        "parameters": {
+          "section": "packages",
+          "setting": "sssd_installed",
+          "expected": true
+        }
+      },
+      {
+        "instance_id": "restricted.linux.rbac.sssd-domain-configured",
+        "implementation": "linux.access.setting_equals",
+        "severity": "critical",
+        "remediation": "Connect SSSD to the approved central IAM domain using the restricted environment procedure.",
+        "parameters": {
+          "section": "sssd",
+          "setting": "domain",
+          "expected": "restricted.example"
+        }
+      },
+      {
+        "instance_id": "restricted.linux.rbac.ssh-central-group-required",
+        "implementation": "linux.access.setting_equals",
+        "severity": "critical",
+        "remediation": "Restrict interactive SSH access to the approved central IAM group.",
+        "parameters": {
+          "section": "ssh",
+          "setting": "allowed_groups",
+          "expected": ["linux-production-operators"]
+        }
+      },
+      {
+        "instance_id": "restricted.linux.rbac.unmanaged-local-login-absent",
+        "implementation": "linux.access.setting_equals",
+        "severity": "critical",
+        "remediation": "Remove interactive authorization from unmanaged local accounts or enroll the identity in central IAM.",
+        "parameters": {
+          "section": "accounts",
+          "setting": "unmanaged_interactive_accounts",
+          "expected": []
+        }
+      }
+    ],
+    "satisfaction": {
+      "allOf": [
+        "restricted.linux.rbac.sssd-installed",
+        "restricted.linux.rbac.sssd-domain-configured",
+        "restricted.linux.rbac.ssh-central-group-required",
+        "restricted.linux.rbac.unmanaged-local-login-absent"
+      ]
+    }
+  }
+}

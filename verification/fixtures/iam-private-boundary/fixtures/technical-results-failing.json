@@ -1,0 +1,33 @@
+{
+  "schema": "compliance.example/technical-results-fixture/v1alpha1",
+  "subject": {
+    "id": "host/restricted-linux-01",
+    "type": "linux-host",
+    "labels": {
+      "iam-profile": "restricted-linux"
+    }
+  },
+  "plan_id": "sha256:example-plan",
+  "results": [
+    {
+      "instance_id": "restricted.linux.rbac.sssd-installed",
+      "status": "pass",
+      "reason": "SSSD is installed."
+    },
+    {
+      "instance_id": "restricted.linux.rbac.sssd-domain-configured",
+      "status": "pass",
+      "reason": "SSSD is connected to the approved domain."
+    },
+    {
+      "instance_id": "restricted.linux.rbac.ssh-central-group-required",
+      "status": "fail",
+      "reason": "SSH permits a local group that is not governed by central IAM."
+    },
+    {
+      "instance_id": "restricted.linux.rbac.unmanaged-local-login-absent",
+      "status": "pass",
+      "reason": "No unmanaged local account has interactive login authorization."
+    }
+  ]
+}

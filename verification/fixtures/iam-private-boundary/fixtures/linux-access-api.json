@@ -1,0 +1,19 @@
+{
+  "subject": {"id": "host/restricted-linux-01", "type": "linux-host"},
+  "type": "linux.access.configuration/v1",
+  "collector": {"id": "mock/linux-access-api", "version": "0.1.0"},
+  "payload": {
+    "packages": {"sssd_installed": true},
+    "sssd": {"domain": "restricted.example"},
+    "ssh": {"allowed_groups": ["local-operators"]},
+    "accounts": {"unmanaged_interactive_accounts": []},
+    "collection": {
+      "simulated_operations": [
+        "package-manager:list-installed",
+        "sssd:read-domain-configuration",
+        "sshd:read-allowed-groups",
+        "accounts:list-interactive"
+      ]
+    }
+  }
+}
