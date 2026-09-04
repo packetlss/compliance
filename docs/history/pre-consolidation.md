@@ -25,7 +25,7 @@ These Git revisions identify reviewed source snapshots used to plan migration. T
 | --- | --- | --- | --- |
 | tooling/runtime and tooling-owned schemas | `packetlss-labs/compliance-tooling` | `bf9d71037a494f0f0a991003193f669aa811b94c` | moved by `packetlss/compliance#5` / PR #6; `packetlss/compliance@e1a0a0ccf472528ef027f8a2f6464bc7cf17a7d6` is authoritative for tooling |
 | reusable control-library policy source | `packetlss-labs/compliance-control-library` | `7e563657de47f4ce9774854c95bcd00dc26f13be` | moved by `packetlss/compliance#9` / PR #11; `packetlss/compliance@a0b94b5a175816252a36e6c7f0e067c0e4ddf79e` is authoritative for `shared-library` |
-| verification-only policy source | `packetlss-labs/compliance-verification-policy` | `18e2b91751c53f5e78fd73edb552b7a4c32c762c` | staged by `packetlss/compliance#10`; destination PR pending assignment; historical source remains authoritative until merge and cutover |
+| verification-only policy source | `packetlss-labs/compliance-verification-policy` | `18e2b91751c53f5e78fd73edb552b7a4c32c762c` | staged by `packetlss/compliance#10` / PR #14; historical source remains authoritative until merge and cutover |
 | ordinary development projects | `packetlss-labs/compliance-development-projects` | `fa0eb99dc472a041e57c38103913c81753b963ab` | not moved |
 | synthetic IAM/private-boundary proof | `packetlss-labs/compliance-project-iam-realization` | `9d75575989031e06484629ee6a68e90497c1f5d9` | not moved |
 | canonical verification scenarios/integration | `packetlss-labs/compliance-verification-scenarios` | `92876dee8c081d6f51976391114c84dbdfd34f81` | not moved |
@@ -85,7 +85,7 @@ A pure enclosing-root relocation must preserve the applicable tooling or policy-
 - final source revision: `18e2b91751c53f5e78fd73edb552b7a4c32c762c`
 - source-main re-verification: GitHub `main` resolved to the same revision immediately before relocation on 2026-09-04
 - destination issue: `packetlss/compliance#10`
-- destination pull request: pending assignment
+- destination pull request: `packetlss/compliance#14`
 - destination producer root: `policy-sources/verification-policy/`
 - semantic source name: `verification-policy`
 - semantic policy root: `policy-sources/verification-policy/policies/`
