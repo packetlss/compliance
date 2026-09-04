@@ -26,7 +26,7 @@ These Git revisions identify reviewed source snapshots used to plan migration. T
 | tooling/runtime and tooling-owned schemas | `packetlss-labs/compliance-tooling` | `bf9d71037a494f0f0a991003193f669aa811b94c` | moved by `packetlss/compliance#5` / PR #6; `packetlss/compliance@e1a0a0ccf472528ef027f8a2f6464bc7cf17a7d6` is authoritative for tooling |
 | reusable control-library policy source | `packetlss-labs/compliance-control-library` | `7e563657de47f4ce9774854c95bcd00dc26f13be` | moved by `packetlss/compliance#9` / PR #11; `packetlss/compliance@a0b94b5a175816252a36e6c7f0e067c0e4ddf79e` is authoritative for `shared-library` |
 | verification-only policy source | `packetlss-labs/compliance-verification-policy` | `18e2b91751c53f5e78fd73edb552b7a4c32c762c` | moved by `packetlss/compliance#10` / PR #14; `packetlss/compliance@33bbcf7b5ca71f83c46dae4ecd16ccc5a8840244` is authoritative for `verification-policy` |
-| ordinary development projects | `packetlss-labs/compliance-development-projects` | `fa0eb99dc472a041e57c38103913c81753b963ab` | staged by `packetlss/compliance#16` / PR #18; authority remains historical until merge and cutover |
+| ordinary development projects | `packetlss-labs/compliance-development-projects` | `fa0eb99dc472a041e57c38103913c81753b963ab` | moved by `packetlss/compliance#16` / PR #18; `packetlss/compliance@812b8162b04ac8d8f903e18831e4e4cfbaaf9274` is authoritative for ordinary development projects |
 | synthetic IAM/private-boundary proof | `packetlss-labs/compliance-project-iam-realization` | `9d75575989031e06484629ee6a68e90497c1f5d9` | not moved |
 | canonical verification scenarios/integration | `packetlss-labs/compliance-verification-scenarios` | `92876dee8c081d6f51976391114c84dbdfd34f81` | not moved |
 
@@ -110,6 +110,6 @@ A pure enclosing-root relocation must preserve the applicable tooling or policy-
 - acquisition transition: removed the historical `validation/dependencies.json` repository-coordinate pin graph and cross-repository credential/clone path; focused validation consumes committed `tooling/`, `policy-sources/control-library/`, `policy-sources/verification-policy/`, and `projects/` roots from one destination revision
 - runtime-independence proof: project validation exports the four explicit roots into a temporary non-Git assembly, verifies its bytes against the committed destination revision before and after execution, and keeps repository/commit/path metadata outside runtime identity
 - semantic contract: current `project-config/v1alpha1`, assessment v1 behavior, fixed-time assertions, expected failures, named policy-source digests, and project isolation are preserved; no new project semantic digest contract is introduced
-- destination authority commit: pending merge and explicit cutover
-- current project authority: `packetlss-labs/compliance-development-projects` until the destination migration PR is merged and cutover is recorded
-- historical source location: `packetlss-labs/compliance-development-projects`; its Git history, issues, pull requests, and prior project-migration provenance remain pre-consolidation records
+- destination authority commit: `812b8162b04ac8d8f903e18831e4e4cfbaaf9274`
+- current project authority: `packetlss/compliance` under `projects/mock-fleet/` and `projects/server-personas/`
+- historical source location: `packetlss-labs/compliance-development-projects`; its Git history, issues, pull requests, and prior project-migration provenance remain pre-consolidation records and it is no longer the active ordinary-project source authority
