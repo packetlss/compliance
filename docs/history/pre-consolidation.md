@@ -24,7 +24,7 @@ These Git revisions identify reviewed source snapshots used to plan migration. T
 | Logical source domain | Historical repository | Reviewed pre-consolidation source commit | Migration status |
 | --- | --- | --- | --- |
 | tooling/runtime and tooling-owned schemas | `packetlss-labs/compliance-tooling` | `bf9d71037a494f0f0a991003193f669aa811b94c` | moved by `packetlss/compliance#5` / PR #6; `packetlss/compliance@e1a0a0ccf472528ef027f8a2f6464bc7cf17a7d6` is authoritative for tooling |
-| reusable control-library policy source | `packetlss-labs/compliance-control-library` | `7e563657de47f4ce9774854c95bcd00dc26f13be` | not moved |
+| reusable control-library policy source | `packetlss-labs/compliance-control-library` | `7e563657de47f4ce9774854c95bcd00dc26f13be` | staged by `packetlss/compliance#9`; destination PR pending; authority transfers only after merge and explicit cutover record |
 | verification-only policy source | `packetlss-labs/compliance-verification-policy` | `18e2b91751c53f5e78fd73edb552b7a4c32c762c` | not moved |
 | ordinary development projects | `packetlss-labs/compliance-development-projects` | `fa0eb99dc472a041e57c38103913c81753b963ab` | not moved |
 | synthetic IAM/private-boundary proof | `packetlss-labs/compliance-project-iam-realization` | `9d75575989031e06484629ee6a68e90497c1f5d9` | not moved |
@@ -60,3 +60,21 @@ A pure enclosing-root relocation must preserve the applicable tooling or policy-
 - destination authority commit: `e1a0a0ccf472528ef027f8a2f6464bc7cf17a7d6`
 - current tooling authority: `packetlss/compliance` under `tooling/`
 - historical source/release repository: `packetlss-labs/compliance-tooling`; its Git history, tags, GitHub Releases, wheels, manifests, checksums, and hosted assets remain pre-consolidation provenance and it is no longer the active tooling source authority
+
+## Control-library relocation
+
+- historical source repository: `packetlss-labs/compliance-control-library`
+- final source revision: `7e563657de47f4ce9774854c95bcd00dc26f13be`
+- source-main re-verification: GitHub `main` resolved to the same revision immediately before relocation on 2026-09-04
+- destination issue: `packetlss/compliance#9`
+- destination pull request: pending assignment when this branch is opened
+- destination producer root: `policy-sources/control-library/`
+- semantic source name: `shared-library`
+- semantic policy root: `policy-sources/control-library/policies/`
+- digest algorithm: `compliance.example/policy-source-tree-digest/v1alpha1`
+- source digest before relocation: `sha256:75f88e26b0e941d93cc993fa40fd8bea96594254c5c6c0c46f39f3237a6d13c1`
+- source digest after relocation: `sha256:75f88e26b0e941d93cc993fa40fd8bea96594254c5c6c0c46f39f3237a6d13c1`
+- equality result: exact equality; the same policy-root-relative paths and bytes produce the same digest under the historical repository `policies/` root and destination `policy-sources/control-library/policies/` root
+- destination authority commit: pending squash merge and explicit cutover record
+- current cutover state: staged in the destination migration PR; `packetlss-labs/compliance-control-library@7e563657de47f4ce9774854c95bcd00dc26f13be` remains authoritative until the PR is merged and the cutover is explicitly recorded
+- historical release location: `packetlss-labs/compliance-control-library`; its Git history, tags, GitHub Releases, descriptors, archives, manifests, checksums, and hosted assets remain pre-consolidation release provenance

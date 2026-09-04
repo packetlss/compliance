@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/evidence/saas-tenant-configuration-v1.schema.json",
+  "type": "object",
+  "required": ["schema", "id", "subject", "type", "collected_at", "collector", "payload", "integrity"],
+  "additionalProperties": true,
+  "properties": {
+    "schema": {"const": "compliance.example/evidence/v1"},
+    "id": {"type": "string", "minLength": 1},
+    "subject": {
+      "type": "object",
+      "required": ["id", "type"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "type": {"const": "saas-tenant"}
+      }
+    },
+    "type": {"const": "saas.tenant.configuration/v1"},
+    "collected_at": {"type": "string", "format": "date-time"},
+    "collector": {
+      "type": "object",
+      "required": ["id", "version"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1}
+      }
+    },
+    "payload": {
+      "type": "object",
+      "required": ["tenant", "authentication", "audit_log"],
+      "additionalProperties": true,
+      "properties": {
+        "tenant": {
+          "type": "object",
+          "required": ["id", "provider"],
+          "additionalProperties": true,
+          "properties": {
+            "id": {"type": "string", "minLength": 1},
+            "provider": {"type": "string", "minLength": 1}
+          }
+        },
+        "authentication": {
+          "type": "object",
+          "required": ["sso_enforced", "mfa_enforced"],
+          "additionalProperties": true,
+          "properties": {
+            "sso_enforced": {"type": ["boolean", "null"]},
+            "mfa_enforced": {"type": ["boolean", "null"]}
+          }
+        },
+        "audit_log": {
+          "type": "object",
+          "required": ["retention_days"],
+          "additionalProperties": true,
+          "properties": {
+            "retention_days": {"type": ["integer", "null"], "minimum": 0}
+          }
+        }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "required": ["digest"],
+      "additionalProperties": true,
+      "properties": {"digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}}
+    }
+  }
+}

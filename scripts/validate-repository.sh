@@ -27,6 +27,16 @@ require_file tooling/scripts/validate-package.sh
 require_file tooling/scripts/validate-locked-artifacts-package.sh
 require_file tooling/scripts/validate-release-preparation.sh
 require_file tooling/scripts/validate-policy-release-compatibility.sh
+require_file policy-sources/control-library/AGENTS.md
+require_file policy-sources/control-library/README.md
+require_file policy-sources/control-library/release/VERSION
+require_file policy-sources/control-library/scripts/ci-versions.env
+require_file policy-sources/control-library/scripts/validate-shared-policy.sh
+require_file policy-sources/control-library/scripts/validate-policy-release.sh
+require_file policy-sources/control-library/tests/test_policy_resources.py
+require_file policy-sources/control-library/tests/test_policy_release.py
+require_file policy-sources/control-library/policies/controls/common/result.rego
+require_file policy-sources/control-library/policies/schemas/policy/control.schema.json
 
 [[ ! -e pyproject.toml ]] || fail "repository root must not be a Python project"
 [[ ! -e uv.lock ]] || fail "repository root must not own a uv lock"
@@ -44,9 +54,22 @@ actual_toolchain="$(cat toolchain/versions.env)"
 tooling_toolchain="$(grep -v '^[[:space:]]*#' tooling/scripts/ci-versions.env | sed '/^[[:space:]]*$/d')"
 [[ "$tooling_toolchain" == "$expected_toolchain" ]] || fail "tooling-local pins differ from the repository toolchain"
 
-# Tooling is the only source domain introduced by migration stage 3. Later
-# source-migration PRs must update this validator atomically for their roots.
-for source_root in policy-sources projects verification; do
+# Migration stage 4a permits exactly the independently named shared-library
+# producer under policy-sources/control-library/. Later source-migration PRs
+# must update this validator atomically for their own explicit roots.
+[[ -d policy-sources/control-library/policies ]] \
+  || fail "shared-library semantic policy root is missing"
+unexpected_policy_source="$(
+  find policy-sources -mindepth 1 -maxdepth 1 ! -name control-library -print -quit
+)"
+[[ -z "$unexpected_policy_source" ]] \
+  || fail "unapproved policy source root appeared: $unexpected_policy_source"
+[[ ! -e policy-sources/control-library/.github ]] \
+  || fail "nested historical workflow metadata must not become active destination CI"
+[[ ! -e policy-sources/control-library/scripts/tooling-contract.env ]] \
+  || fail "control-library validation must consume the co-located tooling root"
+
+for source_root in projects verification; do
   [[ ! -e "$source_root" ]] || fail "source root '$source_root' appeared before its bounded migration stage updated repository validation"
 done
 

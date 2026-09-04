@@ -63,6 +63,11 @@ jobs:
         env:
           COMPLIANCE_TOOLING_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: bash tooling/scripts/validate-tooling.sh
+      - name: Validate control-library component
+        shell: bash
+        env:
+          COMPLIANCE_CONTROL_LIBRARY_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash policy-sources/control-library/scripts/validate-shared-policy.sh
 
   verification-scenarios:
     name: verification-scenarios
