@@ -270,6 +270,13 @@ def main() -> None:
     conflict = load_json(run_root / "plans/host__persona-conflict-01.json")
     require(conflict.get("schema") == "compliance.example/assessment-plan/v1", "unexpected conflict plan schema")
     require(conflict.get("resolution", {}).get("status") == "invalid", "contradictory persona unexpectedly resolved")
+    require(
+        any(
+            error.get("type") == "control-instance-conflict"
+            for error in conflict.get("resolution", {}).get("errors", [])
+        ),
+        "contradictory persona lost its no-precedence conflict evidence",
+    )
     require(conflict.get("coverage", {}).get("assessable") is False, "contradictory persona became assessable")
     require(not (run_root / "results/host__persona-conflict-01.json").exists(), "assessment result was emitted for contradictory persona")
 
