@@ -144,7 +144,7 @@ A pure enclosing-root relocation must preserve the applicable tooling or policy-
 - final source revision: `92876dee8c081d6f51976391114c84dbdfd34f81`
 - source-main re-verification: GitHub `main` resolved to the same revision immediately before relocation on 2026-09-04
 - destination issue: `packetlss/compliance#21`
-- destination pull request: pending creation from `issue-21/relocate-verification-scenarios`; record the PR number before merge
+- destination pull request: `packetlss/compliance#28`
 - destination scenario root: `verification/scenarios/`
 - source relocation: the historical scenario project, fixtures, assertions, feature-suite ownership, and integration support were imported from the exact source revision; nested historical `.github/` hosting metadata was not imported
 - location-only support changes: project/schema locators now target the explicit destination roots; the scenario and integration documentation describes destination-local assembly; the fixed instant, scenario fixtures, assignments, inventory, waiver, expected outcomes, assessment-plan handoff assertions, and 20-CLI-leaf/18-domain-feature ownership contract remain unchanged
