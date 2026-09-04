@@ -1,8 +1,8 @@
 # Compliance
 
-`packetlss/compliance` is the consolidated private development repository for non-sensitive compliance source.
+`packetlss/compliance` is the **sole authoritative development and documentation repository for non-sensitive compliance source**.
 
-All six migrated source domains are now authoritative here:
+All six migrated source domains are authoritative here:
 
 - tooling under `tooling/`;
 - reusable `shared-library` under `policy-sources/control-library/policies/`;
@@ -41,11 +41,12 @@ Current normative architecture is local:
 - `docs/DEVELOPMENT_WORKFLOW.md` — engineering lifecycle;
 - `docs/CONTRACT_MATURITY.md` — compatibility/freeze rules;
 - `docs/adr/` — accepted ADRs 0005–0008;
-- `docs/history/pre-consolidation.md` — migration/history provenance.
+- `docs/history/pre-consolidation.md` — migration/history provenance;
+- `docs/history/retirement-readiness.md` — one-time retirement/cutover evidence.
 
-Historical `packetlss-labs` component repositories and `compliance-workspace` preserve pre-consolidation commits/issues/PRs/releases and are being retired under #29. They are provenance, not active source or architecture authority.
+Historical `packetlss-labs` component repositories and `compliance-workspace` preserve pre-consolidation commits/issues/PRs/releases and are provenance only. They are being archived under #29; no active development or architecture work remains owned there.
 
-Active future design/implementation work is routed to destination issues #31–#38. Real private environment repositories remain separate. Firewall/network-policy work remains out of scope unless explicitly reopened.
+Active future design/implementation work is owned by destination issues #31–#38. Real private environment repositories remain separate. Firewall/network-policy work remains out of scope unless explicitly reopened.
 
 Normal development is:
 
@@ -53,4 +54,4 @@ Normal development is:
 issue -> branch -> PR -> CI -> review -> human squash merge
 ```
 
-Retirement controller #29 temporarily permits automatic squash merges only for bounded, nonsemantic documentation/routing/mechanical retirement PRs after exact-head CI is green.
+Retirement controller #29 temporarily permits automatic squash merges only for bounded, nonsemantic documentation/routing/mechanical retirement PRs after exact-head CI is green. That exception ends when retirement is complete.
