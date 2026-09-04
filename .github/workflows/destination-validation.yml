@@ -78,6 +78,11 @@ jobs:
         env:
           COMPLIANCE_DEVELOPMENT_PROJECTS_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: bash scripts/validate-development-projects.sh
+      - name: Validate IAM private-source boundary
+        shell: bash
+        env:
+          COMPLIANCE_IAM_PRIVATE_BOUNDARY_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash scripts/validate-iam-private-boundary.sh
 
   verification-scenarios:
     name: verification-scenarios
