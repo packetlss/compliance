@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/evidence/linux-access-configuration-v1.schema.json",
+  "type": "object",
+  "required": ["schema", "id", "subject", "type", "collected_at", "collector", "payload", "integrity"],
+  "additionalProperties": true,
+  "properties": {
+    "schema": {"const": "compliance.example/evidence/v1"},
+    "id": {"type": "string", "minLength": 1},
+    "subject": {
+      "type": "object",
+      "required": ["id", "type"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "type": {"const": "linux-host"}
+      }
+    },
+    "type": {"const": "linux.access.configuration/v1"},
+    "collected_at": {"type": "string", "format": "date-time"},
+    "collector": {
+      "type": "object",
+      "required": ["id", "version"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1}
+      }
+    },
+    "payload": {
+      "type": "object",
+      "required": ["packages", "sssd", "ssh", "accounts"],
+      "additionalProperties": true,
+      "properties": {
+        "packages": {
+          "type": "object",
+          "required": ["sssd_installed"],
+          "additionalProperties": true,
+          "properties": {"sssd_installed": {"type": ["boolean", "null"]}}
+        },
+        "sssd": {
+          "type": "object",
+          "required": ["domain"],
+          "additionalProperties": true,
+          "properties": {"domain": {"type": ["string", "null"]}}
+        },
+        "ssh": {
+          "type": "object",
+          "required": ["allowed_groups"],
+          "additionalProperties": true,
+          "properties": {
+            "allowed_groups": {
+              "oneOf": [
+                {"type": "null"},
+                {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+              ]
+            }
+          }
+        },
+        "accounts": {
+          "type": "object",
+          "required": ["unmanaged_interactive_accounts"],
+          "additionalProperties": true,
+          "properties": {
+            "unmanaged_interactive_accounts": {
+              "oneOf": [
+                {"type": "null"},
+                {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+              ]
+            }
+          }
+        }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "required": ["digest"],
+      "additionalProperties": true,
+      "properties": {"digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}}
+    }
+  }
+}

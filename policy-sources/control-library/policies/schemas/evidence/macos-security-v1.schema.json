@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/evidence/macos-security-v1.schema.json",
+  "type": "object",
+  "required": ["schema", "id", "subject", "type", "collected_at", "collector", "payload", "integrity"],
+  "additionalProperties": true,
+  "properties": {
+    "schema": {"const": "compliance.example/evidence/v1"},
+    "id": {"type": "string", "minLength": 1},
+    "subject": {
+      "type": "object",
+      "required": ["id", "type"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "type": {"const": "macos-workstation"}
+      }
+    },
+    "type": {"const": "macos.security/v1"},
+    "collected_at": {"type": "string", "format": "date-time"},
+    "collector": {
+      "type": "object",
+      "required": ["id", "version"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1}
+      }
+    },
+    "payload": {
+      "type": "object",
+      "required": ["gatekeeper", "sip"],
+      "additionalProperties": true,
+      "properties": {
+        "gatekeeper": {"$ref": "#/$defs/setting"},
+        "sip": {"$ref": "#/$defs/setting"}
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "required": ["digest"],
+      "additionalProperties": true,
+      "properties": {
+        "digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+      }
+    }
+  },
+  "$defs": {
+    "setting": {
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": true,
+      "properties": {
+        "status": {"type": "string", "enum": ["enabled", "disabled", "unknown"]},
+        "raw": {"type": "string"}
+      }
+    }
+  }
+}

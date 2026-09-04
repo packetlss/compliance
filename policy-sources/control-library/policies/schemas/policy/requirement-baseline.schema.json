@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/policy/requirement-baseline-v1alpha1.schema.json",
+  "title": "Compliance requirement baseline",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {"const": "compliance.example/v1alpha1"},
+    "kind": {"const": "RequirementBaseline"},
+    "metadata": {
+      "type": "object",
+      "required": ["id", "revision"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "revision": {"$ref": "#/$defs/revision"},
+        "origin": {
+          "type": "object",
+          "required": ["type", "name"],
+          "additionalProperties": true,
+          "properties": {
+            "type": {"type": "string", "minLength": 1},
+            "name": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "required": ["requirements"],
+      "additionalProperties": false,
+      "properties": {
+        "requirements": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/requirementPin"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "revision": {
+      "oneOf": [
+        {"type": "integer", "minimum": 1},
+        {"type": "string", "minLength": 1}
+      ]
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "requirementPin": {
+      "type": "object",
+      "required": ["requirement", "digest", "required"],
+      "additionalProperties": false,
+      "properties": {
+        "requirement": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^.+@.+$"
+        },
+        "digest": {"$ref": "#/$defs/digest"},
+        "required": {"const": true}
+      }
+    }
+  }
+}

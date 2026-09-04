@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/policy/control-realization-v1alpha1.schema.json",
+  "title": "Environment-specific realization of a control requirement",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {"const": "compliance.example/v1alpha1"},
+    "kind": {"const": "ControlRealization"},
+    "metadata": {
+      "type": "object",
+      "required": ["id", "revision", "classification"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "revision": {"$ref": "#/$defs/revision"},
+        "classification": {
+          "type": "string",
+          "enum": ["internal", "confidential", "restricted"]
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "required": ["requirement", "applies_to", "adoption"],
+      "additionalProperties": false,
+      "properties": {
+        "requirement": {"$ref": "#/$defs/requirementPin"},
+        "based_on": {"$ref": "#/$defs/realizationPin"},
+        "applies_to": {
+          "type": "object",
+          "required": ["subject_types"],
+          "additionalProperties": false,
+          "properties": {
+            "subject_types": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            },
+            "match_labels": {
+              "type": "object",
+              "minProperties": 1,
+              "propertyNames": {"type": "string", "minLength": 1},
+              "additionalProperties": {"type": "string"}
+            }
+          }
+        },
+        "adoption": {"$ref": "#/$defs/adoption"},
+        "checks": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/controlInstance"}
+        },
+        "satisfaction": {
+          "type": "object",
+          "required": ["allOf"],
+          "additionalProperties": false,
+          "properties": {
+            "allOf": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"$ref": "#/$defs/identifier"}
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "adoption": {
+                "properties": {"status": {"const": "implemented"}},
+                "required": ["status"]
+              }
+            }
+          },
+          "then": {"required": ["checks", "satisfaction"]},
+          "else": {
+            "properties": {
+              "checks": {"maxItems": 0}
+            },
+            "not": {"required": ["satisfaction"]}
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "revision": {
+      "oneOf": [
+        {"type": "integer", "minimum": 1},
+        {"type": "string", "minLength": 1}
+      ]
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "requirementPin": {
+      "type": "object",
+      "required": ["requirement", "digest"],
+      "additionalProperties": false,
+      "properties": {
+        "requirement": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^.+@.+$"
+        },
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "realizationPin": {
+      "type": "object",
+      "required": ["realization", "digest"],
+      "additionalProperties": false,
+      "properties": {
+        "realization": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^.+@.+$"
+        },
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "adoption": {
+      "type": "object",
+      "required": ["status", "method", "owner"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["implemented", "not_implemented", "not_applicable"]
+        },
+        "method": {
+          "type": "string",
+          "enum": ["automated", "hybrid", "manual", "none"]
+        },
+        "owner": {"type": "string", "minLength": 1},
+        "implementation_ref": {"type": "string", "minLength": 1},
+        "determination": {
+          "type": "object",
+          "required": ["rationale", "approval_ref", "review_after"],
+          "additionalProperties": false,
+          "properties": {
+            "rationale": {"type": "string", "minLength": 1},
+            "approval_ref": {"type": "string", "minLength": 1},
+            "review_after": {"type": "string", "format": "date"}
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"status": {"const": "implemented"}},
+            "required": ["status"]
+          },
+          "then": {
+            "required": ["implementation_ref"],
+            "properties": {
+              "method": {"enum": ["automated", "hybrid", "manual"]}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {"status": {"const": "not_applicable"}},
+            "required": ["status"]
+          },
+          "then": {
+            "required": ["determination"],
+            "properties": {"method": {"const": "none"}}
+          }
+        },
+        {
+          "if": {
+            "properties": {"status": {"const": "not_implemented"}},
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {"method": {"const": "none"}}
+          }
+        }
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["info", "low", "medium", "high", "critical"]
+    },
+    "controlInstance": {
+      "type": "object",
+      "required": ["instance_id", "implementation"],
+      "additionalProperties": false,
+      "properties": {
+        "instance_id": {"$ref": "#/$defs/identifier"},
+        "implementation": {"$ref": "#/$defs/identifier"},
+        "parameters": {"type": "object", "additionalProperties": true},
+        "severity": {"$ref": "#/$defs/severity"},
+        "remediation": {"type": "string"}
+      }
+    }
+  }
+}

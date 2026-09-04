@@ -1,0 +1,24 @@
+{
+  "apiVersion": "compliance.example/v1",
+  "kind": "Control",
+  "metadata": {
+    "id": "linux.sysctl.required",
+    "version": 1
+  },
+  "spec": {
+    "entrypoint": "data.compliance.controls.linux.sysctl_required.evaluate",
+    "applies_to": ["linux-host"],
+    "evidence": [
+      {
+        "type": "linux.sysctl/v1",
+        "required": true,
+        "max_age": "24h"
+      }
+    ],
+    "parameters_schema": "parameters.schema.json",
+    "defaults": {
+      "severity": "high",
+      "remediation": "Set the required kernel parameters through the approved persistent sysctl configuration."
+    }
+  }
+}

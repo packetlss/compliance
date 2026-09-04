@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/policy/control-v1.schema.json",
+  "title": "Compliance control implementation manifest",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {"const": "compliance.example/v1"},
+    "kind": {"const": "Control"},
+    "metadata": {
+      "type": "object",
+      "required": ["id", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "version": {
+          "oneOf": [
+            {"type": "integer", "minimum": 1},
+            {"type": "string", "minLength": 1}
+          ]
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "required": ["entrypoint", "applies_to", "evidence", "parameters_schema"],
+      "additionalProperties": false,
+      "properties": {
+        "entrypoint": {
+          "type": "string",
+          "pattern": "^data(\\.[a-zA-Z_][a-zA-Z0-9_]*)+$"
+        },
+        "applies_to": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "evidence": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/evidenceRequirement"}
+        },
+        "parameters_schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "defaults": {"$ref": "#/$defs/defaults"}
+      }
+    }
+  },
+  "$defs": {
+    "severity": {
+      "type": "string",
+      "enum": ["info", "low", "medium", "high", "critical"]
+    },
+    "evidenceRequirement": {
+      "type": "object",
+      "required": ["type", "required", "max_age"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {"type": "string", "minLength": 1},
+        "required": {"type": "boolean"},
+        "max_age": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[smhd]$"
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "severity": {"$ref": "#/$defs/severity"},
+        "remediation": {"type": "string"}
+      }
+    }
+  }
+}

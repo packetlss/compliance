@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["section", "setting", "expected"],
+  "additionalProperties": false,
+  "properties": {
+    "section": {"type": "string", "minLength": 1},
+    "setting": {"type": "string", "minLength": 1},
+    "expected": {
+      "oneOf": [
+        {"type": "boolean"},
+        {"type": "string"},
+        {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      ]
+    }
+  }
+}

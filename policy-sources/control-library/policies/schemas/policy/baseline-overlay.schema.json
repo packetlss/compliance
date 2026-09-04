@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/policy/baseline-overlay-v1.schema.json",
+  "title": "Compliance baseline overlay",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {"const": "compliance.example/v1"},
+    "kind": {"const": "BaselineOverlay"},
+    "metadata": {"$ref": "#/$defs/metadata"},
+    "spec": {
+      "type": "object",
+      "required": ["extends", "operations"],
+      "additionalProperties": false,
+      "properties": {
+        "extends": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/parentPin"}
+        },
+        "operations": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/operation"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "revision": {
+      "oneOf": [
+        {"type": "integer", "minimum": 1},
+        {"type": "string", "minLength": 1}
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["id", "revision"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "revision": {"$ref": "#/$defs/revision"}
+      }
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "parentPin": {
+      "type": "object",
+      "required": ["baseline", "digest"],
+      "additionalProperties": false,
+      "properties": {
+        "baseline": {"type": "string", "minLength": 3, "pattern": "^.+@.+$"},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["info", "low", "medium", "high", "critical"]
+    },
+    "externalRefs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "controlInstance": {
+      "type": "object",
+      "required": ["instance_id", "implementation"],
+      "additionalProperties": false,
+      "properties": {
+        "instance_id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "implementation": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "parameters": {"type": "object", "additionalProperties": true},
+        "severity": {"$ref": "#/$defs/severity"},
+        "remediation": {"type": "string"},
+        "external_refs": {"$ref": "#/$defs/externalRefs"}
+      }
+    },
+    "deviation": {
+      "type": "object",
+      "required": ["id", "classification", "rationale", "approval_ref", "review_after"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "classification": {"type": "string", "minLength": 1},
+        "rationale": {"type": "string", "minLength": 1},
+        "approval_ref": {"type": "string", "minLength": 1},
+        "review_after": {"type": "string", "format": "date"}
+      }
+    },
+    "target": {"type": "string", "minLength": 1},
+    "tailorOperation": {
+      "type": "object",
+      "required": ["op", "target", "expected_parent_fingerprint", "parameters", "deviation"],
+      "additionalProperties": false,
+      "properties": {
+        "op": {"const": "tailor"},
+        "target": {"$ref": "#/$defs/target"},
+        "expected_parent_fingerprint": {"$ref": "#/$defs/digest"},
+        "parameters": {"type": "object", "additionalProperties": true},
+        "deviation": {"$ref": "#/$defs/deviation"}
+      }
+    },
+    "excludeOperation": {
+      "type": "object",
+      "required": ["op", "target", "expected_parent_fingerprint", "deviation"],
+      "additionalProperties": false,
+      "properties": {
+        "op": {"const": "exclude"},
+        "target": {"$ref": "#/$defs/target"},
+        "expected_parent_fingerprint": {"$ref": "#/$defs/digest"},
+        "deviation": {"$ref": "#/$defs/deviation"}
+      }
+    },
+    "substituteOperation": {
+      "type": "object",
+      "required": ["op", "target", "expected_parent_fingerprint", "implementation", "equivalence_ref"],
+      "additionalProperties": false,
+      "properties": {
+        "op": {"const": "substitute"},
+        "target": {"$ref": "#/$defs/target"},
+        "expected_parent_fingerprint": {"$ref": "#/$defs/digest"},
+        "implementation": {"type": "string", "minLength": 1},
+        "parameters": {"type": "object", "additionalProperties": true},
+        "equivalence_ref": {"type": "string", "minLength": 1}
+      }
+    },
+    "annotateOperation": {
+      "type": "object",
+      "required": ["op", "target", "expected_parent_fingerprint", "annotations"],
+      "additionalProperties": false,
+      "properties": {
+        "op": {"const": "annotate"},
+        "target": {"$ref": "#/$defs/target"},
+        "expected_parent_fingerprint": {"$ref": "#/$defs/digest"},
+        "annotations": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "severity": {"$ref": "#/$defs/severity"},
+            "remediation": {"type": "string"},
+            "external_refs": {"$ref": "#/$defs/externalRefs"}
+          }
+        }
+      }
+    },
+    "addOperation": {
+      "type": "object",
+      "required": ["op", "control"],
+      "additionalProperties": false,
+      "properties": {
+        "op": {"const": "add"},
+        "control": {"$ref": "#/$defs/controlInstance"}
+      }
+    },
+    "sealOperation": {
+      "type": "object",
+      "required": ["op", "target", "expected_parent_fingerprint", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "op": {"const": "seal"},
+        "target": {"$ref": "#/$defs/target"},
+        "expected_parent_fingerprint": {"$ref": "#/$defs/digest"},
+        "blocked_operations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["tailor", "exclude", "substitute", "annotate"]
+          }
+        },
+        "reason": {"type": "string", "minLength": 1}
+      }
+    },
+    "operation": {
+      "type": "object",
+      "required": ["op"],
+      "properties": {
+        "op": {
+          "type": "string",
+          "enum": ["tailor", "exclude", "substitute", "annotate", "add", "seal"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"op": {"const": "tailor"}}, "required": ["op"]},
+          "then": {"$ref": "#/$defs/tailorOperation"}
+        },
+        {
+          "if": {"properties": {"op": {"const": "exclude"}}, "required": ["op"]},
+          "then": {"$ref": "#/$defs/excludeOperation"}
+        },
+        {
+          "if": {"properties": {"op": {"const": "substitute"}}, "required": ["op"]},
+          "then": {"$ref": "#/$defs/substituteOperation"}
+        },
+        {
+          "if": {"properties": {"op": {"const": "annotate"}}, "required": ["op"]},
+          "then": {"$ref": "#/$defs/annotateOperation"}
+        },
+        {
+          "if": {"properties": {"op": {"const": "add"}}, "required": ["op"]},
+          "then": {"$ref": "#/$defs/addOperation"}
+        },
+        {
+          "if": {"properties": {"op": {"const": "seal"}}, "required": ["op"]},
+          "then": {"$ref": "#/$defs/sealOperation"}
+        }
+      ]
+    }
+  }
+}

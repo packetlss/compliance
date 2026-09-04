@@ -1,0 +1,15 @@
+{
+  "apiVersion": "compliance.example/v1",
+  "kind": "Control",
+  "metadata": {"id": "aws.account.number_at_least", "version": 1},
+  "spec": {
+    "entrypoint": "data.compliance.controls.aws.account_number_at_least.evaluate",
+    "applies_to": ["aws-account"],
+    "evidence": [{"type": "aws.account.configuration/v1", "required": true, "max_age": "24h"}],
+    "parameters_schema": "parameters.schema.json",
+    "defaults": {
+      "severity": "medium",
+      "remediation": "Raise the AWS account setting to the approved minimum."
+    }
+  }
+}

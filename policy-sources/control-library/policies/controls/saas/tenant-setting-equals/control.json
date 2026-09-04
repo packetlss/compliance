@@ -1,0 +1,15 @@
+{
+  "apiVersion": "compliance.example/v1",
+  "kind": "Control",
+  "metadata": {"id": "saas.tenant.setting_equals", "version": 1},
+  "spec": {
+    "entrypoint": "data.compliance.controls.saas.tenant_setting_equals.evaluate",
+    "applies_to": ["saas-tenant"],
+    "evidence": [{"type": "saas.tenant.configuration/v1", "required": true, "max_age": "24h"}],
+    "parameters_schema": "parameters.schema.json",
+    "defaults": {
+      "severity": "high",
+      "remediation": "Apply the approved SaaS tenant security configuration."
+    }
+  }
+}

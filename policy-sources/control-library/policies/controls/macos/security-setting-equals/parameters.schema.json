@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["setting", "expected"],
+  "additionalProperties": false,
+  "properties": {
+    "setting": {"type": "string", "enum": ["gatekeeper", "sip"]},
+    "expected": {"type": "string", "enum": ["enabled", "disabled"]}
+  }
+}

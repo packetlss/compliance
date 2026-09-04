@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/policy/baseline-v1.schema.json",
+  "title": "Compliance baseline",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {"const": "compliance.example/v1"},
+    "kind": {"const": "Baseline"},
+    "metadata": {"$ref": "#/$defs/metadata"},
+    "spec": {
+      "type": "object",
+      "required": ["controls"],
+      "additionalProperties": false,
+      "properties": {
+        "controls": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/controlInstance"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "revision": {
+      "oneOf": [
+        {"type": "integer", "minimum": 1},
+        {"type": "string", "minLength": 1}
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "version": {"$ref": "#/$defs/revision"},
+        "revision": {"$ref": "#/$defs/revision"},
+        "origin": {
+          "type": "object",
+          "required": ["type", "name"],
+          "additionalProperties": true,
+          "properties": {
+            "type": {"type": "string", "minLength": 1},
+            "name": {"type": "string", "minLength": 1}
+          }
+        }
+      },
+      "oneOf": [
+        {"required": ["version"], "not": {"required": ["revision"]}},
+        {"required": ["revision"], "not": {"required": ["version"]}}
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["info", "low", "medium", "high", "critical"]
+    },
+    "externalRefs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "controlInstance": {
+      "type": "object",
+      "required": ["instance_id", "implementation"],
+      "additionalProperties": false,
+      "properties": {
+        "instance_id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "implementation": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "parameters": {"type": "object", "additionalProperties": true},
+        "severity": {"$ref": "#/$defs/severity"},
+        "remediation": {"type": "string"},
+        "external_refs": {"$ref": "#/$defs/externalRefs"}
+      }
+    }
+  }
+}
