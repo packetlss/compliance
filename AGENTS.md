@@ -43,11 +43,11 @@ classify/design
   -> fresh branch from current main
   -> focused implementation
   -> PR
-  -> required CI
+  -> CI on the reviewed revision
   -> review/re-review
   -> human squash merge
 ```
 
 Do not implement directly on `main` after bootstrap. Implementation-local questions may be resolved when they do not change semantics, architecture boundaries, public/cross-component contracts, release identity, trust boundaries, or issue scope. Architectural findings return to the design loop and must be recorded durably before implementation relies on them.
 
-Normal consolidated CI must eventually operate from this repository checkout without the old sibling-acquisition `compliance-ci` GitHub App credentials. Required checks and repository protection are established before authority cutover and must not be weakened for migration convenience.
+Normal consolidated CI must eventually operate from this repository checkout without the old sibling-acquisition `compliance-ci` GitHub App credentials. Stable CI evidence must be observed and reviewed before merge. GitHub branch protection, rulesets, required-status-check enforcement, and similar provider controls are optional operational hardening under amended ADR 0008 and are not authority-cutover prerequisites.
