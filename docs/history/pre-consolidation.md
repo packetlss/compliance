@@ -28,7 +28,7 @@ These Git revisions identify reviewed source snapshots used to plan migration. T
 | verification-only policy source | `packetlss-labs/compliance-verification-policy` | `18e2b91751c53f5e78fd73edb552b7a4c32c762c` | moved by `packetlss/compliance#10` / PR #14; `packetlss/compliance@33bbcf7b5ca71f83c46dae4ecd16ccc5a8840244` is authoritative for `verification-policy` |
 | ordinary development projects | `packetlss-labs/compliance-development-projects` | `fa0eb99dc472a041e57c38103913c81753b963ab` | moved by `packetlss/compliance#16` / PR #18; `packetlss/compliance@812b8162b04ac8d8f903e18831e4e4cfbaaf9274` is authoritative for ordinary development projects |
 | synthetic IAM/private-boundary proof | `packetlss-labs/compliance-project-iam-realization` | `9d75575989031e06484629ee6a68e90497c1f5d9` | moved by `packetlss/compliance#20` / PR #25; `packetlss/compliance@ba92703c576abf5a75fbbc7d980915fd20b84e3c` is authoritative for the synthetic IAM/private-boundary fixture |
-| canonical verification scenarios/integration | `packetlss-labs/compliance-verification-scenarios` | `92876dee8c081d6f51976391114c84dbdfd34f81` | moved by `packetlss/compliance#21`; authority cutover remains pending until the destination PR is merged and reconciled |
+| canonical verification scenarios/integration | `packetlss-labs/compliance-verification-scenarios` | `92876dee8c081d6f51976391114c84dbdfd34f81` | moved by `packetlss/compliance#21` / PR #28; `packetlss/compliance@05c9c0cdb78b6190577aadbc6ffe22c80617c95b` is authoritative for canonical verification scenarios/integration |
 
 ## Historical provenance rule
 
@@ -155,6 +155,6 @@ A pure enclosing-root relocation must preserve the applicable tooling or policy-
 - complete integration evidence: the canonical gate retains the fixed `2026-09-01T00:00:00Z` instant, explicit standard/container/conflict assertions, named policy-source provenance and external-adapter handoff checks, and the tooling-owned completeness requirement for all 20 public CLI leaves and 18 domain features
 - CI acquisition transition: the stable `verification-scenarios` context runs the real destination-local gate; normal active workflows and validation scripts contain no sibling App credentials, PAT fallback, historical component clone, or explicit sibling checkout path
 - installed/release ownership: `installed-release-provenance` remains the tooling installed/release lane; complete feature execution remains outside `component-validation`
-- destination authority commit: pending merge and authority reconciliation
-- current authority during review: the historical scenario repository remains canonical until the destination migration PR is merged and cutover is recorded
-- historical source location after cutover: `packetlss-labs/compliance-verification-scenarios`; its Git history, issues, pull requests, and prior canonical-integration evidence remain pre-consolidation provenance
+- destination authority commit: `05c9c0cdb78b6190577aadbc6ffe22c80617c95b`
+- current canonical scenario authority: `packetlss/compliance` under `verification/scenarios/`
+- historical source location after cutover: `packetlss-labs/compliance-verification-scenarios`; its Git history, issues, pull requests, and prior canonical-integration evidence remain pre-consolidation provenance and it is no longer the active canonical integration authority
