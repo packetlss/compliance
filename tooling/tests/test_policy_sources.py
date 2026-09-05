@@ -51,7 +51,7 @@ class PolicySourceIdentityTests(unittest.TestCase):
             self.assertEqual(len(digests), 1)
             self.assertNotEqual(
                 digests.pop(),
-                "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991115fba0f1dd8e4",
+                "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             )
 
     def test_all_included_tree_changes_affect_identity_in_every_location(self) -> None:
