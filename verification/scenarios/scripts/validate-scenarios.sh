@@ -173,6 +173,9 @@ printf '\n== Machine-readable scenario assertions ==\n'
 tooling_run python "$SCENARIOS_ROOT/scripts/assert-linux-hardening-rollout.py" \
   --scenario-root "$PROJECT_ROOT" \
   --run-root "$RUN_ROOT"
+tooling_run python "$SCENARIOS_ROOT/scripts/assert-v4-composition.py" \
+  --scenario-root "$PROJECT_ROOT" \
+  --run-root "$RUN_ROOT"
 
 printf '\n== Feature ownership/completeness integration ==\n'
 tooling_run python "$TOOLING_ROOT"/examples/verify_examples.py --output "$RUN_ROOT/features"
