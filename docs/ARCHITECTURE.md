@@ -298,7 +298,7 @@ Normal validation uses one repository checkout. It does not use migration-era si
 
 Historical `packetlss-labs` component repositories and `compliance-workspace` preserve prior commits, issues, PRs, tags, Releases, assets, architecture, and migration evidence. They are retirement/provenance surfaces, not runtime identity or future implementation authority.
 
-Repository retirement and archival are complete. Active ADR 0007 implementation is routed to #31–#36; detailed assurance design to #37; dormant product-DNA review to #38.
+Repository retirement and archival are complete. ADR 0007 foundation/cutover issues #31–#36 are completed history. Active assurance architecture and post-#73 coordinated migration planning remain with #37; #73 owns only ADR 0012 implementation. Dormant product-DNA review remains with #38.
 
 ## Compatibility/freeze model
 
