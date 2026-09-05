@@ -24,6 +24,17 @@ from tools.render_plan import (
 
 
 class AssessmentArtifactValidationTests(unittest.TestCase):
+    def test_matching_freshness_copies_cannot_bypass_instance_fingerprint(self):
+        from tools.assessment_provenance import artifact_digest
+        plan = copy.deepcopy(self.plan)
+        control = next(c for c in plan['controls'] if not c['derivations'])
+        dependency = control['evidence'][0]
+        dependency['max_age'] = '999999999s'
+        control['policy_inputs']['instance']['evidence'][dependency['id']]['max_age'] = '999999999s'
+        plan['id'] = artifact_digest(plan)
+        with self.assertRaisesRegex(ArtifactValidationError, 'instance fingerprint mismatch'):
+            validate_assessment_plan(plan)
+
     def test_frozen_realization_cannot_lose_required_checks(self):
         from tools.assessment_provenance import artifact_digest
         plan = copy.deepcopy(self.iam_plan)

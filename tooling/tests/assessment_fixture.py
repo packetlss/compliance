@@ -20,6 +20,8 @@ def freeze_policy_inputs(plan):
                       'spec': {'entrypoint': control['entrypoint'],
                                'evidence': [{k: v for k, v in e.items() if k != 'max_age'} for e in control['evidence']]}}
         control['policy_inputs'] = {'instance': instance, 'definition': definition, 'parameters_schema': {'type': 'object'}}
+        from tools.render_plan import control_definition_fingerprint
+        control['definition_fingerprint'] = pp.digest(instance) if control['alignment'] == 'realization' else control_definition_fingerprint(instance)
     if not plan['resolved_baselines'] and not plan['resolved_requirement_baselines']:
         for assignment in plan['assignments']:
             for reference in assignment['baselines']:

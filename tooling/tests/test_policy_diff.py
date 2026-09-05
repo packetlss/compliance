@@ -21,6 +21,7 @@ from tools.policy_diff import (
 )
 from tools.project_config import load_config
 from tools.render_plan import (
+    control_definition_fingerprint,
     load_inventory_inputs,
     render_plan,
 )
@@ -121,7 +122,7 @@ class PolicyDiffTests(unittest.TestCase):
         )
         control["parameters"] = {"required": ["shellcheck", "shfmt"]}
         control["policy_inputs"]["instance"]["parameters"] = copy.deepcopy(control["parameters"])
-        control["definition_fingerprint"] = "sha256:" + "0" * 64
+        control["definition_fingerprint"] = control_definition_fingerprint(control["policy_inputs"]["instance"])
         self.resign(after)
 
         document = build_policy_diff(self.macos_plan, after)

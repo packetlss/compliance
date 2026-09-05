@@ -291,6 +291,9 @@ def validate_frozen(plan):
         definition['_parameters_schema'] = facts['parameters_schema']
         definition['_implementation_modules'] = facts.get('implementation_modules', [])
         instance = facts['instance']
+        from .render_plan import control_definition_fingerprint
+        instance_fingerprint = digest(instance) if control['alignment'] == 'realization' else control_definition_fingerprint(instance)
+        require(instance_fingerprint == control['definition_fingerprint'], 'frozen policy instance fingerprint mismatch')
         require(definition['metadata']['id'] == control['implementation'], 'frozen implementation definition identity mismatch')
         require(instance['instance_id'] == control['instance_id'] and instance['implementation'] == control['implementation'],
                 'frozen technical input identity mismatch')

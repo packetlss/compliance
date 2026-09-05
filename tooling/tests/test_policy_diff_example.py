@@ -13,7 +13,7 @@ from tools.artifact_validation import validate_assessment_plan
 from tools.policy_diff import load_policy_plan_set
 from tools.policy_diff import build_policy_diff_set
 from tools.project_config import load_config
-from tools.render_plan import load_inventory_inputs, render_plan
+from tools.render_plan import load_inventory_inputs, render_plan, control_definition_fingerprint
 
 
 class PolicyDiffExampleTests(unittest.TestCase):
@@ -32,6 +32,7 @@ class PolicyDiffExampleTests(unittest.TestCase):
         )
 
         base["controls"][0]["policy_inputs"]["instance"]["instance_id"] = base["controls"][0]["instance_id"]
+        base["controls"][0]["definition_fingerprint"] = control_definition_fingerprint(base["controls"][0]["policy_inputs"]["instance"])
 
         def sample(_project, subject_id):
             plan = copy.deepcopy(base)
