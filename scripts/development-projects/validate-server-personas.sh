@@ -66,6 +66,9 @@ printf '\n== Server-personas runtime assertions ==\n'
 tooling_run python "$SOURCE_ROOT/scripts/development-projects/assert-server-personas.py" \
   --run-root "$RUN_ROOT"
 
+tooling_run python "$SOURCE_ROOT/scripts/development-projects/assert-provenance.py" \
+  --assembly-root "$ASSEMBLY_ROOT" --run-root "$RUN_ROOT" --project "$PROJECT"
+
 finish_validation
 cleanup
 [[ ! -e "$RUN_ROOT" ]] || fail "temporary generated outputs were not removed"

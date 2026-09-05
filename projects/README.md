@@ -19,7 +19,8 @@ project migrations. The ordinary project source moved here from
 ## Boundaries
 
 - `projects/<id>/` roots never merge state or catalogs for convenience.
-- Reusable controls and schemas remain in `policy-sources/control-library`.
+- Reusable controls and evidence/parameter schemas remain in `policy-sources/control-library`.
+- Project, inventory, assignment, and assessment artifact schemas belong to executing tooling.
 - Synthetic verification policy remains in `policy-sources/verification-policy`.
 - Canonical scenarios and the IAM/private-boundary fixture are not part of this root.
 - Generated evidence, plans, results, external-adapter outputs, credentials, and execution state are not source-controlled.
@@ -42,3 +43,10 @@ removes generated output. It does not fetch or pin historical repositories.
 
 The complete registered feature suite remains owned by the canonical
 verification-scenarios migration stage and is not invoked by this focused gate.
+
+Both projects use `project-config/v1alpha3` and emit assessment plans/results v4.
+Unlocked source/editable execution records actual tooling and independently named
+policy-source digests at planning and evaluation, plus evaluator and subject-scoped
+evidence provenance. The focused gate verifies these identities against materialized
+inputs and checks ADR 0011 successful-selection facts against the assessed plan
+and collected documents. It does not derive query-time timeliness.

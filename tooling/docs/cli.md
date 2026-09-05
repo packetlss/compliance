@@ -128,7 +128,7 @@ assessment. External output is neither proof of execution nor compliance
 evidence and must reference its source assessment plan when it records
 provenance.
 
-`policy diff` compares two stored `assessment-plan/v1` artifacts for the same
+`policy diff` compares two stored assessment plans (v4, or predecessor v1) for the same
 subject. Both inputs are validated against the strict schema, content digest,
 coverage counts, and cross-field invariants before comparison. The command
 does not load or re-resolve the current policy catalog, so its explanation is
@@ -167,7 +167,7 @@ change.
 
 `policy diff-set` applies that same stored-plan comparison to two release
 snapshot directories. It recursively loads every `*.json` file, requires each
-file to be a valid `assessment-plan/v1` artifact, rejects empty sets and
+file to be a valid v4 or predecessor v1 assessment plan, rejects empty sets and
 duplicate subject identities, and matches plans by stable subject ID. It never
 loads a policy catalog or combines project catalogs. Operators should therefore
 pass one project-scoped plan snapshot on each side.
