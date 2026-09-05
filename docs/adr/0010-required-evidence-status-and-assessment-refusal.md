@@ -2,7 +2,7 @@
 
 - **Status:** Accepted design, not yet implemented
 - **Date:** 2026-09-05
-- **Promotion contract:** [#61](https://github.com/packetlss/compliance/issues/61)
+- **Promotion contracts:** [#61](https://github.com/packetlss/compliance/issues/61) (invalid evidence), [#62](https://github.com/packetlss/compliance/issues/62) (evidence selection ambiguity)
 - **Runtime implementation:** [#32](https://github.com/packetlss/compliance/issues/32), after [#31](https://github.com/packetlss/compliance/issues/31)
 
 ## Context and authority
@@ -19,10 +19,16 @@ Those statements left conflicting authority for invalid required evidence.
 This ADR chooses **alternative A**: promote one common system-level evidence
 validity/status/refusal boundary and explicitly reconcile #32. It clarifies
 ADRs 0006 and 0007 and owns the normative definitions and evidence-condition
-matrix below. It supersedes only the tooling decision's schema-invalid-evidence
+matrix below. It supersedes the tooling decision's schema-invalid-evidence
 → `error` classification, retaining the historical decision and rationale.
 Preserving that classification or deferring this common boundary to #37 would
 leave the accepted invalid-evidence constraint unresolved.
+
+#62 extends this ADR with evidence selection ambiguity: deterministic ordering
+does not establish legitimate authority among distinct equally latest eligible
+documents. The predecessor traversal-order selection behavior is superseded as
+normative authority. Complete-document differences do not by themselves imply
+that observations contradict each other.
 
 This promotion changes architecture and implementation contracts only. Current
 runtime behavior and tests are unchanged until #32 implements the correction.
@@ -56,9 +62,15 @@ an envelope containing otherwise attributable children.
 | Condition | Required outcome |
 | --- | --- |
 | Required evidence absent from a valid snapshot | `unknown` |
-| Required evidence schema-valid but stale | `unknown` |
+| All matching candidates schema-valid but stale | Existing stale `unknown` |
+| Unique latest valid/fresh eligible candidate | Select that document |
+| Multiple canonical-identical latest eligible candidates | Coalesce for selection only; preserve complete snapshot provenance |
+| Multiple distinct equally latest valid/fresh eligible candidates | Evidence selection ambiguity: dependent controls `unknown`; select none and do not invoke their OPA criteria |
+| Same payload but different IDs, collector metadata, or extensions at the latest eligible instant | Distinct complete documents: dependent controls `unknown`; no OPA |
+| Same ID but different complete-document digests at the latest eligible instant | Distinct documents: dependent controls `unknown`; no OPA |
+| Older tied candidates plus a unique newer valid/fresh eligible candidate | Select the newer document |
 | Matching evidence has valid routing/identity but fails applicable schema validation | `unknown`; never supply invalid evidence to OPA |
-| Valid and invalid matching candidates coexist | Controls requiring that type are `unknown` |
+| Valid and schema-invalid matching candidates coexist, regardless of timestamps | Existing invalid-evidence `unknown` for controls requiring that type; no OPA; validation precedes tie selection |
 | One required evidence type is invalid among several required types | Affected controls are `unknown` |
 | Valid, fresh evidence is insufficient or inconclusive | `unknown` |
 | Identified OPA execution failure | Attributable `error` if trusted orchestration can construct a valid result |
@@ -100,6 +112,43 @@ supersession requires a separately accepted authority/selection contract.
 Unrelated, explicitly routed subjects are outside a control's matching scope;
 unused types remain subject to the snapshot/provenance obligations below.
 
+### Evidence selection ambiguity and sequencing
+
+Selection is scoped to the subject, required evidence type, and applicable
+eligibility/freshness requirements. Controls depending on that type under those
+requirements share the selection outcome; controls with independent successful
+required-evidence selections remain assessable. Existing freshness eligibility
+semantics and the assessment/evaluation instant are unchanged.
+
+The normative order is:
+
+1. Establish the shared prerequisites above.
+2. Route evidence by explicit subject and type.
+3. Validate every matching candidate against the applicable schema. Any invalid
+   matching candidate makes dependent controls `unknown`, regardless of timestamps;
+   do not continue to selection for that matching set.
+4. Determine eligibility/freshness using the existing requirements.
+5. Identify the greatest eligible collection instant. Absence or all-stale evidence
+   retains its existing `unknown` outcome.
+6. Compare candidates tied at that instant as complete canonical JSON documents
+   under the existing evidence-document identity contract. Coalesce only
+   canonical-identical duplicates, for selection only.
+7. Select the unique remaining document. If more than one distinct document
+   remains, select none and synthesize attributable, provenance-bound `unknown`
+   for every dependent control: this is **evidence selection ambiguity**.
+8. Invoke OPA only for controls whose required evidence selections all succeeded.
+
+For ambiguity, do not fall back to an older candidate, combine/merge payloads,
+or choose by filename, traversal order, evidence ID, digest, collector identity,
+source order, or other undeclared precedence. Evidence ID/digest may order
+representation and diagnostics, never establish selection authority. Complete
+canonical-document comparison includes IDs, collector metadata, extension
+fields, and the rest of the document, not just payload or collector identity.
+
+This per-control `unknown` is distinct from assessment-wide refusal. Unsafe
+routing, attribution, snapshot identity, shared prerequisites, or result-envelope
+integrity still require assessment-wide refusal under the matrix above.
+
 ### Preserve evidence provenance
 
 Schema-invalid content can still be content-addressable and attributable.
@@ -108,11 +157,14 @@ Preserve the existing `evidence-document-digest/v1alpha1` and
 JSON digests and the existing sorted ID/digest set projection described in the
 [tooling provenance contract](../../tooling/docs/artifact-provenance.md).
 Do not add or change an evidence identity algorithm or infer identity from paths.
+The evidence envelope and collector identity semantics are unchanged.
 
 When a rejected document remains validly identified and routed, retain it in the
 subject evidence snapshot. Bind its validation diagnostics to its evidence ID
 and digest. Digest the same snapshot actually considered by evaluation, including
-rejected documents, rather than a filtered set of successfully selected inputs.
+rejected, nonselected, and ambiguous documents, rather than a filtered set of
+successfully selected inputs. Selection-only duplicate coalescing must not reduce
+the complete snapshotted provenance or change existing set normalization.
 Preserve existing provenance obligations for current-subject unused evidence
 types, even though those types are outside an individual control's validation
 scope. If the existing contract cannot represent or verify that snapshot, refuse;
@@ -146,6 +198,26 @@ Required evidence was rejected as invalid; criterion not determined.
 Validation failure must remain distinguishable from absence through these
 structured observations and explanations, without requiring a different status.
 
+For evidence selection ambiguity, provide structured diagnostics containing at
+least:
+
+- stable ambiguity code `evidence_selection_ambiguity`;
+- subject and required evidence type;
+- applicable schema reference in the trusted composition;
+- applicable freshness requirement;
+- assessment/evaluation instant;
+- tied selection (collection) instant; and
+- tied candidate evidence ID + complete-document digest pairs.
+
+Order ambiguity diagnostics by semantic references (subject, type, schema,
+requirements, instants, code), with candidate pairs ordered by ID and digest.
+Optional filesystem locations are nonsemantic diagnostics only. Expose the
+ambiguity and candidate references in both JSON and human explanations with a
+location-independent reason, for example “Required evidence selection is
+ambiguous; criterion not determined.” Do not describe candidates as contradictory
+merely because complete documents differ. Diagnostic ordering must not become
+selection precedence.
+
 ### Logical roll-up and waivers
 
 Preserve the existing logical required-child precedence:
@@ -159,14 +231,14 @@ else                     -> pass
 ```
 
 Reporting/presentation priority is not logical roll-up precedence. Only an
-underlying `fail` may become `waived`. Invalid-evidence `unknown` and execution
-`error` remain unwaivable. This does not redesign existing N/A handling,
+underlying `fail` may become `waived`. Invalid-evidence and selection-ambiguity
+`unknown` and execution `error` remain unwaivable. This does not redesign existing N/A handling,
 applicability, or broader assurance semantics.
 
 ### CLI and operator semantics
 
-The eventual implementation must make invalid-evidence `unknown` operationally
-prominent and retain validation-failure diagnostics in human and JSON
+The eventual implementation must make invalid-evidence and selection-ambiguity `unknown`
+operationally prominent and retain their structured diagnostics in human and JSON
 explanations. Status counts move schema-invalid evidence from `error` to
 `unknown`. Successful artifact creation must not be presented as a passing
 assessment: persisted `unknown` or attributable `error` can represent a
@@ -177,10 +249,11 @@ implements none of these operator changes.
 
 ## Implementation ownership and non-goals
 
-[#32](https://github.com/packetlss/compliance/issues/32) explicitly accepts this
-semantic correction as the **sole exception** to “preserve current semantic
-payload” / “unchanged domain behavior.” Its implementation must satisfy this
-matrix, validation-before-selection, OPA exclusion, existing evidence identity,
+[#32](https://github.com/packetlss/compliance/issues/32) explicitly accepts these
+schema-invalid-evidence and evidence-selection corrections as the **only
+exceptions** to “preserve current semantic payload” / “unchanged domain behavior.” Its implementation must satisfy this
+matrix, validation-before-selection, ambiguity detection before OPA, dependent-control
+`unknown` synthesis, OPA exclusion, existing evidence identity,
 deterministic provenance-bound diagnostics, logical roll-ups and fail-only
 waivers, without reinterpreting historical results. #32 remains blocked on #31.
 
@@ -195,17 +268,15 @@ determinations, mapping coverage, adoption/realization semantics, and broader
 assurance result design. This ADR resolves none of those matters. ADR 0009's
 vocabulary and generic independently named-source model remain unchanged.
 
-### Separate candidate-selection finding
+#62's accepted decision supersedes the earlier unresolved candidate-selection
+follow-up. #32 implements it alongside the schema-invalid-evidence correction;
+it must not stop on an unresolved #62. It must prove filename, traversal,
+materialization, and source-order independence, retaining semantic result
+identity invariance under those permutations. This adds no dependency to #31.
 
-The exploration found that equal collection timestamps can currently fall back
-to traversal order. [#62](https://github.com/packetlss/compliance/issues/62) owns
-the unresolved follow-up:
-
-> Evidence candidate selection must not become filename/traversal-order dependent
-> when equally eligible candidates can change assessment results.
-
-This ADR chooses no tie-break or supersession policy and does not solve that
-finding in #32 incidentally. The finding does not block #31.
+Collector authority/precedence, explicit supersession, payload merging or
+multi-observation control semantics, new freshness or current-status semantics,
+and #37 assurance semantics are outside this decision and #32's correction.
 
 ## Validation and escalation
 
@@ -218,5 +289,8 @@ provenance algorithms; a new result state or evidence identity algorithm is
 required; mixed valid/invalid behavior needs an authority/supersession model;
 current roll-ups cannot represent this decision; an external compatibility
 consumer/freeze exists; or implementation materially overlaps unresolved #37
-semantics. No runtime, test, release, historical-artifact, identity-algorithm,
+semantics. Also return to exploration if selection needs a new equivalence
+algorithm, collector precedence, explicit supersession, payload merging or
+multi-observation semantics, changed freshness eligibility, or a new artifact
+family. No runtime, test, release, historical-artifact, identity-algorithm,
 new artifact-family, adapter, or firewall change is authorized by this promotion.
