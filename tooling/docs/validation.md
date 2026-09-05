@@ -43,7 +43,7 @@ Component coverage retains CLI parsing/discovery and explicit source overrides;
 inventory/DAG/lifecycle behavior; planner and overlay resolution; evaluator and
 unknown/refusal behavior; waiver lifecycle; assessment artifacts; exact source
 provenance and source-order invariance; identical-only coalescing and divergent
-resource/schema refusal; policy diffs; and JCS/digest/release-lock contracts.
+resource/schema refusal; policy diffs; and JCS/digest/composition-lock contracts.
 The example diff-set generator receives local synthetic plans in its focused
 test. Collector enumeration remains tooling-owned.
 No component test invokes the complete feature runner. A focused negative test
@@ -123,5 +123,5 @@ CLI for unlocked/direct/locked equivalence, explanations and refusal without
 replacement. The package gate repeats that CLI proof with the installed wheel,
 verified local receipt and Git/network unavailable via
 `scripts/check-installed-assessment.py`. Existing JCS, domain, roll-up, scenario
-and predecessor locked-artifact gates remain required by impact. No test derives
+and successor locked-artifact gates remain required by impact. No test derives
 query-time operational timeliness.

@@ -68,9 +68,9 @@ assessment-results/v4
 
 with provisional composition/lock/plan/result digest algorithms.
 
-These are **experimental**, implemented by #31/#32 but not yet fully cut over. Destination #34–#36 own consumer migration; #33 owns subsequent predecessor retirement.
+These are **experimental**, implemented by #31/#32 and used by all destination consumers after #34–#36. #33 retires predecessor support.
 
-Current `project-config/v1alpha1`, `project-config/v1alpha2`, `release-lock/v1alpha2`, assessment plan/results v1 and v3 remain **experimental migration inputs**, not frozen compatibility promises. Destination #33 removes their active readers only after successor consumer cutover.
+Predecessor `project-config/v1alpha1`, `project-config/v1alpha2`, `release-lock/v1alpha2`, assessment plan/results v1 and v3 are **Historical/removed** under #33. Current tooling rejects them; historical reproduction uses historical tooling.
 
 ## Historical outcome and operational timeliness
 
@@ -82,7 +82,7 @@ The predecessor status view still calls an exact-plan result `current`, a differ
 
 [ADR 0009](adr/0009-active-compliance-vocabulary.md), implementing #57's architecture decision, makes `control-library` the maintained reusable semantic source name. This intentional pre-freeze rename changes name-bearing composition/provenance identity without changing policy-tree bytes/content digest or the `compliance-control-library` distribution. Historical `shared-library` artifacts remain distinct; no alias is added.
 
-`composition-lock` is the sole forward complete expected-composition abstraction; `release-lock/v1alpha2` is temporary until #33. The `workspace-config` → `project-registry` rename is implemented in Tranche 2 with unchanged selection semantics and no retired-discriminator alias. Registry data remains nonsemantic to composition; tooling source bytes change existing tooling provenance. Neither vocabulary decision freezes a contract or changes technical control/assurance names pending #37.
+`composition-lock` is the sole forward complete expected-composition abstraction. The `workspace-config` → `project-registry` rename is implemented in Tranche 2 with unchanged selection semantics and no retired-discriminator alias. Registry data remains nonsemantic to composition; tooling source bytes change existing tooling provenance. Neither vocabulary decision freezes a contract or changes technical control/assurance names pending #37.
 
 ## Current maturity guidance
 
@@ -107,7 +107,7 @@ Current alpha requirement/realization terminology and detailed assurance evidenc
 
 ### Experimental generated/public views
 
-Machine-readable operator presentation objects, policy diff JSON shapes, and current pre-v4 assessment envelopes remain experimental unless separately frozen. Stable semantic exit behavior or invariants may be retained without freezing every JSON field.
+Machine-readable operator presentation objects, policy diff JSON shapes, and assessment views remain experimental unless separately frozen. Stable semantic exit behavior or invariants may be retained without freezing every JSON field.
 
 ### Historical/removed
 

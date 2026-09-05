@@ -46,8 +46,9 @@ filenames, absolute paths, parent traversal, and symbolic-link redirection are
 refused. No lock is implicitly selected by its presence. v1alpha3 refuses
 policy-source and inventory-schema runtime overrides, including argparse
 abbreviations, so CLI options cannot bypass configured expectations or schema
-ownership. `--no-config` continues to explicitly select predecessor no-config
-execution; it does not produce a successor artifact or successor provenance.
+ownership. `--no-config` explicitly selects supplied runtime inputs without project
+expectations. Planning and evaluation still require complete actual provenance
+and produce only v4 artifacts.
 
 ## Canonical identity
 
@@ -152,7 +153,7 @@ This is local installation integrity evidence, not signing, publisher
 attestation, or protection against replacement of the interpreter/trust root.
 No network, Git, acquisition resolver, or expected lock participates. A plain
 installation without this receipt cannot produce successor actual provenance.
-Existing predecessor installation/artifact semantics remain unchanged.
+Historical installations and artifacts require their historical tooling.
 
 ## Diagnostics and transition to #32
 
@@ -173,7 +174,6 @@ V1alpha3 planning and assessment now use the v4 artifact line implemented under
 actual composition/enforcement is observed before planning and again before
 evaluation; persisted-plan policy drift refuses evaluation. See the
 [v4 artifact contract](artifact-provenance.md#v4-provenance-and-semantic-identity).
-V1alpha3 never emits v1/v3 as a bridge. Existing v1alpha1/v1alpha2,
-release-lock/v1alpha2 and assessment v1/v3 workflows remain until consumer migration
-and #33 retirement. `release show/validate` retain their predecessor contract;
-they do not alias or interpret composition locks.
+Only successor configs, composition locks and v4 assessments are supported.
+Retired discriminators fail strict validation. `release show/validate` is removed;
+`composition show/validate` owns successor diagnostics.

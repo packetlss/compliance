@@ -108,7 +108,7 @@ from tools.policy_source_release import (
 )
 from tools.policy_sources import source_tree_digest
 from tools.release import tooling_release_identity
-from tools.release_lock import POLICY_SOURCE_DIGEST_ALGORITHM
+from tools.composition import POLICY_SOURCE_DIGEST_ALGORITHM
 from tools.tooling_source import TOOLING_SOURCE_DIGEST_ALGORITHM
 
 expected_digest, expected_opa = sys.argv[1:]
@@ -128,16 +128,14 @@ assert json_identity == identity.document(), (json_identity, identity.document()
 package_root = resources.files("tools")
 assert not package_root.joinpath("configuration.py").is_file()
 for relative in (
-    "schemas/assessment-plan.schema.json",
-    "schemas/assessment-plan-v3.schema.json",
-    "schemas/assessment-results.schema.json",
-    "schemas/assessment-results-v3.schema.json",
+    "schemas/assessment-plan-v4.schema.json",
+    "schemas/assessment-results-v4.schema.json",
+    "schemas/project-config-v1alpha3.schema.json",
+    "schemas/composition.schema.json",
+    "schemas/composition-lock-v1alpha1.schema.json",
     "schemas/policy-diff-set.schema.json",
     "schemas/policy-diff.schema.json",
     "schemas/policy-source-release-manifest.schema.json",
-    "schemas/project-config.schema.json",
-    "schemas/project-config-v1alpha2.schema.json",
-    "schemas/release-lock-v1alpha2.schema.json",
     "schemas/tooling-release-manifest-v2.schema.json",
     "schemas/project-registry.schema.json",
 ):
@@ -146,6 +144,14 @@ for relative in (
     json.loads(resource.read_text(encoding="utf-8"))
 
 for removed in (
+    "schemas/assessment-plan.schema.json",
+    "schemas/assessment-plan-v3.schema.json",
+    "schemas/assessment-results.schema.json",
+    "schemas/assessment-results-v3.schema.json",
+    "schemas/project-config.schema.json",
+    "schemas/project-config-v1alpha2.schema.json",
+    "schemas/release-lock-v1alpha2.schema.json",
+
     "schemas/workspace-config.schema.json",
     "schemas/configuration-explanation.schema.json",
     "schemas/configuration-explanation-v3.schema.json",
@@ -178,7 +184,7 @@ generic_release = normalize_policy_source_release({
     },
 })
 assert generic_release.distribution == "installed-package/arbitrary-source", generic_release
-assert generic_release.release_lock_policy_source() == {
+assert generic_release.semantic_document() == {
     "distribution": "installed-package/arbitrary-source",
     "version": "1.2.3",
     "content": {
@@ -283,7 +289,7 @@ mkdir -p \
   "$project/generated/evidence" "$project/generated/plans" "$project/generated/results"
 
 cat > "$project/compliance.yaml" <<'YAML'
-schema: compliance.example/project-config/v1alpha1
+schema: compliance.example/project-config/v1alpha3
 policySources:
   - name: local
     path: policy
@@ -294,7 +300,6 @@ paths:
   plan: generated/plans
   results: generated/results
   waivers: waivers
-  resourceSchema: schema-placeholder.json
 YAML
 cat > "$project/inventory/subject.yaml" <<'YAML'
 apiVersion: compliance.example/v1alpha1
@@ -393,110 +398,9 @@ else:
     raise AssertionError("retired registry discriminator was accepted")
 PY
 
-printf '\n== Locked content-addressed project from installed wheel ==\n'
-locked_project="$temporary/runtime/locked-project"
-mkdir -p \
-  "$locked_project/inventory" "$locked_project/assignments" "$locked_project/waivers" \
-  "$locked_project/materialized/shared/controls" "$locked_project/materialized/shared/schemas" \
-  "$locked_project/generated/evidence" "$locked_project/generated/plans" \
-  "$locked_project/generated/results"
-cp "$project/inventory/"*.yaml "$locked_project/inventory/"
-cp "$project/assignments/"*.yaml "$locked_project/assignments/"
-cp "$project/waivers/"*.yaml "$locked_project/waivers/"
-printf 'package compliance.result\n' > "$locked_project/materialized/shared/controls/result.rego"
-printf '%s\n' '{"type":"object"}' > "$locked_project/materialized/shared/schemas/example.json"
-
-policy_digest="$("$venv_python" - "$locked_project/materialized/shared" <<'PY'
-from pathlib import Path
-import sys
-from tools.policy_sources import source_tree_digest
-print(source_tree_digest(Path(sys.argv[1])))
-PY
-)"
-tooling_version="$("$venv_python" - <<'PY'
-from tools.release import tooling_release_identity
-print(tooling_release_identity().version)
-PY
-)"
-
-cat > "$locked_project/compliance.yaml" <<YAML
-schema: compliance.example/project-config/v1alpha2
-policySources:
-  - name: shared
-    path: materialized/shared
-    digest: $policy_digest
-paths:
-  inventory: inventory
-  assignments: assignments
-  evidence: generated/evidence
-  plan: generated/plans
-  results: generated/results
-  waivers: waivers
-YAML
-cat > "$locked_project/compliance.lock.yaml" <<YAML
-schema: compliance.example/release-lock/v1alpha2
-tooling:
-  distribution: compliance-tooling
-  version: $tooling_version
-  source:
-    digest: $source_digest
-    digestAlgorithm: compliance.example/tooling-source-tree-digest/v1alpha1
-  artifact:
-    kind: python-wheel
-    sha256: $wheel_sha
-policySources:
-  shared:
-    distribution: compliance-policy
-    version: 0.2.0
-    content:
-      digest: $policy_digest
-      digestAlgorithm: compliance.example/policy-source-tree-digest/v1alpha1
-YAML
-
-PATH="$runtime_path" "$venv_compliance" --config "$locked_project/compliance.yaml" release validate --format json > locked-release-validation.json
-PATH="$runtime_path" "$venv_compliance" --config "$locked_project/compliance.yaml" config validate
-PATH="$runtime_path" "$venv_compliance" --config "$locked_project/compliance.yaml" inventory validate
-
-"$venv_python" - locked-release-validation.json "$locked_project" "$policy_digest" "$source_digest" "$wheel_sha" <<'PY'
-from __future__ import annotations
-
-import json
-import sys
-from pathlib import Path
-
-report_path, project_path, policy_digest, source_digest, wheel_sha = sys.argv[1:]
-report = json.loads(Path(report_path).read_text(encoding="utf-8"))
-project = Path(project_path).resolve()
-assert report["schema"] == "compliance.example/release-validation/v1alpha2", report
-assert report["lock_schema"] == "compliance.example/release-lock/v1alpha2", report
-assert report["release_lock_digest_algorithm"] == "compliance.example/release-lock-digest/v1alpha1", report
-assert report["release_lock_digest"].startswith("sha256:"), report
-assert report["valid"] is True, report
-assert report["errors"] == [], report
-assert report["locked_tooling"]["source"]["digest"] == source_digest, report
-assert report["locked_tooling"]["artifact"]["sha256"] == wheel_sha, report
-assert report["installed_tooling"]["source_digest"] == source_digest, report
-assert report["policy_sources"] == [{
-    "actual_digest": policy_digest,
-    "configured_digest": policy_digest,
-    "locked": {
-        "content": {
-            "digest": policy_digest,
-            "digestAlgorithm": "compliance.example/policy-source-tree-digest/v1alpha1",
-        },
-        "distribution": "compliance-policy",
-        "version": "0.2.0",
-    },
-    "materialized_path": str(project / "materialized/shared"),
-    "name": "shared",
-    "valid": True,
-}], report
-assert not (project / ".git").exists()
-PY
-
 printf 'Standalone tooling package validation passed for Python %s.\n' \
   "$("$venv_python" -c 'import platform; print(platform.python_version())')"
 
-# Successor provenance is validated separately from predecessor artifact readers.
+# Prove actual installed composition and v4 assessment without Git.
 "$temporary/venv/bin/python" -I "$TOOLING_ROOT/scripts/check-installed-composition.py"
 PATH="$runtime_path" "$temporary/venv/bin/python" -I "$TOOLING_ROOT/scripts/check-installed-assessment.py"

@@ -16,13 +16,13 @@ A policy source is an independently named/materialized semantic input. Repositor
 
 Canonical runtime/generated-artifact provenance is content-addressed. Preserve the applicable tooling source/distribution identity, policy-source content digests, actual composition identity, evaluator executable identity, evidence snapshot identity, and artifact-specific semantic identities. Git metadata remains useful review/navigation provenance but is not required after runtime inputs are materialized.
 
-ADR 0007 accepts the successor line `project-config/v1alpha3`, `composition-lock/v1alpha1`, `assessment-provenance/v1alpha1`, and assessment plan/results v4. Its destination implementation packets are #31–#36. Current v1alpha1/v1alpha2/release-lock v1alpha2 and assessment v1/v3 contracts are unfrozen migration inputs until that cutover completes.
+ADR 0007 accepts the successor line `project-config/v1alpha3`, `composition-lock/v1alpha1`, `assessment-provenance/v1alpha1`, and assessment plan/results v4. Its destination implementation packets are #31–#36. Consumer cutover is complete; #33 retires the predecessor config, release-lock, and assessment readers. Historical artifacts require historical tooling.
 
 Actual composition provenance and expected enforcement are separate: every successor run records what actually executed; direct expected-source identities or a complete composition lock may additionally refuse mismatches. Expected identity never substitutes for missing actual identity.
 
 [ADR 0009](adr/0009-active-compliance-vocabulary.md) intentionally renames the maintained reusable semantic source from `shared-library` to `control-library`. The component path `policy-sources/control-library/`, semantic root `policy-sources/control-library/policies/`, and distribution `compliance-control-library` remain distinct namespaces; tooling receives source names explicitly. The name grants no precedence, trust, mandatory dependency, or reserved role. Policy-tree content identity is unchanged, while name-bearing composition/provenance identities change without a compatibility alias.
 
-ADR 0007 `composition-lock` is the sole forward complete expected-composition abstraction. `release-lock/v1alpha2` is only a temporary migration contract pending #33. The #57 `workspace-config` → `project-registry` cutover is implemented: the registry selects one project configuration by explicit name or default without composing policy or merging project state. Registry data/location and repository/workspace topology are nonsemantic; the retired discriminator is unsupported without an alias. The changed tooling source bytes affect only existing tooling provenance; technical control/assurance resource names remain unchanged pending #37.
+ADR 0007 `composition-lock` is the sole forward complete expected-composition abstraction. The #57 `workspace-config` → `project-registry` cutover is implemented: the registry selects one project configuration by explicit name or default without composing policy or merging project state. Registry data/location and repository/workspace topology are nonsemantic; the retired discriminator is unsupported without an alias. The changed tooling source bytes affect only existing tooling provenance; technical control/assurance resource names remain unchanged pending #37.
 
 ## Primary intended user jobs
 
@@ -83,7 +83,7 @@ Requirements are desired assurance objectives. Realizations are design-time mapp
 
 Detailed successor terminology, evidence authority, N/A semantics, mapping/result model, identity, and migration remain owned by destination #37.
 
-[ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns the common required-evidence `unknown`, attributable execution `error`, and assessment-wide refusal boundary. It clarifies ADRs 0006/0007; #32 implements its schema-invalid-evidence and evidence selection ambiguity corrections as the only semantic preservation exceptions after #31. These corrections are implemented in the v4 path; predecessor consumers remain pending migration. #31 is complete; broader assurance design remains with #37.
+[ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns the common required-evidence `unknown`, attributable execution `error`, and assessment-wide refusal boundary. It clarifies ADRs 0006/0007; #32 implements its schema-invalid-evidence and evidence selection ambiguity corrections as the only semantic preservation exceptions after #31. These corrections are implemented in the sole supported v4 path. #31 is complete; broader assurance design remains with #37.
 
 ## Historical assessment and operational interpretation
 

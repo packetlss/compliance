@@ -1,3 +1,4 @@
+from tools.assessment_provenance import artifact_digest
 import copy
 import io
 import json
@@ -20,7 +21,6 @@ from tools.policy_diff import (
 )
 from tools.project_config import load_config
 from tools.render_plan import (
-    content_digest,
     load_inventory_inputs,
     render_plan,
 )
@@ -69,7 +69,7 @@ class PolicyDiffTests(unittest.TestCase):
         cls.invalid_plan["resolution"] = {"status": "invalid", "errors": [{"type": "test-conflict"}]}
         cls.invalid_plan["coverage"].update(status="invalid", assessable=False, reason="resolution-errors")
         cls.invalid_plan.pop("id")
-        cls.invalid_plan["id"] = content_digest(cls.invalid_plan)
+        cls.invalid_plan["id"] = artifact_digest(cls.invalid_plan)
         cls.standard_plan = render_project_plan(
             "linux",
             "host/configuration-linux-01",
@@ -78,7 +78,7 @@ class PolicyDiffTests(unittest.TestCase):
     @staticmethod
     def resign(plan):
         plan.pop("id", None)
-        plan["id"] = content_digest(plan)
+        plan["id"] = artifact_digest(plan)
         validate_assessment_plan(plan)
         return plan
 

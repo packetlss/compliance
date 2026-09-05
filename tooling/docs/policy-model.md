@@ -443,11 +443,13 @@ The resolver must:
 ## 5. The rendered assessment plan
 
 The output of DAG and baseline resolution is an immutable **assessment plan**.
-This is the fully rendered policy that will be checked for one subject.
+This is the fully rendered policy that will be checked for one subject. The
+following payload excerpt omits required v4 `digestAlgorithm` and `provenance`;
+see [artifact provenance](artifact-provenance.md) for the complete envelope.
 
 ```json
 {
-  "schema": "compliance.example/assessment-plan/v1",
+  "schema": "compliance.example/assessment-plan/v4",
   "id": "sha256:...",
   "policy_revision": "sha256:...",
   "policy_sources": [
@@ -519,7 +521,7 @@ The plan is canonicalized and content-addressed. Its identifier is recorded on
 every control decision, making it possible to reproduce and explain exactly
 what policy applied at a point in time.
 
-`assessment-plan/v1` is enforced by a strict tooling-owned Draft 2020-12
+`assessment-plan/v4` is enforced by a strict tooling-owned Draft 2020-12
 schema before it is returned or persisted and whenever a stored plan is read by
 the evaluator, explanation view, or plan display. The
 stable envelope, normalized subject, group and assignment paths, baseline and
@@ -723,11 +725,9 @@ waiver-result resolver.
 When an active waiver covers the failure, the stored technical result retains
 the same reason, expected/observed data, severity, remediation, evidence, and
 policy revisions; its status becomes `waived` and a strict `waiver` object
-records `underlying_status: fail` plus the complete approved snapshot. New
-assessment envelopes and their children share one `waiver_revision`. Legacy
-non-waived v1 result artifacts without that extension remain readable.
+records `underlying_status: fail` plus the complete approved snapshot. Assessment envelopes and their children share one `waiver_revision`.
 
-The persisted `assessment-results/v1` envelope also has a strict tooling-owned
+The persisted `assessment-results/v4` envelope also has a strict tooling-owned
 schema. Every technical result carries the plan, policy, inventory, and
 assignment revisions from its envelope together with the common status,
 severity, reason, expected/observed, evidence, remediation, mapping, and
@@ -864,8 +864,8 @@ policies/
 
 The rendered assessment-plan and assessment-results schemas are platform
 artifact contracts rather than policy authoring contracts. They live with the
-tooling under `tools/schemas/assessment-plan.schema.json` and
-`tools/schemas/assessment-results.schema.json`; a policy source cannot replace
+tooling under `tools/schemas/assessment-plan-v4.schema.json` and
+`tools/schemas/assessment-results-v4.schema.json`; a policy source cannot replace
 them during local multi-source assembly.
 
 Baseline documents belong in the same policy-as-code repository for review and

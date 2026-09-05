@@ -73,7 +73,7 @@ class AssessmentStatusTests(unittest.TestCase):
 
     def result_report(self, plan_id=None, **summary):
         return {
-            "schema": "compliance.example/assessment-results/v1",
+            "schema": "compliance.example/assessment-results/v4",
             "subject_id": self.subject["id"],
             "plan_id": plan_id or self.plan["id"],
             "evaluated_at": "2026-08-23T13:03:45Z",
@@ -266,7 +266,7 @@ class AssessmentStatusTests(unittest.TestCase):
         waivers, revision = load_waivers(project / "waivers")
         waiver = {**waivers[0], "underlying_status": "fail"}
         report = {
-            "schema": "compliance.example/assessment-results/v1",
+            "schema": "compliance.example/assessment-results/v4",
             "subject_id": subject["id"],
             "plan_id": plan["id"],
             "evaluated_at": "2026-08-28T12:00:00Z",
@@ -313,7 +313,7 @@ class AssessmentStatusTests(unittest.TestCase):
                 self.policy_sources,
             )
             reports.append({
-                "schema": "compliance.example/assessment-results/v1",
+                "schema": "compliance.example/assessment-results/v4",
                 "subject_id": subject["id"],
                 "plan_id": plan["id"],
                 "evaluated_at": "2026-08-23T13:03:45Z",

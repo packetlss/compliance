@@ -12,7 +12,8 @@ from contract_fixtures import fixture_root
 from tools.compliance import build_parser, main, subject_artifact_path
 from tools.project_config import ProjectConfig, load_config
 from tools.cli import main as console_main
-from tools.render_plan import content_digest
+from tools.assessment_provenance import artifact_digest
+from assessment_fixture import planning_fields
 
 
 class ComplianceCliTests(unittest.TestCase):
@@ -24,8 +25,7 @@ class ComplianceCliTests(unittest.TestCase):
     @staticmethod
     def plan_document(subject_id):
         document = {
-            "schema": "compliance.example/assessment-plan/v1",
-            "policy_revision": "sha256:" + "1" * 64,
+                        "policy_revision": "sha256:" + "1" * 64,
             "policy_sources": [{
                 "name": "unit-test",
                 "digest": "sha256:" + "2" * 64,
@@ -62,7 +62,8 @@ class ComplianceCliTests(unittest.TestCase):
             },
             "resolution": {"status": "valid", "errors": []},
         }
-        document["id"] = content_digest(document)
+        document.update(planning_fields(document["policy_sources"]))
+        document["id"] = artifact_digest(document)
         return document
 
     def test_command_line_path_overrides_config_default(self):

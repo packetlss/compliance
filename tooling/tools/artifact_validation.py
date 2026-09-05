@@ -31,11 +31,11 @@ class ArtifactValidationError(ValueError):
 
 
 def assessment_plan_schema_path() -> Path:
-    return Path(__file__).resolve().parent / "schemas/assessment-plan.schema.json"
+    return Path(__file__).resolve().parent / "schemas/assessment-plan-v4.schema.json"
 
 
 def assessment_results_schema_path() -> Path:
-    return Path(__file__).resolve().parent / "schemas/assessment-results.schema.json"
+    return Path(__file__).resolve().parent / "schemas/assessment-results-v4.schema.json"
 
 
 def _pointer(path: Any) -> str:
@@ -97,24 +97,10 @@ def validate_assessment_plan(
     *,
     source: Path | None = None,
 ) -> None:
-    """Validate an assessment-plan/v1 schema and its cross-field invariants."""
-    if document.get("schema") == "compliance.example/assessment-plan/v4":
-        from .assessment_provenance import validate_v4, base_projection
-        validate_v4(document, plan=True)
-        validate_assessment_plan(base_projection(document, plan=True), source=source)
-        return
-    _validate_schema(
-        document,
-        assessment_plan_schema_path(),
-        "assessment plan",
-        source,
-    )
+    """Validate the v4 envelope and domain invariants."""
+    from .assessment_provenance import validate_provenance
+    _validate_schema(document, assessment_plan_schema_path(), "assessment plan", source)
     errors: list[str] = []
-
-    unsigned = {key: value for key, value in document.items() if key != "id"}
-    expected_id = _content_digest(unsigned)
-    if document["id"] != expected_id:
-        errors.append(f"/id: content digest is {expected_id}, got {document['id']}")
 
     resolution = document["resolution"]
     if (resolution["status"] == "valid") != (not resolution["errors"]):
@@ -250,6 +236,11 @@ def validate_assessment_plan(
     if errors:
         _raise("assessment plan", errors, source)
 
+    try:
+        validate_provenance(document, plan=True)
+    except ValueError as error:
+        _raise("assessment plan", [str(error)], source)
+
 
 def _summary(items: list[JsonObject], statuses: tuple[str, ...]) -> JsonObject:
     return {
@@ -280,18 +271,9 @@ def validate_assessment_results(
     *,
     source: Path | None = None,
 ) -> None:
-    """Validate an assessment-results/v1 envelope and conservative roll-ups."""
-    if document.get("schema") == "compliance.example/assessment-results/v4":
-        from .assessment_provenance import validate_v4, base_projection
-        validate_v4(document, plan=False)
-        validate_assessment_results(base_projection(document, plan=False), source=source)
-        return
-    _validate_schema(
-        document,
-        assessment_results_schema_path(),
-        "assessment results",
-        source,
-    )
+    """Validate the v4 envelope and domain invariants."""
+    from .assessment_provenance import validate_provenance
+    _validate_schema(document, assessment_results_schema_path(), "assessment results", source)
     errors: list[str] = []
 
     collections = (
@@ -475,3 +457,7 @@ def validate_assessment_results(
 
     if errors:
         _raise("assessment results", errors, source)
+    try:
+        validate_provenance(document, plan=False)
+    except ValueError as error:
+        _raise("assessment results", [str(error)], source)

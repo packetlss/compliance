@@ -303,7 +303,7 @@ evaluator persists technical, requirement, and requirement-baseline results,
 and the status/explain views expose all three levels.
 
 The complete result envelope is validated against the strict
-`assessment-results/v1` tooling contract before persistence and when loaded for
+`assessment-results/v4` tooling contract before persistence and when loaded for
 reporting. Validation recalculates technical, requirement, and top-baseline
 summaries and independently checks the conservative roll-up precedence, so an
 inconsistent parent tick cannot be accepted merely because its JSON shape is

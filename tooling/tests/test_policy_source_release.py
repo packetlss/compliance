@@ -20,7 +20,7 @@ from tools.policy_source_release import (
     validate_policy_source_archive,
 )
 from tools.policy_sources import source_tree_digest
-from tools.release_lock import POLICY_SOURCE_DIGEST_ALGORITHM
+from tools.composition import POLICY_SOURCE_DIGEST_ALGORITHM
 
 
 ZERO_DIGEST = "sha256:" + "0" * 64
@@ -245,7 +245,7 @@ class PolicySourceReleaseManifestTests(unittest.TestCase):
                 release = normalize_policy_source_release(document)
                 self.assertEqual(release.semantic_document(), without.semantic_document())
                 self.assertEqual(
-                    release.release_lock_policy_source(), without.release_lock_policy_source()
+                    release.semantic_document(), without.semantic_document()
                 )
 
         invalid = copy.deepcopy(base)

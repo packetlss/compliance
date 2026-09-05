@@ -87,20 +87,7 @@ def validate_stage(record: dict) -> None:
             raise ValueError('recorded composition lock digest mismatch')
 
 
-def base_projection(document: dict, *, plan: bool) -> dict:
-    projected = copy.deepcopy(document)
-    for key in ('provenance', 'digestAlgorithm', 'id'):
-        projected.pop(key, None)
-    projected['schema'] = 'compliance.example/assessment-plan/v1' if plan else 'compliance.example/assessment-results/v1'
-    if plan:
-        projected['id'] = digest(projected)
-    return projected
-
-
-def validate_v4(document: dict, *, plan: bool) -> None:
-    from .artifact_validation import _validate_schema, assessment_plan_schema_path
-    filename = 'assessment-plan-v4.schema.json' if plan else 'assessment-results-v4.schema.json'
-    _validate_schema(document, assessment_plan_schema_path().parent / filename, 'assessment v4', None)
+def validate_provenance(document: dict, *, plan: bool) -> None:
     provenance = document['provenance']
     validate_stage(provenance['planningComposition'])
     if document['id'] != artifact_digest(document):

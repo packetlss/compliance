@@ -14,26 +14,29 @@ from tools.project_config import (
 
 
 VALID_CONFIG = """\
-schema: compliance.example/project-config/v1alpha1
+schema: compliance.example/project-config/v1alpha3
+policySources:
+  - name: company-shared
+    path: ../shared/policies
 paths:
   inventory: inventory
   assignments: assignments
-  policies: ../shared/policies
   evidence: generated/evidence
   plan: generated/plans
   results: generated/results
   waivers: waivers
-  resourceSchema: schemas/inventory.json
 """
 
 MULTI_SOURCE_CONFIG = """\
-schema: compliance.example/project-config/v1alpha1
+schema: compliance.example/project-config/v1alpha3
 policySources:
   - name: company-shared
     path: ../shared/policies
   - name: environment-private
     path: policy
-    digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    expectedContent:
+      digestAlgorithm: compliance.example/policy-source-tree-digest/v1alpha1
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 paths:
   inventory: inventory
   assignments: assignments
@@ -41,7 +44,6 @@ paths:
   plan: generated/plans
   results: generated/results
   waivers: waivers
-  resourceSchema: schemas/inventory.json
 """
 
 PROJECT_REGISTRY = """\
@@ -76,12 +78,12 @@ class ProjectConfigTests(unittest.TestCase):
             source = root / "compliance.yaml"
             source.write_text(VALID_CONFIG, encoding="utf-8")
 
-            config = select_config([], cwd=nested)
+            config = select_config([], cwd=nested, validate_runtime=False)
 
             self.assertEqual(discover_config(nested), source.resolve())
             self.assertEqual(config.source, source.resolve())
             self.assertEqual(config.path("inventory"), (root / "inventory").resolve())
-            self.assertEqual(config.path("policies"), (root.parent / "shared/policies").resolve())
+            self.assertEqual(config.policy_sources[0].path, (root.parent / "shared/policies").resolve())
 
     def test_explicit_config_wins_over_automatic_discovery(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -94,7 +96,7 @@ class ProjectConfigTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            config = select_config(["--config", "alternate.yaml"], cwd=root)
+            config = select_config(["--config", "alternate.yaml"], cwd=root, validate_runtime=False)
 
             self.assertEqual(config.source, alternate.resolve())
             self.assertEqual(config.path("inventory"), (root / "alternate-inventory").resolve())
@@ -112,7 +114,7 @@ class ProjectConfigTests(unittest.TestCase):
             ["company-shared", "environment-private"],
         )
         self.assertEqual(
-            config.policy_sources[1].expected_digest,
+            config.expected_content["environment-private"]["digest"],
             "sha256:" + "a" * 64,
         )
 
@@ -127,7 +129,7 @@ class ProjectConfigTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            with self.assertRaisesRegex(ProjectConfigError, "valid under each"):
+            with self.assertRaisesRegex(ProjectConfigError, "Additional properties"):
                 load_config(source)
 
     def test_no_config_disables_discovery(self):
@@ -135,7 +137,7 @@ class ProjectConfigTests(unittest.TestCase):
             root = Path(temporary)
             (root / "compliance.yaml").write_text(VALID_CONFIG, encoding="utf-8")
 
-            config = select_config(["--no-config"], cwd=root)
+            config = select_config(["--no-config"], cwd=root, validate_runtime=False)
 
             self.assertIsNone(config.source)
             self.assertEqual(config.paths, {})
@@ -193,7 +195,7 @@ class ProjectConfigTests(unittest.TestCase):
             root = Path(temporary)
             source = self._write_project_registry(root)
 
-            config = select_config([], cwd=root)
+            config = select_config([], cwd=root, validate_runtime=False)
 
             self.assertEqual(config.project_registry_source, source.resolve())
             self.assertEqual(config.project_name, "macbook")
@@ -206,7 +208,7 @@ class ProjectConfigTests(unittest.TestCase):
             root = Path(temporary)
             self._write_project_registry(root)
 
-            config = select_config(["--project", "mock-fleet"], cwd=root)
+            config = select_config(["--project", "mock-fleet"], cwd=root, validate_runtime=False)
 
             self.assertEqual(config.project_name, "mock-fleet")
             self.assertEqual(
@@ -220,7 +222,7 @@ class ProjectConfigTests(unittest.TestCase):
             self._write_project_registry(root)
 
             with self.assertRaisesRegex(ProjectConfigError, "unknown project 'missing'"):
-                select_config(["--project", "missing"], cwd=root)
+                select_config(["--project", "missing"], cwd=root, validate_runtime=False)
 
     def test_project_selection_requires_project_registry(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -228,7 +230,7 @@ class ProjectConfigTests(unittest.TestCase):
             (root / "compliance.yaml").write_text(VALID_CONFIG, encoding="utf-8")
 
             with self.assertRaisesRegex(ProjectConfigError, "requires a project registry"):
-                select_config(["--project", "macbook"], cwd=root)
+                select_config(["--project", "macbook"], cwd=root, validate_runtime=False)
 
     def test_project_registry_default_must_name_a_project(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -309,20 +311,19 @@ class ProjectConfigTests(unittest.TestCase):
             )
             nested = root / "operations/nested"
             nested.mkdir(parents=True)
-            for selected in (select_config([], cwd=nested),
-                             select_config(["--config", "../../compliance.yaml", "--project", "macbook"], cwd=nested),
+            for selected in (select_config([], cwd=nested, validate_runtime=False),
+                             select_config(["--config", "../../compliance.yaml", "--project", "macbook"], cwd=nested, validate_runtime=False),
                              load_config(relocated)):
                 with self.subTest(registry=selected.project_registry_source):
                     self.assertEqual(selected.schema, direct.schema)
                     self.assertEqual(selected.source, direct.source)
                     self.assertEqual(selected.paths, direct.paths)
                     self.assertEqual(selected.policy_sources, direct.policy_sources)
-                    self.assertEqual(selected.release_lock, direct.release_lock)
+                    self.assertEqual(selected.composition_lock, direct.composition_lock)
 
     def test_project_cannot_be_selected_when_config_is_disabled(self):
         with self.assertRaisesRegex(ProjectConfigError, "cannot be used with --no-config"):
             select_config(["--no-config", "--project", "macbook"])
-
 
 
 if __name__ == "__main__":

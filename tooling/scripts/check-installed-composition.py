@@ -18,7 +18,7 @@ import yaml
 
 from tools.cli import main
 from tools.composition import COMPOSITION_LOCK_SCHEMA
-from tools.project_config import CONFIG_SCHEMA_V1ALPHA3, composition_validation, load_config
+from tools.project_config import CONFIG_SCHEMA, composition_validation, load_config
 from tools.tooling_identity import (
     RECEIPT_FILENAME, WHEEL_FILENAME, ToolingIdentityError, actual_tooling_identity, create_wheel_receipt,
 )
@@ -140,7 +140,7 @@ def main_proof() -> None:
             policy.mkdir()
             (policy / 'synthetic.yaml').write_text('test: true\n')
             config_path = root / 'compliance.yaml'
-            config = {'schema': CONFIG_SCHEMA_V1ALPHA3,
+            config = {'schema': CONFIG_SCHEMA,
                       'policySources': [{'name': 'control-library', 'path': str(policy)}],
                       'paths': {key: key for key in ('inventory', 'assignments', 'evidence', 'plan', 'results', 'waivers')}}
             config_path.write_text(yaml.safe_dump(config))

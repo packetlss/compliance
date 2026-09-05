@@ -1,3 +1,5 @@
+from tools.assessment_provenance import artifact_digest
+from tools.compliance import default_schema_path
 import copy
 import io
 import json
@@ -11,7 +13,7 @@ from tools.artifact_validation import validate_assessment_plan
 from tools.policy_diff import load_policy_plan_set
 from tools.policy_diff import build_policy_diff_set
 from tools.project_config import load_config
-from tools.render_plan import content_digest, load_inventory_inputs, render_plan
+from tools.render_plan import load_inventory_inputs, render_plan
 
 
 class PolicyDiffExampleTests(unittest.TestCase):
@@ -22,7 +24,7 @@ class PolicyDiffExampleTests(unittest.TestCase):
             config.path("inventory"),
             config.path("assignments"),
             "cloud-account/aws-111122223333",
-            config.path("resourceSchema"),
+            default_schema_path(),
         )
         base = render_plan(subject, groups, assignments, config.policy_sources)
         base["controls"][0]["instance_id"] = (
@@ -41,7 +43,7 @@ class PolicyDiffExampleTests(unittest.TestCase):
                     status="invalid", assessable=False, reason="resolution-errors"
                 )
             plan.pop("id")
-            plan["id"] = content_digest(plan)
+            plan["id"] = artifact_digest(plan)
             return plan
 
         output = root / "samples"
@@ -73,7 +75,6 @@ class PolicyDiffExampleTests(unittest.TestCase):
         config = load_config(root / "compliance.yaml", "cloud")
         document = json.loads(config.source.read_text())
         document["schema"] = "compliance.example/project-config/v1alpha3"
-        document["paths"].pop("resourceSchema")
         config.source.write_text(json.dumps(document))
         with patch("examples.prepare_policy_diff_set.PROJECT_REGISTRY", root / "compliance.yaml"):
             plan = _render("cloud", "cloud-account/aws-111122223333")
