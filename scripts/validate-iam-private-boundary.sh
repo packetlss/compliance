@@ -102,6 +102,10 @@ tooling_run python "$SCRIPT_ROOT/assert-iam-private-boundary.py" \
   --assembly-root "$ASSEMBLY_ROOT" \
   --run-root "$RUN_ROOT"
 
+tooling_run python "$SCRIPT_ROOT/assert-v4-cases.py" \
+  --assembly-root "$ASSEMBLY_ROOT" \
+  --run-root "$RUN_ROOT"
+
 "${COMPLIANCE_PYTHON:-python3}" "$SCRIPT_ROOT/validation_inputs.py" verify --root "$ASSEMBLY_ROOT"
 [[ "$(git -C "$SOURCE_ROOT" rev-parse HEAD)" == "$REPOSITORY_REVISION" ]] \
   || fail "destination revision changed during IAM validation"

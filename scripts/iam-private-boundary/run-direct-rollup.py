@@ -4,10 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import copy
+from itertools import permutations
 import json
 from pathlib import Path
 
 from tools.control_realization import (
+    ControlRealizationError,
     roll_up_realization,
     roll_up_requirement_baseline,
     select_realization,
@@ -37,13 +40,29 @@ def main() -> int:
     lineage_errors = validate_realization_lineage(realization, base_realization)
     if lineage_errors:
         raise SystemExit("ERROR: " + "; ".join(lineage_errors))
-    selected = select_realization(
-        requirement,
-        technical_results["subject"],
-        [base_realization, realization],
-    )
-    if selected != realization:
-        raise SystemExit("ERROR: fail-closed selection did not choose private realization")
+    for order in permutations([base_realization, realization]):
+        selected = select_realization(requirement, technical_results["subject"], list(order))
+        if selected != realization:
+            raise SystemExit("ERROR: source order changed private realization selection")
+        missing = copy.deepcopy(technical_results["subject"])
+        missing["labels"].pop("iam-profile", None)
+        try:
+            select_realization(requirement, missing, list(order))
+        except ControlRealizationError as error:
+            if "no realization applies" not in str(error):
+                raise
+        else:
+            raise SystemExit("ERROR: missing selection label acquired a realization")
+    overlapping = copy.deepcopy(base_realization)
+    overlapping["spec"]["applies_to"] = copy.deepcopy(realization["spec"]["applies_to"])
+    for order in permutations([overlapping, realization]):
+        try:
+            select_realization(requirement, technical_results["subject"], list(order))
+        except ControlRealizationError as error:
+            if "multiple realizations apply" not in str(error):
+                raise
+        else:
+            raise SystemExit("ERROR: overlapping realizations acquired order precedence")
     requirement_assessment = roll_up_realization(
         requirement, realization, technical_results
     )
