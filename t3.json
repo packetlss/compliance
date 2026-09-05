@@ -1,0 +1,52 @@
+{
+  "$schema": "https://t3.codes/schema/t3.json",
+  "defaultThreadEnvMode": "worktree",
+  "scripts": [
+    {
+      "name": "Setup worktree",
+      "command": "uv sync --project tooling --frozen",
+      "icon": "configure",
+      "runOnWorktreeCreate": true
+    },
+    {
+      "name": "Fast tooling tests",
+      "command": "cd tooling && uv run --frozen python -m unittest discover -s tests -v",
+      "icon": "test"
+    },
+    {
+      "name": "Repository contract",
+      "command": "bash scripts/validate-repository.sh",
+      "icon": "test"
+    },
+    {
+      "name": "Tooling gate",
+      "command": "bash tooling/scripts/validate-tooling.sh",
+      "icon": "test"
+    },
+    {
+      "name": "Control-library gate",
+      "command": "bash policy-sources/control-library/scripts/validate-shared-policy.sh",
+      "icon": "test"
+    },
+    {
+      "name": "Verification-policy gate",
+      "command": "bash policy-sources/verification-policy/scripts/validate-verification-policy.sh",
+      "icon": "test"
+    },
+    {
+      "name": "Development-projects gate",
+      "command": "bash scripts/validate-development-projects.sh",
+      "icon": "test"
+    },
+    {
+      "name": "IAM private-boundary gate",
+      "command": "bash scripts/validate-iam-private-boundary.sh",
+      "icon": "test"
+    },
+    {
+      "name": "Canonical-scenarios gate",
+      "command": "bash scripts/validate-verification-scenarios.sh",
+      "icon": "test"
+    }
+  ]
+}

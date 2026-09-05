@@ -41,17 +41,24 @@ Current normative architecture is local:
 - `docs/DEVELOPMENT_WORKFLOW.md` — engineering lifecycle;
 - `docs/CONTRACT_MATURITY.md` — compatibility/freeze rules;
 - `docs/adr/` — accepted ADRs 0005–0008;
+- `t3.json` — shared T3 Code worktree setup and validation shortcuts;
 - `docs/history/pre-consolidation.md` — migration/history provenance;
 - `docs/history/retirement-readiness.md` — one-time retirement/cutover evidence.
 
-Historical `packetlss-labs` component repositories and `compliance-workspace` preserve pre-consolidation commits/issues/PRs/releases and are provenance only. They are being archived under #29; no active development or architecture work remains owned there.
+Historical `packetlss-labs` component repositories and `compliance-workspace` are archived provenance preserving pre-consolidation commits, issues, PRs, and releases. No active development or architecture work remains owned there.
 
 Active future design/implementation work is owned by destination issues #31–#38. Real private environment repositories remain separate. Firewall/network-policy work remains out of scope unless explicitly reopened.
 
-Normal development is:
+Normal T3 Code development is:
 
 ```text
-issue -> branch -> PR -> CI -> review -> human squash merge
+read-only exploration
+  -> promotion packet
+  -> issue when durable coordination is required
+  -> isolated implementation worktree
+  -> PR
+  -> fresh-context review + exact-head CI
+  -> human squash merge
 ```
 
-Retirement controller #29 temporarily permits automatic squash merges only for bounded, nonsemantic documentation/routing/mechanical retirement PRs after exact-head CI is green. That exception ends when retirement is complete.
+Narrow nonsemantic work may use its PR body as the implementation contract. All merges require human final authority; the completed repository-retirement exception is no longer active.

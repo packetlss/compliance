@@ -1,29 +1,20 @@
 # IAM private-boundary fixture instructions
 
-This synthetic fixture models a restricted environment boundary. It owns the
-project inventory, assignments, synthetic observations, and the retained
-private partial policy tree under `policy/`. It does not represent a real
-private environment or authorize private data to enter this repository.
+This synthetic fixture models a restricted environment boundary. It owns project inventory, assignments, observations, and the retained private partial policy tree under `policy/`; it contains no real private data.
 
-Validation must never compose directly from this checked-in `policy/` path.
-The destination gate copies that tree into a separate temporary
-`environment-private` source root, removes the fixture-side copy from the
-temporary execution assembly, and then composes exactly these named sources:
+## Boundaries
 
-- `shared-library`;
-- `verification-policy`; and
-- `environment-private`.
+- Validation must copy `policy/` into a distinct temporary `environment-private` source and remove the fixture-side copy from the execution assembly.
+- Never compose directly from the checked-in fixture path or use symlink/same-inode shortcuts.
+- Compose exactly `shared-library`, `verification-policy`, and `environment-private`; no source has order precedence.
+- Never copy the retained realization into either central policy source.
+- Generated evidence, plans, results, credentials, provider state, and operational data remain temporary and untracked.
+- Assessment plans remain the external-adapter handoff. Do not add adapter execution, backend rendering, or successor schema work here unless separately routed.
 
-Never copy the restricted realization into either central policy source. Keep
-source order nonsemantic and selection fail-closed. Generated evidence, plans,
-results, credentials, provider state, and operational data remain temporary
-and untracked.
+## Validation
 
-Run the focused gate from a clean, committed destination checkout:
+After committing the candidate revision and ensuring the checkout is clean, run from the repository root:
 
 ```sh
 bash scripts/validate-iam-private-boundary.sh
 ```
-
-The assessment plan remains the external-adapter handoff. Do not add adapter
-execution, configuration rendering, or successor schema work here.
