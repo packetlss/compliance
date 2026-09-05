@@ -1561,7 +1561,13 @@ def render_plan(
     groups_document: list[JsonObject],
     assignments: list[JsonObject],
     policy_sources: PolicySources,
+    *,
+    config=None,
 ) -> JsonObject:
+    from .assessment_provenance import PLAN_SCHEMA, PROVENANCE_SCHEMA, PLAN_DIGEST_ALGORITHM, artifact_digest, stage
+    from .composition import require_composition
+    from .project_config import composition_validation
+    report = composition_validation(config, require=True) if config and config.source else require_composition(policy_sources)
     normalized_policy_sources = normalize_policy_sources(policy_sources)
     try:
         source_revisions = policy_source_revisions(normalized_policy_sources)
@@ -1953,7 +1959,9 @@ def render_plan(
         rendered_controls or rendered_requirements
     )
     plan: JsonObject = {
-        "schema": "compliance.example/assessment-plan/v1",
+        "schema": PLAN_SCHEMA,
+        "digestAlgorithm": PLAN_DIGEST_ALGORITHM,
+        "provenance": {"schema": PROVENANCE_SCHEMA, "planningComposition": stage(report)},
         "policy_revision": policy_revision(source_revisions),
         "policy_sources": source_revisions,
         "inventory_revision": content_digest({
@@ -1996,6 +2004,6 @@ def render_plan(
             "errors": resolution_errors,
         },
     }
-    plan["id"] = content_digest(plan)
+    plan["id"] = artifact_digest(plan)
     validate_assessment_plan(plan)
     return plan

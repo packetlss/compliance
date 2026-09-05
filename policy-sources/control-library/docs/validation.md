@@ -43,7 +43,7 @@ The gate retains:
 - Current generic producer tests: path-and-raw-byte source identity, deterministic
   archive identity, exact candidate content and representation digests,
   materialized content verification, no-Git construction, optional noncanonical
-  metadata, release-lock projection, and unsafe or tampered source/archive refusal.
+  metadata, descriptor semantic identity, and unsafe or tampered source/archive refusal.
 - Rego formatting and all control-owned Rego unit tests; destination repository
   cleanliness and temporary-output cleanup.
 

@@ -32,9 +32,8 @@ The semantic release identity is exactly:
 distribution + version + canonical policy content identity
 ```
 
-It projects without loss to one unchanged
-`release-lock/v1alpha2.policySources[*]` value. No release-lock revision or policy
-source semantics change is part of this producer migration.
+Its content identity can be selected by name in `composition-lock/v1alpha1`.
+Distribution/version and acquisition metadata do not enter runtime composition.
 
 ## Canonical policy content identity
 
@@ -60,7 +59,7 @@ The source-root directory name is not hashed. Repository `policies/` and archive
 identical.
 
 Git tag/commit metadata is optional source navigation. It does not participate in
-content identity or the release-lock projection. Runtime validation requires no
+content identity or runtime composition. Runtime validation requires no
 Git metadata, network, hosted provider, or repository after content is locally
 materialized.
 
@@ -185,7 +184,7 @@ normalize, validate, rebuild, or republish the retired format.
 
 The published `compliance-control-library v0.3.0` tag, release, and assets likewise
 remain unchanged with their former provisional `/v1` label. They are historical
-development records, not active `release-lock/v1alpha2` inputs, and the forward
+development records, not active runtime inputs, and the forward
 producer does not add compatibility acceptance for that discarded label.
 
 ## Hosted publication status

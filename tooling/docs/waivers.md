@@ -98,8 +98,7 @@ required technical check produces a waived parent only when no child is fail,
 error, missing, or unknown under the existing precedence rules.
 
 New result envelopes and their technical children record the same
-`waiver_revision`. Older non-waived `assessment-results/v1` artifacts without
-that extension remain readable. Any result claiming `waived` must contain a
+`waiver_revision`. Any result claiming `waived` must contain a
 valid, active, target-matching waiver snapshot and revision.
 
 ## 4. Desired policy remains independent

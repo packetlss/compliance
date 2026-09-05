@@ -1,9 +1,9 @@
 # Tooling Release and Distribution Boundary
 
 
-The ADR 0007 successor foundation and deliberate pre-v4 transition are documented
-in [Actual composition and expected enforcement](composition.md). Existing
-predecessor workflows described here remain supported pending consumer cutover.
+The ADR 0007 actual composition and v4 assessment contracts are documented
+in [Actual composition and expected enforcement](composition.md). All maintained
+consumers use successor contracts; historical artifacts require historical tooling.
 
 Status: **Current pre-freeze package, release, and locked-composition contract**
 
@@ -29,7 +29,7 @@ compliance
 
 Python packaging normalizes the wheel filename to a form such as
 `compliance_tooling-<version>-py3-none-any.whl`; the canonical distribution
-identity recorded by package metadata, release locks, and generated-artifact
+identity recorded by package metadata and descriptive generated-artifact
 provenance is `compliance-tooling`.
 
 The earlier `opa-compliance-prototype` distribution name was a temporary
@@ -216,7 +216,7 @@ for local source navigation and is exercised by package validation, but pushing 
 tag does not publish a release. A publisher may be established in the
 consolidated repository when a concrete downstream release need exists. That
 future transport choice must preserve the provider-neutral wheel, manifest,
-checksum, source identity, wheel identity, and downstream release-lock values.
+checksum, source identity, wheel identity, and downstream expected composition values.
 
 ## Tooling-owned schemas in the wheel
 
@@ -224,13 +224,12 @@ The installed tooling package supplies the generic platform contracts required
 by its CLI and generated artifacts. The wheel contains the schemas currently
 owned below `tools/schemas/`, including:
 
-- project configuration `v1alpha1` and locked project configuration `v1alpha2`;
+- project configuration `v1alpha3`;
 - project-registry configuration;
-- release lock `v1alpha2`;
+- composition and composition lock `v1alpha1`;
 - provider-neutral tooling release manifest `v2`;
-- generic policy-source release manifest `v1` and the two immutable legacy
-  policy-source manifest compatibility schemas;
-- assessment plan/result semantic v1 and content-addressed locked v3 revisions;
+- generic policy-source release manifest `v1`;
+- assessment plan/results v4 and their provenance definitions;
 - policy diff and diff-set outputs.
 
 Inventory/assignment and waiver schemas historically live at repository-level
@@ -259,10 +258,9 @@ compliance.example/policy-source-release-manifest/v1
 
 Its semantic identity is exactly the case-sensitive `distribution`, SemVer
 `version`, and `content` identity using
-`compliance.example/policy-source-tree-digest/v1alpha1`. The normalized semantic
-document is already the complete shape of one
-`release-lock/v1alpha2.policySources[*]` value; source-navigation metadata and
-representations do not enter that projection.
+`compliance.example/policy-source-tree-digest/v1alpha1`. Composition consumes only the named materialized `content` identity; release
+distribution/version, source-navigation metadata and archive representations do not
+enter the composition projection.
 
 The tree digest evaluates generated-directory exclusions relative to the
 explicitly supplied policy-source root. A root named `build` or `__pycache__`,
@@ -301,203 +299,28 @@ of their releases while reusing the generic descriptor and archive profile.
 System-level rationale and identity layering are governed by
 [workspace ADR 0004](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/adr/0004-generic-policy-source-release-contract.md).
 
-## Release lock v1alpha2
+## Successor composition and generated artifacts
 
-A locked downstream project checks in an adjacent:
+Current projects use `project-config/v1alpha3` and optional `composition-lock/v1alpha1`.
+The lock is an expected tooling source/execution identity and name-keyed policy
+content set. It is neither acquisition metadata nor proof of actual execution.
+See [composition](composition.md) for construction and strict enforcement, and
+[assessment provenance](artifact-provenance.md) for v4 planning/evaluation,
+verified installed-wheel receipts, evaluator and complete evidence provenance.
 
-```text
-compliance.lock.yaml
-```
-
-with schema:
-
-```text
-compliance.example/release-lock/v1alpha2
-```
-
-The lock records release **identity, not location**. It contains one exact
-tooling identity and a name-keyed set of exact released policy-source
-identities. It contains no local materialization paths, download URLs, GitHub
-branches, hosted-release IDs, credentials, `latest` selectors, or version
-ranges.
-
-Example shape:
-
-```yaml
-schema: compliance.example/release-lock/v1alpha2
-
-tooling:
-  distribution: compliance-tooling
-  version: 0.3.0
-  source:
-    digest: sha256:<64-hex>
-    digestAlgorithm: compliance.example/tooling-source-tree-digest/v1alpha1
-  artifact:
-    kind: python-wheel
-    sha256: sha256:<64-hex>
-
-policySources:
-  shared:
-    distribution: compliance-policy
-    version: 0.2.0
-    content:
-      digest: sha256:<64-hex>
-      digestAlgorithm: compliance.example/policy-source-tree-digest/v1alpha1
-```
-
-The tooling artifact SHA-256 identifies exact acquired wheel bytes. Each policy
-content digest identifies the materialized policy tree consumed by runtime
-evaluation. Generic policy-source archives retain a separate representation
-SHA-256 at the acquisition boundary. Content and representation identities must
-never be conflated.
-
-An already-installed Python environment cannot reconstruct the original wheel
-bytes. Runtime validation therefore carries `tooling.artifact.sha256` as
-acquisition provenance but verifies the installed tooling distribution,
-semantic version, canonical source digest, and digest algorithm. It does not
-pretend to re-verify the original wheel artifact digest after installation.
-
-The obsolete `opa-compliance-prototype` value is not an alias. A lock that names
-it while the installed distribution is `compliance-tooling` fails through the
-normal tooling-distribution mismatch contract.
-
-## Canonical release-lock identity
-
-A validated lock has a canonical identity named by:
-
-```text
-compliance.example/release-lock-digest/v1alpha1
-```
-
-`release_lock_digest` is SHA-256 over the RFC 8785/JCS UTF-8 representation of
-the validated semantic lock document after lock-specific normalization. The
-rendered value is:
-
-```text
-sha256:<64 lower-case hexadecimal characters>
-```
-
-The digest is independent of:
-
-- YAML comments and whitespace;
-- YAML/key ordering;
-- policy-source map ordering; and
-- local materialization paths.
-
-Relocating the same released composition to another directory or machine does
-not change its release-lock identity. Publication-provider metadata is absent
-from the semantic lock, so republishing identical release bytes elsewhere also
-does not change the lock identity.
-
-Generated artifact v3 contracts record this digest together with the installed
-generator distribution/version/source digest and exact locked wheel identity. See
-[`artifact-provenance.md`](artifact-provenance.md).
-
-## Locked project configuration v1alpha2
-
-`compliance.example/project-config/v1alpha1` remains the current development and
-workspace-compatible contract. It still supports local/unpinned source
-assembly, legacy `paths.policies`, and an authored `paths.resourceSchema`.
-Existing projects are not migrated by the release-lock slice.
-
-The downstream locked contract is:
-
-```text
-compliance.example/project-config/v1alpha2
-```
-
-A `v1alpha2` project:
-
-- requires named `policySources`;
-- requires `name`, local materialized `path`, and exact `digest` for every
-  source;
-- does not support legacy `paths.policies`;
-- does not contain `paths.resourceSchema`;
-- obtains the inventory/assignment schema from the installed tooling package;
-- requires adjacent `compliance.lock.yaml`; and
-- retains project paths for inventory, assignments, evidence, plan, results,
-  and waivers.
-
-The project config owns **location** while the lock owns **release identity**.
-For every configured source, validation requires:
-
-```text
-project policySources[].name
-    == release lock policy source name
-project policySources[].digest
-    == release lock sourceDigest
-actual digest(materialized local path)
-    == release lock sourceDigest
-```
-
-All three must agree before a normal `v1alpha2` command can proceed.
-
-Policy source ordering remains semantically irrelevant. The release lock does
-not introduce source precedence, override ordering, or last-writer-wins
-behavior. Existing identical-only coalescing and divergent-identity hard errors
-remain unchanged.
-
-## Installed-tool enforcement
-
-Normal CLI commands load `v1alpha2` through the same config selection layer used
-by planning and evaluation. Before the validated config is handed to those
-commands, tooling requires:
-
-- installed distribution == locked tooling distribution;
-- installed semantic version == locked tooling version; and
-- embedded installed source digest == locked source digest; and
-- embedded source digest algorithm == the current tooling source algorithm.
-
-A development/editable build with a null source digest cannot silently satisfy
-a locked project. It fails release validation explicitly. Runtime validation
-does not inspect `.git` to manufacture a missing release identity.
-
-The diagnostic surfaces are:
-
-```sh
-compliance --config ./compliance.yaml release show
-compliance --config ./compliance.yaml release validate
-compliance --config ./compliance.yaml release validate --format json
-```
-
-`release show` reports the current state even when invalid. `release validate`
-returns failure when the installed tooling or any materialized source does not
-match the lock.
-
-For locked projects, runtime overrides that would substitute the policy source
-contract (`--policy-source`, `--policies`) or the tooling-owned inventory schema
-(`--resource-schema`) are rejected. The same options remain available to
-`v1alpha1` development projects.
-
-## Generated-artifact provenance
-
-Locked `project-config/v1alpha2` generation uses the content-addressed v3
-artifact revisions. Each v3 artifact records:
-
-```text
-generator.distribution = compliance-tooling
-generator.version = installed semantic version
-generator.source_digest = embedded canonical tooling source digest
-generator.source_digest_algorithm = canonical tooling source algorithm
-generator.artifact_sha256 = exact locked wheel identity
-release_lock_digest = canonical digest of compliance.lock.yaml
-```
-
-The assessment plan content ID includes this provenance. A stored v3 plan
-cannot be evaluated under a different current lock composition; the mismatch
-is a hard refusal. Current `v1alpha1` development projects retain the existing
-v1 assessment artifact behavior.
+`composition show/validate` diagnoses the current actual and expected composition.
+The predecessor `release show/validate` commands and release-lock reader are removed.
 
 ## Materialization is separate from acquisition
 
-The release-lock contract begins **after** immutable artifacts have been
+Composition enforcement begins **after** immutable artifacts have been
 acquired and policy bundles have been materialized into local directories. It
 does not download, clone, fetch, extract, update, or resolve releases.
 
 Historical hosted releases are acquisition surfaces for their immutable wheel
 bytes. A future publisher or artifact store may expose validated bytes elsewhere.
 Runtime identity remains the version/source/artifact values recorded in the
-release manifest and release lock, not the acquisition URL.
+release manifest and expected composition, not the acquisition URL.
 
 After immutable inputs exist, lock validation and normal runtime processing
 require neither:
@@ -509,9 +332,9 @@ require neither:
 - mutable branch or tag resolution; nor
 - GitHub access.
 
-The package gates install a release-style wheel, construct a locked `v1alpha2`
+The package gates install a release-style wheel, construct a locked `v1alpha3`
 project with a local materialized policy tree, shadow `git` with a deliberately
-failing executable, validate the lock, and exercise v3 generated-artifact
+failing executable, validate the lock, and exercise v4 generated-artifact
 provenance. This is the downstream runtime boundary.
 
 ## Workspace integration boundary
@@ -535,12 +358,12 @@ The first locked composition distinguishes all of these values:
 | tooling semantic version | tooling release | human tooling version |
 | optional tooling Git metadata | tooling release | noncanonical human/source navigation |
 | tooling source digest | tooling release + lock | canonical runtime/build source identity |
-| tooling wheel SHA-256 | release manifest + release lock | exact acquired tooling bytes |
+| tooling wheel SHA-256 | release manifest + composition lock | exact acquired tooling bytes |
 | tooling release manifest | tooling release | provider-neutral release metadata |
 | policy semantic version | policy release | human policy release selection |
 | policy archive SHA-256 | generic release representation | acquired policy artifact bytes |
 | policy source SHA-256 | generic release + lock + project | runtime materialized policy identity |
-| release-lock SHA-256 | tooling | portable tooling + policy composition identity |
+| composition-lock SHA-256 | tooling | normalized expected composition identity |
 | local materialized path | project config | machine/directory-specific location only |
 
 Hosted-release IDs and download URLs are intentionally absent from the identity
@@ -579,8 +402,8 @@ compliance.example/configuration-explanation/v3
 
 Historical commits, tags, releases, hosted assets, manifests, archives, and
 checksums remain immutable. Their continued existence does not freeze either
-the removed formats or the surviving v2 tooling, v1alpha2 lock/validation, and
-v3 locked-artifact contracts.
+the removed formats or the current v2 tooling, composition-lock v1alpha1, and
+v4 assessment contracts.
 
 ## Python and OPA support statement
 

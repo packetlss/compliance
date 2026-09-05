@@ -497,6 +497,16 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-05 — Predecessor retirement (#33)
+
+After #31/#32 and destination cutovers #34–#36, current tooling accepts only
+project-config v1alpha3, composition-lock v1alpha1 and assessment plan/results v4.
+Delete predecessor schemas/readers/digests/dispatch and compatibility fixtures;
+reproduce historical artifacts with historical tooling. V4 domain validation and
+construction are native, retaining the existing semantic identity projections,
+actual composition, ADR 0010/0011 evidence behavior and adapter handoff.
+
+
 Substantial choices should become Architecture Decision Records under
 `docs/adr/`. Until then, proposed choices remain in this document and are
 explicitly labelled as assumptions.

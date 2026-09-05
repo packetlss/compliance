@@ -1,9 +1,9 @@
 # Project Directory Layout
 
 
-The ADR 0007 successor foundation and deliberate pre-v4 transition are documented
-in [Actual composition and expected enforcement](composition.md). Existing
-predecessor workflows described here remain supported pending consumer cutover.
+The ADR 0007 actual composition and v4 assessment contracts are documented
+in [Actual composition and expected enforcement](composition.md). All maintained
+consumers use successor contracts; historical artifacts require historical tooling.
 
 Status: **Accepted convention (v0.3)**
 Last updated: **2026-09-04**
@@ -85,8 +85,8 @@ Every project config declares all paths needed by the operator workflow.
 For example, `projects/mock-fleet/compliance.yaml` contains:
 
 ```yaml
-# yaml-language-server: $schema=../../tooling/tools/schemas/project-config.schema.json
-schema: compliance.example/project-config/v1alpha1
+# yaml-language-server: $schema=../../tooling/tools/schemas/project-config-v1alpha3.schema.json
+schema: compliance.example/project-config/v1alpha3
 policySources:
   - name: control-library
     path: ../../policy-sources/control-library/policies
@@ -99,7 +99,6 @@ paths:
   plan: generated/plans
   results: generated/results
   waivers: waivers
-  resourceSchema: ../../tooling/schemas/inventory/resource.schema.json
 ```
 
 Relative paths resolve from the directory containing `compliance.yaml`. The
@@ -120,7 +119,7 @@ governs development topology. Current transition ownership is summarized by the
 workspace [architecture](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/ARCHITECTURE.md)
 and [repository map](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/REPOSITORIES.md).
 
-Maintained projects declare all seven operational paths together with at least
+Maintained projects declare all six operational paths together with at least
 one named `policySources` entry. This prevents a
 project that works for one command from failing later because an operational
 location was left implicit.
@@ -139,7 +138,6 @@ content:
 | `results` | Project runtime | No; status views read this project's results |
 | `waivers` | Project governance | No; exceptions are approved within this subject and visibility boundary |
 | `policySources` | Shared releases plus optional project-private policy | Shared sources yes; private sources remain project-scoped |
-| `resourceSchema` | Platform contract | Yes |
 
 Paths make this a logical contract rather than a filesystem sandbox. Shared
 policy sources and schemas may sit outside the project directory, as all
@@ -147,10 +145,8 @@ maintained repository examples demonstrate. A deployment may also place
 generated artifacts in an external mounted store while retaining the same
 logical separation.
 
-`paths.policies` remains accepted as a legacy single-source form and cannot be
-combined with `policySources`. New projects should use named sources so plans
-can retain each source revision and local environments can add private policy
-without copying it into a shared catalog.
+Projects require named `policySources`. Inventory and waiver schemas come from
+the current tooling installation; configs cannot replace them.
 
 ## Artifact naming
 

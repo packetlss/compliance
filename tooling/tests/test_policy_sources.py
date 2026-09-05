@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from tools.policy_sources import PolicySource, policy_revision, policy_source_revisions, source_pin_errors, source_tree_digest
-from tools.release_lock import POLICY_SOURCE_DIGEST_ALGORITHM
+from tools.composition import POLICY_SOURCE_DIGEST_ALGORITHM
 
 
 class PolicySourceIdentityTests(unittest.TestCase):

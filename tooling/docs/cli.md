@@ -2,8 +2,8 @@
 
 
 The ADR 0007 actual composition and v4 assessment contracts are documented
-in [Actual composition and expected enforcement](composition.md). Existing
-predecessor workflows described here remain supported pending consumer cutover.
+in [Actual composition and expected enforcement](composition.md). All maintained
+consumers use successor contracts; historical artifacts require historical tooling.
 
 Status: **Implemented prototype (v0.2)**
 Last updated: **2026-09-05**
@@ -59,8 +59,7 @@ historical replay; the recorded result ID and `evaluated_at`, evidence
 freshness, and waiver lifecycle selection all use that instant.
 `plan render` remains useful for review, CI, and debugging without evaluation.
 V1alpha3 projects persist strict `assessment-plan/v4` and `assessment-results/v4`
-documents in unlocked, direct-expected and composition-locked modes. Predecessor
-v1/v3 workflows remain available until their separate consumer migrations.
+documents in unlocked, direct-expected and composition-locked modes.
 Before OPA, v4 establishes actual provenance, explicit subject/type routing and
 a complete subject evidence snapshot. It validates every matching required
 evidence candidate against the trusted schema before freshness or selection.
@@ -128,7 +127,7 @@ assessment. External output is neither proof of execution nor compliance
 evidence and must reference its source assessment plan when it records
 provenance.
 
-`policy diff` compares two stored assessment plans (v4, or predecessor v1) for the same
+`policy diff` compares two stored assessment plans (v4) for the same
 subject. Both inputs are validated against the strict schema, content digest,
 coverage counts, and cross-field invariants before comparison. The command
 does not load or re-resolve the current policy catalog, so its explanation is
@@ -167,7 +166,7 @@ change.
 
 `policy diff-set` applies that same stored-plan comparison to two release
 snapshot directories. It recursively loads every `*.json` file, requires each
-file to be a valid v4 or predecessor v1 assessment plan, rejects empty sets and
+file to be a valid v4 assessment plan, rejects empty sets and
 duplicate subject identities, and matches plans by stable subject ID. It never
 loads a policy catalog or combines project catalogs. Operators should therefore
 pass one project-scoped plan snapshot on each side.
@@ -267,7 +266,7 @@ Each referenced project has its own `compliance.yaml`. For example,
 `projects/mock-fleet/compliance.yaml` declares:
 
 ```yaml
-schema: compliance.example/project-config/v1alpha1
+schema: compliance.example/project-config/v1alpha3
 policySources:
   - name: control-library
     path: ../../policy-sources/control-library/policies
@@ -280,10 +279,9 @@ paths:
   plan: generated/plans
   results: generated/results
   waivers: waivers
-  resourceSchema: ../../tooling/schemas/inventory/resource.schema.json
 ```
 
-Maintained projects declare all seven operational path keys and at least one
+Maintained projects declare all six operational path keys and at least one
 named policy source, so a valid project is ready for the complete
 operator workflow rather than only the command first used against it. The
 canonical project tree and path-ownership rules are defined in
@@ -345,19 +343,18 @@ Configuration behavior is deterministic:
 4. A project registry selects `--project NAME`, or its `defaultProject` when omitted;
    a standalone project config rejects `--project` rather than silently
    ignoring it.
-5. Command-line path options override configured paths. Repeating
-   `--policy-source NAME=PATH` replaces the configured policy-source set for
-   that command; source paths resolve from the current working directory.
+5. Command-line path options override configured paths. Configured projects reject policy-source and resource-schema overrides.
+   With `--no-config`, repeated `--policy-source NAME=PATH` supplies the named
+   source set; paths resolve from the current working directory.
 6. Configured relative paths resolve from the directory containing the config
    file. Explicit command-line relative paths resolve from the current working
    directory.
 7. A required path or policy-source set missing from both the command and
    configuration is an error.
 
-The legacy `--policies PATH` and `paths.policies` forms remain available for a
-single source and cannot be combined with the named form. New automation should
-use names because source identity and per-source revisions are included in
-validation output and rendered plans:
+`--no-config --policies PATH` supplies one source; it cannot be combined with
+the named CLI form. Project configs require `policySources` and reject
+`paths.policies`. Named sources expose each revision in validation output and plans:
 
 ```sh
 uv run --project tooling compliance --no-config policy validate \
@@ -375,7 +372,7 @@ The IAM validation assembly additionally supplies the independently materialized
 
 Only documented fields are accepted. Project registry and project files are validated
 against `tools/schemas/project-registry.schema.json` and
-`tools/schemas/project-config.schema.json`. Unknown fields, unknown path names,
+`tools/schemas/project-config-v1alpha3.schema.json`. Unknown fields, unknown path names,
 empty values, invalid project names, multiple YAML documents, missing project
 files, unknown project selections, and unsupported schema versions fail rather
 than being ignored. `compliance config show` prints the project registry (`project_registry` in JSON), selected

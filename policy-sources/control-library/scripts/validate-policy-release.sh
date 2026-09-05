@@ -194,7 +194,7 @@ validation = validate_policy_source_archive(
     Path(archive_representation_path),
 )
 assert validation.content_digest == canonical_digest
-assert release.release_lock_policy_source() == {
+assert release.semantic_document() == {
     "distribution": "compliance-control-library",
     "version": version,
     "content": archive_manifest["content"],

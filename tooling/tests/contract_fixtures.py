@@ -583,7 +583,7 @@ def build_fixture(root):
             root,
             f"{project}/compliance.yaml",
             {
-                "schema": "compliance.example/project-config/v1alpha1",
+                "schema": "compliance.example/project-config/v1alpha3",
                 "policySources": [
                     {"name": "control-library", "path": "../shared"},
                     {"name": "verification-policy", "path": "../selection"},
@@ -600,7 +600,6 @@ def build_fixture(root):
                     "plan": "generated/plans",
                     "results": "generated/results",
                     "waivers": "waivers",
-                    "resourceSchema": "../schemas/inventory/resource.schema.json",
                 },
             },
         )

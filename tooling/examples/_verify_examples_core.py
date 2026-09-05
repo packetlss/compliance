@@ -761,7 +761,7 @@ class ExampleRunner:
         schema_document = self._read(schema_result)
         schema_errors = [
             result for result in schema_document["results"]
-            if result["status"] == "error"
+            if result["observed"].get("evidence_validation_errors")
         ]
         self.domain(
             "evidence.schema-enforcement",
@@ -770,7 +770,7 @@ class ExampleRunner:
                 result["observed"].get("evidence_validation_errors")
                 for result in schema_errors
             )
-            and schema_document["summary"]["error"] == len(schema_errors),
+            and all(result["status"] == "unknown" for result in schema_errors),
         )
         self._display(
             "evidence.schema-enforcement",
@@ -1067,7 +1067,7 @@ class ExampleRunner:
                 document = self._read(path)
             except (json.JSONDecodeError, UnicodeDecodeError):
                 continue
-            if document.get("schema") != "compliance.example/assessment-plan/v1":
+            if document.get("schema") != "compliance.example/assessment-plan/v4":
                 continue
             planned_implementations.update(
                 control["implementation"]

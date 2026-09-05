@@ -41,12 +41,11 @@ from .policy_diff import (
     format_policy_diff_set,
 )
 from .project_config import (
-    CONFIG_SCHEMA,
-    CONFIG_SCHEMA_V1ALPHA3,
     ProjectConfig,
     ProjectConfigError,
     format_config,
     select_config,
+    composition_validation,
 )
 from .render_plan import (
     load_inventory_catalog,
@@ -444,7 +443,7 @@ def _run_plan_render(args: argparse.Namespace) -> None:
         args.subject_id,
         args.resource_schema,
     )
-    plan = render_plan(subject, groups, assignments, _resolved_policy_sources(args))
+    plan = render_plan(subject, groups, assignments, _resolved_policy_sources(args), config=args.project_config)
     output = subject_artifact_path(args.output, args.subject_id)
     write_json(plan, output)
     print(f'wrote {plan["id"]} to {output}')
@@ -564,7 +563,7 @@ def _run_plan_show(args: argparse.Namespace) -> None:
         plans = []
         for candidate in sorted(plan_path.rglob("*.json")):
             document = load_json(candidate)
-            if document.get("schema") == "compliance.example/assessment-plan/v1":
+            if str(document.get("schema", "")).startswith("compliance.example/assessment-plan/"):
                 validate_assessment_plan(document, source=candidate)
                 plans.append((candidate, document))
         if not plans:
@@ -602,6 +601,7 @@ def _render_subject_plan(args: argparse.Namespace) -> dict:
         groups,
         assignments,
         _resolved_policy_sources(args),
+        config=args.project_config,
     )
 
 
@@ -627,6 +627,7 @@ def _run_assessment_view(args: argparse.Namespace) -> None:
             groups,
             assignments,
             _resolved_policy_sources(args),
+            config=args.project_config,
         )
         explanation = build_explanation(plan, reports)
         if args.format == "json":
@@ -645,6 +646,7 @@ def _run_assessment_view(args: argparse.Namespace) -> None:
             group_ids=args.group,
             external_refs=args.reference,
             levels=args.level,
+            config=args.project_config,
         )
         if args.format == "json":
             print(json.dumps(framework_report, indent=2, sort_keys=True))
@@ -658,6 +660,7 @@ def _run_assessment_view(args: argparse.Namespace) -> None:
         assignments,
         _resolved_policy_sources(args),
         reports,
+        config=args.project_config,
     )
     if args.assessment_command == "groups":
         state_filtered = filter_status_report(report, [], args.state)
@@ -684,7 +687,7 @@ def _run_assessment(args: argparse.Namespace) -> None:
         args.resource_schema,
     )
     policy_sources = _resolved_policy_sources(args)
-    plan = render_plan(subject, groups, assignments, policy_sources)
+    plan = render_plan(subject, groups, assignments, policy_sources, config=args.project_config)
     plan_output = subject_artifact_path(args.plan_output, args.subject_id)
     result_output = subject_artifact_path(args.output, args.subject_id)
     write_json(plan, plan_output)
@@ -695,6 +698,10 @@ def _run_assessment(args: argparse.Namespace) -> None:
         opa=args.opa,
         evaluated_at=(parse_timestamp(args.at, field="--at") if args.at else None),
         waiver_path=args.waivers,
+        composition_report=(
+            composition_validation(args.project_config, require=True)
+            if args.project_config.source else None
+        ),
     )
     write_json(report, result_output)
     print(f'wrote plan {plan["id"]} to {plan_output}')

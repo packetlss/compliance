@@ -529,7 +529,6 @@ def load_policy_plan_set(root: Path) -> dict[str, tuple[Path, JsonObject]]:
                 f"invalid JSON assessment plan {path}: {error}"
             ) from error
         if not isinstance(document, dict) or document.get("schema") not in {
-            "compliance.example/assessment-plan/v1",
             "compliance.example/assessment-plan/v4",
         }:
             raise ValueError(f"not an assessment plan in policy diff set: {path}")

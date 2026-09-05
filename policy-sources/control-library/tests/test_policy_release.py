@@ -34,7 +34,7 @@ from tools.policy_source_release import (  # noqa: E402
     validate_policy_source_archive,
 )
 from tools.policy_sources import source_tree_digest  # noqa: E402
-from tools.release_lock import POLICY_SOURCE_DIGEST_ALGORITHM  # noqa: E402
+from tools.composition import POLICY_SOURCE_DIGEST_ALGORITHM  # noqa: E402
 
 
 SOURCE_SHA = "a" * 40
@@ -105,7 +105,7 @@ class PolicyReleaseTests(unittest.TestCase):
         self.assertIs(validate_release_manifest(manifest), manifest)
         normalized = normalize_policy_source_release(manifest)
         self.assertEqual(
-            normalized.release_lock_policy_source(),
+            normalized.semantic_document(),
             {
                 "distribution": DISTRIBUTION_NAME,
                 "version": VERSION,

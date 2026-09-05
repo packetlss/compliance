@@ -6,7 +6,7 @@ from pathlib import Path
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker
 
-from tools.release_lock import RELEASE_LOCK_FILENAME, load_release_lock
+from tools.composition import COMPOSITION_LOCK_FILENAME, load_composition_lock
 
 
 SCHEMA_DIRECTIVE = re.compile(r"^# yaml-language-server: \$schema=(?P<path>\S+)$")
@@ -26,8 +26,8 @@ class YamlSchemaDeclarationTests(unittest.TestCase):
 
         for path in yaml_files:
             with self.subTest(path=path.relative_to(root)):
-                if path.name == RELEASE_LOCK_FILENAME:
-                    load_release_lock(path)
+                if path.name == COMPOSITION_LOCK_FILENAME:
+                    load_composition_lock(path)
                     continue
 
                 text = path.read_text(encoding="utf-8")

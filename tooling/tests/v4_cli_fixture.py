@@ -21,7 +21,6 @@ def prove_v4_cli():
         path = project/'compliance.yaml'
         config = json.loads(path.read_text())
         config['schema'] = 'compliance.example/project-config/v1alpha3'
-        config['paths'].pop('resourceSchema')
         path.write_text(json.dumps(config))
         # A complete criterion decision with attribution copied from its input.
         (root/'shared/controls/test/policy.rego').write_text('''package test.contract

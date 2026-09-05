@@ -141,7 +141,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         validate_assessment_plan(self.plan)
         validate_assessment_results(self.result_report())
 
-    def test_unavailable_policy_source_remains_a_schema_valid_invalid_plan(self):
+    def test_unavailable_policy_source_refuses_without_invented_provenance(self):
         fixture = Path(__file__).resolve().parent / "fixtures/macos-project"
         subject, groups, assignments = load_inventory_inputs(
             fixture / "inventory",
@@ -149,16 +149,8 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             "workstation/tooling-macos-fixture",
             self.root / "schemas/inventory/resource.schema.json",
         )
-        plan = render_plan(
-            subject,
-            groups,
-            assignments,
-            self.root / "does-not-exist-policy",
-        )
-
-        self.assertEqual(plan["resolution"]["status"], "invalid")
-        self.assertEqual(plan["policy_sources"], [])
-        validate_assessment_plan(plan)
+        with self.assertRaisesRegex(ValueError, "not a directory"):
+            render_plan(subject, groups, assignments, self.root / "does-not-exist-policy")
 
     def test_plan_rejects_unknown_envelope_field(self):
         document = copy.deepcopy(self.plan)
@@ -183,7 +175,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         document = copy.deepcopy(self.plan)
         document["subject"]["labels"]["changed"] = "true"
 
-        with self.assertRaisesRegex(ArtifactValidationError, "content digest"):
+        with self.assertRaisesRegex(ArtifactValidationError, "semantic digest"):
             validate_assessment_plan(document)
 
     def test_plan_rejects_inconsistent_coverage_counts(self):
@@ -251,12 +243,12 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
     def test_results_reject_inconsistent_objective_rollup(self):
         document = self.result_report(self.iam_plan)
         document["requirement_assessments"][0]["status"] = "fail"
-        document["requirement_summary"]["pass"] = 0
+        document["requirement_summary"]["unknown"] = 0
         document["requirement_summary"]["fail"] = 1
 
         with self.assertRaisesRegex(
             ArtifactValidationError,
-            r"/requirement_assessments/0/status.*expected pass",
+            r"/requirement_assessments/0/status.*expected unknown",
         ):
             validate_assessment_results(document)
 

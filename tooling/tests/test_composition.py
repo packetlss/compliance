@@ -19,7 +19,7 @@ from tools.composition import (
     observe_composition, require_composition, validate_composition,
 )
 from tools.policy_sources import PolicySource, source_tree_digest
-from tools.project_config import CONFIG_SCHEMA_V1ALPHA3, ProjectConfigError, load_config, select_config
+from tools.project_config import CONFIG_SCHEMA, ProjectConfigError, load_config, select_config
 from tools.tooling_identity import actual_tooling_identity
 from tools.tooling_source import TOOLING_SOURCE_DIGEST_ALGORITHM, tooling_source_digest
 
@@ -55,7 +55,7 @@ class CompositionTests(unittest.TestCase):
             self.sources.append(PolicySource(name, path))
         self.sources = tuple(self.sources)
         self.config = self.root / 'compliance.yaml'
-        self.document = {'schema': CONFIG_SCHEMA_V1ALPHA3,
+        self.document = {'schema': CONFIG_SCHEMA,
                          'policySources': [{'name': s.name, 'path': str(s.path)} for s in self.sources],
                          'paths': {key: key for key in ('inventory', 'assignments', 'evidence', 'plan', 'results', 'waivers')}}
         self.write_config()
@@ -193,7 +193,7 @@ class CompositionTests(unittest.TestCase):
         for flag in ('--policy-source', '--policies', '--resource-schema', '--policy-sour', '--resource-s'):
             for tail in ([flag, 'x'], [flag+'=x']):
                 with self.assertRaisesRegex(ProjectConfigError, 'runtime contract overrides'):
-                    select_config(['--config', str(self.config), *tail], validate_release=False)
+                    select_config(['--config', str(self.config), *tail], validate_runtime=False)
 
     def test_cli_diagnostics_config_and_missing_inputs_no_writes(self):
         for command in (['composition', 'show', '--format', 'json'], ['composition', 'validate', '--format', 'json'], ['config', 'validate']):

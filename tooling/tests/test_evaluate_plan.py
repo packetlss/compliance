@@ -8,19 +8,17 @@ from unittest.mock import patch
 from tools.evaluate_plan import (
     evaluate_control,
     evaluate_plan_document,
-    evidence_for_subject,
-    fresh_evidence,
 )
 from tools.policy_sources import PolicySource, policy_source_revisions
-from tools.render_plan import content_digest
+from tools.assessment_provenance import artifact_digest
+from assessment_fixture import planning_fields
 
 
 def assessment_plan(policy_sources, *, with_requirement=False):
     requirement_digest = "sha256:" + "5" * 64
     baseline_digest = "sha256:" + "6" * 64
     plan = {
-        "schema": "compliance.example/assessment-plan/v1",
-        "policy_revision": "sha256:" + "1" * 64,
+                "policy_revision": "sha256:" + "1" * 64,
         "policy_sources": policy_sources,
         "inventory_revision": "sha256:" + "2" * 64,
         "assignment_revision": "sha256:" + "3" * 64,
@@ -137,11 +135,18 @@ def assessment_plan(policy_sources, *, with_requirement=False):
             }],
         }]
         plan["coverage"]["requirement_count"] = 1
-    plan["id"] = content_digest(plan)
+    plan.update(planning_fields(plan["policy_sources"]))
+    plan["id"] = artifact_digest(plan)
     return plan
 
 
 class EvidenceFreshnessTests(unittest.TestCase):
+    def setUp(self):
+        from tools.evaluator import EvaluatorIdentity
+        identity = patch('tools.evaluator.resolve_opa_evaluator', return_value=(EvaluatorIdentity('opa', '1.18.2', 'sha256:'+'e'*64), 'opa'))
+        identity.start()
+        self.addCleanup(identity.stop)
+
     @staticmethod
     def evidence_schema() -> dict:
         return {
@@ -223,7 +228,7 @@ class EvidenceFreshnessTests(unittest.TestCase):
             "max_age": "24h",
         }]
         plan.pop("id")
-        plan["id"] = content_digest(plan)
+        plan["id"] = artifact_digest(plan)
         return source, plan
 
     @staticmethod
@@ -282,7 +287,7 @@ spec:
             ):
                 with self.subTest(expected=expected, actual=actual):
                     plan = assessment_plan(policy_source_revisions(PolicySource(expected, policy)))
-                    with self.assertRaisesRegex(SystemExit, "do not match the rendered plan"):
+                    with self.assertRaisesRegex(ValueError, "evaluation policy composition differs"):
                         evaluate_plan_document(plan, root, (PolicySource(actual, policy),))
             run.assert_not_called()
 
@@ -296,7 +301,7 @@ spec:
             plan = assessment_plan(policy_source_revisions((source,)))
             marker.write_text('{"changed":true}', encoding="utf-8")
 
-            with self.assertRaisesRegex(SystemExit, "do not match the rendered plan"):
+            with self.assertRaisesRegex(ValueError, "evaluation policy composition differs"):
                 evaluate_plan_document(plan, root, (source,))
 
     @patch("tools.evaluate_plan.subprocess.run")
@@ -336,38 +341,6 @@ spec:
         self.assertIn(str((root / "shared/controls/shared.rego").resolve()), command)
         self.assertIn(str((root / "private/controls/private.rego").resolve()), command)
 
-    def test_selects_latest_fresh_document(self):
-        documents = [
-            {"id": "old", "type": "macos.system/v1", "collected_at": "2026-08-20T12:00:00Z"},
-            {"id": "fresh", "type": "macos.system/v1", "collected_at": "2026-08-23T11:00:00Z"},
-        ]
-        requirements = [{"type": "macos.system/v1", "max_age": "24h"}]
-
-        selected = fresh_evidence(documents, requirements, datetime(2026, 8, 23, 12, tzinfo=UTC))
-
-        self.assertEqual([document["id"] for document in selected], ["fresh"])
-
-    def test_returns_no_document_when_all_are_stale(self):
-        documents = [
-            {"id": "old", "type": "macos.system/v1", "collected_at": "2026-08-20T12:00:00Z"}
-        ]
-        requirements = [{"type": "macos.system/v1", "max_age": "24h"}]
-
-        selected = fresh_evidence(documents, requirements, datetime(2026, 8, 23, 12, tzinfo=UTC))
-
-        self.assertEqual(selected, [])
-
-    def test_shared_directory_evidence_is_scoped_to_subject(self):
-        documents = [
-            {"id": "aws", "subject": {"id": "cloud-account/aws-test"}},
-            {"id": "saas", "subject": {"id": "saas/example/test"}},
-            {"id": "malformed"},
-            {"id": "wrong-shape", "subject": []},
-        ]
-
-        selected = evidence_for_subject(documents, "saas/example/test")
-
-        self.assertEqual([document["id"] for document in selected], ["saas"])
 
     def test_valid_typed_evidence_reaches_opa_with_extensions_preserved(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -399,7 +372,7 @@ spec:
         self.assertEqual(supplied[0]["payload"]["extension"], {"richer": True})
         self.assertEqual(supplied[0]["collector"]["build"], "test-build")
 
-    def test_invalid_typed_evidence_produces_control_error_without_opa(self):
+    def test_invalid_required_evidence_is_unknown_without_opa(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source, plan = self.evidence_plan(root)
@@ -422,9 +395,9 @@ spec:
 
         evaluate.assert_not_called()
         result = report["results"][0]
-        self.assertEqual(result["status"], "error")
-        self.assertEqual(result["evidence_ids"], ["evidence:test"])
-        self.assertIn("Evidence schema validation failed", result["reason"])
+        self.assertEqual(result["status"], "unknown")
+        self.assertEqual(result["evidence_ids"], [])
+        self.assertIn("rejected as invalid", result["reason"])
         errors = result["observed"]["evidence_validation_errors"]
         self.assertEqual(
             {error["path"] for error in errors},
@@ -433,7 +406,7 @@ spec:
         self.assertTrue(all(
             error["evidence_type"] == "test.evidence/v1" for error in errors
         ))
-        self.assertEqual(report["summary"]["error"], 1)
+        self.assertEqual(report["summary"]["unknown"], 1)
 
     def test_invalid_evidence_for_another_subject_is_not_evaluated(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -459,12 +432,12 @@ spec:
                 )
 
         self.assertEqual(report["results"][0]["status"], "unknown")
-        self.assertEqual(evaluate.call_args.args[2]["evidence"], [])
+        evaluate.assert_not_called()
 
     def test_unroutable_evidence_refuses_the_assessment(self):
         cases = (
-            ("{", "unreadable evidence document"),
-            ("[]", "evidence document must be a JSON object"),
+            ("{", "Expecting property name"),
+            ("[]", "evidence document must be an object"),
         )
         for content, message in cases:
             with self.subTest(message=message):
@@ -478,7 +451,7 @@ spec:
                         encoding="utf-8",
                     )
 
-                    with self.assertRaisesRegex(SystemExit, message):
+                    with self.assertRaisesRegex(ValueError, message):
                         evaluate_plan_document(plan, evidence_path, (source,))
 
     def test_evaluation_persists_objective_and_top_baseline_rollups(self):

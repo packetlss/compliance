@@ -15,7 +15,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 
 from .policy_sources import source_tree_digest
-from .release_lock import POLICY_SOURCE_DIGEST_ALGORITHM
+from .composition import POLICY_SOURCE_DIGEST_ALGORITHM
 
 
 POLICY_SOURCE_RELEASE_SCHEMA = (
@@ -91,15 +91,6 @@ class PolicySourceRelease:
             "version": self.version,
             "content": self.content.document(),
         }
-
-    def release_lock_policy_source(self) -> dict[str, Any]:
-        """Project a generic release to release-lock/v1alpha2."""
-        if self.content.digest_algorithm != POLICY_SOURCE_DIGEST_ALGORITHM:
-            raise PolicySourceReleaseError(
-                "policy-source digest algorithm is not valid for active "
-                "release-lock/v1alpha2"
-            )
-        return self.semantic_document()
 
 
 @dataclass(frozen=True)

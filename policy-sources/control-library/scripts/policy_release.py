@@ -30,7 +30,7 @@ from tools.policy_source_release import (
     validate_policy_source_archive,
 )
 from tools.policy_sources import source_tree_digest
-from tools.release_lock import POLICY_SOURCE_DIGEST_ALGORITHM
+from tools.composition import POLICY_SOURCE_DIGEST_ALGORITHM
 
 
 DISTRIBUTION_NAME = "compliance-control-library"

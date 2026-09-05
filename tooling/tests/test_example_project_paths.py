@@ -14,7 +14,7 @@ class ExampleProjectPathTests(unittest.TestCase):
             project = root / "compliance-development-projects/projects/mock-fleet"
             project.mkdir(parents=True)
             (project / "compliance.yaml").write_text(
-                """schema: compliance.example/project-config/v1alpha1
+                """schema: compliance.example/project-config/v1alpha3
 policySources:
   - name: control-library
     path: ../../../compliance-control-library/policies
@@ -25,7 +25,6 @@ paths:
   plan: generated/plans
   results: generated/results
   waivers: waivers
-  resourceSchema: ../../../compliance-tooling/schemas/inventory/resource.schema.json
 """,
                 encoding="utf-8",
             )

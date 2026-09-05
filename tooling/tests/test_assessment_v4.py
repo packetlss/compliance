@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
 
-import test_evaluate_plan as predecessor
+import test_evaluate_plan as fixtures
 from tools.assessment_provenance import (
     PLAN_SCHEMA, PROVENANCE_SCHEMA, PLAN_DIGEST_ALGORITHM, artifact_digest, stage,
     validate_selection_plan,
@@ -24,10 +24,8 @@ class AssessmentV4Tests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.source, self.plan = predecessor.EvidenceFreshnessTests().evidence_plan(self.root)
+        self.source, self.plan = fixtures.EvidenceFreshnessTests().evidence_plan(self.root)
         self.sources = (self.source,)
-        self.plan.update(schema=PLAN_SCHEMA, digestAlgorithm=PLAN_DIGEST_ALGORITHM,
-                         provenance={'schema': PROVENANCE_SCHEMA, 'planningComposition': stage(require_composition(self.sources))})
         self.sign_plan()
         self.evidence = self.root / 'evidence'
         self.evidence.mkdir()
@@ -48,7 +46,7 @@ class AssessmentV4Tests(unittest.TestCase):
             (self.evidence / f'{index}.json').write_text(json.dumps(doc))
 
     def document(self, **changes):
-        return {**predecessor.EvidenceFreshnessTests.evidence_document(), **changes}
+        return {**fixtures.EvidenceFreshnessTests.evidence_document(), **changes}
 
     def run_assessment(self, docs, *, status='pass', effect=None, **kwargs):
         self.write(docs)
@@ -181,7 +179,7 @@ class AssessmentV4Tests(unittest.TestCase):
 
     def test_independent_controls_and_multiple_required_types(self):
         schema_path = self.source.path/'schemas/evidence/second.json'
-        schema = predecessor.EvidenceFreshnessTests.evidence_schema()
+        schema = fixtures.EvidenceFreshnessTests.evidence_schema()
         schema['properties']['type']['const'] = 'second/v1'
         schema_path.write_text(json.dumps(schema))
         independent = copy.deepcopy(self.plan['controls'][0])
@@ -213,7 +211,7 @@ class AssessmentV4Tests(unittest.TestCase):
     def test_waivers_bind_identity_and_only_underlying_fail_is_waivable(self):
         waivers = self.root/'waivers'
         waivers.mkdir()
-        (waivers/'exception.yaml').write_text(predecessor.EvidenceFreshnessTests.waiver_resource())
+        (waivers/'exception.yaml').write_text(fixtures.EvidenceFreshnessTests.waiver_resource())
         failed, _ = self.run_assessment([self.document()], status='fail')
         waived, _ = self.run_assessment([self.document()], status='fail', waiver_path=waivers)
         self.assertEqual(waived['summary']['waived'], 1)
@@ -314,7 +312,7 @@ class AssessmentV4Tests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'snapshot'): validate_assessment_results(changed)
 
     def test_requirement_rollups_keep_unknown_error_fail_and_waived_meaning(self):
-        shell = predecessor.assessment_plan(self.plan['policy_sources'], with_requirement=True)
+        shell = fixtures.assessment_plan(self.plan['policy_sources'], with_requirement=True)
         for key in ('requirements','resolved_requirement_baselines'):
             self.plan[key] = shell[key]
         self.plan['coverage']['requirement_count'] = 1

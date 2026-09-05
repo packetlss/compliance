@@ -92,12 +92,8 @@ from tools.policy_source_release import (
 )
 from tools.policy_sources import PolicySource, source_tree_digest
 from tools.release import tooling_release_identity
-from tools.release_lock import (
-    POLICY_SOURCE_DIGEST_ALGORITHM,
-    RELEASE_LOCK_SCHEMA,
-    load_release_lock,
-    validate_release_composition,
-)
+from tools.composition import POLICY_SOURCE_DIGEST_ALGORITHM, COMPOSITION_LOCK_SCHEMA, load_composition_lock, require_composition
+from tools.tooling_identity import actual_tooling_identity
 from tools.tooling_source import TOOLING_SOURCE_DIGEST_ALGORITHM
 
 expected_source_digest, wheel_sha = sys.argv[1:]
@@ -197,27 +193,16 @@ installed = tooling_release_identity()
 assert installed.source_digest == expected_source_digest, installed
 assert installed.source_digest_algorithm == TOOLING_SOURCE_DIGEST_ALGORITHM, installed
 lock_document = {
-    "schema": RELEASE_LOCK_SCHEMA,
-    "tooling": {
-        "distribution": installed.distribution,
-        "version": installed.version,
-        "source": {
-            "digest": installed.source_digest,
-            "digestAlgorithm": installed.source_digest_algorithm,
-        },
-        "artifact": {"kind": "python-wheel", "sha256": wheel_sha},
+    "schema": COMPOSITION_LOCK_SCHEMA,
+    "expected": {
+        "tooling": actual_tooling_identity(),
+        "policySources": {"arbitrary-source": {"content": release.content.document()}},
     },
-    "policySources": {"arbitrary-source": release.release_lock_policy_source()},
 }
 lock_path = runtime_root / "compliance.lock.yaml"
 lock_path.write_text(yaml.safe_dump(lock_document, sort_keys=True), encoding="utf-8")
-lock = load_release_lock(lock_path)
-assert lock.semantic_document() == lock_document, lock.semantic_document()
-report = validate_release_composition(
-    lock,
-    (PolicySource("arbitrary-source", materialized, content_digest),),
-    installed_identity=installed,
-)
+lock = load_composition_lock(lock_path)
+report = require_composition((PolicySource("arbitrary-source", materialized),), lock=lock)
 assert report["valid"] is True, report
 assert report["errors"] == [], report
 
@@ -228,7 +213,7 @@ without_git_path = release_dir / "without-git-metadata.json"
 without_git_path.write_text(json.dumps(without_git_metadata), encoding="utf-8")
 without_git = load_policy_source_release(without_git_path)
 assert without_git.semantic_document() == release.semantic_document()
-assert without_git.release_lock_policy_source() == release.release_lock_policy_source()
+assert without_git.semantic_document() == release.semantic_document()
 acquisition_metadata = {
     "provider": "not-canonical",
     "repository": "not-canonical",
@@ -249,7 +234,7 @@ print(f"tooling wheel:        {wheel_sha}")
 print(f"arbitrary producer:   {release.distribution} {release.version}")
 print(f"representation bytes: {validation.representation_sha256}")
 print(f"materialized content: {validation.content_digest}")
-print(f"release lock:         {report['release_lock_digest']}")
+print(f"composition:          {report['compositionDigest']}")
 PY
 
 (

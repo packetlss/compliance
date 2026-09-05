@@ -13,7 +13,7 @@ from .render_plan import load_json, render_plan, resolve_groups
 
 
 JsonObject = dict[str, Any]
-RESULT_SCHEMA = "compliance.example/assessment-results/v1"
+RESULT_SCHEMA = "compliance.example/assessment-results/v4"
 STATUS_SCHEMA = "compliance.example/assessment-status/v1"
 GROUP_STATUS_SCHEMA = "compliance.example/assessment-group-status/v1"
 EXPLANATION_SCHEMA = "compliance.example/assessment-explanation/v1"
@@ -75,7 +75,7 @@ def load_result_reports(path: Path | None) -> list[JsonObject]:
     reports = []
     for candidate in paths:
         document = load_json(candidate)
-        if isinstance(document, dict) and document.get("schema") == RESULT_SCHEMA:
+        if isinstance(document, dict) and str(document.get("schema", "")).startswith("compliance.example/assessment-results/"):
             validate_assessment_results(document, source=candidate)
             reports.append(document)
     return reports
@@ -199,12 +199,13 @@ def build_status_report(
     policies_root: Path,
     reports: list[JsonObject],
     generated_at: datetime | None = None,
+    config=None,
 ) -> JsonObject:
     rows = []
     for subject_id in sorted(subjects):
         subject = subjects[subject_id]
         try:
-            plan = render_plan(subject, groups, assignments, policies_root)
+            plan = render_plan(subject, groups, assignments, policies_root, config=config)
             rows.append(status_row(plan, reports))
         except (KeyError, TypeError, ValueError) as error:
             rows.append(invalid_status_row(subject, groups, error))
@@ -332,6 +333,7 @@ def build_framework_report(
     external_refs: list[str] | None = None,
     levels: list[str] | None = None,
     generated_at: datetime | None = None,
+    config=None,
 ) -> JsonObject:
     """Expose objective and technical mappings without claiming equivalence."""
     selected_groups = set(group_ids or [])
@@ -340,7 +342,7 @@ def build_framework_report(
     mappings: list[JsonObject] = []
 
     for subject_id in sorted(subjects):
-        plan = render_plan(subjects[subject_id], groups, assignments, policies_root)
+        plan = render_plan(subjects[subject_id], groups, assignments, policies_root, config=config)
         resolved_group_ids = {group["id"] for group in plan["resolved_groups"]}
         if selected_groups and not selected_groups.intersection(resolved_group_ids):
             continue
@@ -774,9 +776,8 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
         "Policy sources: " + (
             ", ".join(
                 f'{source["name"]}={source["digest"]}'
-                for source in plan.get("policy_sources", [])
+                for source in plan["policy_sources"]
             )
-            or "legacy plan (not recorded)"
         ),
         f'Inventory revision: {plan["inventory_revision"]}',
         f'Assignment revision: {plan["assignment_revision"]}',
