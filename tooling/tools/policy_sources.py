@@ -57,10 +57,14 @@ def source_tree_digest(root: Path) -> str:
         raise ValueError(f"policy source is not a directory: {root}")
     digest = hashlib.sha256()
     for path in sorted(root.rglob("*")):
-        if not path.is_file() or "build" in path.parts or "__pycache__" in path.parts:
+        relative = path.relative_to(root)
+        if (
+            not path.is_file()
+            or "build" in relative.parts
+            or "__pycache__" in relative.parts
+        ):
             continue
-        relative = path.relative_to(root).as_posix()
-        digest.update(relative.encode())
+        digest.update(relative.as_posix().encode())
         digest.update(b"\0")
         digest.update(path.read_bytes())
         digest.update(b"\0")
