@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import base64
 import json
 import importlib.util
 import marshal
@@ -19,7 +20,7 @@ from tools.cli import main
 from tools.composition import COMPOSITION_LOCK_SCHEMA
 from tools.project_config import CONFIG_SCHEMA_V1ALPHA3, composition_validation, load_config
 from tools.tooling_identity import (
-    RECEIPT_FILENAME, WHEEL_FILENAME, ToolingIdentityError, actual_tooling_identity,
+    RECEIPT_FILENAME, WHEEL_FILENAME, ToolingIdentityError, actual_tooling_identity, create_wheel_receipt,
 )
 
 
@@ -95,6 +96,29 @@ def main_proof() -> None:
                 raise AssertionError('unrecorded module accepted')
         finally:
             unrecorded.unlink()
+        # Even a correctly hashed extra RECORD entry cannot expand wheel-owned code.
+        # In particular, a package can shadow a same-named module from the wheel.
+        shadow = Path(dist.locate_file('tools/release/__init__.py'))
+        shadow.parent.mkdir()
+        record_path = info / 'RECORD'
+        original_record = record_path.read_bytes()
+        original_receipt = (info / RECEIPT_FILENAME).read_bytes()
+        try:
+            data = b'altered_behavior = True\n'
+            shadow.write_bytes(data)
+            digest = base64.urlsafe_b64encode(hashlib.sha256(data).digest()).decode().rstrip('=')
+            record_path.write_bytes(original_record + f'tools/release/__init__.py,sha256={digest},{len(data)}\n'.encode())
+            try:
+                create_wheel_receipt(wheel)
+            except ToolingIdentityError:
+                pass
+            else:
+                raise AssertionError('receipt creation accepted RECORD-listed shadowing package')
+            assert (info / RECEIPT_FILENAME).read_bytes() == original_receipt
+        finally:
+            shadow.unlink()
+            shadow.parent.rmdir()
+            record_path.write_bytes(original_record)
         with tempfile.TemporaryDirectory(prefix='composition-no-git-') as temporary:
             root = Path(temporary)
             policy = root / 'policy'

@@ -153,6 +153,10 @@ def _validate_installation(dist: metadata.Distribution, info: Path, wheel: bytes
     record_name = f'{info.name}/RECORD'
     if installed.get(record_name) != ('', ''):
         raise ToolingIdentityError("installed RECORD self entry is missing or invalid")
+    installer_metadata = {
+        f'{info.name}/{name}' for name in ('INSTALLER', 'REQUESTED', 'direct_url.json', 'uv_cache.json')
+    }
+    console_script = Path(sysconfig.get_path('scripts')) / 'compliance'
     for name, entry in installed.items():
         target = root / name
         resolved = target.resolve()
@@ -165,6 +169,9 @@ def _validate_installation(dist: metadata.Distribution, info: Path, wheel: bytes
         if name.endswith('.pyc') and entry == ('', ''):
             _verify_bytecode(target, root, payload)
             continue
+        if (name not in payload and name not in installer_metadata
+                and resolved != console_script.resolve()):
+            raise ToolingIdentityError(f"installed RECORD entry is not owned by wheel: {name}")
         _verify_bytes(target.read_bytes(), entry, name)
     # Unrecorded runtime modules/schema files must not expand the validated wheel.
     for directory in ('tools', 'schemas'):
@@ -174,8 +181,8 @@ def _validate_installation(dist: metadata.Distribution, info: Path, wheel: bytes
                     _verify_bytecode(path, root, payload)
                     continue
                 name = path.relative_to(root).as_posix()
-                if name not in installed:
-                    raise ToolingIdentityError(f"unrecorded installed runtime file: {name}")
+                if name not in payload:
+                    raise ToolingIdentityError(f"installed runtime file is not owned by wheel: {name}")
     return release
 
 

@@ -140,9 +140,12 @@ hash-bearing installed RECORD entry. RECORD's self entry is necessarily unhashed
 All generated Python bytecode, including hashless/unrecorded caches, is checked
 against compilation of the verified wheel-owned source at its declared optimization
 level. Altered executable code, invalid/trailing cache data and sourceless bytecode
-are refused; cache bytes and compilation filenames remain nonsemantic. Unrecorded runtime modules/schemas,
+are refused; cache bytes and compilation filenames remain nonsemantic. Runtime modules/schemas absent from the verified wheel payload (even if listed
+in installed RECORD),
 missing files, symlinked evidence, altered payload, missing/altered receipt,
-wheel or RECORD are refused. Embedded canonical source metadata is accepted
+wheel or RECORD are refused. Installed RECORD extras are restricted to verified generated caches,
+known installer metadata and the generated compliance console entry point.
+Embedded canonical source metadata is accepted
 only after verifying it as part of those wheel bytes.
 
 This is local installation integrity evidence, not signing, publisher
