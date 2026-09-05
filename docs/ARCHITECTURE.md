@@ -1,6 +1,6 @@
 # System architecture
 
-This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0010 in `docs/adr/`.
+This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0011 in `docs/adr/`.
 
 Historical `packetlss-labs/compliance-workspace` architecture remains migration/design provenance. After this documentation-authority transfer, this repository owns current normative system architecture.
 
@@ -36,7 +36,7 @@ These jobs describe the intended product scope of the accepted core, not a claim
 - **Auditor / reviewer:** obtain attributable evidence and explanations of whether decided controls were satisfied, failed, unknown, waived, or otherwise qualified, with the provenance needed to understand the conclusion. Provenance identifies the inputs and execution used; it does not itself authenticate observation truth or approval authority. A point-in-time assessment is not automatically proof of continuous effectiveness. Framework mappings are bounded assurance claims, not automatic certification or legal-compliance claims.
 - **Evidence operator:** understand evidence demand and health: required evidence types, the subjects and controls requiring them, freshness requirements, missing/stale/invalid/otherwise unusable evidence, and the assessment outcomes blocked by those problems. This is an intended product job even though the current CLI does not provide a complete evidence-operator workflow. It does not introduce a new evidence resource or collection-failure taxonomy.
 
-These jobs do not settle invalid-required-evidence `unknown` versus `error` handling, present-state/current-status freshness semantics, detailed manual/procedural assurance or N/A semantics owned by #37, policy-gap discovery, evidence-operator CLI design, collector failure taxonomy, durable evidence retention, or continuous-effectiveness claims. Those decisions remain with their applicable design work; existing evidence/result contracts are not changed here.
+These jobs do not themselves settle evidence or temporal interpretation. [ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns assessment-time evidence validity/status/refusal, and [ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) owns immutable history, exact plan alignment and derived operational evidence timeliness. Detailed manual/procedural assurance and N/A remain with #37; policy-gap discovery, evidence-operator CLI design, collector failure taxonomy and durable evidence retention remain separate work. Point-in-time assessments cannot establish continuous effectiveness.
 
 ### Assessment-plan meaning
 
@@ -84,6 +84,14 @@ Requirements are desired assurance objectives. Realizations are design-time mapp
 Detailed successor terminology, evidence authority, N/A semantics, mapping/result model, identity, and migration remain owned by destination #37.
 
 [ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns the common required-evidence `unknown`, attributable execution `error`, and assessment-wide refusal boundary. It clarifies ADRs 0006/0007; #32 implements its schema-invalid-evidence and evidence selection ambiguity corrections as the only semantic preservation exceptions after #31. This is accepted design, not yet runtime behavior. #31 remains independent and unblocked; broader assurance design remains with #37.
+
+## Historical assessment and operational interpretation
+
+[ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is **accepted design, not yet implemented**. Historical outcomes remain immutable at `evaluated_at` under their exact plan, evidence snapshot, evaluator, planning/evaluation composition and waiver revision/application. Exact current `plan_id` equality means only **Plan-aligned**; a mismatch, including provenance-only differences, means **Different plan**.
+
+At query instant `q`, evidence timeliness is derived from the historical successful selections and the assessed plan's recorded requirements (`q - collected_at <= max_age`, equality included). No mutable evidence substitution, query-time re-selection or historical roll-up recomputation is allowed. Historical `waived` remains waived after expiry; recorded waiver validity is qualified separately. Outcome, alignment, timeliness, waiver validity and coverage/applicability aggregate independently under ADR 0011's state matrix. Neither plan alignment nor timely evidence establishes present-state certainty, absence of drift, or continuous effectiveness.
+
+#32 must retain validated, identity-bound selection references (evidence ID plus complete-document digest), selected `collected_at`, and unambiguous assessed-plan requirement associations resolving `max_age`, with references into the complete snapshot and successful selections distinguished from nonselected candidates. Existing evidence identity and ADR 0010 assessment semantics are unchanged. #32 owns this representation obligation, not query-time judgments. A later separately authorized operational view depends on #32; no runtime implementation or new artifact family is authorized by #66.
 
 ## External-adapter boundary
 

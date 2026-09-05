@@ -9,6 +9,8 @@ This is the destination-owned normative restatement of accepted workspace ADR 00
 
 [ADR 0010](0010-required-evidence-status-and-assessment-refusal.md) clarifies the status/refusal boundary. Its safely attributable schema-invalid required evidence and evidence selection ambiguity → `unknown` corrections are the only accepted exceptions to this ADR’s preservation of current semantic meaning, implemented by #32 after #31; the superseded tooling → `error` and traversal-order selection rules are not preserved, and historical results are not reinterpreted.
 
+[ADR 0011](0011-historical-assessment-and-operational-evidence-timeliness.md) owns interpretation across wall-clock time and requires #32 to retain validated, result-identity-bound successful-selection and temporal facts in v4. This is a representation clarification, not another assessment-time semantic exception or query-time status implementation.
+
 ## Context
 
 Pre-freeze development currently has unlocked project-config/assessment v1 and locked project-config/release-lock/assessment v3 paths. Provenance completeness must not depend on whether a composition was predeclared. ADR 0005 separates **actual provenance**—what really produced an artifact—from optional **expected enforcement**—what a caller required before execution. ADR 0006 removes configuration-generation artifacts, leaving assessment plans/results as the core generated artifact line and the resolved plan as the external-adapter handoff.

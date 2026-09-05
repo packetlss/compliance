@@ -72,6 +72,12 @@ These are **accepted design, not yet fully implemented/cut over**. Destination #
 
 Current `project-config/v1alpha1`, `project-config/v1alpha2`, `release-lock/v1alpha2`, assessment plan/results v1 and v3 remain **experimental migration inputs**, not frozen compatibility promises. Destination #33 removes their active readers only after successor consumer cutover.
 
+## Historical outcome and operational timeliness
+
+[ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is **Accepted design, not yet implemented**. #32 must incorporate its factual temporal-provenance obligation before v4 is complete/merge-ready: validated, result-identity-bound successful selection ID/digest, selected collection instant and assessed-plan requirement association. This does not freeze a JSON layout or change evidence identity algorithms.
+
+The predecessor status view still calls an exact-plan result `current`, a different-plan result `outdated`, and absence `pending`, presenting stored outcomes with a query-time report timestamp without re-evaluating evidence/waiver age. Those experimental labels do not implement ADR 0011. Query-time timeliness, recorded waiver qualification and separated aggregation belong to a later authorized operational-view tranche dependent on #32; #32 implements representation only for this decision. ADR 0010's assessment-time corrections remain its existing responsibility.
+
 ## Accepted vocabulary convergence
 
 [ADR 0009](adr/0009-active-compliance-vocabulary.md), implementing #57's architecture decision, makes `control-library` the maintained reusable semantic source name. This intentional pre-freeze rename changes name-bearing composition/provenance identity without changing policy-tree bytes/content digest or the `compliance-control-library` distribution. Historical `shared-library` artifacts remain distinct; no alias is added.
