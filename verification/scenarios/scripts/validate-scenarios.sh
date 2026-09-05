@@ -47,7 +47,8 @@ require_command opa
 uv_actual="$(uv --version | awk '{print $2}')"
 [[ "$uv_actual" == "$UV_VERSION" ]] || fail "uv $UV_VERSION is required; found $uv_actual"
 
-opa_actual="$(opa version | awk -F': ' '/^Version:/{print $2; exit}')"
+opa_version_output="$(opa version)"
+opa_actual="$(awk -F': ' '/^Version:/{print $2; exit}' <<<"$opa_version_output")"
 [[ "$opa_actual" == "$OPA_VERSION" ]] || fail "OPA $OPA_VERSION is required; found ${opa_actual:-unknown}"
 
 destination_actual="$(git -C "$REPOSITORY_ROOT" rev-parse HEAD)"
