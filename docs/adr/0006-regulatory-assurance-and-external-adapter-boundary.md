@@ -7,6 +7,8 @@
 
 This is the destination-owned normative restatement of accepted workspace ADR 0006. It preserves the accepted product/trust boundary and updates only ownership/topology references.
 
+[ADR 0010](0010-required-evidence-status-and-assessment-refusal.md) clarifies the common required-evidence `unknown` / `error` / assessment-refusal boundary; detailed assurance design remains with #37.
+
 ## Context
 
 The compliance core supports evidence-backed technical assessment and an optional requirement/realization assurance layer. A separate prototype previously added configuration intent compilation and backend renderers. The resolved assessment plan already contains the stable, provenance-bearing information an external configuration/policy adapter needs.

@@ -1,6 +1,6 @@
 # System architecture
 
-This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0009 in `docs/adr/`.
+This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0010 in `docs/adr/`.
 
 Historical `packetlss-labs/compliance-workspace` architecture remains migration/design provenance. After this documentation-authority transfer, this repository owns current normative system architecture.
 
@@ -56,6 +56,8 @@ subject / group assignment
 Requirements are desired assurance objectives. Realizations are design-time mappings, not proof of implementation. Authored adoption/implementation labels cannot create pass. Missing, stale, invalid, or inconclusive required evidence is `unknown`. Realization selection is deterministic and fail-closed; source order is never precedence. Technical results remain independently attributable. Framework mappings are bounded claims and do not imply certification/legal compliance beyond evaluated evidence.
 
 Detailed successor terminology, evidence authority, N/A semantics, mapping/result model, identity, and migration remain owned by destination #37.
+
+[ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns the common required-evidence `unknown`, attributable execution `error`, and assessment-wide refusal boundary. It clarifies ADRs 0006/0007; #32 implements the sole semantic preservation exception after #31. This is accepted design, not yet runtime behavior. #31 remains independent and unblocked; broader assurance design remains with #37.
 
 ## External-adapter boundary
 
