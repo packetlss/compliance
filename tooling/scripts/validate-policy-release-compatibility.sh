@@ -213,7 +213,6 @@ without_git_path = release_dir / "without-git-metadata.json"
 without_git_path.write_text(json.dumps(without_git_metadata), encoding="utf-8")
 without_git = load_policy_source_release(without_git_path)
 assert without_git.semantic_document() == release.semantic_document()
-assert without_git.semantic_document() == release.semantic_document()
 acquisition_metadata = {
     "provider": "not-canonical",
     "repository": "not-canonical",
@@ -221,7 +220,7 @@ acquisition_metadata = {
 }
 assert set(acquisition_metadata).isdisjoint(
     key
-    for source in lock.semantic_document()["policySources"].values()
+    for source in lock.semantic_document()["expected"]["policySources"].values()
     for key in source
 )
 semantic_text = json.dumps(lock.semantic_document(), sort_keys=True)
