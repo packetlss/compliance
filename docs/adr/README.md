@@ -21,6 +21,7 @@ Accepted destination decisions:
 - [ADR 0010 — Required evidence, attributable errors, and assessment refusal](0010-required-evidence-status-and-assessment-refusal.md) — accepted design; runtime implementation in #32, promotions #61 (invalid evidence) and #62 (evidence selection ambiguity).
 
 - [ADR 0011 — Separate historical assessment outcomes from operational evidence timeliness](0011-historical-assessment-and-operational-evidence-timeliness.md) — accepted design, not yet implemented; promotion #66, factual v4 representation in #32, operational view in a later separately authorized tranche.
+- [ADR 0012 — Explicit policy-parameter resolution and policy-owned evidence freshness](0012-explicit-policy-parameter-resolution.md) — accepted design, not yet implemented; promotion under #37, coordinated runtime/schema/consumer migration in [#73](https://github.com/packetlss/compliance/issues/73).
 
 Current system-level documents:
 
