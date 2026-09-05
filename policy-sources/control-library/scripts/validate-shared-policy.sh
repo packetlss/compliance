@@ -7,7 +7,7 @@ fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 [[ "$#" == 0 ]] || fail "usage: $0"
 TOOLING_INPUT="$REPOSITORY_ROOT/tooling"
 # shellcheck disable=SC1091
-source "$SOURCE_ROOT/scripts/ci-versions.env"
+source "$REPOSITORY_ROOT/toolchain/versions.env"
 
 for command in git uv opa tar; do
   command -v "$command" >/dev/null 2>&1 || fail "required command not found: $command"
@@ -46,7 +46,7 @@ mkdir "$EXPORT_ROOT"
 # revision. Local edits and Python environments are not consumed, and Git is
 # not needed after export.
 git -C "$REPOSITORY_ROOT" archive "$repository_actual" \
-  tooling policy-sources/control-library | tar -x -C "$EXPORT_ROOT"
+  toolchain tooling policy-sources/control-library | tar -x -C "$EXPORT_ROOT"
 TOOLING_ROOT="$EXPORT_ROOT/tooling"
 POLICY_ROOT="$EXPORT_ROOT/policy-sources/control-library"
 export UV_PROJECT_ENVIRONMENT="$temporary/venv"

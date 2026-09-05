@@ -2,8 +2,9 @@
 set -euo pipefail
 
 TOOLING_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+REPOSITORY_ROOT="$(cd -- "$TOOLING_ROOT/.." && pwd)"
 # shellcheck disable=SC1091
-source "$TOOLING_ROOT/scripts/ci-versions.env"
+source "$REPOSITORY_ROOT/toolchain/versions.env"
 
 fail() {
   printf 'ERROR: %s\n' "$*" >&2
@@ -30,9 +31,9 @@ PY
 python "$TOOLING_ROOT/scripts/build-wheel.py" \
   --source-digest "$source_digest" \
   --output-dir "$temporary/dist"
-mapfile -t wheels < <(find "$temporary/dist" -maxdepth 1 -type f -name '*.whl' | sort)
-[[ "${#wheels[@]}" -eq 1 ]] || fail "expected exactly one wheel"
-wheel="${wheels[0]}"
+set -- "$temporary/dist"/*.whl
+[[ "$#" -eq 1 && -f "$1" ]] || fail "expected exactly one wheel"
+wheel="$1"
 [[ "$(basename "$wheel")" == compliance_tooling-*.whl ]] || fail "expected compliance_tooling wheel name"
 wheel_sha="sha256:$(sha256sum "$wheel" | awk '{print $1}')"
 
@@ -249,8 +250,12 @@ assert new_provenance.release_lock_digest != provenance.release_lock_digest
 PY
 
 # Restore the original lock so the console validates and inspects the stored v3 plan.
-sed -i "s/sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd/$wheel_sha/" \
-  "$project/compliance.lock.yaml"
+python - "$project/compliance.lock.yaml" "$wheel_sha" <<'PY'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+path.write_text(path.read_text().replace("sha256:" + "d" * 64, sys.argv[2]))
+PY
 PATH="$temporary/no-git-bin:$PATH" "$venv_compliance" \
   --config "$project/compliance.yaml" \
   plan show host/example --format json > "$temporary/runtime/v3-plan-show.json"

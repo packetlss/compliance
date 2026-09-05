@@ -6,7 +6,7 @@ Run the source gate from a clean, committed tooling checkout:
 ./scripts/validate-tooling.sh
 ```
 
-Install the Python, uv, and OPA versions recorded in `scripts/ci-versions.env`.
+From the repository root run `scripts/dev setup`; root `toolchain/versions.env` is the sole pin authority. Use `scripts/dev doctor` for read-only diagnosis.
 The gate performs frozen dependency setup, runs the complete tooling component
 suite, and checks this repository's revision and cleanliness before and after.
 It works at any checkout location, including a direct Git worktree. It neither
@@ -56,8 +56,8 @@ policy, plan, or result is written into the checkout.
 
 ## Composed assertions and their owners
 
-The complete feature suite is owned by
-[`compliance-verification-scenarios`](https://github.com/packetlss-labs/compliance-verification-scenarios/blob/main/integration/README.md).
+The complete feature suite is owned by destination
+[`verification/scenarios`](../../verification/scenarios/integration/README.md).
 The gate established by scenario PR #10 remains the owner of composed
 integration and explicit immutable external input selection. The retained
 tooling catalog after core configuration removal contains 20 public CLI leaves
@@ -66,11 +66,7 @@ manifest is intentionally not advanced by tooling #67; scenario issue #11 owns
 the final coordinated cutover after affected producers and consumers merge.
 Components must not depend back on its manifest.
 
-The integration owner's current repository coordinate and component revisions
-are transition metadata, not canonical semantic identity. Workspace
-[ADR 0005](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/adr/0005-content-addressed-development-boundaries.md)
-and the current [repository map](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/REPOSITORIES.md)
-govern topology while retaining the logical owner and content-addressed inputs.
+Repository coordinates and revisions are review metadata, not canonical semantic identity. Destination [ADR 0005](../../docs/adr/0005-content-addressed-development-boundaries.md) and the current [repository map](../../docs/REPOSITORIES.md) govern topology while retaining logical ownership and content-addressed inputs.
 
 The following old tooling assertions are no longer component gates:
 
@@ -93,7 +89,7 @@ manifest from this repository.
 
 The `tooling-package-validation` workflow tests the installed package on the
 sole supported minor, Python 3.13, using exact Python 3.13.15 from
-`scripts/ci-versions.env`. The single job runs the locked-artifact,
+root `toolchain/versions.env`. The single job runs the locked-artifact,
 annotated-tag, release-preparation, and local generic policy-source conformance
 gates exactly once. Supporting another minor requires an explicit metadata and
 CI decision. Run the relevant scripts separately using the pinned toolchain:
@@ -105,8 +101,7 @@ COMPLIANCE_TOOLING_SHA="$(git rev-parse HEAD)" bash scripts/validate-release-pre
 bash scripts/validate-policy-release-compatibility.sh
 ```
 
-These existing release scripts require Bash 4+ and GNU-compatible command-line
-utilities. The policy-source compatibility script is provider-neutral and fully
+These release scripts support Apple Bash 3.2/native utilities and Ubuntu Linux. The policy-source compatibility script is provider-neutral and fully
 local. It installs the candidate wheel and validates a tooling-owned minimal
 generic descriptor/archive round trip with Git, provider commands, and network
 access disabled during runtime. It does not download a hosted producer release

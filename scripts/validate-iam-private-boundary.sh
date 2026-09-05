@@ -17,10 +17,10 @@ fail() {
 }
 
 export PYTHONDONTWRITEBYTECODE=1
-PYTHONPATH="$SCRIPT_ROOT" python3 -m unittest discover \
+PYTHONPATH="$SCRIPT_ROOT" "${COMPLIANCE_PYTHON:-python3}" -m unittest discover \
   -s "$SOURCE_ROOT/tests/iam-private-boundary" -p 'test_*.py' -v
 
-python3 "$SCRIPT_ROOT/validation_inputs.py" assemble --root "$ASSEMBLY_ROOT"
+"${COMPLIANCE_PYTHON:-python3}" "$SCRIPT_ROOT/validation_inputs.py" assemble --root "$ASSEMBLY_ROOT"
 
 # shellcheck source=../toolchain/versions.env
 source "$SOURCE_ROOT/toolchain/versions.env"
@@ -102,7 +102,7 @@ tooling_run python "$SCRIPT_ROOT/assert-iam-private-boundary.py" \
   --assembly-root "$ASSEMBLY_ROOT" \
   --run-root "$RUN_ROOT"
 
-python3 "$SCRIPT_ROOT/validation_inputs.py" verify --root "$ASSEMBLY_ROOT"
+"${COMPLIANCE_PYTHON:-python3}" "$SCRIPT_ROOT/validation_inputs.py" verify --root "$ASSEMBLY_ROOT"
 [[ "$(git -C "$SOURCE_ROOT" rev-parse HEAD)" == "$REPOSITORY_REVISION" ]] \
   || fail "destination revision changed during IAM validation"
 status="$(git -C "$SOURCE_ROOT" status --porcelain --untracked-files=all)"

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 TOOLING_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+REPOSITORY_ROOT="$(cd -- "$TOOLING_ROOT/.." && pwd)"
 
 fail() {
   printf 'ERROR: %s\n' "$*" >&2
@@ -9,7 +10,7 @@ fail() {
 }
 
 # shellcheck disable=SC1091
-source "$TOOLING_ROOT/scripts/ci-versions.env"
+source "$REPOSITORY_ROOT/toolchain/versions.env"
 for command in git uv opa; do
   command -v "$command" >/dev/null 2>&1 || fail "required command not found: $command"
 done

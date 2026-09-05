@@ -59,34 +59,36 @@ jobs:
           printf '%s  %s\n' "$OPA_SHA256" /tmp/opa | sha256sum --check --strict -
           sudo install -m 0755 /tmp/opa /usr/local/bin/opa
           opa version
+      - name: Select repository development toolchain
+        run: scripts/dev setup
       - name: Validate destination repository contract
         shell: bash
-        run: bash scripts/validate-repository.sh
+        run: scripts/dev gate repository
       - name: Validate tooling component
         shell: bash
         env:
           COMPLIANCE_TOOLING_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: bash tooling/scripts/validate-tooling.sh
+        run: scripts/dev gate tooling
       - name: Validate control-library component
         shell: bash
         env:
           COMPLIANCE_CONTROL_LIBRARY_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: bash policy-sources/control-library/scripts/validate-shared-policy.sh
+        run: scripts/dev gate policy
       - name: Validate verification-policy component
         shell: bash
         env:
           COMPLIANCE_VERIFICATION_POLICY_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: bash policy-sources/verification-policy/scripts/validate-verification-policy.sh
+        run: scripts/dev gate verification-policy
       - name: Validate ordinary development projects
         shell: bash
         env:
           COMPLIANCE_DEVELOPMENT_PROJECTS_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: bash scripts/validate-development-projects.sh
+        run: scripts/dev gate projects
       - name: Validate IAM private-source boundary
         shell: bash
         env:
           COMPLIANCE_IAM_PRIVATE_BOUNDARY_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: bash scripts/validate-iam-private-boundary.sh
+        run: scripts/dev gate iam
 
   verification-scenarios:
     name: verification-scenarios
@@ -133,11 +135,13 @@ jobs:
           printf '%s  %s\n' "$OPA_SHA256" /tmp/opa | sha256sum --check --strict -
           sudo install -m 0755 /tmp/opa /usr/local/bin/opa
           opa version
+      - name: Select repository development toolchain
+        run: scripts/dev setup
       - name: Validate canonical verification scenarios
         shell: bash
         env:
           COMPLIANCE_VERIFICATION_SCENARIOS_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: bash scripts/validate-verification-scenarios.sh
+        run: scripts/dev gate scenarios
 
   installed-release-provenance:
     name: installed-release-provenance
@@ -169,12 +173,14 @@ jobs:
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           version: ${{ steps.versions.outputs.uv }}
+      - name: Select repository development toolchain
+        run: scripts/dev setup
       - name: Validate standalone installed package
         shell: bash
-        run: bash tooling/scripts/validate-package.sh
+        run: scripts/dev gate package
       - name: Validate content-addressed locked artifacts
         shell: bash
-        run: bash tooling/scripts/validate-locked-artifacts-package.sh
+        run: scripts/dev gate locked-artifacts
       - name: Validate annotated release tag gate
         shell: bash
         run: |
@@ -203,7 +209,33 @@ jobs:
         shell: bash
         env:
           COMPLIANCE_TOOLING_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: bash tooling/scripts/validate-release-preparation.sh
+        run: scripts/dev gate release-preparation
       - name: Validate local generic policy-source conformance
         shell: bash
-        run: bash tooling/scripts/validate-policy-release-compatibility.sh
+        run: scripts/dev gate policy-release
+
+  macos-portability:
+    name: macos-portability
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up and inspect repository toolchain
+        run: |
+          /bin/bash scripts/dev setup
+          /bin/bash scripts/dev doctor
+      - name: Exercise working-tree and identity checks
+        run: |
+          /bin/bash scripts/dev check tooling test_canonical_json.py test_tooling_source.py test_package_schema_mirrors.py
+          /bin/bash scripts/dev gate repository
+      - name: Exercise portable package entrypoints
+        env:
+          COMPLIANCE_TOOLING_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          /bin/bash scripts/dev gate package
+          /bin/bash scripts/dev gate release-preparation

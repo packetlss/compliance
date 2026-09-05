@@ -34,14 +34,14 @@ fi
   exit 1
 }
 
-PYTHONPATH="$SCRIPT_ROOT" python3 -m unittest discover \
+PYTHONPATH="$SCRIPT_ROOT" "${COMPLIANCE_PYTHON:-python3}" -m unittest discover \
   -s "$source_root/tests/development-projects" -p 'test_*.py' -v
 if [[ "$#" == 2 && "$1" == --assembly-root ]]; then
   ASSEMBLY_ROOT="$2"
 elif [[ "$#" == 0 ]]; then
   ASSEMBLY_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/compliance-project-validation.XXXXXX")"
   OWN_ASSEMBLY=true
-  python3 "$SCRIPT_ROOT/validation_inputs.py" assemble --root "$ASSEMBLY_ROOT"
+  "${COMPLIANCE_PYTHON:-python3}" "$SCRIPT_ROOT/validation_inputs.py" assemble --root "$ASSEMBLY_ROOT"
 else
   printf 'Usage: %s [--assembly-root TEMPORARY_ASSEMBLY]\n' "$0" >&2
   exit 1

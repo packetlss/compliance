@@ -6,7 +6,7 @@ separation of component, composed integration, and installed-release validation.
 
 ## Inputs and local command
 
-Install the Python, uv, and OPA versions in `scripts/ci-versions.env`. The explicit
+Run `scripts/dev setup` from the repository root; root `toolchain/versions.env` is the sole pin authority. The explicit
 tooling contract is the co-located destination `tooling/` root at the same outer
 Git revision. From the destination root:
 

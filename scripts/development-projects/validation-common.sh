@@ -28,7 +28,7 @@ initialize_validation() {
   DEV_ROOT="$ASSEMBLY_ROOT"
   FIXED_INSTANT="2026-09-01T00:00:00Z"
   export PYTHONDONTWRITEBYTECODE=1
-  python3 "$SOURCE_ROOT/scripts/development-projects/validation_inputs.py" verify --root "$ASSEMBLY_ROOT"
+  "${COMPLIANCE_PYTHON:-python3}" "$SOURCE_ROOT/scripts/development-projects/validation_inputs.py" verify --root "$ASSEMBLY_ROOT"
   # shellcheck source=../../toolchain/versions.env
   source "$SOURCE_ROOT/toolchain/versions.env"
   local command uv_actual opa_actual
@@ -51,7 +51,7 @@ initialize_validation() {
 }
 
 finish_validation() {
-  python3 "$SOURCE_ROOT/scripts/development-projects/validation_inputs.py" verify --root "$ASSEMBLY_ROOT"
+  "${COMPLIANCE_PYTHON:-python3}" "$SOURCE_ROOT/scripts/development-projects/validation_inputs.py" verify --root "$ASSEMBLY_ROOT"
   [[ "$(git -C "$SOURCE_ROOT" rev-parse HEAD)" == "$REPOSITORY_REVISION" ]] \
     || fail "destination revision changed during validation"
   assert_projects_clean

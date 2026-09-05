@@ -34,12 +34,11 @@ cleanup() {
 
 trap cleanup EXIT
 
-require_command python3
-python3 "$SOURCE_ROOT/scripts/integration.py" verify --root "$INTEGRATION_ROOT"
+"${COMPLIANCE_PYTHON:-python3}" "$SOURCE_ROOT/scripts/integration.py" verify --root "$INTEGRATION_ROOT"
 [[ -f "$PROJECT_ROOT/compliance.yaml" ]] || fail "scenario project not found: $PROJECT_ROOT"
 
 # shellcheck disable=SC1091
-source "$SCENARIOS_ROOT/scripts/ci-versions.env"
+source "$REPOSITORY_ROOT/toolchain/versions.env"
 
 require_command git
 require_command uv
@@ -179,7 +178,7 @@ printf '\n== Feature ownership/completeness integration ==\n'
 tooling_run python "$TOOLING_ROOT"/examples/verify_examples.py --output "$RUN_ROOT/features"
 
 printf '\n== Post-validation revisions and cleanliness ==\n'
-python3 "$SOURCE_ROOT/scripts/integration.py" verify --root "$INTEGRATION_ROOT"
+"${COMPLIANCE_PYTHON:-python3}" "$SOURCE_ROOT/scripts/integration.py" verify --root "$INTEGRATION_ROOT"
 assert_scenarios_clean
 cleanup
 [[ ! -e "$RUN_ROOT" ]] || fail "temporary generated outputs were not removed"

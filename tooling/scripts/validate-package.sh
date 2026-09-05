@@ -2,8 +2,9 @@
 set -euo pipefail
 
 TOOLING_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+REPOSITORY_ROOT="$(cd -- "$TOOLING_ROOT/.." && pwd)"
 # shellcheck disable=SC1091
-source "$TOOLING_ROOT/scripts/ci-versions.env"
+source "$REPOSITORY_ROOT/toolchain/versions.env"
 
 fail() {
   printf 'ERROR: %s\n' "$*" >&2
@@ -41,9 +42,9 @@ runtime_path="$temporary/no-git-bin:$PATH"
 python "$TOOLING_ROOT/scripts/build-wheel.py" \
   --source-digest "$source_digest" \
   --output-dir "$temporary/dist"
-mapfile -t wheels < <(find "$temporary/dist" -maxdepth 1 -type f -name '*.whl' | sort)
-[[ "${#wheels[@]}" -eq 1 ]] || fail "expected exactly one wheel, found ${#wheels[@]}"
-wheel="${wheels[0]}"
+set -- "$temporary/dist"/*.whl
+[[ "$#" -eq 1 && -f "$1" ]] || fail "expected exactly one wheel"
+wheel="$1"
 [[ "$(basename "$wheel")" == compliance_tooling-*.whl ]] || fail "expected compliance_tooling wheel name"
 wheel_sha="sha256:$(sha256sum "$wheel" | awk '{print $1}')"
 

@@ -30,9 +30,9 @@ read-only exploration thread
   -> GitHub issue when durable coordination is required
   -> new implementation thread in an isolated worktree
   -> working-tree tests
-  -> committed candidate and canonical local validation
+  -> committed candidate and impact-selected canonical local validation
   -> PR linked to the issue/thread
-  -> fresh-context review on the exact PR head
+  -> concurrent fresh-context review and CI on the exact PR head
        | no finding
        |   -> exact-head CI -> human squash merge
        | implementation-local
@@ -118,7 +118,7 @@ Link authoritative ADRs rather than duplicating them. A thread transcript may be
 
 Substantial implementation uses a T3 worktree and the repository's accepted toolchain. CI is an independent clean-environment gate, not a substitute for material local implementation testing.
 
-Fast focused tests may run against uncommitted changes. Canonical component and scenario gates export committed inputs and therefore run only after a checkpoint commit from a clean worktree.
+Fast focused tests must read current uncommitted changes. Canonical component and scenario gates export committed inputs and therefore run only after a checkpoint commit from a clean worktree. Run applicable working-tree checks locally; select full canonical local gates by impact or reproduction need. A local pass never replaces CI.
 
 Normal validation must not recreate the retired multi-repository workspace dependency graph. Component gates use co-located explicit roots, repository-owned fixtures, installed artifacts, or canonical integration as appropriate.
 
@@ -139,6 +139,10 @@ Runs the canonical deterministic composed scenario/feature suite from a temporar
 ### `installed-release-provenance`
 
 Runs release-critical installed/no-Git, locked-artifact, release preparation/tag and generic policy-source release/provenance validation.
+
+### `macos-portability`
+
+Runs repository setup/doctor, focused identity/tooling checks, and representative package/release entrypoints on macOS arm64 with native Bash and utilities. Linux CI remains the full automated validation authority.
 
 Historical pre-freeze readability is not a default required gate unless an explicit freeze or bounded historical-reproduction contract requires it.
 
@@ -184,7 +188,7 @@ CI may cancel a superseded run for an older head of the same PR. It must not pat
 
 ## Review and definition of done
 
-Review the current PR head, not a stale earlier revision. A PR is complete only when its implementation contract is satisfied, required local/CI validation is recorded and green, fresh-context review is recorded, implementation findings are captured, generated/temporary state is clean, and no unresolved architectural finding remains.
+Review the current PR head, not a stale earlier revision. The candidate must contain the freshly resolved current `main` head; advancing `main` requires candidate integration and new exact-head evidence. `scripts/dev readiness` checks the compact PR review record and required contexts but never posts, mutates, or merges. A PR is complete only when its implementation contract is satisfied, required local/CI validation is recorded and green, fresh-context review is recorded, implementation findings are captured, generated/temporary state is clean, and no unresolved architectural finding remains.
 
 Historical preservation is distinct from current compatibility. Do not keep active complexity solely because an unfrozen historical artifact exists.
 

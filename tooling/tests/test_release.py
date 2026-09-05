@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def _ci_versions() -> dict[str, str]:
     values: dict[str, str] = {}
-    for raw_line in (ROOT / "scripts/ci-versions.env").read_text(encoding="utf-8").splitlines():
+    for raw_line in (ROOT.parent / "toolchain/versions.env").read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#"):
             continue
