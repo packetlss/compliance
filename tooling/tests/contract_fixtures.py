@@ -585,7 +585,7 @@ def build_fixture(root):
             {
                 "schema": "compliance.example/project-config/v1alpha1",
                 "policySources": [
-                    {"name": "shared-library", "path": "../shared"},
+                    {"name": "control-library", "path": "../shared"},
                     {"name": "verification-policy", "path": "../selection"},
                 ]
                 + (

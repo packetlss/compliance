@@ -32,7 +32,7 @@ assert_repository_clean() {
 }
 assert_repository_clean
 printf 'Destination revision: %s\n' "$repository_actual"
-printf 'Semantic source: shared-library (%s)\n' \
+printf 'Semantic source: control-library (%s)\n' \
   'policy-sources/control-library/policies/'
 printf 'Tooling root: tooling/ (same destination revision)\n'
 printf 'Toolchain: Python %s, uv %s, OPA %s\n' "$PYTHON_VERSION" "$UV_VERSION" "$OPA_VERSION"

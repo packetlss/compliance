@@ -106,7 +106,7 @@ printf '\n== All resources, schemas, references, and Rego entrypoints ==\n'
 # An empty temporary cwd prevents unrelated configuration discovery. Both named
 # policy roots are explicit; no inventory, assignments, or consumer project is needed.
 (cd "$RUN_ROOT" && tooling_run compliance policy validate \
-  --policy-source "shared-library=$COMPLIANCE_CONTROL_LIBRARY_ROOT/policies" \
+  --policy-source "control-library=$COMPLIANCE_CONTROL_LIBRARY_ROOT/policies" \
   --policy-source "verification-policy=$materialized_policy_root" --format json)
 printf '\n== Repository-owned source and negative contract tests ==\n'
 tooling_run python -m unittest discover -s "$POLICY_ROOT/tests" -p 'test_verification_policy_source.py' -v

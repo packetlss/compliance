@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tools.policy_sources import PolicySource, source_pin_errors, source_tree_digest
+from tools.policy_sources import PolicySource, policy_revision, policy_source_revisions, source_pin_errors, source_tree_digest
 from tools.release_lock import POLICY_SOURCE_DIGEST_ALGORITHM
 
 
@@ -22,6 +22,20 @@ class PolicySourceIdentityTests(unittest.TestCase):
         (root / "controls").mkdir(parents=True)
         (root / "controls/control.rego").write_bytes(b"package example\n")
         (root / "data.json").write_bytes(b'{"enabled":true}\n')
+
+    def test_explicit_source_rename_changes_policy_identity_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            # Neither the outer path nor a distribution selects the source name.
+            root = Path(temporary) / "compliance-control-library" / "policies"
+            self._write_tree(root)
+            names = ("shared-library", "control-library", "adopter.custom_1")
+            revisions = [policy_source_revisions(PolicySource(name, root)) for name in names]
+
+            self.assertEqual([items[0]["name"] for items in revisions], list(names))
+            self.assertEqual(len({items[0]["digest"] for items in revisions}), 1)
+            self.assertEqual(len({policy_revision(items) for items in revisions}), 3)
+            combined = revisions[0] + revisions[1]
+            self.assertEqual(policy_revision(combined), policy_revision(combined[::-1]))
 
     def test_raw_path_and_byte_vector_is_unchanged(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

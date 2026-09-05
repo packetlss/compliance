@@ -40,7 +40,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             assignments,
             (
                 PolicySource(
-                    "shared-library",
+                    "control-library",
                     cls.root / "shared",
                 ),
                 PolicySource(
@@ -61,7 +61,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             iam_assignments,
             (
                 PolicySource(
-                    "shared-library",
+                    "control-library",
                     cls.root / "shared",
                 ),
                 PolicySource(
@@ -110,7 +110,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 (
                     (
                         PolicySource(
-                            "shared-library",
+                            "control-library",
                             self.root / "shared",
                         ),
                         PolicySource(
@@ -121,7 +121,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                     if plan is self.plan
                     else (
                         PolicySource(
-                            "shared-library",
+                            "control-library",
                             self.root / "shared",
                         ),
                         PolicySource(

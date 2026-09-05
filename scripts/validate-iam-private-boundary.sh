@@ -39,7 +39,7 @@ opa_actual="$(opa version | awk -F': ' '/^Version:/{print $2}')"
 
 FIXTURE_ROOT="$ASSEMBLY_ROOT/verification/fixtures/iam-private-boundary"
 PRIVATE_ROOT="$ASSEMBLY_ROOT/external-sources/environment-private"
-SHARED_ROOT="$ASSEMBLY_ROOT/policy-sources/control-library/policies"
+CONTROL_LIBRARY_ROOT="$ASSEMBLY_ROOT/policy-sources/control-library/policies"
 VERIFICATION_ROOT="$ASSEMBLY_ROOT/policy-sources/verification-policy/policies"
 CONFIG="$FIXTURE_ROOT/compliance.yaml"
 FIXED_INSTANT="2026-09-01T00:00:00Z"
@@ -57,7 +57,7 @@ python_actual="$(tooling_run python -c 'import platform; print(platform.python_v
 printf '\n== IAM independent-source layout ==\n'
 printf 'Destination revision: %s\n' "$REPOSITORY_REVISION"
 printf 'Temporary non-Git assembly: %s\n' "$ASSEMBLY_ROOT"
-printf 'shared-library: %s\n' "$SHARED_ROOT"
+printf 'control-library: %s\n' "$CONTROL_LIBRARY_ROOT"
 printf 'verification-policy: %s\n' "$VERIFICATION_ROOT"
 printf 'environment-private: %s\n' "$PRIVATE_ROOT"
 [[ ! -e "$FIXTURE_ROOT/policy" ]] \

@@ -39,7 +39,7 @@ flowchart TD
 
 The example has its own project configuration at
 [`compliance.yaml`](compliance.yaml). It assembles reusable controls and
-schemas from the co-located, independently named `shared-library` source with
+schemas from the co-located, independently named `control-library` source with
 synthetic baselines from `verification-policy`. Neither source has precedence.
 The validation registry registers it as `mock-fleet`, so operators can select
 it without knowing the config path.

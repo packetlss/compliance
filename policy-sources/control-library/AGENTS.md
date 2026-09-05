@@ -1,6 +1,6 @@
 # Shared control-library instructions
 
-This root owns reusable controls and helpers, control parameter schemas, policy/evidence schemas, and technology-neutral requirement contracts. Its semantic source is `shared-library`, rooted at `policies/`.
+This root owns reusable controls and helpers, control parameter schemas, policy/evidence schemas, and technology-neutral requirement contracts. Its semantic source is `control-library`, rooted at `policies/`.
 
 ## Boundaries
 

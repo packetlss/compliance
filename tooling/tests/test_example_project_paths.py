@@ -16,7 +16,7 @@ class ExampleProjectPathTests(unittest.TestCase):
             (project / "compliance.yaml").write_text(
                 """schema: compliance.example/project-config/v1alpha1
 policySources:
-  - name: shared-library
+  - name: control-library
     path: ../../../compliance-control-library/policies
 paths:
   inventory: inventory

@@ -153,7 +153,7 @@ def verify(root: Path) -> None:
     require(
         {path.name for path in (root / "policy-sources").iterdir()}
         == POLICY_SOURCE_ENTRIES,
-        "assembly must keep exactly the shared-library and verification-policy producers",
+        "assembly must keep exactly the control-library and verification-policy producers",
     )
     require(
         {path.name for path in (root / "verification").iterdir()} == {"fixtures"},

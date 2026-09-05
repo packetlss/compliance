@@ -186,35 +186,35 @@ alignment, current/outdated status, subject, and policy-object identity.
 
 ## Workspaces and project configuration
 
-The current transitional multi-repository checkout root contains a
-workspace-style `compliance.yaml` registry for independently configured
-projects:
+Canonical verification materializes `verification/scenarios/integration/compliance.yaml`
+at its temporary assembly root as a registry of independently configured projects.
+The current schema remains `workspace-config`; #57 accepts `project-registry`
+but defers its implementation to Tranche 2:
 
 ```yaml
 schema: compliance.example/workspace-config/v1alpha1
-defaultProject: mock-fleet
+defaultProject: linux-hardening-rollout
 projects:
-  mock-fleet:
-    config: compliance-development-projects/projects/mock-fleet/compliance.yaml
-  iam-realization:
-    config: compliance-project-iam-realization/compliance.yaml
-  server-personas:
-    config: compliance-development-projects/projects/server-personas/compliance.yaml
   linux-hardening-rollout:
-    config: compliance-verification-scenarios/projects/linux-hardening-rollout/compliance.yaml
+    config: verification/scenarios/projects/linux-hardening-rollout/compliance.yaml
+  mock-fleet:
+    config: projects/mock-fleet/compliance.yaml
+  server-personas:
+    config: projects/server-personas/compliance.yaml
+  iam-realization:
+    config: verification/fixtures/iam-private-boundary/compliance.yaml
 ```
 
-Each referenced project has its own `compliance.yaml`:
+Each referenced project has its own `compliance.yaml`. For example,
+`projects/mock-fleet/compliance.yaml` declares:
 
 ```yaml
 schema: compliance.example/project-config/v1alpha1
 policySources:
-  - name: shared-library
-    path: ../compliance-control-library/policies
+  - name: control-library
+    path: ../../policy-sources/control-library/policies
   - name: verification-policy
-    path: ../compliance-verification-policy/policies
-  - name: environment-private
-    path: policy
+    path: ../../policy-sources/verification-policy/policies
 paths:
   inventory: inventory
   assignments: assignments
@@ -222,7 +222,7 @@ paths:
   plan: generated/plans
   results: generated/results
   waivers: waivers
-  resourceSchema: ../compliance-tooling/schemas/inventory/resource.schema.json
+  resourceSchema: ../../tooling/schemas/inventory/resource.schema.json
 ```
 
 Maintained projects declare all seven operational path keys and at least one
@@ -231,14 +231,14 @@ operator workflow rather than only the command first used against it. The
 canonical project tree and path-ownership rules are defined in
 [`project-layout.md`](project-layout.md).
 
-The checkout registry and editable root Python project preserve the familiar
-`uv run compliance` command across the current component materializations. The
-repository names and relative paths in this example are transition metadata,
-not a release, runtime, or semantic identity contract. Workspace
-[ADR 0005](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/adr/0005-content-addressed-development-boundaries.md),
-the system [architecture](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/ARCHITECTURE.md),
-and the [repository map](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/REPOSITORIES.md)
-govern development topology and current ownership.
+`tooling/` is the sole Python/build root. From the destination root use
+`uv run --project tooling compliance` with an explicit project config, or select
+a project through the materialized registry. Source paths are acquisition
+locations; explicit names and content digests define policy identity. Destination
+[ADR 0005](../../docs/adr/0005-content-addressed-development-boundaries.md),
+[ADR 0009](../../docs/adr/0009-active-compliance-vocabulary.md), the system
+[architecture](../../docs/ARCHITECTURE.md), and the
+[repository map](../../docs/REPOSITORIES.md) govern current authority.
 
 Workspace and project files are versioned configuration, not Kubernetes
 resources. They have no
@@ -248,13 +248,12 @@ right choice for inventory objects that do have those semantics.
 
 The workspace does not merge project inventories or artifacts. A project is an
 operator boundary with its own inventory, assignments, evidence, plans, and
-results; projects may reference a shared policy catalog. From the repository
-root, select one explicitly with the global option:
+results; projects may reference a shared policy catalog. From the destination
+root, select an ordinary project explicitly:
 
 ```sh
-uv run compliance --project mock-fleet inventory validate
-uv run compliance --project iam-realization inventory validate
-uv run compliance --project server-personas waiver list
+uv run --project tooling compliance --config projects/mock-fleet/compliance.yaml inventory validate
+uv run --project tooling compliance --config projects/server-personas/compliance.yaml waiver list
 ```
 
 Framework-oriented examples:
@@ -297,17 +296,18 @@ use names because source identity and per-source revisions are included in
 validation output and rendered plans:
 
 ```sh
-uv run compliance --no-config policy validate \
-  --policy-source shared-library=../compliance-control-library/policies \
-  --policy-source verification-policy=../compliance-verification-policy/policies \
-  --policy-source environment-private=policy
+uv run --project tooling compliance --no-config policy validate \
+  --policy-source control-library=policy-sources/control-library/policies \
+  --policy-source verification-policy=policy-sources/verification-policy/policies
 ```
 
 Configured source order and repeated flag order have no precedence. The CLI
 normalizes sources by name, coalesces only identical resource identities with
 complete provenance, and rejects divergent identities. An optional `digest`
 field on a configured source verifies an immutable `sha256:` pin; maintained
-sibling examples omit it only because they are editable development trees.
+development projects omit it because they are editable development trees.
+The IAM validation assembly additionally supplies the independently materialized
+`environment-private` source; see the [fixture boundary](../../verification/fixtures/iam-private-boundary/README.md).
 
 Only documented fields are accepted. Workspace and project files are validated
 against `tools/schemas/workspace-config.schema.json` and

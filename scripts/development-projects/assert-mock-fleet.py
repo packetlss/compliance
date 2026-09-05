@@ -37,7 +37,7 @@ def assert_assessment_plan_handoff(plan: dict, subject_id: str) -> None:
 
     policy_sources = plan.get("policy_sources", [])
     source_names = {source.get("name") for source in policy_sources}
-    if source_names != {"shared-library", "verification-policy"}:
+    if source_names != {"control-library", "verification-policy"}:
         fail(f"assessment plan lost named policy sources for {subject_id}: {source_names}")
     if any(not is_digest(source.get("digest")) for source in policy_sources):
         fail(f"assessment plan has invalid policy-source content identity for {subject_id}")
@@ -80,7 +80,7 @@ def assert_assessment_plan_handoff(plan: dict, subject_id: str) -> None:
         for control in active
         for locator in control.get("implementation_sources", [])
     )
-    if not {"shared-library", "verification-policy"}.issubset(provenance_names):
+    if not {"control-library", "verification-policy"}.issubset(provenance_names):
         fail(f"assessment plan lost named source provenance for {subject_id}")
 
 

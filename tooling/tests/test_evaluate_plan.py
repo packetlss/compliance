@@ -269,6 +269,23 @@ spec:
             "policy_revision": plan["policy_revision"],
         }
 
+    @patch("tools.evaluate_plan.subprocess.run")
+    def test_evaluation_refuses_old_new_source_names_with_identical_bytes(self, run):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            policy = root / "policy"
+            policy.mkdir()
+            (policy / "marker.json").write_text("{}", encoding="utf-8")
+            for expected, actual in (
+                ("shared-library", "control-library"),
+                ("control-library", "shared-library"),
+            ):
+                with self.subTest(expected=expected, actual=actual):
+                    plan = assessment_plan(policy_source_revisions(PolicySource(expected, policy)))
+                    with self.assertRaisesRegex(SystemExit, "do not match the rendered plan"):
+                        evaluate_plan_document(plan, root, (PolicySource(actual, policy),))
+            run.assert_not_called()
+
     def test_evaluation_rejects_policy_sources_changed_since_rendering(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

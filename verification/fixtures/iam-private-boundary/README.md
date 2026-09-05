@@ -13,7 +13,7 @@ company.identity-access-objectives@1
         └── based_on company realization for provenance only
 ```
 
-The project composes exactly three named policy sources. `shared-library`
+The project composes exactly three named policy sources. `control-library`
 supplies schemas and reusable controls; `verification-policy` supplies the
 synthetic requirement, requirement baseline, and ordinary company
 realization; and `environment-private` supplies this fixture's retained

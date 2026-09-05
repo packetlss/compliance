@@ -58,7 +58,7 @@ framework catalog, so it cannot demonstrate complete framework coverage and
 this scenario makes no certification, legal-compliance, or whole-framework
 claim. The illustrative Linux benchmark references show parent alignment only.
 
-The scenario assembles reusable controls and schemas from `shared-library`
+The scenario assembles reusable controls and schemas from `control-library`
 with the complete synthetic baseline, requirement, and realization family from
 `verification-policy`. It does not consume the IAM project's restricted
 environment-private source.

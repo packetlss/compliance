@@ -72,6 +72,12 @@ These are **accepted design, not yet fully implemented/cut over**. Destination #
 
 Current `project-config/v1alpha1`, `project-config/v1alpha2`, `release-lock/v1alpha2`, assessment plan/results v1 and v3 remain **experimental migration inputs**, not frozen compatibility promises. Destination #33 removes their active readers only after successor consumer cutover.
 
+## Accepted vocabulary convergence
+
+[ADR 0009](adr/0009-active-compliance-vocabulary.md), implementing #57's architecture decision, makes `control-library` the maintained reusable semantic source name. This intentional pre-freeze rename changes name-bearing composition/provenance identity without changing policy-tree bytes/content digest or the `compliance-control-library` distribution. Historical `shared-library` artifacts remain distinct; no alias is added.
+
+`composition-lock` is the sole forward complete expected-composition abstraction; `release-lock/v1alpha2` is temporary until #33. The accepted `workspace-config` → `project-registry` rename remains unimplemented in Tranches 0–1. Neither vocabulary decision freezes a contract or changes technical control/assurance names pending #37.
+
 ## Current maturity guidance
 
 ### Compatibility candidates / likely stable direction
@@ -110,7 +116,7 @@ Historical Git/releases remain immutable provenance.
 Repository co-location does not freeze contracts and does not merge release units.
 
 - `compliance-tooling` distribution remains independently versioned/releasable.
-- `shared-library` remains independently digestible/releasable.
+- `control-library` remains independently digestible/releasable.
 - `verification-policy` remains source-only with no current hosted release lane.
 - real private environment sources remain outside the consolidated repository.
 

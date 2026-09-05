@@ -55,7 +55,7 @@ class PolicyResourceTests(unittest.TestCase):
                 Draft202012Validator.check_schema(read_json(path))
 
     def test_reusable_catalog_and_rego_entrypoints(self):
-        source = PolicySource("shared-library", POLICIES)
+        source = PolicySource("control-library", POLICIES)
         controls, baselines, errors = load_policy_catalogs(source)
         self.assertEqual(errors, [])
         self.assertEqual(baselines, {})
@@ -98,7 +98,7 @@ class PolicyResourceTests(unittest.TestCase):
                     target.unlink()
                 else:
                     target.write_text(json.dumps(replacement), encoding="utf-8")
-                _, _, errors = load_policy_catalogs(PolicySource("shared-library", policy))
+                _, _, errors = load_policy_catalogs(PolicySource("control-library", policy))
                 self.assertIn(expected, {error["type"] for error in errors}, errors)
 
     def test_configuration_facet_is_rejected(self):
@@ -111,7 +111,7 @@ class PolicyResourceTests(unittest.TestCase):
                 "intent_type": "linux.sysctl.values/v1",
             }
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
-            _, _, errors = load_policy_catalogs(PolicySource("shared-library", policy))
+            _, _, errors = load_policy_catalogs(PolicySource("control-library", policy))
             self.assertIn(
                 "control-manifest-schema-invalid",
                 {error["type"] for error in errors},
@@ -119,7 +119,7 @@ class PolicyResourceTests(unittest.TestCase):
             )
 
     def test_missing_rego_entrypoint_is_rejected(self):
-        source = PolicySource("shared-library", POLICIES)
+        source = PolicySource("control-library", POLICIES)
         controls, _, errors = load_policy_catalogs(source)
         self.assertEqual(errors, [])
         controls["linux.sysctl.required"]["spec"]["entrypoint"] = "data.compliance.missing.result"

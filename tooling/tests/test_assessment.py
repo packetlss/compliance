@@ -35,7 +35,7 @@ class AssessmentStatusTests(unittest.TestCase):
         )
         cls.policy_sources = (
             PolicySource(
-                "shared-library",
+                "control-library",
                 cls.root / "shared",
             ),
             PolicySource(
@@ -49,6 +49,27 @@ class AssessmentStatusTests(unittest.TestCase):
             cls.assignments,
             cls.policy_sources,
         )
+
+    def test_source_rename_changes_plan_identity_without_changing_controls(self):
+        old_sources = (
+            PolicySource("shared-library", self.root / "shared"),
+            self.policy_sources[1],
+        )
+        old = render_plan(self.subject, self.groups, self.assignments, old_sources)
+        self.assertNotEqual(old["id"], self.plan["id"])
+        self.assertNotEqual(old["policy_revision"], self.plan["policy_revision"])
+        self.assertEqual(
+            [source["digest"] for source in old["policy_sources"]],
+            [source["digest"] for source in self.plan["policy_sources"]],
+        )
+        # Compare domain fields directly; source locators legitimately change.
+        fields = ("implementation", "instance_id", "parameters", "definition_fingerprint")
+        self.assertEqual(
+            [{field: control[field] for field in fields} for control in old["controls"]],
+            [{field: control[field] for field in fields} for control in self.plan["controls"]],
+        )
+        self.assertEqual(old["coverage"], self.plan["coverage"])
+        self.assertEqual(old["resolution"], self.plan["resolution"])
 
     def result_report(self, plan_id=None, **summary):
         return {
@@ -233,7 +254,7 @@ class AssessmentStatusTests(unittest.TestCase):
             assignments,
             (
                 PolicySource(
-                    "shared-library",
+                    "control-library",
                     self.root / "shared",
                 ),
                 PolicySource(

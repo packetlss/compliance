@@ -2,9 +2,13 @@
 
 This component is the system's standard control library and reusable control
 capability library. It is co-located at `policy-sources/control-library/`, while its
-independent semantic policy source remains named `shared-library` and rooted at
+independent semantic policy source is named `control-library` and rooted at
 `policy-sources/control-library/policies/`. The release distribution identity
 remains `compliance-control-library`.
+
+[ADR 0009](../../docs/adr/0009-active-compliance-vocabulary.md) intentionally
+renames the previous `shared-library` identity. Historical provenance keeps the
+old name; policy-tree bytes and content identity are unchanged, with no alias.
 
 The library owns reusable OPA controls and helpers, control parameter schemas,
 evidence and policy schemas, and technology-neutral requirement contracts. It is

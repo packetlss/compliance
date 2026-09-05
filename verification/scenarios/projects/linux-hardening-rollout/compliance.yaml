@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=../../../../tooling/tools/schemas/project-config.schema.json
 schema: compliance.example/project-config/v1alpha1
 policySources:
-  - name: shared-library
+  - name: control-library
     path: ../../../../policy-sources/control-library/policies
   - name: verification-policy
     path: ../../../../policy-sources/verification-policy/policies
