@@ -44,6 +44,8 @@ metadata and enforcement remain validated despite exclusion from identity.
 `id` is the complete result semantic digest; the retained `assessment_id` is the
 existing run label, not a replacement for the digest. No identity algorithm is
 frozen or renamed to `/v1`. Existing evidence document/set algorithms are unchanged.
+The standalone provenance schema permits planning-only or complete evaluation
+records; a partial evaluation record is invalid.
 Schema diagnostic references use type plus source-name/relative-schema-path
 locators resolved in the trusted composition, not a new schema identity algorithm.
 Materialization paths are never source identity.
@@ -55,7 +57,7 @@ The representation requirement of system
 is implemented by #32. Operational evidence timeliness derivation remains
 unimplemented and requires its separate future tranche.
 
-Each successful selection is an entry in `provenance.selectedEvidence`:
+Each successful required-evidence selection is an entry in `provenance.selectedEvidence`:
 
 ```json
 {
@@ -78,13 +80,16 @@ facts against both the plan and the in-memory snapshot actually evaluated. Store
 validation checks their structure, unique associations, snapshot references and
 identity binding without reopening evidence paths.
 
-These are successful **selections**, including when a later criterion fails or
+These are successful required-evidence **selections**, including when a later criterion fails or
 returns unknown/error. A different required type failing selection prevents OPA
 for that control but does not erase successful selections of its other types.
 Rejected, ambiguous, missing and stale requirements receive no selection record.
 Unused and nonselected current-subject documents remain in the complete snapshot;
 canonical duplicates coalesce only during selection, not in the snapshot descriptor.
 OPA-reported `evidence_ids` neither supply nor override orchestration's facts.
+Optional evidence keeps its predecessor selection and invalid-evidence error
+behavior; the new selection-fact table and ambiguity correction concern required
+evidence only. Optional evidence remains in the complete subject snapshot.
 
 A later view can use these historical records without mutable evidence,
 re-selection, ID-only joins or long-term original-byte retention. No `fresh`,

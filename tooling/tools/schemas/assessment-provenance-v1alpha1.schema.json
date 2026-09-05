@@ -704,7 +704,7 @@
                 "minLength": 1
               },
               "required": {
-                "type": "boolean"
+                "const": true
               },
               "max_age": {
                 "type": "string",
@@ -739,5 +739,27 @@
   "required": [
     "schema",
     "planningComposition"
-  ]
+  ],
+  "dependentRequired": {
+    "evaluationComposition": [
+      "evaluator",
+      "evidence",
+      "selectedEvidence"
+    ],
+    "evaluator": [
+      "evaluationComposition",
+      "evidence",
+      "selectedEvidence"
+    ],
+    "evidence": [
+      "evaluationComposition",
+      "evaluator",
+      "selectedEvidence"
+    ],
+    "selectedEvidence": [
+      "evaluationComposition",
+      "evaluator",
+      "evidence"
+    ]
+  }
 }

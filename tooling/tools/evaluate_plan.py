@@ -307,6 +307,8 @@ def evaluate_plan_document(
         validators, schema_references = prepare_schemas(evidence_schemas, required_evidence_types)
         selected_uses = []
     evaluated_at = (evaluated_at or datetime.now(UTC)).replace(microsecond=0)
+    if is_v4 and evaluated_at.utcoffset() is None:
+        raise ValueError('assessment time must have an explicit timezone')
     waivers, waiver_revision = load_waivers(waiver_path)
     technical_assessment_id = (
         f'assessment:{plan["id"].removeprefix("sha256:")[:16]}:'
@@ -326,8 +328,9 @@ def evaluate_plan_document(
         )
         evidence_requirements = control.get("evidence", [])
         ambiguities = []
+        optional_validation_errors = []
         if is_v4:
-            selected_evidence, uses, validation_errors, ambiguities = select_evidence(
+            selected_evidence, uses, validation_errors, ambiguities, optional_validation_errors = select_evidence(
                 evidence, evidence_requirements, evaluated_at, plan['subject']['id'],
                 validators, schema_references, evidence_sources,
             )
@@ -369,10 +372,19 @@ def evaluate_plan_document(
                 reason = 'Required evidence selection is ambiguous; criterion not determined.'
             else:
                 reason = 'Required evidence is missing or stale; criterion not determined.'
+            if optional_validation_errors:
+                observed.setdefault('evidence_validation_errors', []).extend(optional_validation_errors)
+                observed['evidence_validation_errors'].sort(key=lambda item: (item['evidence_type'],item['requirement_index'],item['evidence_id'],item['evidence_digest'],item['path'],item['schema_path']))
             if ambiguities:
                 observed['evidence_selection_ambiguities'] = ambiguities
             result = control_error_result(assessment_input, reason, observed=observed)
             result['status'] = 'unknown'
+        elif is_v4 and optional_validation_errors:
+            result = control_error_result(
+                assessment_input, 'Optional evidence schema validation failed.',
+                observed={'evidence_validation_errors': optional_validation_errors},
+                evidence_ids=sorted({error['evidence_id'] for error in optional_validation_errors}),
+            )
         elif validation_errors:
             first = validation_errors[0]
             location = first.get("source", first["evidence_type"])
@@ -403,6 +415,8 @@ def evaluate_plan_document(
                     item_schema = {'$defs': schema['$defs']}
                     item_schema['$ref'] = schema['properties']['results']['items']['$ref']
                     candidate = {**result, 'waiver_revision': waiver_revision} if isinstance(result, dict) else result
+                    from ._canonical_json import canonical_json_bytes
+                    canonical_json_bytes(candidate)
                     errors = list(Draft202012Validator(item_schema, format_checker=FormatChecker()).iter_errors(candidate))
                     expected = control_error_result(assessment_input, '')
                     fields = ('control_id', 'instance_id', 'subject_id', 'plan_id', 'inventory_revision', 'assignment_revision', 'policy_revision')

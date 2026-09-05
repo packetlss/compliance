@@ -343,6 +343,55 @@ class AssessmentV4Tests(unittest.TestCase):
             validate_selection_plan(changed, self.plan)
 
 
+    def test_optional_candidates_keep_predecessor_selection_and_invalid_error(self):
+        self.plan['controls'][0]['evidence'][0]['required'] = False
+        self.sign_plan()
+        first = self.document()
+        second = self.document(id='other')
+        report, opa = self.run_assessment([first,second])
+        self.assertEqual(report['summary']['pass'], 1)
+        self.assertEqual(opa.call_count, 1)
+        self.assertEqual(opa.call_args.args[2]['evidence'], [first])
+        self.assertEqual(report['provenance']['selectedEvidence'], [])
+        report, opa = self.run_assessment([first,self.document(payload={'value':False})])
+        self.assertEqual(report['summary']['error'], 1)
+        self.assertEqual(opa.call_count, 0)
+        self.assertFalse(report['results'][0]['observed']['evidence_validation_errors'][0]['required'])
+
+    def test_unrepresentable_criterion_decisions_are_attributable_errors(self):
+        for value in (float('nan'),float('inf'),'\ud800'):
+            def unusable(opa, sources, data, entrypoint):
+                result = control_error_result(data, 'Criterion decision')
+                result['status'] = 'pass'
+                result['observed'] = {'value':value}
+                return result
+            report, opa = self.run_assessment([self.document()], effect=unusable)
+            self.assertEqual(report['summary']['error'],1)
+            self.assertEqual(opa.call_count,1)
+            self.assertEqual(len(report['provenance']['selectedEvidence']),1)
+
+    def test_standalone_provenance_requires_complete_evaluation_record(self):
+        from jsonschema import Draft202012Validator
+        schema = json.loads((Path(__file__).parents[1]/'tools/schemas/assessment-provenance-v1alpha1.schema.json').read_text())
+        validator = Draft202012Validator(schema)
+        planning = self.plan['provenance']
+        validator.validate(planning)
+        report, _ = self.run_assessment([self.document()])
+        validator.validate(report['provenance'])
+        for field in ('evaluationComposition','evaluator','evidence','selectedEvidence'):
+            incomplete = {**planning, field:report['provenance'][field]}
+            self.assertTrue(list(validator.iter_errors(incomplete)),field)
+
+    def test_naive_assessment_time_refuses_before_criterion_execution(self):
+        self.plan['controls'][0]['evidence'] = []
+        self.sign_plan()
+        self.write([])
+        with patch('tools.evaluate_plan.evaluate_control') as opa:
+            with self.assertRaisesRegex(ValueError,'explicit timezone'):
+                evaluate_plan_document(self.plan,self.evidence,self.sources,evaluated_at=self.now.replace(tzinfo=None))
+            opa.assert_not_called()
+
+
 class V4JcsProjectionVectors(unittest.TestCase):
     def test_fixed_unicode_numeric_and_enforcement_projection_vectors(self):
         from tools.composition import composition_digest

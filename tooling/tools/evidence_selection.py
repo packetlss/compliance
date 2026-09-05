@@ -77,7 +77,7 @@ def prepare_schemas(schemas, required_types):
 
 
 def select_evidence(documents, requirements, evaluated_at, subject_id, validators, schemas, locations):
-    selected, uses, invalid, ambiguous = [], [], [], []
+    selected, uses, invalid, ambiguous, optional_invalid = [], [], [], [], []
     for index, requirement in enumerate(requirements):
         evidence_type = requirement['type']
         candidates = [doc for doc in documents if doc['type'] == evidence_type]
@@ -88,6 +88,7 @@ def select_evidence(documents, requirements, evaluated_at, subject_id, validator
                     'type': 'evidence-schema-validation-failed',
                     'code': 'evidence_schema_invalid',
                     'evidence_type': evidence_type,
+                    'required': requirement['required'], 'requirement_index': index,
                     'evidence_id': doc['id'], 'evidence_digest': evidence_document_digest(doc),
                     'schema_reference': schemas[evidence_type],
                     'path': _json_pointer(error.absolute_path),
@@ -96,7 +97,7 @@ def select_evidence(documents, requirements, evaluated_at, subject_id, validator
                     'source': locations[id(doc)],
                 })
         if errors:
-            invalid.extend(errors)
+            (invalid if requirement['required'] else optional_invalid).extend(errors)
             continue
         maximum_age = parse_duration(requirement['max_age'])
         eligible = []
@@ -107,6 +108,11 @@ def select_evidence(documents, requirements, evaluated_at, subject_id, validator
             if evaluated_at - instant <= maximum_age:
                 eligible.append((instant, doc))
         if not eligible:
+            continue
+        if not requirement['required']:
+            # Optional evidence remains the predecessor contract. ADR 0010/0011
+            # changes required selections only; do not invent optional semantics.
+            selected.append(max(eligible, key=lambda candidate: candidate[0])[1])
             continue
         latest = max(instant for instant, _ in eligible)
         tied = {evidence_document_digest(doc): doc for instant, doc in eligible if instant == latest}
@@ -125,6 +131,7 @@ def select_evidence(documents, requirements, evaluated_at, subject_id, validator
         uses.append({'requirement_index': index, 'requirement': copy.deepcopy(requirement),
                      'id': document['id'], 'digest': evidence_document_digest(document),
                      'collected_at': document['collected_at']})
-    invalid.sort(key=lambda x:(x['evidence_type'],x['evidence_id'],x['evidence_digest'],x['path'],x['schema_path'],x['message']))
+    for errors in (invalid, optional_invalid):
+        errors.sort(key=lambda x:(x['evidence_type'],x['requirement_index'],x['evidence_id'],x['evidence_digest'],x['path'],x['schema_path'],x['message']))
     ambiguous.sort(key=lambda x:(x['evidence_type'],x['requirement_index']))
-    return selected, uses, invalid, ambiguous
+    return selected, uses, invalid, ambiguous, optional_invalid

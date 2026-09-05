@@ -155,9 +155,12 @@ def validate_v4(document: dict, *, plan: bool) -> None:
                     {'id': diagnostic['evidence_id'], 'digest': diagnostic['evidence_digest']}]
                 if any((item['id'], item['digest']) not in references for item in pairs):
                     raise ValueError('evidence diagnostic reference is absent from snapshot')
-                if result['status'] != 'unknown':
-                    raise ValueError('rejected/ambiguous evidence must be unknown')
-                if any(use['instance_id'] == result['instance_id'] and use['requirement']['type'] == diagnostic['evidence_type'] for use in uses):
+                required = field.endswith('ambiguities') or diagnostic['required']
+                if required and result['status'] != 'unknown':
+                    raise ValueError('rejected/ambiguous required evidence must be unknown')
+                if not required and result['status'] not in {'error', 'unknown'}:
+                    raise ValueError('invalid optional evidence must prevent criterion execution')
+                if any(use['instance_id'] == result['instance_id'] and use['requirement_index'] == diagnostic['requirement_index'] for use in uses):
                     raise ValueError('rejected/ambiguous requirement mislabeled as selected')
 
 
@@ -168,6 +171,18 @@ def validate_selection_plan(report: dict, plan: dict) -> None:
     controls = {control['instance_id']: control for control in plan['controls']}
     if set(controls) != {item['instance_id'] for item in report['results']}:
         raise ValueError('result controls do not match assessed plan')
+    for result in report['results']:
+        requirements = controls[result['instance_id']]['evidence']
+        for field in ('evidence_validation_errors', 'evidence_selection_ambiguities'):
+            for diagnostic in result.get('observed', {}).get(field, []):
+                index = diagnostic['requirement_index']
+                if index >= len(requirements) or requirements[index]['type'] != diagnostic['evidence_type']:
+                    raise ValueError('evidence diagnostic requirement does not resolve into assessed plan')
+                if field.endswith('ambiguities'):
+                    if diagnostic['freshness_requirement'] != requirements[index]:
+                        raise ValueError('ambiguity freshness requirement differs from assessed plan')
+                elif diagnostic['required'] != requirements[index]['required']:
+                    raise ValueError('diagnostic required flag differs from assessed plan')
     for use in report['provenance']['selectedEvidence']:
         control = controls.get(use['instance_id'])
         if control is None or use['requirement_index'] >= len(control['evidence']) or control['evidence'][use['requirement_index']] != use['requirement']:
