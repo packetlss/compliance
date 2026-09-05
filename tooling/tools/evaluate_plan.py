@@ -205,11 +205,11 @@ def control_error_result(
         "observed": observed or {},
         "external_refs": assessment_input["control"].get("external_refs", []),
         "alignment": assessment_input["control"].get("alignment", "unmapped"),
-        "evidence_ids": evidence_ids if evidence_ids is not None else [
+        "evidence_ids": evidence_ids if evidence_ids is not None else list(dict.fromkeys(
             document["id"]
             for document in assessment_input["evidence"]
             if isinstance(document.get("id"), str)
-        ],
+        )),
     }
 
 

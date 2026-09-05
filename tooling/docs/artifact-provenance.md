@@ -101,7 +101,9 @@ historical outcome nor roll-ups change with later wall-clock time.
 [ADR 0010](../../docs/adr/0010-required-evidence-status-and-assessment-refusal.md)
 applies in the v4 path. Establish plan/composition/evaluator/catalog and snapshot
 integrity, explicitly route subject/type, validate every matching candidate, then
-apply existing freshness eligibility. Schema-invalid matching evidence produces
+apply existing freshness eligibility. Snapshot documents are normalized using the existing JCS representation before
+validation, so embedded document values in human validation messages are
+canonical-order-independent. Schema-invalid matching evidence produces
 attributable `unknown`; no dependent OPA call occurs. Distinct documents at the
 greatest eligible collection instant produce `evidence_selection_ambiguity`,
 `unknown` and no dependent OPA call. Complete canonical duplicates may coalesce

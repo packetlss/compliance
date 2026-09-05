@@ -9,6 +9,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from referencing import Registry
 
+from ._canonical_json import canonical_json_bytes
 from .evidence_provenance import evidence_document_digest, evidence_set_provenance
 from .evaluate_plan import EVIDENCE_FORMAT_CHECKER, _json_pointer, parse_duration
 
@@ -40,7 +41,9 @@ def snapshot_evidence(path: Path, subject_id: str):
             continue
         if not isinstance(document.get('type'), str) or not document['type'].strip():
             raise ValueError('subject evidence lacks interpretable type routing')
-        evidence_document_digest(document)  # reject non-JCS/unrepresentable documents before child results
+        # Diagnose and consume the same canonical semantic document. JSON Schema
+        # messages can embed object repr; insertion order must not change identity.
+        document = json.loads(canonical_json_bytes(document))
         documents.append(document)
         locations[id(document)] = source.name
     return documents, locations, evidence_set_provenance(documents)

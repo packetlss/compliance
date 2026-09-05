@@ -392,6 +392,30 @@ class AssessmentV4Tests(unittest.TestCase):
             opa.assert_not_called()
 
 
+    def test_canonical_identical_invalid_documents_have_identical_diagnostics(self):
+        first = self.document(payload={'value':{'a':1,'b':2}})
+        second = self.document(payload={'value':{'b':2,'a':1}})
+        a, opa_a = self.run_assessment([first])
+        b, opa_b = self.run_assessment([second])
+        self.assertEqual(a['provenance']['evidence'],b['provenance']['evidence'])
+        self.assertEqual(a['results'],b['results'])
+        self.assertEqual(a['id'],b['id'])
+        self.assertEqual(opa_a.call_count,0)
+        self.assertEqual(opa_b.call_count,0)
+
+    def test_same_document_selected_for_two_requirements_retains_attributable_error(self):
+        requirement = copy.deepcopy(self.plan['controls'][0]['evidence'][0])
+        requirement['max_age'] = '48h'
+        self.plan['controls'][0]['evidence'].append(requirement)
+        self.sign_plan()
+        for effect in (RuntimeError('scoped'), lambda *args: None):
+            report, opa = self.run_assessment([self.document()],effect=effect)
+            self.assertEqual(report['summary']['error'],1)
+            self.assertEqual(report['results'][0]['evidence_ids'],['evidence:test'])
+            self.assertEqual([use['requirement_index'] for use in report['provenance']['selectedEvidence']],[0,1])
+            self.assertEqual(opa.call_count,1)
+
+
 class V4JcsProjectionVectors(unittest.TestCase):
     def test_fixed_unicode_numeric_and_enforcement_projection_vectors(self):
         from tools.composition import composition_digest
