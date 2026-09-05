@@ -5,6 +5,14 @@ from __future__ import annotations
 
 import argparse
 import json
+
+from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
+from tools.assessment_provenance import validate_selection_plan, validate_selection_snapshot
+from tools.evaluator import opa_evaluator_identity
+from tools.evidence_provenance import evidence_set_provenance
+from tools.policy_sources import source_tree_digest
+from tools.render_plan import content_digest
+from tools.tooling_source import TOOLING_SOURCE_DIGEST_ALGORITHM, tooling_source_digest
 from pathlib import Path
 
 FIXED_INSTANT = "2026-09-01T00:00:00Z"
@@ -38,6 +46,8 @@ def is_digest(value: object) -> bool:
 
 
 def assert_config(config: dict, assembly_root: Path) -> None:
+    if config.get("schema") != "compliance.example/project-config/v1alpha3":
+        fail("IAM config must use v1alpha3")
     sources = config.get("policy_sources", [])
     if [source.get("name") for source in sources] != SOURCE_NAMES:
         fail(f"config lost the exact named source set: {sources}")
@@ -58,7 +68,8 @@ def assert_config(config: dict, assembly_root: Path) -> None:
 
 
 def assert_plan(plan: dict) -> None:
-    if plan.get("schema") != "compliance.example/assessment-plan/v1":
+    validate_assessment_plan(plan)
+    if plan.get("schema") != "compliance.example/assessment-plan/v4":
         fail("IAM plan changed assessment schema")
     if not is_digest(plan.get("id")) or not is_digest(plan.get("policy_revision")):
         fail("IAM plan lost plan or final policy identity")
@@ -124,7 +135,8 @@ def assert_plan(plan: dict) -> None:
 
 
 def assert_result(result: dict) -> None:
-    if result.get("schema") != "compliance.example/assessment-results/v1":
+    validate_assessment_results(result)
+    if result.get("schema") != "compliance.example/assessment-results/v4":
         fail("IAM result changed assessment schema")
     if result.get("evaluated_at") != FIXED_INSTANT:
         fail(f"IAM result changed deterministic instant: {result.get('evaluated_at')}")
@@ -148,6 +160,73 @@ def assert_result(result: dict) -> None:
         fail("IAM objective lost its authored adoption annotation")
     if len(baselines) != 1 or baselines[0].get("status") != "fail":
         fail(f"IAM top requirement baseline no longer fails: {baselines}")
+
+
+
+def assert_provenance(plan: dict, result: dict, config: dict, assembly_root: Path,
+                      documents: list[dict]) -> None:
+    expected_actual = {
+        "tooling": {
+            "source": {
+                "digestAlgorithm": TOOLING_SOURCE_DIGEST_ALGORITHM,
+                "digest": tooling_source_digest(assembly_root / "tooling"),
+            },
+            "execution": {"kind": "source"},
+        },
+        "policySources": [
+            {"name": source["name"], "content": {
+                "digestAlgorithm": "compliance.example/policy-source-tree-digest/v1alpha1",
+                "digest": source_tree_digest(Path(source["path"])),
+            }}
+            for source in config["policy_sources"]
+        ],
+    }
+    for stage in (plan["provenance"]["planningComposition"],
+                  result["provenance"]["planningComposition"],
+                  result["provenance"]["evaluationComposition"]):
+        if stage["actual"] != expected_actual:
+            fail("actual composition does not identify the executing tooling and materialized sources")
+        if stage["enforcement"] != {"directExpectedContent": {}, "compositionLock": None}:
+            fail("unlocked fixture claimed expected enforcement")
+    if result["provenance"]["evaluator"] != opa_evaluator_identity().document():
+        fail("result does not identify the actual OPA version and executable bytes")
+    if result["provenance"]["evidence"] != evidence_set_provenance(documents):
+        fail("result lost complete subject evidence snapshot identity")
+    validate_selection_plan(result, plan)
+    validate_selection_snapshot(result, documents)
+    selections = result["provenance"]["selectedEvidence"]
+    if {item["instance_id"] for item in selections} != CONTROL_INSTANCES or len(selections) != 4:
+        fail("IAM result lost successful evidence selection for a technical check")
+    for item in selections:
+        if item["collected_at"] != FIXED_INSTANT or item["requirement"] != {
+            "type": "linux.access.configuration/v1", "required": True, "max_age": "24h"
+        }:
+            fail("IAM result lost factual collection instant or assessed evidence requirement")
+
+    roots = {source["name"]: Path(source["path"]) for source in config["policy_sources"]}
+    requirement_document = load(roots["verification-policy"] / "requirements/company/company-role-based-access.json")
+    realization_document = load(roots["environment-private"] / "realizations/restricted/restricted-linux-role-based-access.json")
+    requirement = plan["requirements"][0]
+    realization = requirement["realization"]
+    if requirement["digest"] != content_digest(requirement_document):
+        fail("IAM requirement objective identity changed")
+    if realization["digest"] != content_digest(realization_document):
+        fail("IAM selected realization identity changed")
+    if realization["based_on"] != realization_document["spec"]["based_on"]:
+        fail("IAM non-inheriting realization lineage changed")
+    if set(requirement["technical_instance_ids"]) != CONTROL_INSTANCES:
+        fail("IAM requirement lost technical-control linkage")
+    assessment = result["requirement_assessments"][0]
+    for key, expected in (("requirement_digest", requirement["digest"]),
+                          ("realization", realization),
+                          ("technical_instance_ids", requirement["technical_instance_ids"])):
+        if assessment[key] != expected:
+            fail(f"IAM result lost planned requirement/realization lineage: {key}")
+    checks = {check["instance_id"]: check for check in realization_document["spec"]["checks"]}
+    for control in plan["controls"]:
+        check = checks[control["instance_id"]]
+        if control["parameters"] != check["parameters"] or control["implementation"] != check["implementation"]:
+            fail("IAM plan changed restricted technical intent")
 
 
 def assert_frameworks(frameworks: dict) -> None:
@@ -176,9 +255,14 @@ def main() -> int:
     assembly_root = args.assembly_root.resolve()
     run_root = args.run_root.resolve()
 
-    assert_config(load(run_root / "config.json"), assembly_root)
-    assert_plan(load(run_root / "plans/host__restricted-linux-01.json"))
-    assert_result(load(run_root / "results/host__restricted-linux-01.json"))
+    config = load(run_root / "config.json")
+    plan = load(run_root / "plans/host__restricted-linux-01.json")
+    result = load(run_root / "results/host__restricted-linux-01.json")
+    assert_config(config, assembly_root)
+    assert_plan(plan)
+    assert_result(result)
+    documents = [load(path) for path in sorted((run_root / "evidence").rglob("*.json"))]
+    assert_provenance(plan, result, config, assembly_root, documents)
     assert_frameworks(load(run_root / "frameworks.json"))
     assert_rollup(load(run_root / "direct-rollup.json"))
     explain = (run_root / "explain.txt").read_text(encoding="utf-8")

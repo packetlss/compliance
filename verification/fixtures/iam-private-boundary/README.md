@@ -14,7 +14,7 @@ company.identity-access-objectives@1
 ```
 
 The project composes exactly three named policy sources. `control-library`
-supplies schemas and reusable controls; `verification-policy` supplies the
+supplies evidence/parameter schemas and reusable controls; `verification-policy` supplies the
 synthetic requirement, requirement baseline, and ordinary company
 realization; and `environment-private` supplies this fixture's retained
 restricted realization and fictitious parameters. The restricted resource has
@@ -54,6 +54,14 @@ technical passes, one technical failure, a failing IAM requirement, and a
 failing top requirement baseline. The generated assessment plan retains all
 three source identities, the selected environment-private realization, and the
 resolved control fields required by an external adapter.
+
+The fixture uses `project-config/v1alpha3` with tooling-owned inventory and
+assignment schemas and generates assessment plan/results v4. Validation checks
+actual planning and evaluation tooling/source composition, exact evaluator bytes,
+the complete subject evidence snapshot, and successful evidence selections bound
+to the assessed plan's requirements and collection instant (ADR 0011 facts only).
+It also checks source-order/location independence, fail-closed realization
+selection, and evidence-derived unknown outcomes without changing authored policy.
 
 Run from the destination root after committing the candidate revision:
 
