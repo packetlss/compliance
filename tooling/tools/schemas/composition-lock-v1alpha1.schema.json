@@ -1,0 +1,122 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "expected"
+  ],
+  "properties": {
+    "schema": {
+      "const": "compliance.example/composition-lock/v1alpha1"
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tooling",
+        "policySources"
+      ],
+      "properties": {
+        "tooling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "execution"
+          ],
+          "properties": {
+            "source": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "digest",
+                "digestAlgorithm"
+              ],
+              "properties": {
+                "digest": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "digestAlgorithm": {
+                  "const": "compliance.example/tooling-source-tree-digest/v1alpha1"
+                }
+              }
+            },
+            "execution": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "source"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind",
+                    "wheelSha256"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "installed-wheel"
+                    },
+                    "wheelSha256": {
+                      "type": "string",
+                      "pattern": "^sha256:[0-9a-f]{64}$"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "policySources": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "content"
+            ],
+            "properties": {
+              "content": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "digest",
+                  "digestAlgorithm"
+                ],
+                "properties": {
+                  "digest": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  },
+                  "digestAlgorithm": {
+                    "const": "compliance.example/policy-source-tree-digest/v1alpha1"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/composition-lock-v1alpha1.schema.json"
+}

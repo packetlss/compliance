@@ -496,3 +496,6 @@ PY
 
 printf 'Standalone tooling package validation passed for Python %s.\n' \
   "$("$venv_python" -c 'import platform; print(platform.python_version())')"
+
+# Successor provenance is validated separately from predecessor artifact readers.
+"$temporary/venv/bin/python" -I "$TOOLING_ROOT/scripts/check-installed-composition.py"

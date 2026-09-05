@@ -42,6 +42,7 @@ from .policy_diff import (
 )
 from .project_config import (
     CONFIG_SCHEMA,
+    CONFIG_SCHEMA_V1ALPHA3,
     ProjectConfig,
     ProjectConfigError,
     format_config,
@@ -199,13 +200,13 @@ def _run_config_validate(args: argparse.Namespace) -> None:
             f"valid project registry: {args.project_config.project_registry_source}; "
             f"project {args.project_config.project_name}: {args.project_config.source} "
             f"({len(args.project_config.paths)} configured path(s), "
-            f"{len(args.project_config.policy_sources)} policy source(s), {CONFIG_SCHEMA})"
+            f"{len(args.project_config.policy_sources)} policy source(s), {args.project_config.schema})"
         )
     else:
         print(
             f"valid project config: {args.project_config.source} "
             f"({len(args.project_config.paths)} configured path(s), "
-            f"{len(args.project_config.policy_sources)} policy source(s), {CONFIG_SCHEMA})"
+            f"{len(args.project_config.policy_sources)} policy source(s), {args.project_config.schema})"
         )
 
 
@@ -749,7 +750,8 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
         prog="compliance",
         description=(
             "Inspect inventory, render policy, and run or "
-            "report assessments."
+            "report assessments. Composition diagnostics: compliance composition "
+            "show/validate [--format json]."
         ),
     )
     config_group = parser.add_mutually_exclusive_group()
@@ -988,6 +990,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = build_parser(config)
     args = parser.parse_args(arguments)
     try:
+        if config.schema == CONFIG_SCHEMA_V1ALPHA3 and (
+            args.handler in {_run_plan_render, _run_assessment, _run_assessment_view}
+        ):
+            raise ProjectConfigError(
+                "assessment artifact generation for project-config/v1alpha3 requires "
+                "assessment v4 implementation owned by #32; no plan or result was written"
+            )
         args.handler(args)
     except (ValueError, OSError, json.JSONDecodeError) as error:
         parser.error(str(error))
