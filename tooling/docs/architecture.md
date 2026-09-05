@@ -497,6 +497,41 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-05 — Scoped assurance, applicability authority and external claims (#37)
+
+System [ADR 0013](../../docs/adr/0013-scoped-assurance-and-obligation-instances.md),
+[ADR 0014](../../docs/adr/0014-attributable-applicability-and-authority-acceptance.md)
+and [ADR 0015](../../docs/adr/0015-bounded-external-claims-and-assurance-recognition.md)
+are **accepted design, not yet implemented**. Tooling retains ownership of
+Subject/InventoryGroup/PolicyAssignment, planning, evaluation and exact attributable
+results; no second inventory hierarchy or generic ClaimScope registry is introduced.
+Population resolution must retain union membership and every path plus an exhaustive
+basis at one `t`. Exact obligation instances preserve host/entity/system quantification.
+Common assurance requires scoped consumption and necessary integration evidence.
+
+Future plans/results must preserve exact applicability assertions, source-owned
+meaning, acceptance decisions, population/obligation denominators, mapping/conformity
+gaps and named recognition dependencies with immutable identity and time attribution.
+The core consumes narrow governance/policy acceptance inputs, not a generic authority
+verifier. Provenance proves consumed content, not semantic authority. Recognition
+participates in normal dependency roll-up and cannot overwrite objective results.
+The three ADRs' conceptual vectors and migration tables define successor obligations.
+
+Claim-resolution inability safely attributable to a bounded claim leaves it
+unestablished while independently valid technical/objective assessment remains
+publishable. Evidence insufficiency after valid dependency resolution follows ADR
+0010; untrustworthy shared integrity requires refusal. Do not synthesize evidence
+`unknown` for pre-assessment claim/policy resolution, or weaken ADR 0012's unresolved
+policy boundary. Preserve exactly-one realization selection, missing-realization
+behavior, current technical evidence selection/roll-up and fail-only waivers.
+
+Complete #73 independently; then #37 owns repository-grounded planning of these
+shared surfaces against post-#73 code, defaulting to one coordinated successor.
+No runtime/schema/fixture edits or new discriminator/version/algorithm freeze follow
+from this promotion. Manual/procedural methodology, sampling inference and other
+residual assurance decisions remain with #37, not implementation convenience.
+
+
 ### 2026-09-05 — Explicit policy parameters and policy-owned freshness (#37)
 
 System [ADR 0012](../../docs/adr/0012-explicit-policy-parameter-resolution.md)

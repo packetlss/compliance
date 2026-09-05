@@ -82,7 +82,32 @@ The predecessor status view still calls an exact-plan result `current`, a differ
 
 [ADR 0012](adr/0012-explicit-policy-parameter-resolution.md) is **Accepted design, not yet implemented**, promoted under #37 with the single bounded migration contract [#73](https://github.com/packetlss/compliance/issues/73). It accepts explicit declarations, bindings, descendant tailoring, typed requirement-slot consumption, policy-owned effective freshness and immutable resolved-plan provenance. It does not freeze wire syntax, schema/artifact versions or identity algorithms.
 
-Current requirement/realization schemas still use pinned requirements and literal technical inputs; Control manifests still own effective `max_age`. Those experimental contracts remain until the coordinated schema/planner/provenance/consumer migration. Successor schema, fingerprint, validation, explanation and policy-diff obligations are in ADR 0012's migration table. Development artifacts may need regeneration; historical artifacts retain their original identity and meaning. Broader #37 assurance and external-authority/conformity semantics remain separately routed.
+Current requirement/realization schemas still use pinned requirements and literal technical inputs; Control manifests still own effective `max_age`. Those experimental contracts remain until the coordinated schema/planner/provenance/consumer migration. Successor schema, fingerprint, validation, explanation and policy-diff obligations are in ADR 0012's migration table. Development artifacts may need regeneration; historical artifacts retain their original identity and meaning. ADRs 0013–0015 below separately route accepted scoped assurance and external-authority/conformity semantics; none enters #73.
+
+## Scoped assurance and external claims
+
+[ADR 0013](adr/0013-scoped-assurance-and-obligation-instances.md) (population and
+obligation instances), [ADR 0014](adr/0014-attributable-applicability-and-authority-acceptance.md)
+(applicability and narrow authority acceptance), and
+[ADR 0015](adr/0015-bounded-external-claims-and-assurance-recognition.md) (external
+claim completeness and explicit recognition) are **Accepted design, not yet
+implemented** under [#37](https://github.com/packetlss/compliance/issues/37).
+Current inventory and experimental assurance schemas remain executable foundations;
+this promotion adds no runtime/schema/fixture support or wire/version/algorithm freeze.
+
+Their migration tables require exact immutable population, assertion, acceptance,
+obligation, dependency, target and temporal attribution. Finish #73 independently,
+then inspect its actual representation and default to one coordinated successor
+migration across all three ADRs. Multiple issues require demonstrated independently
+complete cutovers, not one issue per ADR. Current runtime remains until cutover;
+development artifacts may then need regeneration, while historical results and
+artifacts remain immutable and retired readers are not restored.
+
+Safely attributable unresolved claim conditions leave a claim unestablished,
+without automatically refusing independently valid assessments or turning claim
+resolution into evidence `unknown`. ADR 0010 evidence/refusal and ADR 0012 unresolved
+policy retain their separate boundaries. Concrete representation unable to preserve
+those distinctions and exact attribution must return to architecture.
 
 ## Accepted vocabulary convergence
 
@@ -109,7 +134,7 @@ None of these are frozen merely by this classification.
 
 ### Design pass required
 
-Current alpha requirement/realization terminology and detailed assurance evidence/N/A/mapping/result authority semantics remain under destination #37. Do not present unresolved fields as frozen regulatory vocabulary.
+Destination #37 remains open for manual/procedural methodology and evidence qualification, sampling inference, remaining assurance terminology/adopter annotations and unresolved result/representation questions. ADRs 0013–0015 settle their stated population, applicability/N/A authority, mapping completeness and recognition invariants, not those residual methods or runtime syntax. Repository-grounded migration planning must route blocking residual questions back to architecture. Do not present unresolved fields as frozen regulatory vocabulary.
 
 ### Experimental generated/public views
 

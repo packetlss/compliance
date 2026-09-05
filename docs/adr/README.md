@@ -23,6 +23,10 @@ Accepted destination decisions:
 - [ADR 0011 — Separate historical assessment outcomes from operational evidence timeliness](0011-historical-assessment-and-operational-evidence-timeliness.md) — accepted design, not yet implemented; promotion #66, factual v4 representation in #32, operational view in a later separately authorized tranche.
 - [ADR 0012 — Explicit policy-parameter resolution and policy-owned evidence freshness](0012-explicit-policy-parameter-resolution.md) — accepted design, not yet implemented; promotion under #37, coordinated runtime/schema/consumer migration in [#73](https://github.com/packetlss/compliance/issues/73).
 
+- [ADR 0013 — Scoped assurance, population completeness, and obligation instances](0013-scoped-assurance-and-obligation-instances.md) — accepted design, not yet implemented; #37.
+- [ADR 0014 — Attributable applicability determinations and authority acceptance](0014-attributable-applicability-and-authority-acceptance.md) — accepted design, not yet implemented; #37.
+- [ADR 0015 — Bounded external claims and explicit assurance recognition](0015-bounded-external-claims-and-assurance-recognition.md) — accepted design, not yet implemented; #37; owns coordinated migration sequencing and residual architecture routing.
+
 Current system-level documents:
 
 - [`../ARCHITECTURE.md`](../ARCHITECTURE.md)
@@ -30,6 +34,6 @@ Current system-level documents:
 - [`../DEVELOPMENT_WORKFLOW.md`](../DEVELOPMENT_WORKFLOW.md)
 - [`../CONTRACT_MATURITY.md`](../CONTRACT_MATURITY.md)
 
-Open accepted-design implementation/design successors are destination issues #31–#38. In particular, #31–#36 own ADR 0007 implementation/consumer migration and #37 owns detailed requirement/realization assurance semantics.
+ADR 0007 foundation/cutover issues #31–#36 (including #33 retirement) are completed history. [#37](https://github.com/packetlss/compliance/issues/37) remains the open parent assurance architecture effort; these promotions do not close it. Complete #73 / ADR 0012 independently, then plan ADRs 0013–0015 together against the post-#73 repository representation, defaulting to one coordinated successor migration. Split issues require proven independently complete cutovers. Manual/procedural methodology, sampling inference and other residual assurance questions remain under #37 before implementation relies on them. See ADR 0015 for migration and escalation boundaries.
 
 Do not treat historical workspace topology or issue numbers as current component/repository boundaries. Historical references remain provenance links only.
