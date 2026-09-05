@@ -35,6 +35,8 @@ runtime behavior and tests are unchanged until #32 implements the correction.
 The project remains pre-freeze without external compatibility consumers; no
 historical result, release, or artifact is reinterpreted or rewritten.
 
+[ADR 0011](0011-historical-assessment-and-operational-evidence-timeliness.md) owns interpretation of historical results across wall-clock time and the v4 factual temporal-provenance clarification in #32. This ADR retains assessment-time validity/freshness eligibility, schema-invalid evidence, selection ambiguity, attributable `error`, and assessment-wide refusal unchanged.
+
 ## Decision
 
 ### Definitions and shared prerequisites

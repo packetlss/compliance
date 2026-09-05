@@ -212,6 +212,37 @@ an upstream-framework conformance claim. The command supports exact
 all repeatable with OR semantics. Its JSON output preserves claim type,
 alignment, current/outdated status, subject, and policy-object identity.
 
+## Historical results and operational views
+
+The predecessor `assessment status` implementation re-renders the present plan,
+calls a matching `plan_id` result `current`, presents the stored result state,
+calls a different-plan result `outdated`, and calls absence `pending`. Its report
+timestamp is query time; it does not re-evaluate selected evidence or waiver age.
+The `current/outdated` wording above describes that predecessor behavior only.
+
+System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is **accepted design, not yet implemented**.
+Future status/explanation/group views must separately expose historical outcomes
+at `evaluated_at`, **Plan-aligned / Different plan / Plan alignment unavailable**,
+selected-evidence timeliness as of explicit `q`, recorded waiver validity, and
+existing coverage/applicability. Prefer **Selected evidence within recorded age
+limits as of …**, **Evidence stale — reassessment due**, and **Evidence timeliness
+unavailable**. Concurrent stale and unavailable conditions must both remain visible.
+Historical PASS with stale evidence cannot support a “currently passing” claim.
+Avoid unqualified “current PASS”, “currently secure” and overloaded “outdated”.
+
+Historical WAIVED stays waived; show **Recorded waiver within validity window** or
+**Recorded waiver expired** separately using the recorded exception. **No assessment**
+does not establish refusal: show **Assessment refused — no new result** only from
+explicit trustworthy attempt information, retaining any older result as history.
+No persisted attempt/status artifact is introduced.
+
+#32 retains factual v4 provenance only for ADR 0011 and does not derive query-time
+fresh/stale/current state. The later operational-view tranche depends on #32 and
+owns temporal derivation, presentation, temporal tests and one canonical time-advance
+scenario. It consumes a validated v4 result, exact assessed plan, current comparison
+plan and explicit query instant. No new CLI grammar or runtime change is implemented
+by this promotion; ADR 0010 assessment-time behavior remains separately owned.
+
 ## Project registries and project configuration
 
 Canonical verification materializes `verification/scenarios/integration/compliance.yaml`

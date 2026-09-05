@@ -7,6 +7,36 @@ predecessor workflows described here remain supported pending consumer cutover.
 
 Status: **Current pre-freeze artifact provenance contract**
 
+## Accepted v4 temporal provenance
+
+System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md#v4-factual-temporal-provenance-option-b)
+is **accepted design, not yet implemented** and narrowly clarifies #32's v4 scope.
+For each control's successful evidence selection, v4 must retain the selected
+**evidence ID plus complete-document digest**, the selected document's `collected_at`
+instant used in freshness evaluation, and an unambiguous association with the
+assessed plan's applicable requirement sufficient to resolve recorded `max_age`.
+The selected reference resolves into the complete subject evidence snapshot
+descriptor; successful selections remain distinct from rejected, ambiguous and
+otherwise nonselected candidates. Same-ID/different-digest documents must remain
+exactly attributable.
+
+Trusted assessment orchestration captures these validated, result-identity-bound
+facts from the same snapshotted documents consumed by evaluation; OPA/criterion
+self-reported IDs alone are insufficient. A shared evidence-use table or per-control
+references may satisfy the invariant; no JSON layout is prescribed. Preserve the
+existing evidence-document and evidence-set digest algorithms and complete snapshot
+obligations. ADR 0010 / PR #65 ambiguity diagnostics do not replace successful-selection
+provenance or alter selection semantics.
+
+A later view must be able to derive timeliness without mutable evidence access,
+re-selection, evidence-ID-only joins or assumed long-term evidence-byte retention.
+These are historical facts, not stored `fresh`, `stale`, `current` or
+`reassessment_due` judgments. #32 implements representation only for this ADR and
+is not complete/merge-ready until the obligation is incorporated. No new result
+state, artifact family, retention system or monitoring/scheduling is introduced.
+The following v1/v3 sections continue to describe predecessor contracts pending
+consumer cutover, not an already implemented v4 temporal representation.
+
 ## Content-addressed locked artifacts
 
 Content-addressed `release-lock/v1alpha2` projects use these v3 artifact schemas:

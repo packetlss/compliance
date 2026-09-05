@@ -140,6 +140,8 @@ The reporting service consumes immutable decisions and evidence references. It
 maintains finding lifecycles, history, dashboards, notifications, exports, and
 audit views. It does not recalculate policy outcomes.
 
+System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) owns immutable historical outcomes, exact current-plan alignment and query-time operational evidence timeliness. Its state matrix, separate dimension aggregation and continuous-effectiveness boundaries are accepted design, not yet implemented. A historical result never ages into another logical outcome; only support from its exact selected evidence and recorded waiver interval receives temporal qualification. #32 retains the validated identity-bound selection/temporal facts in v4; a later operational-view tranche owns their derivation and presentation. See [artifact provenance](artifact-provenance.md#accepted-v4-temporal-provenance) and [CLI behavior](cli.md#historical-results-and-operational-views).
+
 ### Policy management plane
 
 Git-backed policy, control metadata, evidence schemas, baselines, and tests are
@@ -295,8 +297,9 @@ precedence, copy vague framework prose into Rego, or implicitly merge control
 parameters.
 
 For a technically realized objective, the immutable plan explains the resolved
-implementation contract, while fresh evidence and results explain whether that
-implementation currently exists. External generated or applied output is not
+implementation contract, while evidence and results explain what was concluded
+at the recorded assessment instant. Evidence within recorded age limits does not
+establish present-state certainty under ADR 0011. External generated or applied output is not
 proof by itself. Portions of a requirement concerning
 governance, people, or process need appropriate attributable evidence and
 checks or must remain visible as unverified rather than being inferred from a
@@ -414,9 +417,12 @@ a layered model where organizational baselines and local additions compose.
 
 ### E. Evidence retention and freshness
 
-Set freshness per evidence type or control, and decide whether to retain full
-evidence snapshots or content-addressed deltas. Stale or absent evidence must
-produce `unknown`, not `pass`.
+Assessment-time stale or absent required evidence produces `unknown`, not `pass`,
+under ADR 0010. [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) separately defines query-time
+timeliness without changing historical results or existing freshness eligibility.
+#32 retains the required factual temporal provenance; deriving timeliness must
+not depend on long-term evidence-byte retention. Evidence storage/retention design
+remains outside that decision.
 
 ### F. High-level requirements and private technical realizations
 
@@ -579,3 +585,4 @@ and commands are unsupported, and adaptation is external.
 | 2026-09-05 | Promote the common required-evidence status/refusal boundary, clarifying ADRs 0006/0007 and reconciling #32 | System [ADR 0010](../../docs/adr/0010-required-evidence-status-and-assessment-refusal.md) is normative; accepted design, not yet implemented. #31 is unblocked; #37 retains broader assurance design; #62 owns tied-candidate selection |
 | 2026-09-05 | Implement ADR 0007 actual composition, optional direct/complete enforcement, v1alpha3 configuration and verified local wheel receipts; refuse v1alpha3 assessment generation pending #32 | Accepted under #31; [composition contract](composition.md) defines normalized projections and transitional diagnostics; predecessor readers retained for #33 |
 | 2026-09-05 | Extend ADR 0010 with #62 evidence selection ambiguity: canonical-identical latest duplicates coalesce for selection only; distinct equally latest eligible documents select none and make dependent controls `unknown` without OPA | Accepted design, not yet implemented; #32 owns both ADR 0010 corrections. Supersedes predecessor traversal-order selection and the earlier unresolved #62 follow-up; complete snapshot provenance remains preserved |
+| 2026-09-05 | Separate immutable historical assessment outcomes, exact plan alignment, derived evidence timeliness and recorded waiver validity; require minimal factual temporal provenance in v4 (option B, #66) | System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is normative; accepted design, not yet implemented. #32 owns representation only for this decision; operational status is a later dependent tranche. ADR 0010 retains assessment-time semantics |

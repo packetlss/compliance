@@ -126,6 +126,27 @@ otherwise they use the current UTC time. They support table and JSON output.
 reports `WAIVED` distinctly, and `assessment explain` displays the underlying
 failure plus validity, rationale, ownership, approval, and immutable digest.
 
+### Accepted historical validity qualification
+
+System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is **accepted design, not yet implemented**.
+A stored historical `waived` result remains waived after its recorded exception
+expires. Future assessment views qualify that immutable applied snapshot separately:
+**Recorded waiver within validity window** when `validFrom <= q < expiresAt`, or
+**Recorded waiver expired** at/after the exclusive end. They do not substitute the
+current catalog, add revocation authority, or change historical outcomes to fail or
+unknown. Validation of the applied waiver in a historical result concerns its
+`evaluated_at`, not the later report timestamp.
+
+The predecessor assessment status view timestamps its report at query time without
+re-evaluating waiver age; the authored-resource `waiver list/explain --at` lifecycle
+above is a separate existing interface. Expiration alone does not mutate stored
+waiver bytes or their revision; it changes applicability to future evaluations.
+Recorded waiver qualification is independent of historical outcomes, plan alignment,
+evidence timeliness and coverage, and does not recompute historical assurance
+roll-ups. Fail-only application remains unchanged and a waiver never proves compliance.
+#32's ADR 0011 addition is factual evidence provenance only; derived assessment
+presentation belongs to the later operational-view tranche.
+
 ## 6. Ownership and limitations
 
 The environment/project repository owns waiver resources because it owns the

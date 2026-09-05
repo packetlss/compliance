@@ -958,6 +958,27 @@ Production promotion should reference the bundle digest, not a mutable tag.
   talks to a long-running OPA server.
 - Which implementation language hosts the input builder and evaluation API.
 
+## Historical evidence use and query-time timeliness
+
+System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is **accepted design, not yet implemented**.
+It owns interpretation across wall-clock time; ADR 0010 retains assessment-time
+validity/freshness eligibility, invalid evidence, ambiguity, error and refusal.
+At query instant `q`, derive support only from the exact historical successful
+selections and assessed-plan requirements: `q - collected_at <= max_age`, with
+equality inside the recorded age limit. Do not reselect, substitute mutable
+current evidence, or change future timestamps, illustrative evidence `expires_at`,
+optional-evidence semantics or freshness eligibility. A later fresh document cannot
+refresh an old result. Historical logical outcomes and assurance roll-ups remain
+immutable; timely evidence is not present-state certainty or continuous effectiveness.
+
+#32 must preserve each control's successful selection ID/digest, selected collection
+instant and unambiguous assessed-plan requirement association as validated,
+result-identity-bound orchestration facts resolving into the complete snapshot.
+See [v4 temporal provenance](artifact-provenance.md#accepted-v4-temporal-provenance).
+Rejected/ambiguous/nonselected candidates and selection diagnostics cannot stand in
+for those facts. Query-time derivation and separate aggregation belong to a later
+operational-view tranche, not #32's representation clarification.
+
 ## 12. OPA references
 
 - [OPA policy language](https://www.openpolicyagent.org/docs/policy-language)
