@@ -68,7 +68,7 @@ def run(root):
         assignment = next((work/'assignments').glob('*.yaml'))
         original_assignment = yaml.safe_load(assignment.read_text())
         selected = copy.deepcopy(original_assignment)
-        selected['spec']['baselines'] = [child_ref]
+        selected['spec']['baselineRefs'] = [{'name': parent['metadata']['id'], 'revision': '2'}]
         assignment.write_text(yaml.safe_dump(selected))
         second = render('tailored')
         assert second['coverage']['assessable']
@@ -96,10 +96,10 @@ def run(root):
         validate_assessment_results(result)
         assert result['summary']['unknown'] == 4
         historical = copy.deepcopy(result)
-        selected['spec']['baselines'] = [baseline_ref, child_ref]
+        selected['spec']['baselineRefs'] = [{'name': parent['metadata']['id'], 'revision': revision} for revision in ['1', '2']]
         assignment.write_text(yaml.safe_dump(selected))
         assert not render('conflict')['coverage']['assessable']
-        selected['spec']['baselines'] = [child_ref]
+        selected['spec']['baselineRefs'] = [{'name': parent['metadata']['id'], 'revision': '2'}]
         assignment.write_text(yaml.safe_dump(selected))
         realization_path.unlink()
         missing = render('missing-realization')
