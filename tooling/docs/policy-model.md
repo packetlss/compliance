@@ -187,6 +187,15 @@ subject plan, and the evaluator performs the conservative roll-up.
 
 ### Control manifest
 
+The manifest below describes the current executable contract. System
+[ADR 0012](../../docs/adr/0012-explicit-policy-parameter-resolution.md) accepts
+policy/baseline/requirement ownership of effective evidence `max_age`, with
+Controls retaining dependency contracts and optional capability restrictions.
+Explicit bindings and descendant tailoring choose values; constraints, defaults
+and min/max do not. [#73](https://github.com/packetlss/compliance/issues/73) owns
+the coordinated migration. Until then, Control-owned ages and the literal-input
+examples in this document remain migration inputs, not successor syntax.
+
 Each control implementation has a machine-readable manifest beside its Rego
 module. Rego contains decision logic; the manifest provides discovery and
 dependency metadata to the rest of the platform. The examples below use YAML

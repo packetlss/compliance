@@ -51,6 +51,15 @@ Materialization paths are never source identity.
 
 ## Accepted v4 temporal provenance
 
+System [ADR 0012](../../docs/adr/0012-explicit-policy-parameter-resolution.md#immutable-plan-and-provenance-obligations)
+accepts successor resolved parameter, declaration/schema pin, binding/tailoring,
+consumption-edge, exact destination and policy-owned freshness facts in the same
+assessment plan/results boundary. [#73](https://github.com/packetlss/compliance/issues/73)
+owns their schema, validation and identity/fingerprint migration; they are not
+current v4 fields. That migration must preserve the historical selected-document
+and exact assessed-dependency/`max_age` attribution below, without re-resolving
+parameters during evaluation or rewriting historical artifacts.
+
 The representation requirement of system
 [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md#v4-factual-temporal-provenance-option-b)
 is implemented by #32. Operational evidence timeliness derivation remains

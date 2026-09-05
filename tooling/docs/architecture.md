@@ -497,6 +497,20 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-05 — Explicit policy parameters and policy-owned freshness (#37)
+
+System [ADR 0012](../../docs/adr/0012-explicit-policy-parameter-resolution.md)
+accepts explicit binding and descendant tailoring, stable requirement slots,
+direct typed realization-dependency consumption and policy-owned effective
+`max_age`. Required unresolved or conflicting parameters prevent an assessable
+plan; evaluation consumes already resolved values. Exact resolved implementation
+inputs remain distinct from semantic requirement slots. Immutable plan facts
+retain values, pins, operations, links, destinations and freshness provenance.
+The bounded migration is [#73](https://github.com/packetlss/compliance/issues/73).
+Current literal-input schemas and Control-owned ages remain executable until
+that cutover; no runtime behavior changes in this documentation promotion.
+ADR 0010/0011 evidence semantics and missing-realization behavior are preserved.
+
 ### 2026-09-05 — Predecessor retirement (#33)
 
 After #31/#32 and destination cutovers #34–#36, current tooling accepts only

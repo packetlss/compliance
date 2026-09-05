@@ -1,6 +1,6 @@
 # System architecture
 
-This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0011 in `docs/adr/`.
+This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 in `docs/adr/`.
 
 Historical `packetlss-labs/compliance-workspace` architecture remains migration/design provenance. After this documentation-authority transfer, this repository owns current normative system architecture.
 
@@ -81,9 +81,19 @@ subject / group assignment
 
 Requirements are desired assurance objectives. Realizations are design-time mappings, not proof of implementation. Authored adoption/implementation labels cannot create pass. Missing, stale, invalid, or inconclusive required evidence is `unknown`. Realization selection is deterministic and fail-closed; source order is never precedence. Technical results remain independently attributable. Framework mappings are bounded claims and do not imply certification/legal compliance beyond evaluated evidence.
 
-Detailed successor terminology, evidence authority, N/A semantics, mapping/result model, identity, and migration remain owned by destination #37.
+Detailed successor terminology, evidence authority, N/A semantics, mapping/result model, identity, and migration remain owned by destination #37, except the accepted parameter-resolution decision routed below to ADR 0012 and its bounded implementation successor #73.
 
 [ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns the common required-evidence `unknown`, attributable execution `error`, and assessment-wide refusal boundary. It clarifies ADRs 0006/0007; #32 implements its schema-invalid-evidence and evidence selection ambiguity corrections as the only semantic preservation exceptions after #31. These corrections are implemented in the sole supported v4 path. #31 is complete; broader assurance design remains with #37.
+
+## Explicit policy parameters and freshness
+
+[ADR 0012](adr/0012-explicit-policy-parameter-resolution.md) is **accepted design, not yet implemented** under #37; [#73](https://github.com/packetlss/compliance/issues/73) owns the coordinated schema/runtime/consumer migration. Its common model is declaration → explicit binding → optional explicit descendant tailoring → concrete effective value → explicit dependency consumption → resolved assessment plan. Required unresolved parameters and independently applicable divergent bindings prevent an assessable plan. Source/file order, ancestry, assignment scope or specificity, strictness and min/max never choose values; constraints and JSON Schema defaults cannot manufacture them.
+
+Requirement slots have stable technology-neutral identity with exact declaration/revision/type-schema pins. Realizations retain explicit typed links into required dependency inputs; plans materialize every linked value with immutable provenance, and evaluation does not resolve parameters again. Technical destinations belong to an exact resolved implementation/interface, including after substitution. Selected derivation permits explicit tailoring; independently assigning divergent ancestor and descendant policies is a conflict.
+
+Effective evidence `max_age` belongs to policy/baseline/requirement intent. Controls retain evidence dependency contracts and optional capability restrictions; realizations link semantic freshness slots where applicable. Current Control-owned ages and literal-input schemas remain executable migration inputs until #73 cuts over all affected consumers. ADR 0010 still owns assessment-time evidence semantics and ADR 0011 immutable historical selection attribution; the future-timestamp question is unchanged.
+
+Policy resolution determines company intent; external conformity compares it with explicit external conditions; assessment tests evidence against that company intent. Passing company policy does not establish an external framework claim. Fixed/open external binding restrictions do not authenticate issuer authority; that authority contract remains with #37. Missing realization/coverage gaps remain distinct from unresolved parameters and missing evidence. Ordinary named private policy sources need no new resource family or precedence. ADR 0012 extends the existing provenance-bearing plan, not the adapter or authorization artifact surface.
 
 ## Historical assessment and operational interpretation
 

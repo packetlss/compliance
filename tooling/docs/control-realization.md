@@ -130,6 +130,17 @@ complete and valid assessment for its intended scope, not a missing objective.
 
 ## 3. Technology-neutral requirement
 
+System [ADR 0012](../../docs/adr/0012-explicit-policy-parameter-resolution.md)
+accepts technology-neutral parameter declarations and explicit RequirementBaseline
+bindings/parameter-only derivation, with realization links from exact semantic
+slots into required technical/evidence/freshness dependency inputs. Plans
+materialize those values with provenance; copied literals do not supply the
+semantic linkage. This is **accepted design, not yet implemented**; [#73](https://github.com/packetlss/compliance/issues/73)
+owns the coordinated migration. The current schemas and examples below retain
+complete literal checks until cutover. Missing realization/coverage behavior,
+`allOf` and provenance-only `based_on` are unchanged; broader #37 assurance and
+external-claim authority remain separate work.
+
 A `ControlRequirement` is suitable for a signed company-policy release. It has a
 stable ID and revision, a technology-neutral statement, and optional external
 framework mappings. It contains no environment hostnames, IAM domains, group
@@ -332,8 +343,9 @@ does not yet:
 - define inheritance or overlays on realizations themselves.
 
 Complete embedded checks and non-inheriting `based_on` provenance are the
-accepted initial authoring model; template/binding and automatic realization
-inheritance remain deliberately deferred.
+accepted initial authoring model. ADR 0012 promotes explicit parameter binding
+and consumption for later implementation in #73; realization templates and
+automatic realization inheritance remain deferred.
 
 The stable Linux hardening rollout scenario in
 `verification/scenarios/projects/linux-hardening-rollout` uses only
