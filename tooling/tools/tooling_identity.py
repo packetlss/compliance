@@ -175,7 +175,14 @@ def _validate_installation(dist: metadata.Distribution, info: Path, wheel: bytes
         _verify_bytes(target.read_bytes(), entry, name)
     # Unrecorded runtime modules/schema files must not expand the validated wheel.
     for directory in ('tools', 'schemas'):
-        for path in (root / directory).rglob('*'):
+        tree = root / directory
+        if tree.is_symlink():
+            raise ToolingIdentityError(f"installed runtime directory is a symbolic link: {tree}")
+        for path in tree.rglob('*'):
+            if path.is_symlink():
+                raise ToolingIdentityError(f"installed runtime symbolic link: {path}")
+            if not path.is_file() and not path.is_dir():
+                raise ToolingIdentityError(f"unsupported installed runtime file: {path}")
             if path.is_file():
                 if path.suffix == '.pyc':
                     _verify_bytecode(path, root, payload)

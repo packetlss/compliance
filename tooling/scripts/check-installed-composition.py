@@ -96,6 +96,21 @@ def main_proof() -> None:
                 raise AssertionError('unrecorded module accepted')
         finally:
             unrecorded.unlink()
+        # rglob does not descend into symlink directories; inspect the link itself.
+        with tempfile.TemporaryDirectory(prefix='composition-shadow-') as temporary:
+            external = Path(temporary)
+            (external / '__init__.py').write_text('altered_behavior = True\n')
+            link = Path(dist.locate_file('tools/release'))
+            try:
+                link.symlink_to(external, target_is_directory=True)
+                try:
+                    actual_tooling_identity()
+                except ToolingIdentityError:
+                    pass
+                else:
+                    raise AssertionError('unrecorded symlink package accepted')
+            finally:
+                link.unlink()
         # Even a correctly hashed extra RECORD entry cannot expand wheel-owned code.
         # In particular, a package can shadow a same-named module from the wheel.
         shadow = Path(dist.locate_file('tools/release/__init__.py'))
