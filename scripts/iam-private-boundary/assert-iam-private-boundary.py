@@ -199,7 +199,7 @@ def assert_provenance(plan: dict, result: dict, config: dict, assembly_root: Pat
         fail("IAM result lost successful evidence selection for a technical check")
     for item in selections:
         if item["collected_at"] != FIXED_INSTANT or item["requirement"] != {
-            "type": "linux.access.configuration/v1", "required": True, "max_age": "24h"
+            "id": "observation", "type": "linux.access.configuration/v1", "required": True, "max_age": "86400s"
         }:
             fail("IAM result lost factual collection instant or assessed evidence requirement")
 

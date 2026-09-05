@@ -29,7 +29,7 @@ def run(root):
         config = {'schema': 'compliance.example/project-config/v1alpha3',
                   'policySources': [{'name': name, 'path': str(path)} for name, path in sources.items()],
                   'paths': {'inventory': str(fixture/'inventory'), 'assignments': str(work/'assignments'),
-                            'evidence': str(work/'evidence'), 'plan': str(work/'plans'), 'results': str(work/'results')}}
+                            'evidence': str(work/'evidence'), 'plan': str(work/'plans'), 'results': str(work/'results'), 'waivers': str(work/'waivers')}}
         config_path = work/'compliance.yaml'
         config_path.write_text(yaml.safe_dump(config))
         command = ['compliance', '--config', str(config_path)]
