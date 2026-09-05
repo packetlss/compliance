@@ -151,6 +151,19 @@ def complete(states):
             require(state['bound'] or not state['declaration']['required'], 'required policy parameter unresolved')
 
 
+def reconcile_selected_slots(states, selected):
+    """Independently selected exact pins cannot split one semantic slot identity."""
+    candidate = dict(selected)
+    for slots in states.values():
+        for state in slots.values():
+            identity = (state['identity']['requirement'], state['identity']['slot'])
+            value = fingerprint(state)
+            require(identity not in candidate or candidate[identity] == value,
+                    'independently selected stable parameter identity conflict')
+            candidate[identity] = value
+    selected.update(candidate)
+
+
 def implementation_pin(definition):
     return {'id': definition['metadata']['id'], 'version': definition['metadata']['version'],
             'fingerprint': digest({'manifest': document(definition), 'parameters_schema': definition['_parameters_schema'], 'implementation_modules': definition.get('_implementation_modules', [])})}
@@ -290,6 +303,7 @@ def validate_frozen(plan):
         controls[control['implementation']] = definition
     requirements = {r['reference']: r['parameter_facts']['document'] for r in plan['requirements']}
     by_reference = {r['reference']: r for r in plan['requirements']}
+    selected_slots = {}
     for baseline in plan['resolved_requirement_baselines']:
         facts = baseline['parameter_derivation']
         catalog = {}
@@ -299,6 +313,7 @@ def validate_frozen(plan):
             catalog[ancestor['reference']] = {**ancestor['document'], '_sources': ancestor['policy_sources']}
         states, ancestry = resolve(baseline['reference'], catalog, requirements)
         complete(states)
+        reconcile_selected_slots(states, selected_slots)
         require(equal(states, facts['states']) and equal(ancestry, facts['ancestry']), 'frozen derivation inconsistent')
         require(baseline['digest'] == ancestry[-1]['digest'], 'selected baseline digest mismatch')
         require(equal(baseline['requirements'], ancestry[-1]['document']['spec']['requirements']),

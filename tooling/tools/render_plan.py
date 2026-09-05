@@ -1637,6 +1637,7 @@ def render_plan(
     resolved_requirement_baselines: list[JsonObject] = []
     resolution_errors: list[JsonObject] = copy.deepcopy(policy_errors)
     baseline_cache: dict[str, JsonObject] = {}
+    selected_parameter_slots = {}
 
     if subject["status"] == "unknown":
         resolution_errors.append({
@@ -1657,6 +1658,7 @@ def render_plan(
                 try:
                     parameter_states, parameter_ancestry = pp.resolve(baseline_reference, requirement_baselines, requirements)
                     pp.complete(parameter_states)
+                    pp.reconcile_selected_slots(parameter_states, selected_parameter_slots)
                 except (ValueError, KeyError) as error:
                     resolution_errors.append({"type": "parameter-resolution-failed", "message": str(error), **baseline_provenance})
                     continue

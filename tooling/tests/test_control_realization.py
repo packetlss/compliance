@@ -1,6 +1,9 @@
 import copy
 import json
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 from jsonschema import Draft202012Validator, FormatChecker
 
@@ -20,6 +23,46 @@ from tools.policy_sources import PolicySource
 
 
 class ControlRealizationTests(unittest.TestCase):
+    def test_distinct_revisions_cannot_split_stable_parameter_identity(self):
+        from tools import policy_parameters as pp
+        from tools.artifact_validation import validate_assessment_plan, ArtifactValidationError
+        from tools.assessment_provenance import artifact_digest
+        subject, groups, assignments = load_inventory_inputs(
+            self.root / 'iam/inventory', self.root / 'iam/assignments',
+            'host/restricted-linux-01', self.root / 'schemas/inventory/resource.schema.json')
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for revision, value in ((1, '30d'), (2, '15d')):
+                requirement = copy.deepcopy(self.requirement)
+                requirement['metadata'].update(id='review.same-objective', revision=revision)
+                schema = {'$id': 'https://example.test/revision-age', 'type': 'string'}
+                requirement['spec']['parameters'] = {'privileged_evidence_max_age': {
+                    'required': True, 'binding_mode': 'fixed', 'value': value,
+                    'representation': 'duration', 'schema': schema, 'schema_digest': pp.digest(schema)}}
+                baseline = copy.deepcopy(self.baseline)
+                baseline['metadata'].update(id=f'review.baseline-{revision}', revision=1)
+                baseline['spec'] = {'requirements': [{'requirement': f'review.same-objective@{revision}',
+                    'digest': pp.digest(requirement), 'required': True}]}
+                for folder, document in (('requirements', requirement), ('requirement-baselines', baseline)):
+                    (root / folder).mkdir(exist_ok=True)
+                    (root / folder / f'{revision}.json').write_text(json.dumps(document))
+            sources = (PolicySource('control-library', self.root / 'shared'), PolicySource('review', root))
+            assignments[0]['baselines'] = ['review.baseline-1@1', 'review.baseline-2@1']
+            for reverse in (False, True):
+                if reverse:
+                    assignments[0]['baselines'].reverse()
+                plan = render_plan(subject, groups, assignments, sources)
+                self.assertFalse(plan['coverage']['assessable'])
+                self.assertTrue(any('stable parameter identity conflict' in e.get('message', '')
+                                    for e in plan['resolution']['errors']))
+            # Model an artifact emitted before stable-identity reconciliation existed.
+            with patch.object(pp, 'reconcile_selected_slots'):
+                legacy = render_plan(subject, groups, assignments, sources)
+            self.assertTrue(legacy['coverage']['assessable'])
+            legacy['id'] = artifact_digest(legacy)
+            with self.assertRaisesRegex(ArtifactValidationError, 'stable parameter identity conflict'):
+                validate_assessment_plan(legacy)
+
     @classmethod
     def setUpClass(cls):
         cls.root = fixture_root(cls)
