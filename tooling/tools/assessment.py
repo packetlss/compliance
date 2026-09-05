@@ -895,7 +895,7 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
                 f'      digest: {waiver["digest"]}',
             ])
         lines.append(f"    effective criteria: {effective_criteria(control)}")
-        lines.append("    policy evidence requirements: " + json.dumps(control['evidence'], sort_keys=True))
+        lines.append("    policy evidence requirements: " + json.dumps(control.get('evidence', control.get('policy_inputs', {}).get('instance', {}).get('evidence', {})), sort_keys=True))
         if control.get("external_refs"):
             lines.append("    external refs: " + ", ".join(control["external_refs"]))
         if lineage := lineage_description(control):
@@ -911,7 +911,7 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
     for control in plan["excluded_controls"]:
         lines.append(f'  ○ EXCLUDED  {control["instance_id"]}')
         lines.append(f"    effective criteria: {effective_criteria(control)}")
-        lines.append("    policy evidence requirements: " + json.dumps(control['evidence'], sort_keys=True))
+        lines.append("    policy evidence requirements: " + json.dumps(control.get('evidence', control.get('policy_inputs', {}).get('instance', {}).get('evidence', {})), sort_keys=True))
         if control.get("external_refs"):
             lines.append("    external refs: " + ", ".join(control["external_refs"]))
         if lineage := lineage_description(control):

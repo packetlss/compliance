@@ -36,7 +36,7 @@ def run(root):
 
         def render(name):
             output = work/name
-            subprocess.run([*command, 'plan', 'render', 'host/restricted-linux-01', '--output', str(output)], check=True, capture_output=True, text=True)
+            subprocess.run([*command, 'plan', 'render', 'host/restricted-linux-01', '--output', str(output)], check=True, text=True)
             files = list(output.rglob('*.json'))
             assert len(files) == 1, files
             plan = json.loads(files[0].read_text())
@@ -89,7 +89,7 @@ def run(root):
             else:
                 raise AssertionError('independent parameter tampering was accepted')
         (work/'evidence').mkdir()
-        subprocess.run([*command, 'assessment', 'run', 'host/restricted-linux-01', '--at', '2026-09-01T00:00:00Z'], check=True, capture_output=True, text=True)
+        subprocess.run([*command, 'assessment', 'run', 'host/restricted-linux-01', '--at', '2026-09-01T00:00:00Z'], check=True, text=True)
         results = list((work/'results').rglob('*.json'))
         assert len(results) == 1
         result = json.loads(results[0].read_text())
