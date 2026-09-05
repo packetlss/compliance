@@ -255,6 +255,14 @@ document is already the complete shape of one
 `release-lock/v1alpha2.policySources[*]` value; source-navigation metadata and
 representations do not enter that projection.
 
+The tree digest evaluates generated-directory exclusions relative to the
+explicitly supplied policy-source root. A root named `build` or `__pycache__`,
+or a root beneath an ancestor with either name, is therefore ordinary source
+content; only matching components inside that root are excluded. Artifacts
+created by the earlier path-dependent implementation with an erroneous empty
+content digest must be regenerated. Consumers do not accept that identity as a
+compatibility alias.
+
 The packaged `tools.policy_source_release` module validates and normalizes only
 this generic schema. The producer-specific pre-freeze
 `policy-release-manifest/v1` and `verification-policy-release-manifest/v1`

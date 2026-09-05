@@ -313,7 +313,7 @@ class PolicySourceArchiveTests(unittest.TestCase):
             first = validate_policy_source_archive(
                 release, release.representations[0], first_path
             )
-            destination = root / "consumer-selected-source"
+            destination = root / "build" / "consumer-selected-source"
             second = validate_policy_source_archive(
                 release,
                 release.representations[1],
