@@ -61,10 +61,25 @@ freshness, and waiver lifecycle selection all use that instant.
 Rendered `assessment-plan/v1` and `assessment-results/v1` documents are strict
 stored contracts. Before OPA is invoked, `assessment run` filters evidence by
 exact subject identity and validates matching control evidence against the
-type schema from the plan's pinned policy sources. A matching schema failure is
-persisted as that control's `error`; unreadable or non-object evidence refuses
-the assessment because it cannot be routed safely. Valid additional fields are
-preserved, while missing or stale valid evidence remains `unknown`. The CLI
+type schema from the plan's pinned policy sources. The accepted system
+[ADR 0010](../../docs/adr/0010-required-evidence-status-and-assessment-refusal.md) correction makes safely
+attributable schema-invalid required evidence `unknown`, including mixed
+valid/invalid candidates; validate all matching candidates before selection and
+never send invalid evidence to OPA. Runtime still uses the predecessor `error`
+classification until #32 implements this correction. ADR 0010 reserves `error`
+for attributable execution/decision failure and requires refusal for
+untrustworthy routing, shared prerequisites, provenance or result integrity.
+Valid additional fields remain preserved; missing or stale evidence is `unknown`.
+
+The eventual #32 operator behavior must make invalid-evidence `unknown`
+prominent, retain validation diagnostics in human and JSON explanations, and
+move its counts from `error` to `unknown`. Creating an artifact is not a passing
+assessment: persisted `unknown` or attributable `error` may be a completed run.
+Refusal/write failure is command failure with no new results envelope. No new
+status or filter grammar is introduced here; historical results are not
+reinterpreted. These are accepted requirements, not yet implemented behavior.
+
+The CLI
 validates plans before persistence and whenever they
 are displayed or evaluated. Result files
 are validated before persistence and when assessment views load them. A file

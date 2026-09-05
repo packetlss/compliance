@@ -9,11 +9,16 @@ Accepted decisions:
 - [ADR 0007 — Separate actual composition provenance from expected enforcement](0007-unified-actual-and-expected-composition-provenance.md)
 - [ADR 0008 — Consolidate non-sensitive development in a private personal repository](0008-consolidated-private-development-repository.md)
 
-These destination files are normative restatements of the accepted decisions from the immutable final architecture snapshot:
+ADRs 0005–0008 are normative restatements of the accepted decisions from the immutable final architecture snapshot:
 
 `packetlss-labs/compliance-workspace@098ef18c1384b34c532f705b3f5b3d1a25bd638f`
 
 The historical workspace copies, issues, and PRs remain decision/migration provenance. The workspace commit is not semantic runtime identity and is no longer an active architecture dependency after this transfer.
+
+Accepted destination decisions:
+
+- [ADR 0009 — Converge active compliance vocabulary](0009-active-compliance-vocabulary.md)
+- [ADR 0010 — Required evidence, attributable errors, and assessment refusal](0010-required-evidence-status-and-assessment-refusal.md) — accepted design; runtime implementation in #32, promotion #61, candidate-selection follow-up #62.
 
 Current system-level documents:
 

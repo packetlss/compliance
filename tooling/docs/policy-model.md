@@ -328,17 +328,25 @@ Evidence schemas define a **minimum compatibility contract**:
   evidence version. Removing, renaming, or changing the meaning or type of a
   required field does.
 
-The evaluator enforces this contract at the assessment-input boundary. It
-first selects documents by exact subject identity, then validates every
-document whose type is declared by the current control, and only then applies
-freshness selection. A matching schema-invalid document produces an
-independently attributable `error` result for that control and is never
-supplied to OPA. It is not treated as absent evidence because that would
-collapse a validation failure into `unknown`. Documents for another subject or
-for an evidence type unused by the control remain outside that control's
-validation scope, preserving project evidence-directory sharing and open type
-extension. Unreadable JSON and non-object files refuse the assessment because
-their subject and type cannot be routed safely.
+System [ADR 0010](../../docs/adr/0010-required-evidence-status-and-assessment-refusal.md) owns the normative
+evidence-condition matrix and `unknown` / `error` / refusal boundary. Its
+accepted correction is not yet implemented; #32 owns the runtime cutover.
+Validate every explicitly matching subject/type document before freshness or
+candidate selection. Safely attributable schema-invalid required evidence,
+including mixed valid/invalid candidates, makes affected controls `unknown`;
+invalid evidence never reaches OPA. Attributable criterion execution/decision
+failures are `error`; untrustworthy routing, shared prerequisites or result
+integrity require assessment-wide refusal. Do not infer routing from paths.
+
+The predecessor evaluator's matching-schema-failure → `error` rule is superseded
+as normative authority; the historical rationale remains in the
+[architecture decision log](architecture.md#11-decision-log). Preserve rejected
+identified/routed documents and current-subject unused-type provenance in the
+same snapshot considered by evaluation. ADR 0010 requires deterministic,
+provenance-bound `observed.evidence_validation_errors` without changing evidence
+identity algorithms. Other explicitly routed subjects remain outside matching
+scope; unused types remain outside a control's validation scope, preserving
+evidence-directory sharing and open type extension.
 
 Schema validation uses the exact evidence schema assembled from the policy
 sources pinned by the plan, including RFC 3339 format checking. Valid unknown
@@ -683,9 +691,11 @@ Allowed statuses:
 
 - `pass` — sufficient fresh evidence proves the desired state.
 - `fail` — sufficient fresh evidence proves a violation.
-- `unknown` — evidence is missing, stale, incomplete, or inconclusive.
+- `unknown` — criterion truth cannot be established from admissible evidence,
+  with safely attributable missing, stale, invalid, incomplete, or inconclusive evidence.
 - `not_applicable` — the control does not apply to this subject.
-- `error` — schema, policy, or evaluation failed.
+- `error` — safely attributable criterion execution or decision interpretation
+  failed and trusted orchestration can construct a valid result (ADR 0010).
 - `waived` — a failing result is covered by a valid explicit waiver.
 
 A waiver should not turn a failure into a pass; consumers must be able to see
