@@ -5,6 +5,16 @@
 - **Parent architecture contract:** [#37](https://github.com/packetlss/compliance/issues/37)
 - **Runtime/schema migration:** [#73](https://github.com/packetlss/compliance/issues/73); no runtime change in this promotion
 
+Current authority routing: [ADR 0014](0014-attributable-applicability-and-authority-acceptance.md)
+and [ADR 0015](0015-bounded-external-claims-and-assurance-recognition.md) now accept
+the separately deferred narrow applicability-authority and external-claim decisions;
+[ADR 0013](0013-scoped-assurance-and-obligation-instances.md) owns scoped populations
+and obligation instances. They do not extend #73 or change this ADR's parameter
+identity, resolution, direct typed consumption or unresolved-policy boundary.
+Complete #73 independently, then plan their coordinated successor under #37.
+Historical deferrals below describe this ADR's bounded scope, not unsettled
+invariants already decided by ADRs 0013–0015.
+
 ## Context and authority
 
 The accepted parameter decision under #37 needs durable authority for a common

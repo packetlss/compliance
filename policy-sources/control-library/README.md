@@ -94,6 +94,31 @@ The destination materializes this producer at `policy-sources/control-library/`.
 Its outer path, GitHub repository, semantic source name, and release distribution
 identity remain separate concepts.
 
+## Accepted scoped-assurance ownership
+
+[ADR 0013](../../docs/adr/0013-scoped-assurance-and-obligation-instances.md),
+[ADR 0014](../../docs/adr/0014-attributable-applicability-and-authority-acceptance.md)
+and [ADR 0015](../../docs/adr/0015-bounded-external-claims-and-assurance-recognition.md)
+are accepted design, not yet implemented under #37. This library retains reusable
+policy/evidence schemas and technology-neutral contracts; tooling owns inventory,
+planning and results. Adopter sources own company interpretations, desired policy,
+applicable governance acceptance decisions and scoped consumption/claim inputs.
+Synthetic examples belong to verification policy; real private facts remain outside
+this repository. The library's name and content digests establish no issuer or
+applicability authority, source precedence or automatic company policy adoption.
+
+Population bases, applicability determinations and recognition rules retain distinct
+semantics. Exact claim/obligation accounting and explicit named recognition dependencies
+do not turn mappings, authored realizations or broad operational reach into proof.
+Missing interpretation/realization and unresolved claim authority remain visible,
+distinct from evidence insufficiency and shared assessment-integrity refusal.
+
+Finish #73 / ADR 0012 independently before repository-grounded coordinated migration
+planning under #37 across all three ADRs. Their migration tables govern successor
+ownership without selecting wire syntax, generic attachments or new resource kinds.
+Current policy/schema bytes remain unchanged until an authorized runtime cutover.
+Manual/procedural methodology and sampling inference still require architecture.
+
 ## Component validation
 
 From a clean, committed destination checkout, run:

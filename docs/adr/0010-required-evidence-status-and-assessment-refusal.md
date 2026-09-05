@@ -37,6 +37,14 @@ historical result, release, or artifact is reinterpreted or rewritten.
 
 [ADR 0011](0011-historical-assessment-and-operational-evidence-timeliness.md) owns interpretation of historical results across wall-clock time and the v4 factual temporal-provenance clarification in #32. This ADR retains assessment-time validity/freshness eligibility, schema-invalid evidence, selection ambiguity, attributable `error`, and assessment-wide refusal unchanged.
 
+Current routing clarification: [ADR 0013](0013-scoped-assurance-and-obligation-instances.md#preserve-existing-assessment-boundaries)
+distinguishes safely attributable claim-resolution inability from evidence
+insufficiency and this ADR's shared-integrity refusal. A bounded claim can remain
+unestablished while independently valid technical/objective assessment is
+publishable. Pre-assessment claim resolution is not evidence `unknown`.
+ADRs 0014–0015 extend applicability/claim architecture, not this ADR's technical
+evidence selection or roll-up; ADR 0012's unresolved-policy boundary is unchanged.
+
 ## Decision
 
 ### Definitions and shared prerequisites
