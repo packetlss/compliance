@@ -4,48 +4,48 @@
   "scripts": [
     {
       "name": "Setup worktree",
-      "command": "uv sync --project tooling --frozen",
+      "command": "scripts/dev setup",
       "icon": "configure",
       "runOnWorktreeCreate": true
     },
     {
       "name": "Fast tooling tests",
-      "command": "cd tooling && uv run --frozen python -m unittest discover -s tests -v",
+      "command": "scripts/dev check tooling",
       "icon": "test"
     },
     {
       "name": "Repository contract",
-      "command": "bash scripts/validate-repository.sh",
+      "command": "scripts/dev gate repository",
       "icon": "test"
     },
     {
       "name": "Tooling gate",
-      "command": "bash tooling/scripts/validate-tooling.sh",
+      "command": "scripts/dev gate tooling",
       "icon": "test"
     },
     {
       "name": "Control-library gate",
-      "command": "bash policy-sources/control-library/scripts/validate-shared-policy.sh",
+      "command": "scripts/dev gate policy",
       "icon": "test"
     },
     {
       "name": "Verification-policy gate",
-      "command": "bash policy-sources/verification-policy/scripts/validate-verification-policy.sh",
+      "command": "scripts/dev gate verification-policy",
       "icon": "test"
     },
     {
       "name": "Development-projects gate",
-      "command": "bash scripts/validate-development-projects.sh",
+      "command": "scripts/dev gate projects",
       "icon": "test"
     },
     {
       "name": "IAM private-boundary gate",
-      "command": "bash scripts/validate-iam-private-boundary.sh",
+      "command": "scripts/dev gate iam",
       "icon": "test"
     },
     {
       "name": "Canonical-scenarios gate",
-      "command": "bash scripts/validate-verification-scenarios.sh",
+      "command": "scripts/dev gate scenarios",
       "icon": "test"
     }
   ]

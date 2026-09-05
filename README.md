@@ -28,8 +28,21 @@ Stable destination CI contexts are:
 - `component-validation`
 - `verification-scenarios`
 - `installed-release-provenance`
+- `macos-portability`
 
 `verification-scenarios` is the real canonical composed gate and owns all 20 retained public CLI leaves and 18 retained domain features. Normal validation uses one repository checkout and no historical sibling-repository App/PAT acquisition path.
+
+From the repository root, `scripts/dev setup` creates this worktree's isolated environment and installs the repository-pinned Python, uv, and OPA without sudo or global package-manager changes. Downloads are cached outside semantic roots. Use `scripts/dev doctor` for read-only diagnosis. Quick checks read the current working tree:
+
+```sh
+scripts/dev check tooling
+scripts/dev check policy
+scripts/dev check projects
+scripts/dev check iam
+scripts/dev check scenarios
+```
+
+Optional tooling test names may follow `scripts/dev check tooling`. Canonical committed-input gates are explicit, for example `scripts/dev gate tooling`, `scripts/dev gate policy`, and `scripts/dev gate scenarios`. They refuse a dirty checkout and are selected by change impact or reproduction need. `scripts/dev readiness` reports current integration, exact-head review, and required CI evidence without mutating GitHub.
 
 ## Architecture and workflow
 

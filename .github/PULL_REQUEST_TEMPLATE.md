@@ -19,8 +19,9 @@ None.
 ## Validation
 
 - [ ] Fast working-tree tests, when applicable
-- [ ] Applicable canonical local gates on a clean committed candidate
+- [ ] Impact-selected canonical local gates on a clean committed candidate, or reason not run
 - [ ] Exact-head CI
+- [ ] `macos-portability`
 
 ## Implementation findings
 
@@ -30,7 +31,7 @@ None.
 
 - Reviewed head:
 - Reviewer/provider:
-- Outcome and finding disposition:
+- Outcome and finding disposition: <!-- Pass, Approved, or No findings when accepted -->
 
 ## Integration or migration impact
 

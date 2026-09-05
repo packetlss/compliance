@@ -30,9 +30,9 @@ Historical `packetlss-labs` repositories are archived provenance only. Never tre
 
 Use one T3 Code project at this repository root.
 
-- **Explore:** use a read-only thread against a clean default-branch checkout. Inspect and reason, but do not edit files or mutate GitHub. End with either no action or a promotion packet covering objective, write scope, design basis, acceptance criteria, non-goals, invariants, expected failures, validation, escalation conditions, and dependencies.
+- **Explore:** use a read-only thread against a clean default-branch checkout for uncertain architecture, semantic, trust, or cross-component design. Inspect and reason, but do not edit files or mutate GitHub. End with either no action or a promotion packet covering objective, write scope, design basis, acceptance criteria, non-goals, invariants, expected failures, validation, escalation conditions, and dependencies. Narrow understood nonsemantic work may begin directly in an implementation worktree with a PR-only contract.
 - **Implement:** start a new T3-managed worktree from current `main`. A durable issue is required for architecture, semantics, trust/release boundaries, cross-component contracts, dependent migrations, or work expected to span sessions. A narrow nonsemantic documentation, test, refactor, or mechanical change may use the PR body as its contract.
-- **Review:** use a fresh-context, read-only thread against the exact PR head. The reviewer reports findings and does not edit the implementation worktree. Material fixes return to implementation and require re-review of the new head.
+- **Review:** use a fresh-context, read-only thread against the exact PR head. Review and CI may run concurrently. The reviewer reports findings and does not edit the implementation worktree. Material fixes return to implementation and require re-review and CI of the new head.
 - **Merge:** CI and independent review provide evidence; a human retains final squash-merge authority.
 
 Do not implement directly on `main`. T3-generated branch names are allowed; durable task identity comes from the linked issue or PR, not the branch name. Do not run two editing threads in the same worktree concurrently.
@@ -57,12 +57,13 @@ ADR 0007 successor implementation remains bounded by its destination issues. Unt
 
 ## Validation and pull requests
 
-Use fast tests against the working tree during implementation. Canonical gates that export committed inputs require a clean, committed candidate revision; create a checkpoint commit before running them.
+Use applicable fast tests against the working tree during implementation. Select full canonical local gates by change impact or reproduction need; they are not an unconditional pre-PR requirement. Canonical gates that export committed inputs require a clean, committed candidate revision; create a checkpoint commit before running them. Local evidence never substitutes for exact-head CI.
 
 Every PR must record its contract, change and behavioral impact, validation actually performed, architecture/provenance/compatibility/trust impact, material findings, and exact-head independent review outcome. Preserve these stable CI contexts on every PR:
 
 - `component-validation`
 - `verification-scenarios`
 - `installed-release-provenance`
+- `macos-portability`
 
 Normal validation uses one destination checkout. Do not restore historical sibling acquisition, `COMPLIANCE_CI_*` credentials, PAT fallback, repository-coordinate manifests, or mutable branch resolution. A PR is complete only when its contract is satisfied, applicable local and exact-head CI evidence is green, findings are resolved, and generated state is clean.

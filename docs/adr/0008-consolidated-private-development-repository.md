@@ -113,7 +113,10 @@ Stable destination CI surfaces are:
 component-validation
 verification-scenarios
 installed-release-provenance
+macos-portability
 ```
+
+Narrow, understood, nonsemantic work may enter implementation directly with a PR-only contract. Applicable working-tree checks are required, while canonical local gates are impact-selected and retain their clean committed-input contract. After push, exact-head review and CI may proceed concurrently. Every material head change invalidates both forms of evidence. The candidate must contain the current `main` head; human final squash merge authority is unchanged.
 
 CI evidence and fresh-context review must cover the current head. Provider-enforced branch protection, rulesets, required-status enforcement, conversation-resolution enforcement, or similar plan-gated controls are optional operational hardening, not architecture prerequisites. Human final squash merge remains mandatory.
 

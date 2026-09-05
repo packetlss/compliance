@@ -2,8 +2,9 @@
 set -euo pipefail
 
 TOOLING_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+REPOSITORY_ROOT="$(cd -- "$TOOLING_ROOT/.." && pwd)"
 # shellcheck disable=SC1091
-source "$TOOLING_ROOT/scripts/ci-versions.env"
+source "$REPOSITORY_ROOT/toolchain/versions.env"
 
 fail() {
   printf 'ERROR: %s\n' "$*" >&2
@@ -69,8 +70,14 @@ PATH="$release_path" uv run --project "$TOOLING_ROOT" --frozen python \
   --release-dir "$metadata_dir" >/dev/null
 
 for release_dir in "$generic_dir" "$metadata_dir"; do
-  mapfile -t payload_files < <(
-    find "$release_dir" -maxdepth 1 -type f -printf '%f\n' | sort
+  payload_files=()
+  while IFS= read -r payload_file; do payload_files+=("$payload_file"); done < <(
+    python - "$release_dir" <<'PY'
+from pathlib import Path
+import sys
+for path in sorted(Path(sys.argv[1]).iterdir()):
+    if path.is_file(): print(path.name)
+PY
   )
   expected_files=(
     SHA256SUMS

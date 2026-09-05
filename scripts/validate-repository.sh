@@ -24,7 +24,10 @@ require_file toolchain/versions.env
 require_file tooling/AGENTS.md
 require_file tooling/pyproject.toml
 require_file tooling/uv.lock
-require_file tooling/scripts/ci-versions.env
+require_file scripts/dev
+require_file toolchain/dev.py
+require_file toolchain/bin/sha256sum
+require_file tests/toolchain/test_dev.py
 require_file tooling/scripts/validate-tooling.sh
 require_file tooling/scripts/validate-package.sh
 require_file tooling/scripts/validate-locked-artifacts-package.sh
@@ -33,7 +36,6 @@ require_file tooling/scripts/validate-policy-release-compatibility.sh
 require_file policy-sources/control-library/AGENTS.md
 require_file policy-sources/control-library/README.md
 require_file policy-sources/control-library/release/VERSION
-require_file policy-sources/control-library/scripts/ci-versions.env
 require_file policy-sources/control-library/scripts/validate-shared-policy.sh
 require_file policy-sources/control-library/scripts/validate-policy-release.sh
 require_file policy-sources/control-library/tests/test_policy_resources.py
@@ -42,7 +44,6 @@ require_file policy-sources/control-library/policies/controls/common/result.rego
 require_file policy-sources/control-library/policies/schemas/policy/control.schema.json
 require_file policy-sources/verification-policy/AGENTS.md
 require_file policy-sources/verification-policy/README.md
-require_file policy-sources/verification-policy/scripts/ci-versions.env
 require_file policy-sources/verification-policy/scripts/check-source-boundary.py
 require_file policy-sources/verification-policy/scripts/validate-verification-policy.sh
 require_file policy-sources/verification-policy/tests/test_verification_policy_source.py
@@ -80,7 +81,6 @@ require_file verification/scenarios/compliance.yaml
 require_file verification/scenarios/integration/README.md
 require_file verification/scenarios/integration/compliance.yaml
 require_file verification/scenarios/projects/linux-hardening-rollout/compliance.yaml
-require_file verification/scenarios/scripts/ci-versions.env
 require_file verification/scenarios/scripts/integration.py
 require_file verification/scenarios/scripts/test_integration.py
 require_file verification/scenarios/scripts/assert-linux-hardening-rollout.py
@@ -91,8 +91,9 @@ require_file scripts/validate-verification-scenarios.sh
 [[ ! -e uv.lock ]] || fail "repository root must not own a uv lock"
 [[ ! -e .gitmodules ]] || fail "submodules are not part of the consolidated target"
 
-python3 -m json.tool t3.json >/dev/null \
+"${COMPLIANCE_PYTHON:-python3}" -m json.tool t3.json >/dev/null \
   || fail "t3.json is not valid JSON"
+"${COMPLIANCE_PYTHON:-python3}" -m unittest discover -s tests/toolchain -v
 
 if grep -nE 'COMPLIANCE_CI_|PERSONAL_ACCESS_TOKEN|GH_PAT|GH_TOKEN|packetlss-labs/compliance-' t3.json; then
   fail "T3 project configuration must not contain historical acquisition or credentials"
@@ -101,18 +102,10 @@ fi
 expected_toolchain='PYTHON_VERSION=3.13.15
 UV_VERSION=0.12.5
 OPA_VERSION=1.18.2
-OPA_LINUX_AMD64_STATIC_SHA256=9903e5125ac281104f2c4b7371d10cc3b74a98933743fcbfc174f9bf0ab20de8'
+OPA_LINUX_AMD64_STATIC_SHA256=9903e5125ac281104f2c4b7371d10cc3b74a98933743fcbfc174f9bf0ab20de8
+OPA_DARWIN_ARM64_STATIC_SHA256=3ffa2af6a3b9ccff5d171d061d27990db5ad8cc5c10214c7eeeabc0f29ca11cf'
 actual_toolchain="$(cat toolchain/versions.env)"
 [[ "$actual_toolchain" == "$expected_toolchain" ]] || fail "toolchain/versions.env does not match the accepted migration toolchain"
-
-# The retained tooling-local pins are digest-preserving migration content, not a
-# second repository-level toolchain owner. Require them to match the root pins.
-tooling_toolchain="$(grep -v '^[[:space:]]*#' tooling/scripts/ci-versions.env | sed '/^[[:space:]]*$/d')"
-[[ "$tooling_toolchain" == "$expected_toolchain" ]] || fail "tooling-local pins differ from the repository toolchain"
-verification_toolchain="$(grep -v '^[[:space:]]*#' policy-sources/verification-policy/scripts/ci-versions.env | sed '/^[[:space:]]*$/d')"
-[[ "$verification_toolchain" == "$expected_toolchain" ]] || fail "verification-policy pins differ from the repository toolchain"
-scenario_toolchain="$(grep -v '^[[:space:]]*#' verification/scenarios/scripts/ci-versions.env | sed '/^[[:space:]]*$/d')"
-[[ "$scenario_toolchain" == "$expected_toolchain" ]] || fail "scenario pins differ from the repository toolchain"
 
 # Migration stage 6a permits exactly the independently named shared-library and
 # verification-policy producers, two ordinary project roots, and the approved

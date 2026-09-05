@@ -4,7 +4,7 @@ set -euo pipefail
 VERIFY_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 REPOSITORY_ROOT="$(cd -- "$VERIFY_ROOT/../.." && pwd)"
 # shellcheck disable=SC1091
-source "$VERIFY_ROOT/scripts/ci-versions.env"
+source "$REPOSITORY_ROOT/toolchain/versions.env"
 
 fail() {
   printf 'ERROR: %s\n' "$*" >&2
@@ -51,7 +51,7 @@ mkdir "$EXPORT_ROOT"
 # destination revision. Local edits are not consumed, and Git is unnecessary
 # after export.
 git -C "$REPOSITORY_ROOT" archive "$repository_actual" \
-  tooling policy-sources/control-library policy-sources/verification-policy \
+  toolchain tooling policy-sources/control-library policy-sources/verification-policy \
   | tar -x -C "$EXPORT_ROOT"
 TOOLING_ROOT="$EXPORT_ROOT/tooling"
 export COMPLIANCE_CONTROL_LIBRARY_ROOT="$EXPORT_ROOT/policy-sources/control-library"

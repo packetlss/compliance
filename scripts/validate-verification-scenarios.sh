@@ -15,7 +15,7 @@ fail() {
   exit 1
 }
 
-for command in git python3 tar uv opa; do
+for command in git tar uv opa; do
   command -v "$command" >/dev/null 2>&1 || fail "required command not found: $command"
 done
 
@@ -26,8 +26,8 @@ if [[ -n "${COMPLIANCE_VERIFICATION_SCENARIOS_SHA:-}" ]]; then
 fi
 
 export PYTHONDONTWRITEBYTECODE=1
-python3 -m unittest discover -s "$SCENARIO_ROOT/scripts" -p 'test_*.py' -v
-python3 "$SCENARIO_ROOT/scripts/integration.py" assemble --root "$ASSEMBLY_ROOT"
+"${COMPLIANCE_PYTHON:-python3}" -m unittest discover -s "$SCENARIO_ROOT/scripts" -p 'test_*.py' -v
+"${COMPLIANCE_PYTHON:-python3}" "$SCENARIO_ROOT/scripts/integration.py" assemble --root "$ASSEMBLY_ROOT"
 bash "$SCENARIO_ROOT/scripts/validate-scenarios.sh" \
   --integration-root "$ASSEMBLY_ROOT"
 

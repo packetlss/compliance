@@ -16,12 +16,10 @@ operable project are in [`docs/project-layout.md`](docs/project-layout.md).
 The implemented link between high-level objectives, environment-private technical
 implementations, and defensible top-level baseline results is exercised in
 [`docs/control-realization.md`](docs/control-realization.md).
-Development topology and repository ownership are governed by workspace
-[ADR 0005](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/adr/0005-content-addressed-development-boundaries.md),
-the current system
-[architecture](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/ARCHITECTURE.md),
-and the transitional
-[repository map](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/REPOSITORIES.md).
+Development topology and repository ownership are governed by destination
+[ADR 0005](../docs/adr/0005-content-addressed-development-boundaries.md), the
+current system [architecture](../docs/ARCHITECTURE.md), and
+[repository map](../docs/REPOSITORIES.md).
 Repository layout is not semantic policy, release, or runtime identity.
 The resolved assessment plan is also the machine-readable handoff to external
 IaC, PaC, MDM, ticketing, or configuration-management programs. Core tooling
@@ -61,21 +59,21 @@ for the selection rules and reporting semantics.
 Runnable end-to-end examples are available for:
 
 - synthetic AWS and SaaS API-governed subjects in
-  [`mock-fleet/`](https://github.com/packetlss-labs/compliance-development-projects/blob/main/projects/mock-fleet/README.md); and
+  [`mock-fleet/`](../projects/mock-fleet/README.md); and
 - a synthetic restricted Linux IAM realization in
-  [`compliance-project-iam-realization/`](https://github.com/packetlss-labs/compliance-project-iam-realization/blob/main/README.md);
+  [IAM boundary fixture](../verification/fixtures/iam-private-boundary/README.md);
 - synthetic standard and container-runtime server personas, including an
   invalid overlapping classification, in
-  [`server-personas/`](https://github.com/packetlss-labs/compliance-development-projects/blob/main/projects/server-personas/README.md); and
+  [`server-personas/`](../projects/server-personas/README.md); and
 - the stable synthetic Linux hardening rollout in
-  [`compliance-verification-scenarios/`](https://github.com/packetlss-labs/compliance-verification-scenarios/blob/main/projects/linux-hardening-rollout/README.md).
+  [canonical scenarios](../verification/scenarios/projects/linux-hardening-rollout/README.md).
 
 ## Operator CLI
 
 The prototype uses `uv` for locked Python dependencies and exposes one
 operator-facing command. In the current transitional checkout, repository paths
-come from the automatically discovered workspace registry
-[`compliance.yaml`](https://github.com/packetlss-labs/compliance-workspace/blob/main/compliance.yaml):
+come from the automatically discovered repository registry
+[`compliance.yaml`](../verification/scenarios/compliance.yaml):
 
 ```sh
 uv sync

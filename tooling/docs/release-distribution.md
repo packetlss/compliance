@@ -578,7 +578,7 @@ v3 locked-artifact contracts.
 The Python package metadata declares `>=3.13,<3.14`. CPython 3.13 is the only
 supported minor during pre-freeze development. The exact canonical development
 and CI interpreter is Python 3.13.15, as recorded in
-`scripts/ci-versions.env`.
+root `toolchain/versions.env`.
 
 Supporting another Python minor requires an explicit package-metadata decision
 and CI evidence. Historical releases retain their original metadata and are not
@@ -586,7 +586,7 @@ republished to adopt the current support range.
 
 OPA is not a Python dependency and is not downloaded or installed by the wheel.
 The current tooling release metadata records OPA `1.18.2` as the tested
-evaluator version, matching `scripts/ci-versions.env`. Commands that require OPA
+evaluator version, matching root `toolchain/versions.env`. Commands that require OPA
 continue to use an externally supplied executable. Package installation and
 release/config/inventory/waiver validation perform no OPA network acquisition.
 

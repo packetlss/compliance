@@ -321,17 +321,7 @@ neither automatically constitutes certification or a legal conclusion.
 
 ## 7. Repository boundaries
 
-Repository topology is governed by workspace
-[ADR 0005](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/adr/0005-content-addressed-development-boundaries.md),
-the current system
-[architecture](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/ARCHITECTURE.md),
-and the transitional
-[repository map](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/REPOSITORIES.md).
-The current multi-repository checkout and its exact Git revisions remain useful
-transition and leaf-integration metadata, but neither repository names, checkout
-paths, workspace commits, nor submodule gitlinks are canonical semantic or
-runtime identity. The workspace is a leaf integration/deployment consumer, not
-the upstream source-development boundary.
+Repository topology is governed by destination [ADR 0005](../../docs/adr/0005-content-addressed-development-boundaries.md), the current system [architecture](../../docs/ARCHITECTURE.md), and [repository map](../../docs/REPOSITORIES.md). Repository names, checkout paths, commits, and acquisition metadata are not canonical semantic or runtime identity.
 
 Logical boundaries remain explicit across any source layout. Tooling, each
 named policy source, release units, verification scenarios, and independently

@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+"""Small sha256sum subset used by repository validation on macOS and Linux."""
+import hashlib
+import pathlib
+import sys
+
+args = [arg for arg in sys.argv[1:] if arg not in {"--strict"}]
+if args and args[0] == "--check":
+    source = sys.stdin if args[1:] == ["-"] or not args[1:] else open(args[1], encoding="utf-8")
+    ok = True
+    for line in source:
+        expected, name = line.rstrip("\n").split(None, 1)
+        path = pathlib.Path(name.lstrip(" *"))
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        matched = actual == expected
+        print(f"{path}: {'OK' if matched else 'FAILED'}")
+        ok &= matched
+    raise SystemExit(0 if ok else 1)
+for name in args or ["-"]:
+    data = sys.stdin.buffer.read() if name == "-" else pathlib.Path(name).read_bytes()
+    print(f"{hashlib.sha256(data).hexdigest()}  {name}")

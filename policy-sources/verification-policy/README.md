@@ -86,7 +86,7 @@ The path-and-byte digest construction is unchanged.
 Commit proposed changes before running the canonical gate, which checks the
 destination repository for tracked and unignored changes before and after
 validation. Install the exact Python, uv, and OPA versions in
-[`scripts/ci-versions.env`](scripts/ci-versions.env), then run from the destination
+root [`toolchain/versions.env`](../../toolchain/versions.env), then run from the destination
 root:
 
 ```sh

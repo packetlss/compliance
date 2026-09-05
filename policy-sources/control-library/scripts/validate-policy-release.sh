@@ -3,7 +3,8 @@ set -euo pipefail
 
 POLICY_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck disable=SC1091
-source "$POLICY_ROOT/scripts/ci-versions.env"
+REPOSITORY_ROOT="$(cd -- "$POLICY_ROOT/../.." && pwd)"
+source "$REPOSITORY_ROOT/toolchain/versions.env"
 
 fail() {
   printf 'ERROR: %s\n' "$*" >&2
@@ -63,7 +64,7 @@ PATH="$release_path" python "$POLICY_ROOT/scripts/policy-release.py" verify \
   --release-dir "$descriptor_only" \
   --policy-root "$materialized_dir" \
   > "$temporary/descriptor-verified.json"
-cmp --silent "$temporary/descriptor.json" "$temporary/descriptor-verified.json" \
+cmp -s "$temporary/descriptor.json" "$temporary/descriptor-verified.json" \
   || fail "descriptor prepare and verify returned different manifests"
 descriptor_files="$(find "$descriptor_only" -maxdepth 1 -type f -exec basename {} \; | sort | tr '\n' ' ')"
 [[ "$descriptor_files" == "SHA256SUMS policy-source-release-manifest.json " ]] \
@@ -85,7 +86,7 @@ PATH="$release_path" python "$POLICY_ROOT/scripts/policy-release.py" verify \
   --release-dir "$archive_release" \
   --policy-root "$materialized_dir" \
   > "$temporary/archive-verified.json"
-cmp --silent "$temporary/archive.json" "$temporary/archive-verified.json" \
+cmp -s "$temporary/archive.json" "$temporary/archive-verified.json" \
   || fail "archive prepare and verify returned different manifests"
 archive_files="$(
   find "$archive_release" -maxdepth 1 -type f -exec basename {} \; \
@@ -108,7 +109,7 @@ PATH="$release_path" python "$POLICY_ROOT/scripts/policy-release.py" prepare \
   --archive \
   --output-dir "$alternate_release" \
   > "$temporary/alternate.json"
-cmp --silent \
+cmp -s \
   "$archive_release/compliance-control-library-${release_version}.tar.gz" \
   "$alternate_release/compliance-control-library-${release_version}.tar.gz" \
   || fail "Git metadata changed generic archive representation bytes"
