@@ -9,43 +9,43 @@
       "runOnWorktreeCreate": true
     },
     {
+      "name": "Toolchain doctor",
+      "command": "scripts/dev doctor",
+      "icon": "configure"
+    },
+    {
       "name": "Fast tooling tests",
       "command": "scripts/dev check tooling",
       "icon": "test"
     },
     {
-      "name": "Repository contract",
-      "command": "scripts/dev gate repository",
+      "name": "Fast policy tests",
+      "command": "scripts/dev check policy",
       "icon": "test"
     },
     {
-      "name": "Tooling gate",
-      "command": "scripts/dev gate tooling",
+      "name": "Fast project tests",
+      "command": "scripts/dev check projects",
       "icon": "test"
     },
     {
-      "name": "Control-library gate",
-      "command": "scripts/dev gate policy",
+      "name": "Fast IAM tests",
+      "command": "scripts/dev check iam",
       "icon": "test"
     },
     {
-      "name": "Verification-policy gate",
-      "command": "scripts/dev gate verification-policy",
+      "name": "Fast scenario assembly tests",
+      "command": "scripts/dev check scenarios",
       "icon": "test"
     },
     {
-      "name": "Development-projects gate",
-      "command": "scripts/dev gate projects",
-      "icon": "test"
-    },
-    {
-      "name": "IAM private-boundary gate",
-      "command": "scripts/dev gate iam",
-      "icon": "test"
-    },
-    {
-      "name": "Canonical-scenarios gate",
+      "name": "Canonical scenarios",
       "command": "scripts/dev gate scenarios",
+      "icon": "test"
+    },
+    {
+      "name": "PR readiness",
+      "command": "scripts/dev readiness",
       "icon": "test"
     }
   ]
