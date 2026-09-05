@@ -13,6 +13,9 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from tools.artifact_validation import validate_assessment_plan
+from tools.assessment_provenance import artifact_digest
+from tools.assessment_v4 import render_plan_v4
+from tools.compliance import default_schema_path
 from tools.project_config import load_config
 from tools.render_plan import (
     content_digest,
@@ -37,14 +40,22 @@ def _render(project_name: str, subject_id: str) -> JsonObject:
         config.path("inventory"),
         config.path("assignments"),
         subject_id,
-        config.path("resourceSchema"),
+        config.path("resourceSchema") or default_schema_path(),
     )
+    if config.schema == "compliance.example/project-config/v1alpha3":
+        return render_plan_v4(
+            render_plan, subject, groups, assignments, config.policy_sources, config=config
+        )
     return render_plan(subject, groups, assignments, config.policy_sources)
 
 
 def _resign(plan: JsonObject) -> JsonObject:
     plan.pop("id", None)
-    plan["id"] = content_digest(plan)
+    plan["id"] = (
+        artifact_digest(plan)
+        if plan["schema"] == "compliance.example/assessment-plan/v4"
+        else content_digest(plan)
+    )
     validate_assessment_plan(plan)
     return plan
 

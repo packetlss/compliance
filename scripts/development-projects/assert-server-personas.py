@@ -107,6 +107,8 @@ def assert_runtime(run_root: Path) -> None:
             fail(f"unexpected collection instant in {path.name}")
 
     standard = load(run_root / "results" / "host__standard-app-01.json")
+    if standard["summary"] != {"pass": 2, "fail": 0, "unknown": 0, "error": 0, "waived": 1}:
+        fail(f"unexpected standard-host summary: {standard['summary']}")
     waived = [result for result in standard.get("results", []) if result.get("status") == "waived"]
     if len(waived) != 1:
         fail(f"expected one waived standard-host failure, found {len(waived)}")
@@ -132,7 +134,7 @@ def assert_runtime(run_root: Path) -> None:
 
     container_result = load(run_root / "results" / "host__container-app-01.json")
     summary = container_result.get("summary", {})
-    if summary.get("fail", 0) or summary.get("error", 0):
+    if summary != {"pass": 4, "fail": 0, "unknown": 0, "error": 0, "waived": 0}:
         fail(f"container persona no longer passes its expected technical controls: {summary}")
 
     container_plan = load(run_root / "plans" / "host__container-app-01.json")

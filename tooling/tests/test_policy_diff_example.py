@@ -1,11 +1,13 @@
 import copy
 import io
+import json
 import unittest
 from contextlib import redirect_stdout
 from unittest.mock import patch
 
 from contract_fixtures import fixture_root
-from examples.prepare_policy_diff_set import main
+from examples.prepare_policy_diff_set import main, _render, _resign
+from tools.artifact_validation import validate_assessment_plan
 from tools.policy_diff import build_policy_diff_set
 from tools.project_config import load_config
 from tools.render_plan import content_digest, load_inventory_inputs, render_plan
@@ -64,3 +66,21 @@ class PolicyDiffExampleTests(unittest.TestCase):
         self.assertEqual(changed["summary"]["removed"], 1)
         self.assertEqual(changed["summary"]["added"], 1)
         self.assertEqual(incomplete["comparison"]["status"], "incomplete")
+
+    def test_v4_project_uses_tooling_schema_and_resigns_diff_fixture(self):
+        root = fixture_root(self)
+        config = load_config(root / "compliance.yaml", "cloud")
+        document = json.loads(config.source.read_text())
+        document["schema"] = "compliance.example/project-config/v1alpha3"
+        document["paths"].pop("resourceSchema")
+        config.source.write_text(json.dumps(document))
+        with patch("examples.prepare_policy_diff_set.PROJECT_REGISTRY", root / "compliance.yaml"):
+            plan = _render("cloud", "cloud-account/aws-111122223333")
+        self.assertEqual(plan["schema"], "compliance.example/assessment-plan/v4")
+        self.assertEqual(plan["provenance"]["planningComposition"]["actual"]["tooling"]["execution"],
+                         {"kind": "source"})
+        before = plan["id"]
+        plan["controls"][0]["remediation"] = "Synthetic changed runbook"
+        _resign(plan)
+        self.assertNotEqual(plan["id"], before)
+        validate_assessment_plan(plan)
