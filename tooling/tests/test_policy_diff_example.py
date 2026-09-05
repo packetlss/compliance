@@ -1,11 +1,14 @@
 import copy
 import io
+import json
 import unittest
 from contextlib import redirect_stdout
 from unittest.mock import patch
 
 from contract_fixtures import fixture_root
-from examples.prepare_policy_diff_set import main
+from examples.prepare_policy_diff_set import main, _render, _resign
+from tools.artifact_validation import validate_assessment_plan
+from tools.policy_diff import load_policy_plan_set
 from tools.policy_diff import build_policy_diff_set
 from tools.project_config import load_config
 from tools.render_plan import content_digest, load_inventory_inputs, render_plan
@@ -64,3 +67,39 @@ class PolicyDiffExampleTests(unittest.TestCase):
         self.assertEqual(changed["summary"]["removed"], 1)
         self.assertEqual(changed["summary"]["added"], 1)
         self.assertEqual(incomplete["comparison"]["status"], "incomplete")
+
+    def test_v4_project_uses_tooling_schema_and_resigns_diff_fixture(self):
+        root = fixture_root(self)
+        config = load_config(root / "compliance.yaml", "cloud")
+        document = json.loads(config.source.read_text())
+        document["schema"] = "compliance.example/project-config/v1alpha3"
+        document["paths"].pop("resourceSchema")
+        config.source.write_text(json.dumps(document))
+        with patch("examples.prepare_policy_diff_set.PROJECT_REGISTRY", root / "compliance.yaml"):
+            plan = _render("cloud", "cloud-account/aws-111122223333")
+        self.assertEqual(plan["schema"], "compliance.example/assessment-plan/v4")
+        self.assertEqual(plan["provenance"]["planningComposition"]["actual"]["tooling"]["execution"],
+                         {"kind": "source"})
+        snapshots = root / "v4-snapshots"
+        snapshots.mkdir()
+        snapshot = snapshots / "plan.json"
+        snapshot.write_text(json.dumps(plan))
+        unchanged = build_policy_diff_set(snapshots, snapshots)
+        self.assertFalse(unchanged["summary"]["changed"])
+        self.assertEqual(unchanged["summary"]["unchanged"], 1)
+        before = plan["id"]
+        plan["controls"][0]["remediation"] = "Synthetic changed runbook"
+        _resign(plan)
+        self.assertNotEqual(plan["id"], before)
+        validate_assessment_plan(plan)
+        changed_snapshots = root / "changed-v4-snapshots"
+        changed_snapshots.mkdir()
+        (changed_snapshots / "plan.json").write_text(json.dumps(plan))
+        changed = build_policy_diff_set(snapshots, changed_snapshots)
+        self.assertEqual(changed["summary"]["modified"], 1)
+        self.assertEqual(changed["comparison"]["status"], "complete")
+        # V4 admission must retain identity/provenance validation.
+        plan["provenance"]["planningComposition"]["actual"]["tooling"]["source"]["digest"] = "sha256:" + "0" * 64
+        snapshot.write_text(json.dumps(plan))
+        with self.assertRaises(ValueError):
+            load_policy_plan_set(snapshots)

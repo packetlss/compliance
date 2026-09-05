@@ -77,6 +77,9 @@ printf '\n== Mock-fleet runtime assertions ==\n'
 tooling_run python "$SOURCE_ROOT/scripts/development-projects/assert-mock-fleet.py" \
   --run-root "$MOCK_RUN_ROOT"
 
+tooling_run python "$SOURCE_ROOT/scripts/development-projects/assert-provenance.py" \
+  --assembly-root "$ASSEMBLY_ROOT" --run-root "$MOCK_RUN_ROOT" --project "$MOCK_PROJECT"
+
 finish_validation
 cleanup
 [[ ! -e "$RUN_ROOT" ]] || fail "temporary generated outputs were not removed"

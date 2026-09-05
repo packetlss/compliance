@@ -72,6 +72,10 @@ overlay. The standard subject demonstrates the separate temporary exception
 mechanism: the failure remains visible, the approval expires, and assessed
 technical policy is not rewritten.
 
-The project assembles reusable controls and schemas from `control-library` with
+The project assembles reusable controls and evidence/parameter schemas from `control-library` with
 this synthetic benchmark and company policy from `verification-policy`.
 Neither partial source is treated as a complete catalog by itself.
+
+The `project-config/v1alpha3` configuration uses executing tooling’s inventory and
+assignment schemas. Assessment plans/results use v4 actual composition, evaluator,
+and evidence provenance; generated state remains local to this project.

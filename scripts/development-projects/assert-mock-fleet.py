@@ -27,7 +27,7 @@ def is_digest(value: object) -> bool:
 
 
 def assert_assessment_plan_handoff(plan: dict, subject_id: str) -> None:
-    if plan.get("schema") != "compliance.example/assessment-plan/v1":
+    if plan.get("schema") != "compliance.example/assessment-plan/v4":
         fail(f"unexpected assessment-plan schema for {subject_id}")
     if not is_digest(plan.get("id")) or not is_digest(plan.get("policy_revision")):
         fail(f"assessment plan lost plan or final policy identity for {subject_id}")
@@ -139,7 +139,7 @@ def assert_runtime(run_root: Path) -> None:
     for filename, (expected_pass, expected_fail) in expected.items():
         document = load(run_root / "results" / filename)
         summary = document["summary"]
-        if summary.get("pass") != expected_pass or summary.get("fail") != expected_fail:
+        if summary != {"pass": expected_pass, "fail": expected_fail, "unknown": 0, "error": 0, "not_applicable": 0, "waived": 0}:
             fail(f"unexpected assessment summary for {filename}: {summary}")
         if document.get("evaluated_at") != FIXED_INSTANT:
             fail(f"unexpected evaluation instant for {filename}")
