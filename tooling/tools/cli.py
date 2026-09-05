@@ -86,9 +86,9 @@ def _run_locked_config_validate(arguments: list[str]) -> bool:
         raise SystemExit(f"compliance: configuration error: {error}") from error
     if not config.is_locked:
         return False
-    if config.workspace_source:
+    if config.project_registry_source:
         print(
-            f"valid workspace: {config.workspace_source}; "
+            f"valid project registry: {config.project_registry_source}; "
             f"project {config.project_name}: {config.source} "
             f"({len(config.paths)} configured path(s), "
             f"{len(config.policy_sources)} policy source(s), {config.schema})"

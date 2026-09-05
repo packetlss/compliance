@@ -51,7 +51,7 @@ verification/scenarios/scripts/validate-scenarios.sh \
 The scenario-owned `integration/compliance.yaml` registry selects the Linux
 rollout, two ordinary development projects, and the synthetic IAM project using
 destination-local paths. The validator uses the public CLI, the existing
-`COMPLIANCE_EXAMPLE_WORKSPACE_CONFIG` interface, and the fixed
+`COMPLIANCE_EXAMPLE_PROJECT_REGISTRY` interface, and the fixed
 `2026-09-01T00:00:00Z` instant.
 
 Validation preserves waiver lifecycle and underlying failure, unknown access

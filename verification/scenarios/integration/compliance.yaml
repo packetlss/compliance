@@ -1,5 +1,5 @@
 # Copied to the temporary integration root; paths are relative to that root.
-schema: compliance.example/workspace-config/v1alpha1
+schema: compliance.example/project-registry/v1alpha1
 defaultProject: linux-hardening-rollout
 projects:
   linux-hardening-rollout:

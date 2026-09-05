@@ -10,7 +10,8 @@ import yaml
 from contract_fixtures import fixture_root
 
 from tools.compliance import build_parser, main, subject_artifact_path
-from tools.project_config import ProjectConfig
+from tools.project_config import ProjectConfig, load_config
+from tools.cli import main as console_main
 from tools.render_plan import content_digest
 
 
@@ -114,12 +115,13 @@ class ComplianceCliTests(unittest.TestCase):
             ])
 
         document = json.loads(output.getvalue())
-        self.assertEqual(document["workspace"], str(self.config_path))
+        self.assertEqual(document["project_registry"], str(self.config_path))
+        self.assertNotIn("workspace", document)
         self.assertEqual(document["project"], "cloud")
-        workspace = yaml.safe_load(self.config_path.read_text(encoding="utf-8"))
+        project_registry = yaml.safe_load(self.config_path.read_text(encoding="utf-8"))
         expected_source = (
             self.config_path.parent
-            / workspace["projects"]["cloud"]["config"]
+            / project_registry["projects"]["cloud"]["config"]
         ).resolve()
         self.assertEqual(
             document["source"],
@@ -130,7 +132,7 @@ class ComplianceCliTests(unittest.TestCase):
             str(expected_source.parent / "inventory"),
         )
 
-    def test_config_list_exposes_workspace_projects(self):
+    def test_config_list_exposes_project_registry_projects(self):
         output = io.StringIO()
         with redirect_stdout(output):
             main([
@@ -140,6 +142,9 @@ class ComplianceCliTests(unittest.TestCase):
             ])
 
         document = json.loads(output.getvalue())
+        self.assertEqual(document["schema"], "compliance.example/project-registry-list/v1")
+        self.assertEqual(document["project_registry"], str(self.config_path))
+        self.assertNotIn("workspace", document)
         self.assertEqual(document["default_project"], "cloud")
         self.assertEqual(document["selected_project"], "cloud")
         self.assertEqual(
@@ -150,6 +155,47 @@ class ComplianceCliTests(unittest.TestCase):
                 "linux",
             ],
         )
+
+    def test_console_config_text_uses_registry_terminology(self):
+        for command, expected in (("show", "Project registry:"),
+                                  ("list", "Project registry:"),
+                                  ("validate", "valid project registry:")):
+            with self.subTest(command=command):
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    console_main(["--config", str(self.config_path), "config", command])
+                self.assertIn(expected, output.getvalue())
+                self.assertNotIn("workspace", output.getvalue().lower())
+
+    def test_registry_and_direct_selection_render_identical_plans_and_keep_paths_isolated(self):
+        registry = yaml.safe_load(self.config_path.read_text(encoding="utf-8"))
+        selected = load_config(self.config_path, "cloud")
+        with tempfile.TemporaryDirectory() as temporary:
+            relocated = Path(temporary) / "registry.yaml"
+            relocated.write_text(yaml.safe_dump({
+                "schema": registry["schema"],
+                "defaultProject": "same-project",
+                "projects": {"same-project": {"config": str(selected.source)}},
+            }), encoding="utf-8")
+            plans = []
+            for index, flags in enumerate((
+                ["--config", str(self.config_path)],
+                ["--config", str(self.config_path), "--project", "cloud"],
+                ["--config", str(selected.source)],
+                ["--config", str(relocated)],
+            )):
+                output_path = Path(temporary) / f"plan-{index}.json"
+                with redirect_stdout(io.StringIO()):
+                    console_main(flags + ["plan", "render", "cloud-account/aws-111122223333",
+                                          "--output", str(output_path)])
+                plans.append(json.loads(output_path.read_text(encoding="utf-8")))
+            for plan in plans[1:]:
+                self.assertEqual(plan, plans[0])
+        configs = [load_config(self.config_path, name) for name in registry["projects"]]
+        for key in ("inventory", "assignments", "waivers", "evidence", "plan", "results"):
+            with self.subTest(path=key):
+                paths = [config.path(key) for config in configs]
+                self.assertEqual(len(set(paths)), len(configs))
 
     def test_inventory_validate_uses_only_project_config(self):
         output = io.StringIO()
@@ -162,7 +208,7 @@ class ComplianceCliTests(unittest.TestCase):
 
         self.assertIn("valid inventory: 2 subject(s), 2 group(s), 2 assignment(s)", output.getvalue())
 
-    def test_named_workspace_project_uses_mock_fleet_inventory(self):
+    def test_named_project_registry_project_uses_mock_fleet_inventory(self):
         output = io.StringIO()
         with redirect_stdout(output):
             main([

@@ -5,7 +5,7 @@ Last updated: **2026-09-04**
 
 A project is the smallest independently operable compliance scope. It owns one
 inventory projection, its policy assignments, collected evidence, rendered
-plans, and assessment results. A workspace-style registry may select one project
+plans, and assessment results. A project registry may select one project
 at a time, but it does not merge these catalogs or artifacts and does not
 require a particular repository topology.
 

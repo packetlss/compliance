@@ -25,7 +25,7 @@ from .release_lock import (
 CONFIG_FILENAME = "compliance.yaml"
 CONFIG_SCHEMA = "compliance.example/project-config/v1alpha1"
 CONFIG_SCHEMA_V1ALPHA2 = "compliance.example/project-config/v1alpha2"
-WORKSPACE_SCHEMA = "compliance.example/workspace-config/v1alpha1"
+PROJECT_REGISTRY_SCHEMA = "compliance.example/project-registry/v1alpha1"
 _LOCKED_RUNTIME_OVERRIDE_FLAGS = ("--policy-source", "--policies", "--resource-schema")
 
 
@@ -43,8 +43,8 @@ def project_config_schema_path(schema: str = CONFIG_SCHEMA) -> Path:
     return Path(__file__).resolve().parent / "schemas" / filename
 
 
-def workspace_config_schema_path() -> Path:
-    return Path(__file__).resolve().parent / "schemas/workspace-config.schema.json"
+def project_registry_schema_path() -> Path:
+    return Path(__file__).resolve().parent / "schemas/project-registry.schema.json"
 
 
 @dataclass(frozen=True)
@@ -56,7 +56,7 @@ class ProjectConfig:
     paths: dict[str, Path] = field(default_factory=dict)
     policy_sources: tuple[PolicySource, ...] = ()
     release_lock: ReleaseLock | None = None
-    workspace_source: Path | None = None
+    project_registry_source: Path | None = None
     project_name: str | None = None
     default_project: str | None = None
     available_projects: dict[str, Path] = field(default_factory=dict)
@@ -72,7 +72,9 @@ class ProjectConfig:
         document: dict[str, Any] = {
             "schema": self.schema,
             "source": str(self.source) if self.source else None,
-            "workspace": str(self.workspace_source) if self.workspace_source else None,
+            "project_registry": (
+                str(self.project_registry_source) if self.project_registry_source else None
+            ),
             "project": self.project_name,
             "available_projects": {
                 name: str(path) for name, path in sorted(self.available_projects.items())
@@ -168,7 +170,7 @@ def _load_document(source: Path) -> Any:
 def _load_project_config(
     source: Path,
     *,
-    workspace_source: Path | None = None,
+    project_registry_source: Path | None = None,
     project_name: str | None = None,
     default_project: str | None = None,
     available_projects: dict[str, Path] | None = None,
@@ -225,7 +227,7 @@ def _load_project_config(
         paths=paths,
         policy_sources=policy_sources,
         release_lock=release_lock,
-        workspace_source=workspace_source,
+        project_registry_source=project_registry_source,
         project_name=project_name,
         default_project=default_project,
         available_projects=available_projects or {},
@@ -277,28 +279,28 @@ def load_config(path: Path, project: str | None = None) -> ProjectConfig:
     if schema in {CONFIG_SCHEMA, CONFIG_SCHEMA_V1ALPHA2}:
         if project is not None:
             raise ProjectConfigError(
-                f"--project requires a workspace config; {source} is a project config"
+                f"--project requires a project registry; {source} is a project config"
             )
         return _load_project_config(source)
-    if schema != WORKSPACE_SCHEMA:
+    if schema != PROJECT_REGISTRY_SCHEMA:
         raise ProjectConfigError(
             f"unsupported configuration schema in {source}: {schema!r}"
         )
 
-    workspace = _validate_document(
+    project_registry = _validate_document(
         document,
         source,
-        expected_schema=WORKSPACE_SCHEMA,
-        schema_path=workspace_config_schema_path(),
+        expected_schema=PROJECT_REGISTRY_SCHEMA,
+        schema_path=project_registry_schema_path(),
     )
-    default_project = workspace["defaultProject"]
+    default_project = project_registry["defaultProject"]
     projects = {
         name: (source.parent / definition["config"]).resolve()
-        for name, definition in workspace["projects"].items()
+        for name, definition in project_registry["projects"].items()
     }
     if default_project not in projects:
         raise ProjectConfigError(
-            f"workspace defaultProject {default_project!r} is not defined in projects"
+            f"project registry defaultProject {default_project!r} is not defined in projects"
         )
     selected_project = project or default_project
     if selected_project not in projects:
@@ -308,7 +310,7 @@ def load_config(path: Path, project: str | None = None) -> ProjectConfig:
         )
     return _load_project_config(
         projects[selected_project],
-        workspace_source=source,
+        project_registry_source=source,
         project_name=selected_project,
         default_project=default_project,
         available_projects=projects,
@@ -371,8 +373,8 @@ def format_config(config: ProjectConfig, output_format: str) -> str:
     if output_format == "json":
         return json.dumps(document, indent=2, sort_keys=True)
     lines = [f"Config: {config.source or 'none'}", f"Schema: {config.schema}"]
-    if config.workspace_source:
-        lines.append(f"Workspace: {config.workspace_source}")
+    if config.project_registry_source:
+        lines.append(f"Project registry: {config.project_registry_source}")
         lines.append(
             f"Project: {config.project_name}"
             + (" (default)" if config.project_name == config.default_project else "")

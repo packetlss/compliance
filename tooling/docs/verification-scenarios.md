@@ -219,7 +219,7 @@ boundaries, not create one repository per feature. A future example repository
 may contain several independently configured projects when they share the same
 maintainers and visibility. Each project must retain its own `compliance.yaml`,
 inventory, assignments, waivers, private policy inputs, and generated paths;
-a workspace-style registry still selects exactly one project at a time.
+a project registry still selects exactly one project at a time.
 
 Likewise, development projects may be consolidated into one development
 repository while remaining separate logical projects. They should not become

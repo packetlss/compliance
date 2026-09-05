@@ -23,16 +23,16 @@ from tools.render_plan import (
 
 JsonObject = dict[str, Any]
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
-WORKSPACE_CONFIG = Path(
+PROJECT_REGISTRY = Path(
     os.environ.get(
-        "COMPLIANCE_EXAMPLE_WORKSPACE_CONFIG",
+        "COMPLIANCE_EXAMPLE_PROJECT_REGISTRY",
         str(WORKSPACE_ROOT / "compliance.yaml"),
     )
 ).resolve()
 
 
 def _render(project_name: str, subject_id: str) -> JsonObject:
-    config = load_config(WORKSPACE_CONFIG, project_name)
+    config = load_config(PROJECT_REGISTRY, project_name)
     subject, groups, assignments = load_inventory_inputs(
         config.path("inventory"),
         config.path("assignments"),

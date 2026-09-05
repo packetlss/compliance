@@ -32,7 +32,7 @@ except ImportError:  # Direct execution by path.
 
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
-WORKSPACE_CONFIG = WORKSPACE_ROOT / "compliance.yaml"
+PROJECT_REGISTRY = WORKSPACE_ROOT / "compliance.yaml"
 MOCK_COLLECTOR = WORKSPACE_ROOT / "tooling/collectors/mock-api/collect.py"
 FEATURE_COVERAGE_PATH = Path(__file__).resolve().with_name("feature-coverage.json")
 LINUX_ROLLOUT_ROOT = (
@@ -47,9 +47,9 @@ MOCK_FLEET_AWS_SUBJECTS = frozenset(
 )
 
 CLI_EXAMPLES = {
-    ("config", "show"): "resolved workspace and project configuration",
-    ("config", "validate"): "strict workspace and project validation",
-    ("config", "list"): "workspace project registry",
+    ("config", "show"): "resolved project registry and project configuration",
+    ("config", "validate"): "strict project registry and project validation",
+    ("config", "list"): "project registry",
     ("inventory", "validate"): "resource schemas, references, and DAG",
     ("inventory", "list"): "subject, group, and assignment identities",
     ("inventory", "graph"): "multi-parent group hierarchy",
@@ -235,7 +235,7 @@ class ExampleRunner:
 
     @staticmethod
     def _project(project: str) -> list[str]:
-        return ["--config", str(WORKSPACE_CONFIG), "--project", project]
+        return ["--config", str(PROJECT_REGISTRY), "--project", project]
 
     def _show_selected(self, feature: str) -> bool:
         family = feature.split(".", 1)[0]
@@ -473,12 +473,12 @@ class ExampleRunner:
         self.cli(
             ("config", "validate"),
             [*rollout, "config", "validate"],
-            contains=("valid workspace", "project linux-hardening-rollout"),
+            contains=("valid project registry", "project linux-hardening-rollout"),
         )
         self.cli(
             ("config", "list"),
             [
-                "--config", str(WORKSPACE_CONFIG),
+                "--config", str(PROJECT_REGISTRY),
                 "--project", "mock-fleet",
                 "config", "list",
             ],
@@ -676,7 +676,7 @@ class ExampleRunner:
         # The tooling-owned macOS fixture preserves semantic overlay-lineage
         # coverage without coupling the executable suite to a boundary project.
         macos_fixture = WORKSPACE_ROOT / "tooling/tests/fixtures/macos-project"
-        mock_config = load_config(WORKSPACE_CONFIG, "mock-fleet")
+        mock_config = load_config(PROJECT_REGISTRY, "mock-fleet")
         macos_subject, macos_groups, macos_assignments = load_inventory_inputs(
             macos_fixture / "inventory",
             macos_fixture / "assignments",

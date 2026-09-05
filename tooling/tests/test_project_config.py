@@ -1,6 +1,9 @@
+import copy
 import tempfile
 import unittest
 from pathlib import Path
+
+import yaml
 
 from tools.project_config import (
     ProjectConfigError,
@@ -41,8 +44,8 @@ paths:
   resourceSchema: schemas/inventory.json
 """
 
-WORKSPACE_CONFIG = """\
-schema: compliance.example/workspace-config/v1alpha1
+PROJECT_REGISTRY = """\
+schema: compliance.example/project-registry/v1alpha1
 defaultProject: macbook
 projects:
   macbook:
@@ -53,7 +56,7 @@ projects:
 
 
 class ProjectConfigTests(unittest.TestCase):
-    def _write_workspace(self, root: Path) -> Path:
+    def _write_project_registry(self, root: Path) -> Path:
         projects = root / "projects"
         projects.mkdir()
         (projects / "macbook.yaml").write_text(VALID_CONFIG, encoding="utf-8")
@@ -62,7 +65,7 @@ class ProjectConfigTests(unittest.TestCase):
             encoding="utf-8",
         )
         source = root / "compliance.yaml"
-        source.write_text(WORKSPACE_CONFIG, encoding="utf-8")
+        source.write_text(PROJECT_REGISTRY, encoding="utf-8")
         return source
 
     def test_discovers_nearest_config_and_resolves_paths_from_its_directory(self):
@@ -185,23 +188,23 @@ class ProjectConfigTests(unittest.TestCase):
             with self.assertRaisesRegex(ProjectConfigError, "waivers.*required"):
                 load_config(source)
 
-    def test_workspace_selects_default_project(self):
+    def test_project_registry_selects_default_project(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            source = self._write_workspace(root)
+            source = self._write_project_registry(root)
 
             config = select_config([], cwd=root)
 
-            self.assertEqual(config.workspace_source, source.resolve())
+            self.assertEqual(config.project_registry_source, source.resolve())
             self.assertEqual(config.project_name, "macbook")
             self.assertEqual(config.default_project, "macbook")
             self.assertEqual(config.source, (root / "projects/macbook.yaml").resolve())
             self.assertEqual(sorted(config.available_projects), ["macbook", "mock-fleet"])
 
-    def test_workspace_selects_named_project(self):
+    def test_project_registry_selects_named_project(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            self._write_workspace(root)
+            self._write_project_registry(root)
 
             config = select_config(["--project", "mock-fleet"], cwd=root)
 
@@ -211,33 +214,110 @@ class ProjectConfigTests(unittest.TestCase):
                 (root / "projects/mock-inventory").resolve(),
             )
 
-    def test_workspace_rejects_unknown_project(self):
+    def test_project_registry_rejects_unknown_project(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            self._write_workspace(root)
+            self._write_project_registry(root)
 
             with self.assertRaisesRegex(ProjectConfigError, "unknown project 'missing'"):
                 select_config(["--project", "missing"], cwd=root)
 
-    def test_project_selection_requires_workspace(self):
+    def test_project_selection_requires_project_registry(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             (root / "compliance.yaml").write_text(VALID_CONFIG, encoding="utf-8")
 
-            with self.assertRaisesRegex(ProjectConfigError, "requires a workspace"):
+            with self.assertRaisesRegex(ProjectConfigError, "requires a project registry"):
                 select_config(["--project", "macbook"], cwd=root)
 
-    def test_workspace_default_must_name_a_project(self):
+    def test_project_registry_default_must_name_a_project(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            source = self._write_workspace(root)
+            source = self._write_project_registry(root)
             source.write_text(
-                WORKSPACE_CONFIG.replace("defaultProject: macbook", "defaultProject: missing"),
+                PROJECT_REGISTRY.replace("defaultProject: macbook", "defaultProject: missing"),
                 encoding="utf-8",
             )
 
             with self.assertRaisesRegex(ProjectConfigError, "defaultProject 'missing'"):
                 load_config(source)
+
+    def test_registry_rejects_retired_and_invalid_discriminators(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = self._write_project_registry(Path(temporary))
+            for schema in ("compliance.example/workspace-config/v1alpha1",
+                           "compliance.example/project-registry/v99", None):
+                with self.subTest(schema=schema):
+                    document = yaml.safe_load(PROJECT_REGISTRY)
+                    document["schema"] = schema
+                    source.write_text(yaml.safe_dump(document), encoding="utf-8")
+                    with self.assertRaisesRegex(ProjectConfigError, "unsupported configuration schema"):
+                        load_config(source)
+
+    def test_registry_rejects_malformed_documents_and_references(self):
+        valid = yaml.safe_load(PROJECT_REGISTRY)
+        invalid = [
+            {**valid, "unexpected": True},
+            {key: value for key, value in valid.items() if key != "defaultProject"},
+            {**valid, "defaultProject": ""},
+            {**valid, "projects": {}},
+            {**valid, "projects": {"Invalid Name": {"config": "project.yaml"}}},
+        ]
+        for reference in ({}, {"config": " "}, {"config": 42},
+                          {"config": "project.yaml", "merge": True}, "project.yaml"):
+            document = copy.deepcopy(valid)
+            document["projects"]["macbook"] = reference
+            invalid.append(document)
+        with tempfile.TemporaryDirectory() as temporary:
+            source = self._write_project_registry(Path(temporary))
+            for document in invalid:
+                with self.subTest(document=document):
+                    source.write_text(yaml.safe_dump(document), encoding="utf-8")
+                    with self.assertRaisesRegex(ProjectConfigError, "schema validation failed"):
+                        load_config(source)
+            for text, error in (("- not-an-object", "unsupported configuration schema"),
+                                (PROJECT_REGISTRY + "---\n{}\n", "exactly one YAML document"),
+                                ("projects: [", "cannot read configuration")):
+                with self.subTest(text=text):
+                    source.write_text(text, encoding="utf-8")
+                    with self.assertRaisesRegex(ProjectConfigError, error):
+                        load_config(source)
+
+    def test_registry_rejects_missing_selected_config_and_nested_registry(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self._write_project_registry(root)
+            selected = root / "projects/macbook.yaml"
+            selected.unlink()
+            with self.assertRaisesRegex(ProjectConfigError, "cannot read configuration"):
+                load_config(source)
+            selected.write_text(PROJECT_REGISTRY, encoding="utf-8")
+            with self.assertRaisesRegex(ProjectConfigError, "unsupported project config schema"):
+                load_config(source)
+
+    def test_direct_default_explicit_and_relocated_registry_inputs_are_equivalent(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            self._write_project_registry(root)
+            direct = load_config(root / "projects/macbook.yaml")
+            relocated = root / "lookup/registry.yaml"
+            relocated.parent.mkdir()
+            relocated.write_text(
+                PROJECT_REGISTRY.replace("config: projects/", "config: ../projects/")
+                .replace("  mock-fleet:\n    config: ../projects/mock-fleet.yaml\n", ""),
+                encoding="utf-8",
+            )
+            nested = root / "operations/nested"
+            nested.mkdir(parents=True)
+            for selected in (select_config([], cwd=nested),
+                             select_config(["--config", "../../compliance.yaml", "--project", "macbook"], cwd=nested),
+                             load_config(relocated)):
+                with self.subTest(registry=selected.project_registry_source):
+                    self.assertEqual(selected.schema, direct.schema)
+                    self.assertEqual(selected.source, direct.source)
+                    self.assertEqual(selected.paths, direct.paths)
+                    self.assertEqual(selected.policy_sources, direct.policy_sources)
+                    self.assertEqual(selected.release_lock, direct.release_lock)
 
     def test_project_cannot_be_selected_when_config_is_disabled(self):
         with self.assertRaisesRegex(ProjectConfigError, "cannot be used with --no-config"):

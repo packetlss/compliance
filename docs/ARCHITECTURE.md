@@ -22,7 +22,7 @@ Actual composition provenance and expected enforcement are separate: every succe
 
 [ADR 0009](adr/0009-active-compliance-vocabulary.md) intentionally renames the maintained reusable semantic source from `shared-library` to `control-library`. The component path `policy-sources/control-library/`, semantic root `policy-sources/control-library/policies/`, and distribution `compliance-control-library` remain distinct namespaces; tooling receives source names explicitly. The name grants no precedence, trust, mandatory dependency, or reserved role. Policy-tree content identity is unchanged, while name-bearing composition/provenance identities change without a compatibility alias.
 
-ADR 0007 `composition-lock` is the sole forward complete expected-composition abstraction. `release-lock/v1alpha2` is only a temporary migration contract pending #33. The #57 `workspace-config` → `project-registry` decision is accepted but not implemented in this tranche; technical control/assurance resource names remain unchanged pending #37.
+ADR 0007 `composition-lock` is the sole forward complete expected-composition abstraction. `release-lock/v1alpha2` is only a temporary migration contract pending #33. The #57 `workspace-config` → `project-registry` cutover is implemented: the registry selects one project configuration by explicit name or default without composing policy or merging project state. Registry data/location and repository/workspace topology are nonsemantic; the retired discriminator is unsupported without an alias. The changed tooling source bytes affect only existing tooling provenance; technical control/assurance resource names remain unchanged pending #37.
 
 ## First-core policy and assurance model
 
