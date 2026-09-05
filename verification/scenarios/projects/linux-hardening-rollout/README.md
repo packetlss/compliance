@@ -98,6 +98,15 @@ fingerprints, lineage, policy-source digests, and provenance for `auditd`,
 `containerd`, ASLR, and the tailored IPv4-forwarding decision. These fields are
 the external-adapter handoff; the plan itself makes no application claim.
 
+The project uses `project-config/v1alpha3` without an authored tooling-schema
+path. Plans and results use v4 and record the actual source/editable tooling and
+named policy composition at planning and evaluation, the exact evaluator,
+complete subject evidence snapshot, factual successful evidence selections, and
+applied-waiver provenance. Expected composition enforcement remains separate
+from those actual facts. The canonical gate proves that locking identical actual
+inputs leaves the semantic plan ID unchanged and that mismatches refuse before
+domain execution.
+
 The standard subject deliberately lacks `auditd` and all access evidence. The
 exact audit-package failure becomes `WAIVED` at the fixed instant while the
 four access checks and their objective remain `UNKNOWN`. Its assessment and

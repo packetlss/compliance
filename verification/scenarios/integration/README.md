@@ -62,6 +62,15 @@ resolved parameters, fingerprints, derivations, deviations, lineage, and
 source plus requirement/realization provenance required at the external-adapter
 handoff. No adapter is installed or executed.
 
+The canonical project uses `project-config/v1alpha3` and v4 assessment
+artifacts. Validation recomputes actual source/editable tooling and named-source
+identity from the temporary non-Git assembly, requires exact planning/evaluation
+source equality, and checks evaluator, complete evidence snapshot, factual
+successful-selection, and applied-waiver provenance. A temporary locked variant
+proves that identical actual composition produces the unlocked semantic plan ID
+while recording distinct expected enforcement. Direct and complete-lock
+mismatches must refuse before plan/domain execution.
+
 The complete feature runner executes once and requires exactly one owner for
 each of the 20 retained CLI leaves and 18 retained domain features. Generated
 outputs stay in a temporary run directory and are removed. Before and after
