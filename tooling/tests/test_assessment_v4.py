@@ -314,6 +314,17 @@ class AssessmentV4Tests(unittest.TestCase):
         changed['id'] = artifact_digest(changed)
         with self.assertRaisesRegex(ValueError,'snapshot'): validate_assessment_results(changed)
 
+    def test_results_cannot_bypass_frozen_validation_with_invalid_resolution(self):
+        report, _ = self.run_assessment([self.document()])
+        for resolution in ({'status': 'invalid', 'errors': []},
+                           {'status': 'valid', 'errors': [{'message': 'unresolved'}]}):
+            changed = copy.deepcopy(report)
+            changed['resolved_policy']['resolution'] = resolution
+            changed['resolved_policy']['controls'][0]['policy_inputs']['instance']['evidence']['observation-1']['max_age'] = '99d'
+            changed['id'] = artifact_digest(changed)
+            with self.assertRaisesRegex(ValueError, 'error-free frozen policy'):
+                validate_assessment_results(changed)
+
     def test_requirement_rollups_keep_unknown_error_fail_and_waived_meaning(self):
         shell = fixtures.assessment_plan(self.plan['policy_sources'], with_requirement=True)
         for key in ('requirements','resolved_requirement_baselines','resolved_baselines'):

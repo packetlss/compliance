@@ -102,6 +102,8 @@ def validate_provenance(document: dict, *, plan: bool) -> None:
             raise ValueError('plan policy sources do not match planning composition')
         return
     from .policy_parameters import validate_frozen
+    if document['resolved_policy']['resolution'] != {'status': 'valid', 'errors': []}:
+        raise ValueError('results require valid error-free frozen policy resolution')
     validate_frozen(document['resolved_policy'])
     frozen_controls = {item['instance_id']: item for item in document['resolved_policy']['controls']}
     for use in provenance['selectedEvidence']:
