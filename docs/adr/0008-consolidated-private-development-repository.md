@@ -52,7 +52,7 @@ Durable semantic/ownership boundaries are:
 
 - `tooling/` is the explicit tooling source/build root;
 - Python distribution identity remains `compliance-tooling` unless separately reviewed;
-- `policy-sources/control-library/policies/` is independently named `shared-library`;
+- `policy-sources/control-library/policies/` was independently named `shared-library` at consolidation; [ADR 0009](0009-active-compliance-vocabulary.md) intentionally renames its maintained semantic source to `control-library`, preserving the root and policy bytes;
 - `policy-sources/verification-policy/policies/` is independently named `verification-policy`;
 - each `projects/<id>/` remains logically isolated;
 - canonical composed verification is under `verification/scenarios/`; and

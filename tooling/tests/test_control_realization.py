@@ -277,7 +277,7 @@ class ControlRealizationTests(unittest.TestCase):
             assignments,
             (
                 PolicySource(
-                    "shared-library",
+                    "control-library",
                     self.root / "shared",
                 ),
                 PolicySource(
@@ -314,7 +314,7 @@ class ControlRealizationTests(unittest.TestCase):
             assignments,
             (
                 PolicySource(
-                    "shared-library",
+                    "control-library",
                     self.root / "shared",
                 ),
                 PolicySource(
@@ -352,7 +352,7 @@ class ControlRealizationTests(unittest.TestCase):
             assignments,
             (
                 PolicySource(
-                    "shared-library",
+                    "control-library",
                     self.root / "shared",
                 ),
                 PolicySource(

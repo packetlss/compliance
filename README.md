@@ -5,7 +5,7 @@
 All six migrated source domains are authoritative here:
 
 - tooling under `tooling/`;
-- reusable `shared-library` under `policy-sources/control-library/policies/`;
+- reusable `control-library` under `policy-sources/control-library/policies/`;
 - source-only `verification-policy` under `policy-sources/verification-policy/policies/`;
 - ordinary `mock-fleet` and `server-personas` projects under `projects/`;
 - the synthetic IAM/private-boundary fixture under `verification/fixtures/iam-private-boundary/`; and

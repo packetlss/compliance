@@ -202,7 +202,7 @@ downstream release is needed. Publication, if later required, remains a transpor
 adapter around these identities rather than their owner.
 
 The destination producer path is `policy-sources/control-library/`, the semantic
-source name is `shared-library`, and the semantic root is its `policies/` directory.
+source name is `control-library`, and the semantic root is its `policies/` directory.
 Those are independent from release distribution identity. Destination CI runs the
 gate in `component-validation`.
 

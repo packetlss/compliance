@@ -1,6 +1,6 @@
 # System architecture
 
-This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0008 in `docs/adr/`.
+This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0009 in `docs/adr/`.
 
 Historical `packetlss-labs/compliance-workspace` architecture remains migration/design provenance. After this documentation-authority transfer, this repository owns current normative system architecture.
 
@@ -19,6 +19,10 @@ Canonical runtime/generated-artifact provenance is content-addressed. Preserve t
 ADR 0007 accepts the successor line `project-config/v1alpha3`, `composition-lock/v1alpha1`, `assessment-provenance/v1alpha1`, and assessment plan/results v4. Its destination implementation packets are #31–#36. Current v1alpha1/v1alpha2/release-lock v1alpha2 and assessment v1/v3 contracts are unfrozen migration inputs until that cutover completes.
 
 Actual composition provenance and expected enforcement are separate: every successor run records what actually executed; direct expected-source identities or a complete composition lock may additionally refuse mismatches. Expected identity never substitutes for missing actual identity.
+
+[ADR 0009](adr/0009-active-compliance-vocabulary.md) intentionally renames the maintained reusable semantic source from `shared-library` to `control-library`. The component path `policy-sources/control-library/`, semantic root `policy-sources/control-library/policies/`, and distribution `compliance-control-library` remain distinct namespaces; tooling receives source names explicitly. The name grants no precedence, trust, mandatory dependency, or reserved role. Policy-tree content identity is unchanged, while name-bearing composition/provenance identities change without a compatibility alias.
+
+ADR 0007 `composition-lock` is the sole forward complete expected-composition abstraction. `release-lock/v1alpha2` is only a temporary migration contract pending #33. The #57 `workspace-config` → `project-registry` decision is accepted but not implemented in this tranche; technical control/assurance resource names remain unchanged pending #37.
 
 ## First-core policy and assurance model
 
@@ -71,7 +75,7 @@ All non-sensitive compliance development source whose information-sharing bounda
 packetlss/compliance
 ├── tooling/
 ├── policy-sources/
-│   ├── control-library/policies/      # shared-library
+│   ├── control-library/policies/      # control-library
 │   └── verification-policy/policies/  # verification-policy
 ├── projects/
 │   ├── mock-fleet/
@@ -100,7 +104,7 @@ Real need-to-know environments remain in separate authorized repositories/worksp
 
 `verification/fixtures/iam-private-boundary/` is a synthetic proof only. Its private `policy/` subtree is physically copied to a distinct temporary `environment-private` source root before execution. Validation rejects symlink/same-inode shortcuts and removes the fixture-side policy from the execution assembly so success cannot depend on recursive central-checkout traversal.
 
-The runtime source set remains explicitly named `shared-library`, `verification-policy`, and `environment-private`; no source has order precedence.
+The runtime source set remains explicitly named `control-library`, `verification-policy`, and `environment-private`; no source has order precedence.
 
 ## Policy-source assembly
 

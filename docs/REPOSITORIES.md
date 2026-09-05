@@ -9,7 +9,7 @@ Repository layout is not semantic policy, release, or runtime identity. This doc
 | Logical area | Destination root | Responsibility |
 | --- | --- | --- |
 | Tooling | `tooling/` | CLI, planner/evaluator, collectors, tooling-owned schemas, provenance/release implementation and tests; Python distribution `compliance-tooling` |
-| Shared policy | `policy-sources/control-library/` | Reusable controls/helpers, policy/evidence/parameter contracts, provider-neutral policy release/archive construction; semantic source `shared-library` |
+| Shared policy | `policy-sources/control-library/` | Reusable controls/helpers, policy/evidence/parameter contracts, provider-neutral policy release/archive construction; semantic source `control-library` |
 | Verification policy | `policy-sources/verification-policy/` | Synthetic baselines, requirements/realizations, mappings, deliberate conflicts and verification-only resources; semantic source `verification-policy`; source-only lifecycle |
 | Ordinary projects | `projects/mock-fleet/`, `projects/server-personas/` | Independent exploratory project inventory, assignments, fixtures, waivers and generated-state paths |
 | IAM synthetic boundary | `verification/fixtures/iam-private-boundary/` | Synthetic proof of a separately materialized `environment-private` source; not a real private-data repository |
@@ -27,7 +27,7 @@ In-core configuration compiler/renderers/configuration artifacts/plugin runtime 
 
 ### Policy sources
 
-Reusable control/helper/schema changes belong to `shared-library`. Synthetic verification-only policy belongs to `verification-policy`. These are independent semantic roots even though they share one Git repository.
+Reusable control/helper/schema changes belong to `control-library`. Synthetic verification-only policy belongs to `verification-policy`. These are independent semantic roots even though they share one Git repository.
 
 Do not duplicate reusable controls into verification policy. Do not move private environment parameters/realizations into either central source. Release coordinates/repository paths are not policy-source identity.
 
@@ -60,7 +60,7 @@ Destination #37 owns unresolved detailed assurance semantics. Destination #31–
 Source repository and release unit are distinct concepts.
 
 - `compliance-tooling` Python distribution remains independently versioned/releasable from `tooling/`.
-- `shared-library` retains independently digestible/releasable policy-source construction.
+- `control-library` retains independently digestible/releasable policy-source construction.
 - `verification-policy` remains source-only with no current hosted release lane.
 - Generic policy-source artifact schemas/validation are tooling-owned.
 - Historical hosted releases remain in their original repositories and are not republished by retirement.

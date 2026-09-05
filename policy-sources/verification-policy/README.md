@@ -12,7 +12,7 @@ independently named `verification-policy`, rooted at
 Repository location, source order, and Git metadata do not define its semantic
 identity or precedence.
 
-Projects assemble this source with the reusable `shared-library` source, which
+Projects assemble this source with the reusable `control-library` source, which
 supplies controls, Rego helpers, and schemas. Source order has no precedence,
 and reusable resources must not be copied here.
 
@@ -66,7 +66,7 @@ Development projects, stable scenarios, policy-diff examples, and tooling tests
 consume these slices. The ordinary projects assemble:
 
 ```text
-shared-library       -> reusable package/sysctl controls and schemas
+control-library       -> reusable package/sysctl controls and schemas
 verification-policy -> synthetic assessment and assurance resources
 ```
 
@@ -99,7 +99,7 @@ revision. It exports those committed objects into a temporary non-Git directory,
 synchronizes only tooling's frozen environment, and removes all temporary output.
 It never consumes local working-file edits, acquires a sibling repository, or
 discovers an implicit policy tree. The resource validator receives the
-`shared-library` and `verification-policy` roots explicitly, without project
+`control-library` and `verification-policy` roots explicitly, without project
 configuration, inventory, or assignments.
 
 Coverage retained by the verification-policy component gate:

@@ -233,7 +233,7 @@ class ComplianceCliTests(unittest.TestCase):
                 "policy",
                 "validate",
                 "--policy-source",
-                f"shared-library={self.root / 'shared'}",
+                f"control-library={self.root / 'shared'}",
                 "--policy-source",
                 "verification-policy="
                 f"{self.root / 'selection'}",

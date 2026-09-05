@@ -21,14 +21,14 @@ from tools.render_plan import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SHARED = Path(os.environ["COMPLIANCE_CONTROL_LIBRARY_ROOT"]) / "policies"
+CONTROL_LIBRARY = Path(os.environ["COMPLIANCE_CONTROL_LIBRARY_ROOT"]) / "policies"
 check_source_boundary = runpy.run_path(str(ROOT / "scripts/check-source-boundary.py"))["check_source_boundary"]
 BASELINE = Path("baselines/company/company-linux-server-operations.json")
 REALIZATION = Path("realizations/company/company-linux-role-based-access.json")
 
 
 def sources(root: Path) -> tuple[PolicySource, ...]:
-    return (PolicySource("shared-library", SHARED), PolicySource("verification-policy", root))
+    return (PolicySource("control-library", CONTROL_LIBRARY), PolicySource("verification-policy", root))
 
 
 class VerificationPolicySourceTests(unittest.TestCase):
@@ -58,7 +58,7 @@ class VerificationPolicySourceTests(unittest.TestCase):
         self.assertEqual(len(list(self.root.rglob("*.json"))), 16)
         for catalog in (baselines, requirements, objectives, realizations):
             self.assertTrue(all(item["_source"].startswith("verification-policy:") for item in catalog.values()))
-        self.assertTrue(all(item["_source"].startswith("shared-library:") for item in controls.values()))
+        self.assertTrue(all(item["_source"].startswith("control-library:") for item in controls.values()))
 
     def test_source_order_does_not_change_resources_or_named_identity(self) -> None:
         ordered = sources(self.root)
@@ -72,7 +72,7 @@ class VerificationPolicySourceTests(unittest.TestCase):
         target.parent.mkdir(parents=True)
         shutil.copyfile(self.root / REALIZATION, target)
         combined = (
-            PolicySource("shared-library", SHARED),
+            PolicySource("control-library", CONTROL_LIBRARY),
             PolicySource("verification-policy", self.root),
             PolicySource("environment-private", private),
         )

@@ -393,7 +393,7 @@ class PolicySchemaTests(unittest.TestCase):
         cls.root = fixture_root(cls)
         cls.schemas = cls.root / "shared/schemas/policy"
 
-    def test_shared_library_baselines_validate(self):
+    def test_control_library_baselines_validate(self):
         catalog, errors = validate_policy_catalog(
             self.root / "shared"
         )
@@ -404,7 +404,7 @@ class PolicySchemaTests(unittest.TestCase):
     def test_shared_and_verification_baselines_validate_together(self):
         catalog, errors = validate_policy_catalog((
             PolicySource(
-                "shared-library",
+                "control-library",
                 self.root / "shared",
             ),
             PolicySource(
@@ -453,7 +453,7 @@ class PolicySchemaTests(unittest.TestCase):
                 target,
             )
             sources = (
-                PolicySource("shared-library", shared),
+                PolicySource("control-library", shared),
                 PolicySource("verification-policy", verification),
                 PolicySource("environment-private", private),
             )
@@ -487,7 +487,7 @@ class PolicySchemaTests(unittest.TestCase):
             target.write_text(json.dumps(realization), encoding="utf-8")
 
             _, _, errors = load_policy_catalogs((
-                PolicySource("shared-library", shared),
+                PolicySource("control-library", shared),
                 PolicySource("verification-policy", verification),
                 PolicySource("environment-private", private),
             ))
@@ -507,7 +507,7 @@ class PolicySchemaTests(unittest.TestCase):
             self.root / "schemas/inventory/resource.schema.json",
         )
         sources = [
-            PolicySource("shared-library", shared),
+            PolicySource("control-library", shared),
             PolicySource("verification-policy", verification),
             PolicySource("environment-private", private),
         ]
@@ -518,7 +518,7 @@ class PolicySchemaTests(unittest.TestCase):
         self.assertEqual(first, reordered)
         self.assertEqual(
             [source["name"] for source in first["policy_sources"]],
-            ["environment-private", "shared-library", "verification-policy"],
+            ["control-library", "environment-private", "verification-policy"],
         )
         self.assertEqual(
             first["requirements"][0]["realization"]["policy_sources"][0][
@@ -530,7 +530,7 @@ class PolicySchemaTests(unittest.TestCase):
     def test_policy_source_digest_pin_mismatch_is_invalid(self):
         shared = self.root / "shared"
         _, _, errors = load_policy_catalogs((PolicySource(
-            "shared-library",
+            "control-library",
             shared,
             "sha256:" + "0" * 64,
         ),))
@@ -719,7 +719,7 @@ class PolicySchemaTests(unittest.TestCase):
             overlay_path.write_text(json.dumps(overlay), encoding="utf-8")
 
             _, errors = validate_policy_catalog((
-                PolicySource("shared-library", shared),
+                PolicySource("control-library", shared),
                 PolicySource("verification-policy", verification),
             ))
 
@@ -836,7 +836,7 @@ class PolicySchemaTests(unittest.TestCase):
                 groups,
                 assignments,
                 (
-                    PolicySource("shared-library", shared),
+                    PolicySource("control-library", shared),
                     PolicySource("verification-policy", verification),
                 ),
             )
@@ -886,7 +886,7 @@ class PlanRevisionTests(unittest.TestCase):
         )
         cls.policy_sources = (
             PolicySource(
-                "shared-library",
+                "control-library",
                 cls.root / "shared",
             ),
             PolicySource(
@@ -946,7 +946,7 @@ class PlanRevisionTests(unittest.TestCase):
                 "baselines": ["test.overlap@1"],
             }]
             plan = render_plan(self.subject, self.groups, assignments, (
-                PolicySource("shared-library", self.root / "shared"),
+                PolicySource("control-library", self.root / "shared"),
                 PolicySource("verification-policy", selection),
             ))
         self.assertEqual(plan["resolution"]["status"], "invalid")
@@ -1062,7 +1062,7 @@ class PlanRevisionTests(unittest.TestCase):
             groups,
             assignments,
             (
-                PolicySource("shared-library", self.root / "shared"),
+                PolicySource("control-library", self.root / "shared"),
                 PolicySource("verification-policy", self.root / "selection"),
                 PolicySource("environment-private", self.root / "iam/policy"),
             ),

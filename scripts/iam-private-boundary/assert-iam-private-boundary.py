@@ -11,7 +11,7 @@ FIXED_INSTANT = "2026-09-01T00:00:00Z"
 PRIVATE_POLICY_DIGEST = (
     "sha256:f94aea8ac3259219c8a745a9bcd057f7ccdb80c97bed36a923f4f2522e3644aa"
 )
-SOURCE_NAMES = ["environment-private", "shared-library", "verification-policy"]
+SOURCE_NAMES = ["control-library", "environment-private", "verification-policy"]
 CONTROL_INSTANCES = {
     "restricted.linux.rbac.sssd-installed",
     "restricted.linux.rbac.sssd-domain-configured",

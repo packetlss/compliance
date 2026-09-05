@@ -69,7 +69,7 @@ def assert_assessment_plan_handoff(plan: dict) -> None:
 
     sources = plan.get("policy_sources", [])
     require(
-        {source.get("name") for source in sources} == {"shared-library", "verification-policy"},
+        {source.get("name") for source in sources} == {"control-library", "verification-policy"},
         f"unexpected named policy sources: {sources}",
     )
     require(all(is_digest(source.get("digest")) for source in sources), "policy source digest is missing")

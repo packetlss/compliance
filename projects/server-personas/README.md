@@ -72,6 +72,6 @@ overlay. The standard subject demonstrates the separate temporary exception
 mechanism: the failure remains visible, the approval expires, and assessed
 technical policy is not rewritten.
 
-The project assembles reusable controls and schemas from `shared-library` with
+The project assembles reusable controls and schemas from `control-library` with
 this synthetic benchmark and company policy from `verification-policy`.
 Neither partial source is treated as a complete catalog by itself.

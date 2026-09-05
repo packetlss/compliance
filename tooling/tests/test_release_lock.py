@@ -138,6 +138,39 @@ paths:
             tested_opa_version="1.18.2",
         )
 
+    def test_semantic_rename_changes_lock_identity_and_refuses_name_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            policy, digest = self._policy_tree(root)
+            locks = {}
+            for name in ("shared-library", "control-library", "adopter.custom_1"):
+                path = root / f"{name}.lock.yaml"
+                path.write_text(
+                    self._lock_text_v2(digest).replace("  shared:", f"  {name}:"),
+                    encoding="utf-8",
+                )
+                locks[name] = load_release_lock(path)
+                report = validate_release_composition(
+                    locks[name], (PolicySource(name, policy, digest),),
+                    installed_identity=self._identity_v2(),
+                )
+                self.assertTrue(report["valid"], report)
+            self.assertEqual(len({lock.digest() for lock in locks.values()}), 3)
+            for expected, actual in (
+                ("shared-library", "control-library"),
+                ("control-library", "shared-library"),
+            ):
+                with self.subTest(expected=expected, actual=actual):
+                    report = validate_release_composition(
+                        locks[expected], (PolicySource(actual, policy, digest),),
+                        installed_identity=self._identity_v2(),
+                    )
+                    self.assertFalse(report["valid"])
+                    self.assertEqual(report["errors"], [
+                        {"type": "locked-policy-source-missing", "policy_source": expected},
+                        {"type": "unlocked-policy-source", "policy_source": actual},
+                    ])
+
     def test_historical_v1alpha1_lock_is_unsupported(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "compliance.lock.yaml"

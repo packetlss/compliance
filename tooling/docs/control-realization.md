@@ -314,15 +314,17 @@ immutable requirement assessment. `assessment frameworks --level objective`
 therefore exposes the current result of the complete realized objective rather
 than inferring it from one mapped technical check.
 
-The registered `iam-realization` project assembles the named `shared-library`,
+The registered `iam-realization` project assembles the named `control-library`,
 `verification-policy`, and `environment-private` sources locally. The private
 source contains only the restricted realization; schemas and reusable controls
-come from the shared library, while requirement intent, requirement baseline,
+come from `control-library`, while requirement intent, requirement baseline,
 and the ordinary company realization come from verification policy. The
 resulting plan records all three source digests and the final deterministic
 policy revision. The project provides the illustrative
-Linux Rego implementation, open evidence schema, inventory DAG, assignment, fixture
-collector input, and intentional failing result. The contract deliberately
+inventory DAG, assignment, fixture collector input, and intentional failing
+result; reusable Rego and evidence schemas remain in `control-library`.
+The [IAM gate](../../verification/fixtures/iam-private-boundary/README.md)
+physically materializes `environment-private` separately before execution. The contract deliberately
 does not yet:
 
 - support nested, threshold, or alternative satisfaction expressions;
@@ -334,7 +336,7 @@ accepted initial authoring model; template/binding and automatic realization
 inheritance remain deliberately deferred.
 
 The stable Linux hardening rollout scenario in
-`compliance-verification-scenarios/projects/linux-hardening-rollout` uses only
+`verification/scenarios/projects/linux-hardening-rollout` uses only
 the complete shared company realization. Its container host supplies all four
 access observations and rolls up to a passing objective. Its standard host
 deliberately supplies no access document, so all four checks and the objective

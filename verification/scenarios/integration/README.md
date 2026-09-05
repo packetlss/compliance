@@ -19,7 +19,7 @@ is not semantic runtime identity.
 
 This remains a **source-development integration lane**. Installed-release
 acquisition and no-Git runtime provenance remain the separate
-`installed-release-provenance` gate. Tooling, `shared-library`, and
+`installed-release-provenance` gate. Tooling, `control-library`, and
 `verification-policy` retain distinct roots and identities. Ordinary projects
 remain isolated.
 

@@ -426,7 +426,7 @@ This is the fully rendered policy that will be checked for one subject.
   "id": "sha256:...",
   "policy_revision": "sha256:...",
   "policy_sources": [
-    {"name": "shared-library", "digest": "sha256:..."},
+    {"name": "control-library", "digest": "sha256:..."},
     {"name": "verification-policy", "digest": "sha256:..."},
     {"name": "environment-private", "digest": "sha256:..."}
   ],

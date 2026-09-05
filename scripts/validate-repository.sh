@@ -107,12 +107,12 @@ OPA_DARWIN_ARM64_STATIC_SHA256=3ffa2af6a3b9ccff5d171d061d27990db5ad8cc5c10214c7e
 actual_toolchain="$(cat toolchain/versions.env)"
 [[ "$actual_toolchain" == "$expected_toolchain" ]] || fail "toolchain/versions.env does not match the accepted migration toolchain"
 
-# Migration stage 6a permits exactly the independently named shared-library and
+# Maintained source includes the independently named control-library and
 # verification-policy producers, two ordinary project roots, and the approved
 # synthetic IAM fixture. environment-private exists only as a temporary,
 # independently copied execution root.
 [[ -d policy-sources/control-library/policies ]] \
-  || fail "shared-library semantic policy root is missing"
+  || fail "control-library semantic policy root is missing"
 [[ -d policy-sources/verification-policy/policies ]] \
   || fail "verification-policy semantic policy root is missing"
 unexpected_policy_source="$(

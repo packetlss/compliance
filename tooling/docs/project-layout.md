@@ -76,18 +76,17 @@ document order do not affect resource identity or revision digests.
 
 ## Complete project configuration
 
-Every project config declares all paths needed by the operator workflow:
+Every project config declares all paths needed by the operator workflow.
+For example, `projects/mock-fleet/compliance.yaml` contains:
 
 ```yaml
-# yaml-language-server: $schema=../../tools/schemas/project-config.schema.json
+# yaml-language-server: $schema=../../tooling/tools/schemas/project-config.schema.json
 schema: compliance.example/project-config/v1alpha1
 policySources:
-  - name: shared-library
-    path: ../compliance-control-library/policies
+  - name: control-library
+    path: ../../policy-sources/control-library/policies
   - name: verification-policy
-    path: ../compliance-verification-policy/policies
-  - name: environment-private
-    path: policy
+    path: ../../policy-sources/verification-policy/policies
 paths:
   inventory: inventory
   assignments: assignments
@@ -95,19 +94,19 @@ paths:
   plan: generated/plans
   results: generated/results
   waivers: waivers
-  resourceSchema: ../compliance-tooling/schemas/inventory/resource.schema.json
+  resourceSchema: ../../tooling/schemas/inventory/resource.schema.json
 ```
 
 Relative paths resolve from the directory containing `compliance.yaml`. The
 project config is therefore also the project-root marker used by automatic CLI
 discovery.
 
-The relative paths above illustrate the current transitional checkout only.
-Repository names and sibling placement are not part of the project contract:
+The relative paths above illustrate the consolidated development checkout.
+Repository names and placement are not part of the project contract:
 each logical policy source is named and content-addressed independently of its
 materialization path. A deployed project should resolve each named source to a
 verified immutable artifact and obtain the inventory schema from its pinned
-tooling installation. The private source may be a partial tree—for example, it
+tooling installation. An additional private source may be a partial tree—for example, it
 may contain only `realizations/`—because schemas and reusable controls can
 resolve from the shared source during environment-local assembly.
 
