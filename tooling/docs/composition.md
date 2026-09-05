@@ -168,16 +168,12 @@ version/release diagnostics. They create no artifact. The JSON report separates
 2 for a mismatch. Missing actual identity or invalid configuration fails both.
 Configuration validation enforces selected expectations as well.
 
-The accepted #31 transition refuses v1alpha3 plan rendering and assessment
-execution before any plan/result is written, explaining that generation needs
-assessment v4 owned by #32. Assessment views that internally render plans are
-also refused. v1alpha3 never emits v1/v3 as a bridge. Existing v1alpha1/v1alpha2,
-release-lock/v1alpha2 and assessment v1/v3 readers/workflows remain until #33.
-`release show/validate` retain their existing predecessor contract; they do not
-alias or interpret composition locks.
-
-#32 will consume the fresh observation/enforcement boundary before planning
-and again before evaluation, persist actual planning/evaluation composition,
-refuse persisted-plan policy drift, and replace transitional refusal with v4.
-#31 does not add a configuration-artifact successor or change domain evidence,
-assurance, waivers, adapters, or project-registry semantics.
+V1alpha3 planning and assessment now use the v4 artifact line implemented under
+#32, including assessment views that internally render comparison plans. Fresh
+actual composition/enforcement is observed before planning and again before
+evaluation; persisted-plan policy drift refuses evaluation. See the
+[v4 artifact contract](artifact-provenance.md#v4-provenance-and-semantic-identity).
+V1alpha3 never emits v1/v3 as a bridge. Existing v1alpha1/v1alpha2,
+release-lock/v1alpha2 and assessment v1/v3 workflows remain until consumer migration
+and #33 retirement. `release show/validate` retain their predecessor contract;
+they do not alias or interpret composition locks.

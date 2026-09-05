@@ -990,13 +990,6 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = build_parser(config)
     args = parser.parse_args(arguments)
     try:
-        if config.schema == CONFIG_SCHEMA_V1ALPHA3 and (
-            args.handler in {_run_plan_render, _run_assessment, _run_assessment_view}
-        ):
-            raise ProjectConfigError(
-                "assessment artifact generation for project-config/v1alpha3 requires "
-                "assessment v4 implementation owned by #32; no plan or result was written"
-            )
         args.handler(args)
     except (ValueError, OSError, json.JSONDecodeError) as error:
         parser.error(str(error))

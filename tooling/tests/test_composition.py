@@ -195,7 +195,7 @@ class CompositionTests(unittest.TestCase):
                 with self.assertRaisesRegex(ProjectConfigError, 'runtime contract overrides'):
                     select_config(['--config', str(self.config), *tail], validate_release=False)
 
-    def test_cli_diagnostics_config_and_transitional_no_writes(self):
+    def test_cli_diagnostics_config_and_missing_inputs_no_writes(self):
         for command in (['composition', 'show', '--format', 'json'], ['composition', 'validate', '--format', 'json'], ['config', 'validate']):
             output = io.StringIO()
             with redirect_stdout(output): main(['--config', str(self.config), *command])
@@ -203,7 +203,7 @@ class CompositionTests(unittest.TestCase):
         for command in (['plan', 'render', 'host/test'], ['assessment', 'run', 'host/test']):
             with redirect_stderr(io.StringIO()) as errors, self.assertRaises(SystemExit):
                 main(['--config', str(self.config), *command])
-            self.assertIn('#32', errors.getvalue())
+            self.assertIn('resource path does not exist', errors.getvalue())
             self.assertFalse((self.root / 'plan').exists())
             self.assertFalse((self.root / 'results').exists())
         self.document['policySources'][0]['expectedContent'] = content()

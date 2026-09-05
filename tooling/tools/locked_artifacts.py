@@ -24,7 +24,7 @@ from .artifact_provenance import (
 )
 from .evaluator import resolve_opa_evaluator
 from .evidence_provenance import evidence_set_provenance
-from .project_config import ProjectConfig
+from .project_config import ProjectConfig, CONFIG_SCHEMA_V1ALPHA3, composition_validation
 from .render_plan import content_digest, load_json
 
 
@@ -33,6 +33,8 @@ ASSESSMENT_PLAN_V1 = "compliance.example/assessment-plan/v1"
 ASSESSMENT_PLAN_V3 = "compliance.example/assessment-plan/v3"
 ASSESSMENT_RESULTS_V1 = "compliance.example/assessment-results/v1"
 ASSESSMENT_RESULTS_V3 = "compliance.example/assessment-results/v3"
+ASSESSMENT_PLAN_V4 = "compliance.example/assessment-plan/v4"
+ASSESSMENT_RESULTS_V4 = "compliance.example/assessment-results/v4"
 
 
 def _schemas_root() -> Path:
@@ -95,7 +97,7 @@ def validate_assessment_plan_any(
 
     validator = base_validator or default_validator
     schema = document.get("schema")
-    if schema == ASSESSMENT_PLAN_V1:
+    if schema in {ASSESSMENT_PLAN_V1, ASSESSMENT_PLAN_V4}:
         validator(document, source=source)
         return
     if schema != ASSESSMENT_PLAN_V3:
@@ -120,7 +122,7 @@ def validate_assessment_results_any(
 
     validator = base_validator or default_validator
     schema = document.get("schema")
-    if schema == ASSESSMENT_RESULTS_V1:
+    if schema in {ASSESSMENT_RESULTS_V1, ASSESSMENT_RESULTS_V4}:
         validator(document, source=source)
         return
     if schema != ASSESSMENT_RESULTS_V3:
@@ -274,6 +276,7 @@ def load_result_reports_any(
         if isinstance(document, dict) and document.get("schema") in {
             ASSESSMENT_RESULTS_V1,
             ASSESSMENT_RESULTS_V3,
+            ASSESSMENT_RESULTS_V4,
         }:
             validate_assessment_results_any(
                 document,
@@ -300,6 +303,7 @@ def load_policy_plan_set_any(
         if not isinstance(document, dict) or document.get("schema") not in {
             ASSESSMENT_PLAN_V1,
             ASSESSMENT_PLAN_V3,
+            ASSESSMENT_PLAN_V4,
         }:
             raise ValueError(f"not an assessment plan in policy diff set: {path}")
         validate_assessment_plan_any(
@@ -329,6 +333,7 @@ def _locked_plan_show(args: Any, compliance_module: Any) -> None:
             if document.get("schema") in {
                 ASSESSMENT_PLAN_V1,
                 ASSESSMENT_PLAN_V3,
+            ASSESSMENT_PLAN_V4,
             }:
                 validate_assessment_plan_any(document, source=candidate)
                 plans.append((candidate, document))
@@ -371,11 +376,12 @@ def _patch(
 @contextmanager
 def locked_artifact_runtime(config: ProjectConfig) -> Iterator[None]:
     """Temporarily install version-appropriate wrappers for one locked CLI invocation."""
-    if not config.is_locked:
+    is_v4 = config.schema == CONFIG_SCHEMA_V1ALPHA3
+    if not config.is_locked and not is_v4:
         yield
         return
 
-    provenance = locked_artifact_provenance(config)
+    provenance = None if is_v4 else locked_artifact_provenance(config)
 
     from . import artifact_validation as artifact_validation_module
     from . import assessment as assessment_module
@@ -388,9 +394,16 @@ def locked_artifact_runtime(config: ProjectConfig) -> Iterator[None]:
     base_validate_results = artifact_validation_module.validate_assessment_results
 
     def render_locked(*args: Any, **kwargs: Any) -> JsonObject:
+        if is_v4:
+            from .assessment_v4 import render_plan_v4
+            return render_plan_v4(base_render_plan, *args, config=config, **kwargs)
         return render_plan_locked(base_render_plan, provenance, *args, **kwargs)
 
     def evaluate_locked(plan: JsonObject, *args: Any, **kwargs: Any) -> JsonObject:
+        if is_v4:
+            if plan.get('schema') != ASSESSMENT_PLAN_V4:
+                raise ValueError('v1alpha3 assessment requires a v4 plan')
+            return base_evaluate_plan(plan, *args, composition_report=composition_validation(config, require=True), **kwargs)
         return evaluate_plan_locked(base_evaluate_plan, provenance, plan, *args, **kwargs)
 
     def validate_plan_locked(

@@ -98,6 +98,11 @@ def validate_assessment_plan(
     source: Path | None = None,
 ) -> None:
     """Validate an assessment-plan/v1 schema and its cross-field invariants."""
+    if document.get("schema") == "compliance.example/assessment-plan/v4":
+        from .assessment_provenance import validate_v4, base_projection
+        validate_v4(document, plan=True)
+        validate_assessment_plan(base_projection(document, plan=True), source=source)
+        return
     _validate_schema(
         document,
         assessment_plan_schema_path(),
@@ -276,6 +281,11 @@ def validate_assessment_results(
     source: Path | None = None,
 ) -> None:
     """Validate an assessment-results/v1 envelope and conservative roll-ups."""
+    if document.get("schema") == "compliance.example/assessment-results/v4":
+        from .assessment_provenance import validate_v4, base_projection
+        validate_v4(document, plan=False)
+        validate_assessment_results(base_projection(document, plan=False), source=source)
+        return
     _validate_schema(
         document,
         assessment_results_schema_path(),

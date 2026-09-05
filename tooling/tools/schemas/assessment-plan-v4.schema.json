@@ -1,0 +1,1570 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/assessment-plan-v4.schema.json",
+  "type": "object",
+  "required": [
+    "schema",
+    "id",
+    "policy_revision",
+    "policy_sources",
+    "inventory_revision",
+    "assignment_revision",
+    "subject",
+    "resolved_groups",
+    "assignments",
+    "resolved_baselines",
+    "resolved_requirement_baselines",
+    "requirements",
+    "controls",
+    "excluded_controls",
+    "coverage",
+    "resolution",
+    "digestAlgorithm",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "compliance.example/assessment-plan/v4"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "policy_revision": {
+      "$ref": "#/$defs/digest"
+    },
+    "policy_sources": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/policySourceRevision"
+      }
+    },
+    "inventory_revision": {
+      "$ref": "#/$defs/digest"
+    },
+    "assignment_revision": {
+      "$ref": "#/$defs/digest"
+    },
+    "subject": {
+      "$ref": "#/$defs/subject"
+    },
+    "resolved_groups": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/resolvedGroup"
+      }
+    },
+    "assignments": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/assignment"
+      }
+    },
+    "resolved_baselines": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/resolvedBaseline"
+      }
+    },
+    "resolved_requirement_baselines": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/resolvedRequirementBaseline"
+      }
+    },
+    "requirements": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/requirement"
+      }
+    },
+    "controls": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/control"
+      }
+    },
+    "excluded_controls": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/excludedControl"
+      }
+    },
+    "coverage": {
+      "$ref": "#/$defs/coverage"
+    },
+    "resolution": {
+      "$ref": "#/$defs/resolution"
+    },
+    "digestAlgorithm": {
+      "const": "compliance.example/assessment-plan-digest/v1alpha1"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "compliance.example/assessment-provenance/v1alpha1"
+        },
+        "planningComposition": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "actual": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "tooling",
+                "policySources"
+              ],
+              "properties": {
+                "tooling": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "source",
+                    "execution"
+                  ],
+                  "properties": {
+                    "source": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "digest",
+                        "digestAlgorithm"
+                      ],
+                      "properties": {
+                        "digest": {
+                          "type": "string",
+                          "pattern": "^sha256:[0-9a-f]{64}$"
+                        },
+                        "digestAlgorithm": {
+                          "const": "compliance.example/tooling-source-tree-digest/v1alpha1"
+                        }
+                      }
+                    },
+                    "execution": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "kind"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "const": "source"
+                            }
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "kind",
+                            "wheelSha256"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "const": "installed-wheel"
+                            },
+                            "wheelSha256": {
+                              "type": "string",
+                              "pattern": "^sha256:[0-9a-f]{64}$"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                "policySources": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "name",
+                      "content"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$"
+                      },
+                      "content": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "digest",
+                          "digestAlgorithm"
+                        ],
+                        "properties": {
+                          "digest": {
+                            "type": "string",
+                            "pattern": "^sha256:[0-9a-f]{64}$"
+                          },
+                          "digestAlgorithm": {
+                            "const": "compliance.example/policy-source-tree-digest/v1alpha1"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "compositionDigestAlgorithm": {
+              "const": "compliance.example/composition-digest/v1alpha1"
+            },
+            "compositionDigest": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "enforcement": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "directExpectedContent": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "digest",
+                      "digestAlgorithm"
+                    ],
+                    "properties": {
+                      "digest": {
+                        "type": "string",
+                        "pattern": "^sha256:[0-9a-f]{64}$"
+                      },
+                      "digestAlgorithm": {
+                        "const": "compliance.example/policy-source-tree-digest/v1alpha1"
+                      }
+                    }
+                  }
+                },
+                "compositionLock": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "expected": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "tooling",
+                            "policySources"
+                          ],
+                          "properties": {
+                            "tooling": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "source",
+                                "execution"
+                              ],
+                              "properties": {
+                                "source": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "digest",
+                                    "digestAlgorithm"
+                                  ],
+                                  "properties": {
+                                    "digest": {
+                                      "type": "string",
+                                      "pattern": "^sha256:[0-9a-f]{64}$"
+                                    },
+                                    "digestAlgorithm": {
+                                      "const": "compliance.example/tooling-source-tree-digest/v1alpha1"
+                                    }
+                                  }
+                                },
+                                "execution": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "required": [
+                                        "kind"
+                                      ],
+                                      "properties": {
+                                        "kind": {
+                                          "const": "source"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "object",
+                                      "additionalProperties": false,
+                                      "required": [
+                                        "kind",
+                                        "wheelSha256"
+                                      ],
+                                      "properties": {
+                                        "kind": {
+                                          "const": "installed-wheel"
+                                        },
+                                        "wheelSha256": {
+                                          "type": "string",
+                                          "pattern": "^sha256:[0-9a-f]{64}$"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            "policySources": {
+                              "type": "array",
+                              "minItems": 1,
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "name",
+                                  "content"
+                                ],
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$"
+                                  },
+                                  "content": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "required": [
+                                      "digest",
+                                      "digestAlgorithm"
+                                    ],
+                                    "properties": {
+                                      "digest": {
+                                        "type": "string",
+                                        "pattern": "^sha256:[0-9a-f]{64}$"
+                                      },
+                                      "digestAlgorithm": {
+                                        "const": "compliance.example/policy-source-tree-digest/v1alpha1"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "digestAlgorithm": {
+                          "const": "compliance.example/composition-lock-digest/v1alpha1"
+                        },
+                        "digest": {
+                          "type": "string",
+                          "pattern": "^sha256:[0-9a-f]{64}$"
+                        }
+                      },
+                      "required": [
+                        "expected",
+                        "digestAlgorithm",
+                        "digest"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "directExpectedContent",
+                "compositionLock"
+              ]
+            },
+            "metadata": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "distribution",
+                "version"
+              ],
+              "properties": {
+                "distribution": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "version": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "required": [
+            "actual",
+            "compositionDigestAlgorithm",
+            "compositionDigest",
+            "enforcement"
+          ]
+        }
+      },
+      "required": [
+        "schema",
+        "planningComposition"
+      ]
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "reference": {
+      "type": "string",
+      "minLength": 3,
+      "pattern": "^.+@.+$"
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "externalRefs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "policySourceRevision": {
+      "type": "object",
+      "required": [
+        "name",
+        "digest"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "policyLocator": {
+      "type": "object",
+      "required": [
+        "policy_source",
+        "path"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "policy_source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "subject": {
+      "type": "object",
+      "required": [
+        "schema",
+        "id",
+        "type",
+        "status",
+        "labels",
+        "inventory"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "compliance.example/inventory-subject/v1"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[^/]+/.+$"
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "active",
+            "retired",
+            "unknown"
+          ]
+        },
+        "labels": {
+          "$ref": "#/$defs/stringMap"
+        },
+        "annotations": {
+          "$ref": "#/$defs/stringMap"
+        },
+        "attributes": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "inventory": {
+          "type": "object",
+          "required": [
+            "source",
+            "external_id",
+            "observed_at"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "source": {
+              "type": "string",
+              "minLength": 1
+            },
+            "external_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "observed_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "revision": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "membershipSource": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "membership",
+            "source"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "membership": {
+              "const": "explicit"
+            },
+            "source": {
+              "const": "group.members"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "membership",
+            "source"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "membership": {
+              "const": "selector"
+            },
+            "source": {
+              "type": "object",
+              "required": [
+                "match_labels"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "match_labels": {
+                  "$ref": "#/$defs/stringMap"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "membership",
+            "via"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "membership": {
+              "const": "inherited"
+            },
+            "via": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "resolvedGroup": {
+      "type": "object",
+      "required": [
+        "id",
+        "sources"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/membershipSource"
+          }
+        }
+      }
+    },
+    "assignment": {
+      "type": "object",
+      "required": [
+        "id",
+        "group",
+        "baselines"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "group": {
+          "type": "string",
+          "minLength": 1
+        },
+        "baselines": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reference"
+          }
+        }
+      }
+    },
+    "deviation": {
+      "type": "object",
+      "required": [
+        "id",
+        "classification",
+        "rationale",
+        "approval_ref",
+        "review_after"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "classification": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "approval_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "review_after": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    },
+    "baselineLineage": {
+      "type": "object",
+      "required": [
+        "reference",
+        "digest"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "reference": {
+          "$ref": "#/$defs/reference"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "resolvedBaseline": {
+      "type": "object",
+      "required": [
+        "assignment",
+        "group",
+        "reference",
+        "digest",
+        "policy_sources",
+        "lineage",
+        "deviations"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "assignment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "group": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reference": {
+          "$ref": "#/$defs/reference"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "policy_sources": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/policyLocator"
+          }
+        },
+        "lineage": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/baselineLineage"
+          }
+        },
+        "deviations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/deviation"
+          }
+        }
+      }
+    },
+    "requirementPin": {
+      "type": "object",
+      "required": [
+        "requirement",
+        "digest",
+        "required"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "requirement": {
+          "$ref": "#/$defs/reference"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "resolvedRequirementBaseline": {
+      "type": "object",
+      "required": [
+        "assignment",
+        "group",
+        "baseline",
+        "reference",
+        "digest",
+        "policy_sources",
+        "requirements"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "assignment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "group": {
+          "type": "string",
+          "minLength": 1
+        },
+        "baseline": {
+          "$ref": "#/$defs/reference"
+        },
+        "reference": {
+          "$ref": "#/$defs/reference"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "policy_sources": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/policyLocator"
+          }
+        },
+        "requirements": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/requirementPin"
+          }
+        }
+      }
+    },
+    "adoption": {
+      "type": "object",
+      "required": [
+        "status",
+        "method",
+        "owner"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "implemented",
+            "not_implemented",
+            "not_applicable"
+          ]
+        },
+        "method": {
+          "enum": [
+            "automated",
+            "hybrid",
+            "manual",
+            "none"
+          ]
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "implementation_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "determination": {
+          "type": "object",
+          "required": [
+            "rationale",
+            "approval_ref",
+            "review_after"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "rationale": {
+              "type": "string",
+              "minLength": 1
+            },
+            "approval_ref": {
+              "type": "string",
+              "minLength": 1
+            },
+            "review_after": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        }
+      }
+    },
+    "realizationPin": {
+      "type": "object",
+      "required": [
+        "realization",
+        "digest"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "realization": {
+          "$ref": "#/$defs/reference"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "realization": {
+      "type": "object",
+      "required": [
+        "reference",
+        "digest",
+        "classification",
+        "policy_sources"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "reference": {
+          "$ref": "#/$defs/reference"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "classification": {
+          "enum": [
+            "internal",
+            "confidential",
+            "restricted"
+          ]
+        },
+        "policy_sources": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/policyLocator"
+          }
+        },
+        "based_on": {
+          "$ref": "#/$defs/realizationPin"
+        }
+      }
+    },
+    "baselineProvenance": {
+      "type": "object",
+      "required": [
+        "group",
+        "assignment",
+        "baseline"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "group": {
+          "type": "string",
+          "minLength": 1
+        },
+        "assignment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "baseline": {
+          "$ref": "#/$defs/reference"
+        },
+        "requirement": {
+          "$ref": "#/$defs/reference"
+        },
+        "realization": {
+          "$ref": "#/$defs/reference"
+        }
+      },
+      "dependentRequired": {
+        "requirement": [
+          "realization"
+        ],
+        "realization": [
+          "requirement"
+        ]
+      }
+    },
+    "requirement": {
+      "type": "object",
+      "required": [
+        "reference",
+        "digest",
+        "title",
+        "statement",
+        "external_refs",
+        "policy_sources",
+        "required",
+        "adoption",
+        "satisfaction",
+        "technical_instance_ids",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "reference": {
+          "$ref": "#/$defs/reference"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "external_refs": {
+          "$ref": "#/$defs/externalRefs"
+        },
+        "policy_sources": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/policyLocator"
+          }
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "adoption": {
+          "$ref": "#/$defs/adoption"
+        },
+        "satisfaction": {
+          "type": "object",
+          "required": [
+            "allOf"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "allOf": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "technical_instance_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "provenance": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/baselineProvenance"
+          }
+        },
+        "realization": {
+          "$ref": "#/$defs/realization"
+        }
+      }
+    },
+    "evidenceRequirement": {
+      "type": "object",
+      "required": [
+        "type",
+        "required",
+        "max_age"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "max_age": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[smhd]$"
+        }
+      }
+    },
+    "controlLineage": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "baseline",
+            "operation"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "baseline": {
+              "$ref": "#/$defs/reference"
+            },
+            "operation": {
+              "enum": [
+                "defined",
+                "tailor",
+                "exclude",
+                "substitute",
+                "annotate",
+                "add",
+                "seal"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "realization",
+            "operation"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "realization": {
+              "$ref": "#/$defs/reference"
+            },
+            "operation": {
+              "const": "defined"
+            }
+          }
+        }
+      ]
+    },
+    "criteriaState": {
+      "type": "object",
+      "required": [
+        "implementation",
+        "parameters",
+        "disposition"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "implementation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "disposition": {
+          "enum": [
+            "evaluate",
+            "excluded"
+          ]
+        }
+      }
+    },
+    "derivation": {
+      "type": "object",
+      "required": [
+        "operation",
+        "overlay",
+        "parent_fingerprint",
+        "inherited_lineage",
+        "before",
+        "after"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "enum": [
+            "tailor",
+            "exclude",
+            "substitute"
+          ]
+        },
+        "overlay": {
+          "$ref": "#/$defs/reference"
+        },
+        "parent_fingerprint": {
+          "$ref": "#/$defs/digest"
+        },
+        "inherited_lineage": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/controlLineage"
+          }
+        },
+        "before": {
+          "$ref": "#/$defs/criteriaState"
+        },
+        "after": {
+          "$ref": "#/$defs/criteriaState"
+        },
+        "deviation": {
+          "$ref": "#/$defs/deviation"
+        },
+        "equivalence_ref": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "enum": [
+                  "tailor",
+                  "exclude"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "deviation"
+            ],
+            "not": {
+              "required": [
+                "equivalence_ref"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "operation": {
+                "const": "substitute"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "equivalence_ref"
+            ],
+            "not": {
+              "required": [
+                "deviation"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "overlayPolicy": {
+      "type": "object",
+      "required": [
+        "blocked_operations",
+        "reason",
+        "sealed_by"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "blocked_operations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "tailor",
+              "exclude",
+              "substitute",
+              "annotate",
+              "seal"
+            ]
+          }
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sealed_by": {
+          "$ref": "#/$defs/reference"
+        }
+      }
+    },
+    "control": {
+      "type": "object",
+      "required": [
+        "instance_id",
+        "implementation",
+        "entrypoint",
+        "parameters",
+        "severity",
+        "remediation",
+        "evidence",
+        "disposition",
+        "alignment",
+        "definition_fingerprint",
+        "derivations",
+        "deviations",
+        "lineage",
+        "provenance",
+        "implementation_sources"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "instance_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "implementation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entrypoint": {
+          "type": "string",
+          "pattern": "^data\\.[A-Za-z0-9_.]+$"
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "remediation": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/evidenceRequirement"
+          }
+        },
+        "disposition": {
+          "const": "evaluate"
+        },
+        "alignment": {
+          "enum": [
+            "unaltered",
+            "additional",
+            "tailored",
+            "substituted",
+            "annotated",
+            "realization"
+          ]
+        },
+        "definition_fingerprint": {
+          "$ref": "#/$defs/digest"
+        },
+        "derivations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/derivation"
+          }
+        },
+        "deviations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/deviation"
+          }
+        },
+        "lineage": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/controlLineage"
+          }
+        },
+        "provenance": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/baselineProvenance"
+          }
+        },
+        "implementation_sources": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/policyLocator"
+          }
+        },
+        "overlay_policy": {
+          "$ref": "#/$defs/overlayPolicy"
+        },
+        "external_refs": {
+          "$ref": "#/$defs/externalRefs"
+        },
+        "equivalence_ref": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "excludedControl": {
+      "type": "object",
+      "required": [
+        "instance_id",
+        "implementation",
+        "parameters",
+        "disposition",
+        "alignment",
+        "definition_fingerprint",
+        "derivations",
+        "deviations",
+        "lineage",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "instance_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "implementation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "disposition": {
+          "const": "excluded"
+        },
+        "alignment": {
+          "const": "deviated"
+        },
+        "definition_fingerprint": {
+          "$ref": "#/$defs/digest"
+        },
+        "derivations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/derivation"
+          }
+        },
+        "deviations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/deviation"
+          }
+        },
+        "lineage": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/controlLineage"
+          }
+        },
+        "provenance": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/baselineProvenance"
+          }
+        },
+        "overlay_policy": {
+          "$ref": "#/$defs/overlayPolicy"
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "status",
+        "assessable",
+        "reason",
+        "assignment_count",
+        "active_control_count",
+        "excluded_control_count",
+        "requirement_count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "assigned",
+            "unassigned",
+            "inactive",
+            "invalid"
+          ]
+        },
+        "assessable": {
+          "type": "boolean"
+        },
+        "reason": {
+          "enum": [
+            "policy-assigned",
+            "no-active-controls",
+            "no-policy-assignment",
+            "subject-retired",
+            "resolution-errors"
+          ]
+        },
+        "assignment_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "active_control_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "excluded_control_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "requirement_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "resolution": {
+      "type": "object",
+      "required": [
+        "status",
+        "errors"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "valid",
+            "invalid"
+          ]
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "type"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

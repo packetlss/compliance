@@ -826,6 +826,10 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
         lines.append(f'  {state_label(baseline_state, color)}  {reference}')
         if result and result.get("reason"):
             lines.append(f'    {result["reason"]}')
+        if result:
+            for field in ('evidence_validation_errors', 'evidence_selection_ambiguities'):
+                for diagnostic in result.get('observed', {}).get(field, []):
+                    lines.append('    ' + json.dumps(diagnostic, sort_keys=True))
 
     lines.append("Control objectives:")
     if not plan.get("requirements"):
@@ -846,6 +850,10 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
                 lines.append(f'    based on: {based_on["realization"]}')
         if result and result.get("reason"):
             lines.append(f'    {result["reason"]}')
+        if result:
+            for field in ('evidence_validation_errors', 'evidence_selection_ambiguities'):
+                for diagnostic in result.get('observed', {}).get(field, []):
+                    lines.append('    ' + json.dumps(diagnostic, sort_keys=True))
 
     lines.append("Active controls:")
     if not plan["controls"]:
@@ -859,6 +867,10 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
         )
         if result and result.get("reason"):
             lines.append(f'    {result["reason"]}')
+        if result:
+            for field in ('evidence_validation_errors', 'evidence_selection_ambiguities'):
+                for diagnostic in result.get('observed', {}).get(field, []):
+                    lines.append('    ' + json.dumps(diagnostic, sort_keys=True))
         if result and result.get("status") != "pass" and result.get("severity"):
             lines.append(f'    severity: {result["severity"]}')
         if result and result.get("status") != "pass" and result.get("remediation"):

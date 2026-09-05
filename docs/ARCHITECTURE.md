@@ -48,7 +48,7 @@ The plan is not:
 - a backend configuration specification or authorization to apply changes; or
 - evidence that settings were deployed or remain effective at the present moment.
 
-This clarifies existing artifact meaning, not a new payload or readiness claim: #31 establishes the composition foundation, while v1alpha3 assessment artifact generation remains unavailable until the v4 implementation owned by #32.
+This clarifies existing artifact meaning, not a new payload or readiness claim: #31 establishes the composition foundation, and #32 implements v1alpha3 assessment generation through provenance-bearing v4 plans/results.
 
 ## First-core policy and assurance model
 
@@ -83,15 +83,15 @@ Requirements are desired assurance objectives. Realizations are design-time mapp
 
 Detailed successor terminology, evidence authority, N/A semantics, mapping/result model, identity, and migration remain owned by destination #37.
 
-[ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns the common required-evidence `unknown`, attributable execution `error`, and assessment-wide refusal boundary. It clarifies ADRs 0006/0007; #32 implements its schema-invalid-evidence and evidence selection ambiguity corrections as the only semantic preservation exceptions after #31. This is accepted design, not yet runtime behavior. #31 remains independent and unblocked; broader assurance design remains with #37.
+[ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns the common required-evidence `unknown`, attributable execution `error`, and assessment-wide refusal boundary. It clarifies ADRs 0006/0007; #32 implements its schema-invalid-evidence and evidence selection ambiguity corrections as the only semantic preservation exceptions after #31. These corrections are implemented in the v4 path; predecessor consumers remain pending migration. #31 is complete; broader assurance design remains with #37.
 
 ## Historical assessment and operational interpretation
 
-[ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is **accepted design, not yet implemented**. Historical outcomes remain immutable at `evaluated_at` under their exact plan, evidence snapshot, evaluator, planning/evaluation composition and waiver revision/application. Exact current `plan_id` equality means only **Plan-aligned**; a mismatch, including provenance-only differences, means **Different plan**.
+[ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) has its factual v4 representation implemented under #32; the operational view remains **accepted design, not yet implemented**. Historical outcomes remain immutable at `evaluated_at` under their exact plan, evidence snapshot, evaluator, planning/evaluation composition and waiver revision/application. Exact current `plan_id` equality means only **Plan-aligned**; a mismatch, including provenance-only differences, means **Different plan**.
 
 At query instant `q`, evidence timeliness is derived from the historical successful selections and the assessed plan's recorded requirements (`q - collected_at <= max_age`, equality included). No mutable evidence substitution, query-time re-selection or historical roll-up recomputation is allowed. Historical `waived` remains waived after expiry; recorded waiver validity is qualified separately. Outcome, alignment, timeliness, waiver validity and coverage/applicability aggregate independently under ADR 0011's state matrix. Neither plan alignment nor timely evidence establishes present-state certainty, absence of drift, or continuous effectiveness.
 
-#32 must retain validated, identity-bound selection references (evidence ID plus complete-document digest), selected `collected_at`, and unambiguous assessed-plan requirement associations resolving `max_age`, with references into the complete snapshot and successful selections distinguished from nonselected candidates. Existing evidence identity and ADR 0010 assessment semantics are unchanged. #32 owns this representation obligation, not query-time judgments. A later separately authorized operational view depends on #32; no runtime implementation or new artifact family is authorized by #66.
+#32 retains validated, identity-bound selection references (evidence ID plus complete-document digest), selected `collected_at`, and unambiguous assessed-plan requirement associations resolving `max_age`, with references into the complete snapshot and successful selections distinguished from nonselected candidates. Existing evidence identity and ADR 0010 assessment semantics are unchanged. #32 owns this representation obligation, not query-time judgments. A later separately authorized operational view depends on #32; no runtime implementation or new artifact family is authorized by #66.
 
 ## External-adapter boundary
 

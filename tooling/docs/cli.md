@@ -1,7 +1,7 @@
 # Operator CLI, Project Registries, and Project Configuration
 
 
-The ADR 0007 successor foundation and deliberate pre-v4 transition are documented
+The ADR 0007 actual composition and v4 assessment contracts are documented
 in [Actual composition and expected enforcement](composition.md). Existing
 predecessor workflows described here remain supported pending consumer cutover.
 
@@ -58,34 +58,33 @@ timezone-aware RFC 3339 instant for deterministic verification or deliberate
 historical replay; the recorded result ID and `evaluated_at`, evidence
 freshness, and waiver lifecycle selection all use that instant.
 `plan render` remains useful for review, CI, and debugging without evaluation.
-Rendered `assessment-plan/v1` and `assessment-results/v1` documents are strict
-stored contracts. Before OPA is invoked, `assessment run` filters evidence by
-exact subject identity and validates matching control evidence against the
-type schema from the plan's pinned policy sources. The accepted system
-[ADR 0010](../../docs/adr/0010-required-evidence-status-and-assessment-refusal.md) correction makes safely
-attributable schema-invalid required evidence `unknown`, including mixed
-valid/invalid candidates; validate all matching candidates before selection and
-never send invalid evidence to OPA. Runtime still uses the predecessor `error`
-classification until #32 implements this correction. ADR 0010 reserves `error`
-for attributable execution/decision failure and requires refusal for
-untrustworthy routing, shared prerequisites, provenance or result integrity.
-Valid additional fields remain preserved; missing or stale evidence is `unknown`.
+V1alpha3 projects persist strict `assessment-plan/v4` and `assessment-results/v4`
+documents in unlocked, direct-expected and composition-locked modes. Predecessor
+v1/v3 workflows remain available until their separate consumer migrations.
+Before OPA, v4 establishes actual provenance, explicit subject/type routing and
+a complete subject evidence snapshot. It validates every matching required
+evidence candidate against the trusted schema before freshness or selection.
 
-ADR 0010 also requires #32 to detect distinct equally latest eligible complete
-evidence documents before OPA and synthesize provenance-bound `unknown` for
-dependent controls. Canonical-identical duplicates coalesce for selection only;
-independent controls remain assessable. JSON and human explanations must expose
-structured evidence selection ambiguity diagnostics. This is accepted design
-pending #32, distinct from assessment-wide refusal; roll-up and fail-only waiver
-semantics remain unchanged.
+Under [ADR 0010](../../docs/adr/0010-required-evidence-status-and-assessment-refusal.md),
+schema-invalid required evidence produces attributable `unknown`, including
+mixed valid/invalid candidates. Distinct equally latest eligible complete
+documents also produce `unknown` without dependent OPA calls. Canonical-identical
+duplicates coalesce for selection only. Independent controls remain assessable;
+missing/stale required evidence stays unknown. No ordering precedence, older
+fallback or payload merging is introduced.
 
-The eventual #32 operator behavior must make invalid-evidence `unknown`
-prominent, retain validation diagnostics in human and JSON explanations, and
-move its counts from `error` to `unknown`. Creating an artifact is not a passing
-assessment: persisted `unknown` or attributable `error` may be a completed run.
-Refusal/write failure is command failure with no new results envelope. No new
-status or filter grammar is introduced here; historical results are not
-reinterpreted. These are accepted requirements, not yet implemented behavior.
+JSON and human explanations retain structured validation and selection ambiguity
+diagnostics, including exact evidence ID/digest and schema references. Invalid
+required-evidence counts belong to unknown. V4 reserves error for attributable
+execution/decision failures, while preserving the predecessor invalid optional
+evidence error behavior. Optional evidence selection semantics are not redesigned.
+Only underlying fail may be waived; logical roll-ups remain unchanged.
+
+Creating an artifact is not a passing assessment: persisted unknown or attributable
+error may represent a completed run. Untrustworthy routing, shared prerequisites,
+provenance or result integrity refuse publication. Refusal/write failure is command
+failure with no new results envelope; atomic writes preserve previous output.
+No new status/filter grammar or historical reinterpretation is introduced.
 
 The CLI
 validates plans before persistence and whenever they
@@ -220,7 +219,7 @@ calls a different-plan result `outdated`, and calls absence `pending`. Its repor
 timestamp is query time; it does not re-evaluate selected evidence or waiver age.
 The `current/outdated` wording above describes that predecessor behavior only.
 
-System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is **accepted design, not yet implemented**.
+System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) has its factual v4 representation implemented under #32; its operational view remains **accepted design, not yet implemented**.
 Future status/explanation/group views must separately expose historical outcomes
 at `evaluated_at`, **Plan-aligned / Different plan / Plan alignment unavailable**,
 selected-evidence timeliness as of explicit `q`, recorded waiver validity, and
