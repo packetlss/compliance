@@ -43,7 +43,10 @@ wheel_sha="sha256:$(sha256sum "$wheel" | awk '{print $1}')"
 
 python -m venv "$temporary/venv"
 venv_python="$temporary/venv/bin/python"
-uv pip install --python "$venv_python" "$wheel"
+python "$TOOLING_ROOT/scripts/install-locked-wheel.py" \
+  --python "$venv_python" \
+  --wheel "$wheel" \
+  --cache-dir "$temporary/uv-cache"
 
 cat > "$temporary/no-provider-bin/provider-command-disabled" <<'SH'
 #!/usr/bin/env bash

@@ -86,6 +86,10 @@ registry credentials are deliberately absent from this runtime identity.
 the canonical source digest without changing or dirtying the authoritative
 source checkout.
 
+The PEP 517 backend is selected exactly by the identity-bearing
+`pyproject.toml` (`uv_build==0.12.5`). Independent builds therefore use the
+accepted backend version rather than resolving a newer version from a range.
+
 Example release-style build:
 
 ```sh
@@ -603,6 +607,25 @@ policy-source conformance validation exactly once.
 
 This package gate complements rather than replaces the canonical composed
 scenario integration gate.
+
+Each installed-runtime gate derives its dependency requirements from
+`uv.lock` with `uv export --frozen --no-dev --no-emit-project`. The exported
+requirements retain the lock's exact versions, platform artifact choices, and
+hashes. Validation installs those dependencies with hash enforcement into a
+fresh external environment, then installs the candidate wheel with `--no-deps`.
+The source project is never installed into that environment. An unavailable or
+hash-mismatched locked artifact is therefore a hard failure rather than an
+invitation to resolve another compatible version. The standalone package gate
+performs the same install first with an empty dedicated cache and then in a new
+runtime environment with that populated cache, proving cache state does not
+change selected identities.
+
+The lock and validation helper are test inputs, not artifact-construction
+inputs, and remain outside the established tooling source-tree digest. The exact
+backend requirement in `pyproject.toml` and `scripts/build-wheel.py` remain
+inside that digest boundary, so this change intentionally changes tooling
+source and subsequently built wheel identities without changing the digest
+algorithm.
 
 ## Deferred from this slice
 

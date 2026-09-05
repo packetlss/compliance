@@ -40,7 +40,10 @@ wheel_sha="sha256:$(sha256sum "$wheel" | awk '{print $1}')"
 python -m venv "$temporary/venv"
 venv_python="$temporary/venv/bin/python"
 venv_compliance="$temporary/venv/bin/compliance"
-uv pip install --python "$venv_python" "$wheel"
+python "$TOOLING_ROOT/scripts/install-locked-wheel.py" \
+  --python "$venv_python" \
+  --wheel "$wheel" \
+  --cache-dir "$temporary/uv-cache"
 
 # All installed-package imports below must resolve from the wheel, not the source checkout.
 cd "$temporary/runtime"

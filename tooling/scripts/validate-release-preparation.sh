@@ -96,7 +96,10 @@ wheel="$generic_dir/compliance_tooling-${release_version}-py3-none-any.whl"
 python -m venv "$temporary/venv"
 venv_python="$temporary/venv/bin/python"
 venv_compliance="$temporary/venv/bin/compliance"
-uv pip install --python "$venv_python" "$wheel"
+python "$TOOLING_ROOT/scripts/install-locked-wheel.py" \
+  --python "$venv_python" \
+  --wheel "$wheel" \
+  --cache-dir "$temporary/uv-cache"
 
 cd "$runtime_dir"
 PATH="$release_path" "$venv_compliance" --version > version.txt
