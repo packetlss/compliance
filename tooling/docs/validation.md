@@ -107,3 +107,8 @@ generic descriptor/archive round trip with Git, provider commands, and network
 access disabled during runtime. It does not download a hosted producer release
 or require cross-repository credentials. Producer-specific pre-freeze formats
 are reproduced with the corresponding historical tooling and release state.
+All four scripts export exact, hash-bearing runtime requirements from
+`tooling/uv.lock`, install them in an external virtual environment, and then
+install the candidate wheel with dependency resolution disabled. The package
+gate covers both an initially empty dedicated uv cache and a fresh environment
+using the populated cache.

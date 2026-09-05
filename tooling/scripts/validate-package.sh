@@ -68,10 +68,19 @@ with zipfile.ZipFile(wheel) as archive:
 assert metadata["Requires-Python"].replace(" ", "") == ">=3.13,<3.14", metadata
 PY
 
+python -m venv "$temporary/cache-prime-venv"
+python "$TOOLING_ROOT/scripts/install-locked-wheel.py" \
+  --python "$temporary/cache-prime-venv/bin/python" \
+  --wheel "$wheel" \
+  --cache-dir "$temporary/uv-cache"
+
 python -m venv "$temporary/venv"
 venv_python="$temporary/venv/bin/python"
 venv_compliance="$temporary/venv/bin/compliance"
-uv pip install --python "$venv_python" "$wheel"
+python "$TOOLING_ROOT/scripts/install-locked-wheel.py" \
+  --python "$venv_python" \
+  --wheel "$wheel" \
+  --cache-dir "$temporary/uv-cache"
 
 cd "$temporary/runtime"
 PATH="$runtime_path" "$venv_compliance" --version
