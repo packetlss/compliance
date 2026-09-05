@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import re
+import os
+import tempfile
 import subprocess
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -246,9 +248,24 @@ def evaluate_plan_document(
     opa: str = "opa",
     evaluated_at: datetime | None = None,
     waiver_path: Path | None = None,
+    composition_report: JsonObject | None = None,
 ) -> JsonObject:
     """Evaluate an already rendered plan and return its immutable result envelope."""
     validate_assessment_plan(plan)
+    is_v4 = plan.get('schema') == 'compliance.example/assessment-plan/v4'
+    if is_v4:
+        from .assessment_provenance import stage, artifact_digest, RESULTS_SCHEMA, RESULTS_DIGEST_ALGORITHM, validate_selection_plan, validate_selection_snapshot
+        from .composition import require_composition
+        from .evaluator import resolve_opa_evaluator
+        from .evidence_selection import snapshot_evidence, prepare_schemas, select_evidence
+        evaluation = composition_report or require_composition(policies)
+        planning = plan['provenance']['planningComposition']
+        if evaluation['actual']['policySources'] != planning['actual']['policySources']:
+            raise ValueError('evaluation policy composition differs from planning composition')
+        lock = evaluation['enforcement']['compositionLock']
+        if lock is not None and planning['actual'] != lock['expected']:
+            raise ValueError('planning composition differs from selected evaluation lock')
+        evaluator, opa = resolve_opa_evaluator(opa)
     if plan["resolution"]["status"] != "valid":
         raise SystemExit("refusing to evaluate an invalid assessment plan")
     coverage = plan.get("coverage", {})
@@ -266,8 +283,11 @@ def evaluate_plan_document(
 
     if not evidence_path.is_dir():
         raise SystemExit(f"evidence path is not a directory: {evidence_path}")
-    loaded_evidence, evidence_sources = load_evidence_documents(evidence_path)
-    evidence = evidence_for_subject(loaded_evidence, plan["subject"]["id"])
+    if is_v4:
+        evidence, evidence_sources, evidence_descriptor = snapshot_evidence(evidence_path, plan['subject']['id'])
+    else:
+        loaded_evidence, evidence_sources = load_evidence_documents(evidence_path)
+        evidence = evidence_for_subject(loaded_evidence, plan["subject"]["id"])
 
     required_evidence_types = {
         requirement["type"]
@@ -283,6 +303,9 @@ def evaluate_plan_document(
                 f"invalid: {json.dumps(evidence_schema_errors, sort_keys=True)}"
             )
 
+    if is_v4:
+        validators, schema_references = prepare_schemas(evidence_schemas, required_evidence_types)
+        selected_uses = []
     evaluated_at = (evaluated_at or datetime.now(UTC)).replace(microsecond=0)
     waivers, waiver_revision = load_waivers(waiver_path)
     technical_assessment_id = (
@@ -302,17 +325,25 @@ def evaluate_plan_document(
             evaluated_at,
         )
         evidence_requirements = control.get("evidence", [])
-        validation_errors = evidence_validation_errors(
-            evidence,
-            evidence_requirements,
-            evidence_schemas,
-            sources=evidence_sources,
-        )
-        selected_evidence = fresh_evidence(
-            evidence,
-            evidence_requirements,
-            evaluated_at,
-        ) if not validation_errors else []
+        ambiguities = []
+        if is_v4:
+            selected_evidence, uses, validation_errors, ambiguities = select_evidence(
+                evidence, evidence_requirements, evaluated_at, plan['subject']['id'],
+                validators, schema_references, evidence_sources,
+            )
+            selected_uses.extend({'instance_id': control['instance_id'], **use} for use in uses)
+        else:
+            validation_errors = evidence_validation_errors(
+                evidence,
+                evidence_requirements,
+                evidence_schemas,
+                sources=evidence_sources,
+            )
+            selected_evidence = fresh_evidence(
+                evidence,
+                evidence_requirements,
+                evaluated_at,
+            ) if not validation_errors else []
         assessment_input = {
             "schema": "compliance.example/assessment-input/v1",
             "assessment": {
@@ -329,7 +360,20 @@ def evaluate_plan_document(
             # Waivers must not influence the technical decision produced by Rego.
             "waiver": None,
         }
-        if validation_errors:
+        if is_v4 and (validation_errors or ambiguities or any(requirement['required'] and not any(use['requirement_index'] == index for use in uses) for index, requirement in enumerate(evidence_requirements))):
+            observed = {}
+            if validation_errors:
+                reason = 'Required evidence was rejected as invalid; criterion not determined.'
+                observed['evidence_validation_errors'] = validation_errors
+            elif ambiguities:
+                reason = 'Required evidence selection is ambiguous; criterion not determined.'
+            else:
+                reason = 'Required evidence is missing or stale; criterion not determined.'
+            if ambiguities:
+                observed['evidence_selection_ambiguities'] = ambiguities
+            result = control_error_result(assessment_input, reason, observed=observed)
+            result['status'] = 'unknown'
+        elif validation_errors:
             first = validation_errors[0]
             location = first.get("source", first["evidence_type"])
             pointer = first.get("path", "")
@@ -351,12 +395,23 @@ def evaluate_plan_document(
                 evidence_ids=evidence_ids,
             )
         else:
-            result = evaluate_control(
-                opa,
-                policies,
-                assessment_input,
-                control["entrypoint"],
-            )
+            try:
+                result = evaluate_control(opa, policies, assessment_input, control["entrypoint"])
+                if is_v4:
+                    from .artifact_validation import assessment_results_schema_path
+                    schema = load_json(assessment_results_schema_path())
+                    item_schema = {'$defs': schema['$defs']}
+                    item_schema['$ref'] = schema['properties']['results']['items']['$ref']
+                    candidate = {**result, 'waiver_revision': waiver_revision} if isinstance(result, dict) else result
+                    errors = list(Draft202012Validator(item_schema, format_checker=FormatChecker()).iter_errors(candidate))
+                    expected = control_error_result(assessment_input, '')
+                    fields = ('control_id', 'instance_id', 'subject_id', 'plan_id', 'inventory_revision', 'assignment_revision', 'policy_revision')
+                    if errors or any(result.get(key) != expected[key] for key in fields) or result.get('status') == 'waived' or 'waiver' in result or any(key in result.get('observed', {}) for key in ('evidence_validation_errors', 'evidence_selection_ambiguities')):
+                        result = control_error_result(assessment_input, 'OPA returned an unusable decision')
+            except Exception:
+                if not is_v4:
+                    raise
+                result = control_error_result(assessment_input, 'Criterion execution failed')
         result["waiver_revision"] = waiver_revision
         if waiver is not None and result.get("status") == "fail":
             result["status"] = "waived"
@@ -390,16 +445,37 @@ def evaluate_plan_document(
         "requirement_assessments": requirement_assessments,
         "requirement_baseline_assessments": requirement_baseline_assessments,
     }
+    if is_v4:
+        report['schema'] = RESULTS_SCHEMA
+        report['digestAlgorithm'] = RESULTS_DIGEST_ALGORITHM
+        report['provenance'] = {
+            **plan['provenance'], 'evaluationComposition': stage(evaluation),
+            'evaluator': evaluator.document(), 'evidence': evidence_descriptor,
+            'selectedEvidence': sorted(selected_uses, key=lambda item: (item['instance_id'], item['requirement_index'])),
+        }
+        report['id'] = artifact_digest(report)
+        validate_selection_plan(report, plan)
+        validate_selection_snapshot(report, evidence)
     validate_assessment_results(report)
     return report
 
 
 def write_json(document: JsonObject, output: Path) -> None:
-    if document.get("schema") == "compliance.example/assessment-plan/v1":
+    if document.get("schema") in {"compliance.example/assessment-plan/v1", "compliance.example/assessment-plan/v4"}:
         validate_assessment_plan(document, source=output)
-    elif document.get("schema") == "compliance.example/assessment-results/v1":
+    elif document.get("schema") in {"compliance.example/assessment-results/v1", "compliance.example/assessment-results/v4"}:
         validate_assessment_results(document, source=output)
     output.parent.mkdir(parents=True, exist_ok=True)
-    with output.open("w", encoding="utf-8") as stream:
-        json.dump(document, stream, indent=2, sort_keys=True)
-        stream.write("\n")
+    # Encode before opening any output, then atomically publish a complete envelope.
+    encoded = json.dumps(document, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=output.parent, delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(encoded)
+            stream.flush()
+            os.fsync(stream.fileno())
+        temporary.replace(output)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)

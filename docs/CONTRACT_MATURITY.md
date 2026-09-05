@@ -68,13 +68,13 @@ assessment-results/v4
 
 with provisional composition/lock/plan/result digest algorithms.
 
-These are **accepted design, not yet fully implemented/cut over**. Destination #31–#36 own implementation and consumer migration.
+These are **experimental**, implemented by #31/#32 but not yet fully cut over. Destination #34–#36 own consumer migration; #33 owns subsequent predecessor retirement.
 
 Current `project-config/v1alpha1`, `project-config/v1alpha2`, `release-lock/v1alpha2`, assessment plan/results v1 and v3 remain **experimental migration inputs**, not frozen compatibility promises. Destination #33 removes their active readers only after successor consumer cutover.
 
 ## Historical outcome and operational timeliness
 
-[ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is **Accepted design, not yet implemented**. #32 must incorporate its factual temporal-provenance obligation before v4 is complete/merge-ready: validated, result-identity-bound successful selection ID/digest, selected collection instant and assessed-plan requirement association. This does not freeze a JSON layout or change evidence identity algorithms.
+[ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) has its factual representation implemented by #32; operational derivation remains **Accepted design, not yet implemented**. V4 retains: validated, result-identity-bound successful selection ID/digest, selected collection instant and assessed-plan requirement association. This does not freeze a JSON layout or change evidence identity algorithms.
 
 The predecessor status view still calls an exact-plan result `current`, a different-plan result `outdated`, and absence `pending`, presenting stored outcomes with a query-time report timestamp without re-evaluating evidence/waiver age. Those experimental labels do not implement ADR 0011. Query-time timeliness, recorded waiver qualification and separated aggregation belong to a later authorized operational-view tranche dependent on #32; #32 implements representation only for this decision. ADR 0010's assessment-time corrections remain its existing responsibility.
 

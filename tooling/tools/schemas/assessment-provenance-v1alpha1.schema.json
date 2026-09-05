@@ -1,0 +1,743 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/assessment-provenance-v1alpha1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "compliance.example/assessment-provenance/v1alpha1"
+    },
+    "planningComposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "actual": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tooling",
+            "policySources"
+          ],
+          "properties": {
+            "tooling": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "execution"
+              ],
+              "properties": {
+                "source": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "digest",
+                    "digestAlgorithm"
+                  ],
+                  "properties": {
+                    "digest": {
+                      "type": "string",
+                      "pattern": "^sha256:[0-9a-f]{64}$"
+                    },
+                    "digestAlgorithm": {
+                      "const": "compliance.example/tooling-source-tree-digest/v1alpha1"
+                    }
+                  }
+                },
+                "execution": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "kind"
+                      ],
+                      "properties": {
+                        "kind": {
+                          "const": "source"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "kind",
+                        "wheelSha256"
+                      ],
+                      "properties": {
+                        "kind": {
+                          "const": "installed-wheel"
+                        },
+                        "wheelSha256": {
+                          "type": "string",
+                          "pattern": "^sha256:[0-9a-f]{64}$"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "policySources": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "content"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$"
+                  },
+                  "content": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "digest",
+                      "digestAlgorithm"
+                    ],
+                    "properties": {
+                      "digest": {
+                        "type": "string",
+                        "pattern": "^sha256:[0-9a-f]{64}$"
+                      },
+                      "digestAlgorithm": {
+                        "const": "compliance.example/policy-source-tree-digest/v1alpha1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "compositionDigestAlgorithm": {
+          "const": "compliance.example/composition-digest/v1alpha1"
+        },
+        "compositionDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "enforcement": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "directExpectedContent": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "digest",
+                  "digestAlgorithm"
+                ],
+                "properties": {
+                  "digest": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  },
+                  "digestAlgorithm": {
+                    "const": "compliance.example/policy-source-tree-digest/v1alpha1"
+                  }
+                }
+              }
+            },
+            "compositionLock": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "expected": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "tooling",
+                        "policySources"
+                      ],
+                      "properties": {
+                        "tooling": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "source",
+                            "execution"
+                          ],
+                          "properties": {
+                            "source": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "digest",
+                                "digestAlgorithm"
+                              ],
+                              "properties": {
+                                "digest": {
+                                  "type": "string",
+                                  "pattern": "^sha256:[0-9a-f]{64}$"
+                                },
+                                "digestAlgorithm": {
+                                  "const": "compliance.example/tooling-source-tree-digest/v1alpha1"
+                                }
+                              }
+                            },
+                            "execution": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "properties": {
+                                    "kind": {
+                                      "const": "source"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "kind",
+                                    "wheelSha256"
+                                  ],
+                                  "properties": {
+                                    "kind": {
+                                      "const": "installed-wheel"
+                                    },
+                                    "wheelSha256": {
+                                      "type": "string",
+                                      "pattern": "^sha256:[0-9a-f]{64}$"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "policySources": {
+                          "type": "array",
+                          "minItems": 1,
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "name",
+                              "content"
+                            ],
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$"
+                              },
+                              "content": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "digest",
+                                  "digestAlgorithm"
+                                ],
+                                "properties": {
+                                  "digest": {
+                                    "type": "string",
+                                    "pattern": "^sha256:[0-9a-f]{64}$"
+                                  },
+                                  "digestAlgorithm": {
+                                    "const": "compliance.example/policy-source-tree-digest/v1alpha1"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "digestAlgorithm": {
+                      "const": "compliance.example/composition-lock-digest/v1alpha1"
+                    },
+                    "digest": {
+                      "type": "string",
+                      "pattern": "^sha256:[0-9a-f]{64}$"
+                    }
+                  },
+                  "required": [
+                    "expected",
+                    "digestAlgorithm",
+                    "digest"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "directExpectedContent",
+            "compositionLock"
+          ]
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "distribution",
+            "version"
+          ],
+          "properties": {
+            "distribution": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "required": [
+        "actual",
+        "compositionDigestAlgorithm",
+        "compositionDigest",
+        "enforcement"
+      ]
+    },
+    "evaluationComposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "actual": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tooling",
+            "policySources"
+          ],
+          "properties": {
+            "tooling": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "execution"
+              ],
+              "properties": {
+                "source": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "digest",
+                    "digestAlgorithm"
+                  ],
+                  "properties": {
+                    "digest": {
+                      "type": "string",
+                      "pattern": "^sha256:[0-9a-f]{64}$"
+                    },
+                    "digestAlgorithm": {
+                      "const": "compliance.example/tooling-source-tree-digest/v1alpha1"
+                    }
+                  }
+                },
+                "execution": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "kind"
+                      ],
+                      "properties": {
+                        "kind": {
+                          "const": "source"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "kind",
+                        "wheelSha256"
+                      ],
+                      "properties": {
+                        "kind": {
+                          "const": "installed-wheel"
+                        },
+                        "wheelSha256": {
+                          "type": "string",
+                          "pattern": "^sha256:[0-9a-f]{64}$"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "policySources": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "content"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$"
+                  },
+                  "content": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "digest",
+                      "digestAlgorithm"
+                    ],
+                    "properties": {
+                      "digest": {
+                        "type": "string",
+                        "pattern": "^sha256:[0-9a-f]{64}$"
+                      },
+                      "digestAlgorithm": {
+                        "const": "compliance.example/policy-source-tree-digest/v1alpha1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "compositionDigestAlgorithm": {
+          "const": "compliance.example/composition-digest/v1alpha1"
+        },
+        "compositionDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "enforcement": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "directExpectedContent": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "digest",
+                  "digestAlgorithm"
+                ],
+                "properties": {
+                  "digest": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  },
+                  "digestAlgorithm": {
+                    "const": "compliance.example/policy-source-tree-digest/v1alpha1"
+                  }
+                }
+              }
+            },
+            "compositionLock": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "expected": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "tooling",
+                        "policySources"
+                      ],
+                      "properties": {
+                        "tooling": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "source",
+                            "execution"
+                          ],
+                          "properties": {
+                            "source": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "digest",
+                                "digestAlgorithm"
+                              ],
+                              "properties": {
+                                "digest": {
+                                  "type": "string",
+                                  "pattern": "^sha256:[0-9a-f]{64}$"
+                                },
+                                "digestAlgorithm": {
+                                  "const": "compliance.example/tooling-source-tree-digest/v1alpha1"
+                                }
+                              }
+                            },
+                            "execution": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "kind"
+                                  ],
+                                  "properties": {
+                                    "kind": {
+                                      "const": "source"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "kind",
+                                    "wheelSha256"
+                                  ],
+                                  "properties": {
+                                    "kind": {
+                                      "const": "installed-wheel"
+                                    },
+                                    "wheelSha256": {
+                                      "type": "string",
+                                      "pattern": "^sha256:[0-9a-f]{64}$"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "policySources": {
+                          "type": "array",
+                          "minItems": 1,
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "name",
+                              "content"
+                            ],
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$"
+                              },
+                              "content": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "digest",
+                                  "digestAlgorithm"
+                                ],
+                                "properties": {
+                                  "digest": {
+                                    "type": "string",
+                                    "pattern": "^sha256:[0-9a-f]{64}$"
+                                  },
+                                  "digestAlgorithm": {
+                                    "const": "compliance.example/policy-source-tree-digest/v1alpha1"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "digestAlgorithm": {
+                      "const": "compliance.example/composition-lock-digest/v1alpha1"
+                    },
+                    "digest": {
+                      "type": "string",
+                      "pattern": "^sha256:[0-9a-f]{64}$"
+                    }
+                  },
+                  "required": [
+                    "expected",
+                    "digestAlgorithm",
+                    "digest"
+                  ]
+                }
+              ]
+            }
+          },
+          "required": [
+            "directExpectedContent",
+            "compositionLock"
+          ]
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "distribution",
+            "version"
+          ],
+          "properties": {
+            "distribution": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "required": [
+        "actual",
+        "compositionDigestAlgorithm",
+        "compositionDigest",
+        "enforcement"
+      ]
+    },
+    "evaluator": {
+      "type": "object",
+      "required": [
+        "name",
+        "version",
+        "executableSha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "const": "opa"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$"
+        },
+        "executableSha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "documentDigestAlgorithm",
+        "setDigestAlgorithm",
+        "setDigest",
+        "documents"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "documentDigestAlgorithm": {
+          "const": "compliance.example/evidence-document-digest/v1alpha1"
+        },
+        "setDigestAlgorithm": {
+          "const": "compliance.example/evidence-set-digest/v1alpha1"
+        },
+        "setDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "documents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "digest"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "digest": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "selectedEvidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "instance_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requirement_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "requirement": {
+            "type": "object",
+            "required": [
+              "type",
+              "required",
+              "max_age"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "max_age": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*[smhd]$"
+              }
+            }
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "collected_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "instance_id",
+          "requirement_index",
+          "requirement",
+          "id",
+          "digest",
+          "collected_at"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "planningComposition"
+  ]
+}

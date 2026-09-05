@@ -499,3 +499,4 @@ printf 'Standalone tooling package validation passed for Python %s.\n' \
 
 # Successor provenance is validated separately from predecessor artifact readers.
 "$temporary/venv/bin/python" -I "$TOOLING_ROOT/scripts/check-installed-composition.py"
+PATH="$runtime_path" "$temporary/venv/bin/python" -I "$TOOLING_ROOT/scripts/check-installed-assessment.py"

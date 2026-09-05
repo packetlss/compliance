@@ -1,41 +1,123 @@
 # Locked Generated-Artifact Provenance
 
 
-The ADR 0007 successor foundation and deliberate pre-v4 transition are documented
-in [Actual composition and expected enforcement](composition.md). Existing
-predecessor workflows described here remain supported pending consumer cutover.
+`project-config/v1alpha3` produces assessment plan/results v4 in unlocked,
+direct-expected and composition-locked execution. The predecessor v1/v3 workflows
+below remain available pending consumer migration (#34–#36) and retirement (#33).
 
-Status: **Current pre-freeze artifact provenance contract**
+Status: **Current experimental artifact provenance contract; not frozen**
+
+## V4 provenance and semantic identity
+
+The closed v4 schemas retain the assessment payload and adapter handoff. Plans add
+`digestAlgorithm`, `id`, and `provenance` with schema
+`compliance.example/assessment-provenance/v1alpha1`. `planningComposition` records
+actual tooling/source composition, its algorithm/digest, optional descriptive
+metadata, and the direct/complete enforcement actually performed. Results copy
+that validated planning record and add separately observed `evaluationComposition`,
+exact `evaluator`, complete subject `evidence`, and `selectedEvidence`.
+
+The plan and results algorithms are respectively
+`compliance.example/assessment-plan-digest/v1alpha1` and
+`compliance.example/assessment-results-digest/v1alpha1`. Both SHA-256 hash RFC
+8785/JCS bytes after this explicit projection:
+
+- Remove only the top-level `id`.
+- For each composition stage retain its normalized `actual`,
+  `compositionDigestAlgorithm`, and `compositionDigest`; exclude stage descriptive
+  metadata and expected enforcement.
+- In result `observed.evidence_validation_errors` and
+  `observed.evidence_selection_ambiguities`, exclude optional `source` and
+  `schema_source` diagnostic locations. No arbitrary OPA observed/payload keys are
+  removed by name.
+- Retain all other payload, including `evaluated_at`, plan reference, evaluator,
+  full evidence snapshot, successful-selection facts, waiver revision/application,
+  requirement/realization roll-ups, and semantic diagnostics.
+
+Schema validation and cross-field checks precede identity acceptance. Composition
+source names/content and the policy revision must agree. Evaluation re-digests
+policy inputs and refuses any difference from planning, including unlocked runs;
+a selected complete lock must also match the planning composition. Evaluation may
+use a different provenance-complete tooling build in unlocked mode. Descriptive
+metadata and enforcement remain validated despite exclusion from identity.
+
+`id` is the complete result semantic digest; the retained `assessment_id` is the
+existing run label, not a replacement for the digest. No identity algorithm is
+frozen or renamed to `/v1`. Existing evidence document/set algorithms are unchanged.
+Schema diagnostic references use type plus source-name/relative-schema-path
+locators resolved in the trusted composition, not a new schema identity algorithm.
+Materialization paths are never source identity.
 
 ## Accepted v4 temporal provenance
 
-System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md#v4-factual-temporal-provenance-option-b)
-is **accepted design, not yet implemented** and narrowly clarifies #32's v4 scope.
-For each control's successful evidence selection, v4 must retain the selected
-**evidence ID plus complete-document digest**, the selected document's `collected_at`
-instant used in freshness evaluation, and an unambiguous association with the
-assessed plan's applicable requirement sufficient to resolve recorded `max_age`.
-The selected reference resolves into the complete subject evidence snapshot
-descriptor; successful selections remain distinct from rejected, ambiguous and
-otherwise nonselected candidates. Same-ID/different-digest documents must remain
-exactly attributable.
+The representation requirement of system
+[ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md#v4-factual-temporal-provenance-option-b)
+is implemented by #32. Operational evidence timeliness derivation remains
+unimplemented and requires its separate future tranche.
 
-Trusted assessment orchestration captures these validated, result-identity-bound
-facts from the same snapshotted documents consumed by evaluation; OPA/criterion
-self-reported IDs alone are insufficient. A shared evidence-use table or per-control
-references may satisfy the invariant; no JSON layout is prescribed. Preserve the
-existing evidence-document and evidence-set digest algorithms and complete snapshot
-obligations. ADR 0010 / PR #65 ambiguity diagnostics do not replace successful-selection
-provenance or alter selection semantics.
+Each successful selection is an entry in `provenance.selectedEvidence`:
 
-A later view must be able to derive timeliness without mutable evidence access,
-re-selection, evidence-ID-only joins or assumed long-term evidence-byte retention.
-These are historical facts, not stored `fresh`, `stale`, `current` or
-`reassessment_due` judgments. #32 implements representation only for this ADR and
-is not complete/merge-ready until the obligation is incorporated. No new result
-state, artifact family, retention system or monitoring/scheduling is introduced.
-The following v1/v3 sections continue to describe predecessor contracts pending
-consumer cutover, not an already implemented v4 temporal representation.
+```json
+{
+  "instance_id": "host.setting",
+  "requirement_index": 0,
+  "requirement": {"type": "host.settings/v1", "required": true, "max_age": "24h"},
+  "id": "evidence:observation",
+  "digest": "sha256:<complete-document digest>",
+  "collected_at": "2026-09-05T10:00:00.123456Z"
+}
+```
+
+The control instance and zero-based index resolve the exact evidence requirement
+in the assessed `plan_id`; the copied requirement must equal that plan entry and
+retains its `max_age`. Entries sort by control instance and requirement index.
+The ID/digest pair resolves into `provenance.evidence.documents`; repeated IDs with
+different document digests are separate references. The exact selected document's
+original collection-time string is retained. Generation validates the selection
+facts against both the plan and the in-memory snapshot actually evaluated. Stored
+validation checks their structure, unique associations, snapshot references and
+identity binding without reopening evidence paths.
+
+These are successful **selections**, including when a later criterion fails or
+returns unknown/error. A different required type failing selection prevents OPA
+for that control but does not erase successful selections of its other types.
+Rejected, ambiguous, missing and stale requirements receive no selection record.
+Unused and nonselected current-subject documents remain in the complete snapshot;
+canonical duplicates coalesce only during selection, not in the snapshot descriptor.
+OPA-reported `evidence_ids` neither supply nor override orchestration's facts.
+
+A later view can use these historical records without mutable evidence,
+re-selection, ID-only joins or long-term original-byte retention. No `fresh`,
+`stale`, `current`, `reassessment_due` or operational status is persisted. Neither
+historical outcome nor roll-ups change with later wall-clock time.
+
+## V4 required evidence and refusal
+
+[ADR 0010](../../docs/adr/0010-required-evidence-status-and-assessment-refusal.md)
+applies in the v4 path. Establish plan/composition/evaluator/catalog and snapshot
+integrity, explicitly route subject/type, validate every matching candidate, then
+apply existing freshness eligibility. Schema-invalid matching evidence produces
+attributable `unknown`; no dependent OPA call occurs. Distinct documents at the
+greatest eligible collection instant produce `evidence_selection_ambiguity`,
+`unknown` and no dependent OPA call. Complete canonical duplicates may coalesce
+for selection only. No older fallback, payload merge or ordering precedence exists.
+Independent controls remain assessable; any failed required selection blocks its
+control. Missing/stale required evidence is unknown, not a completed passing check.
+
+Structured validation diagnostics bind evidence ID/digest, schema reference,
+instance/schema pointers, keyword, stable code and human message. Ambiguity
+records retain subject, schema/type, requirement, assessment/tied instants and
+ordered candidate ID/digest pairs. Human explanations retain these diagnostics.
+Invalid-evidence counts belong to unknown. Only underlying fail can be waived;
+logical roll-ups preserve fail → error → unknown/missing → waived → pass.
+
+Unverifiable prerequisites, ambiguous routing, inaccessible/unrepresentable
+snapshot, validator implementation failure or invalid shared result provenance
+refuse the assessment. An identified criterion execution failure or unusable
+OPA decision becomes attributable error. Output encoding/validation precedes
+atomic publication; refusal/write failure leaves no new result envelope and does
+not present an older result as the refused attempt's output. Completing artifact
+creation is distinct from assessment pass.
 
 ## Content-addressed locked artifacts
 

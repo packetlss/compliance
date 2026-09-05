@@ -112,3 +112,16 @@ All four scripts export exact, hash-bearing runtime requirements from
 install the candidate wheel with dependency resolution disabled. The package
 gate covers both an initially empty dedicated uv cache and a fresh environment
 using the populated cache.
+
+## V4 conformance
+
+`test_assessment_v4.py` exercises required-evidence routing/refusal, all-candidate
+validation, ambiguity/coalescing, independent controls, selected factual temporal
+provenance, exact evaluator identity, waiver binding, malformed provenance, and
+path/order independence. `test_assessment_v4_cli.py` uses real OPA and the public
+CLI for unlocked/direct/locked equivalence, explanations and refusal without
+replacement. The package gate repeats that CLI proof with the installed wheel,
+verified local receipt and Git/network unavailable via
+`scripts/check-installed-assessment.py`. Existing JCS, domain, roll-up, scenario
+and predecessor locked-artifact gates remain required by impact. No test derives
+query-time operational timeliness.
