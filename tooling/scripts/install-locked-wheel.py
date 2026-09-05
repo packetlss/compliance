@@ -89,6 +89,16 @@ def main() -> None:
             check=True,
         )
 
+        # Bind locally supplied wheel bytes to the installed distribution. Isolated
+        # mode prevents the checkout/PYTHONPATH from supplying the installation hook.
+        subprocess.run(
+            [str(args.python), "-I", "-c",
+             "from pathlib import Path; import sys; "
+             "from tools.tooling_identity import create_wheel_receipt; "
+             "create_wheel_receipt(Path(sys.argv[1]))", str(args.wheel.resolve())],
+            check=True,
+        )
+
         verification = (
             "import importlib.metadata as m, json, sys; "
             "expected=json.loads(sys.argv[1]); "

@@ -1,5 +1,10 @@
 # Project Directory Layout
 
+
+The ADR 0007 successor foundation and deliberate pre-v4 transition are documented
+in [Actual composition and expected enforcement](composition.md). Existing
+predecessor workflows described here remain supported pending consumer cutover.
+
 Status: **Accepted convention (v0.3)**
 Last updated: **2026-09-04**
 

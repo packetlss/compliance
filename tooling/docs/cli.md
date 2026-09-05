@@ -1,5 +1,10 @@
 # Operator CLI, Project Registries, and Project Configuration
 
+
+The ADR 0007 successor foundation and deliberate pre-v4 transition are documented
+in [Actual composition and expected enforcement](composition.md). Existing
+predecessor workflows described here remain supported pending consumer cutover.
+
 Status: **Implemented prototype (v0.2)**
 Last updated: **2026-09-05**
 
