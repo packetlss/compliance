@@ -1,5 +1,10 @@
 # Tooling Release and Distribution Boundary
 
+
+The ADR 0007 successor foundation and deliberate pre-v4 transition are documented
+in [Actual composition and expected enforcement](composition.md). Existing
+predecessor workflows described here remain supported pending consumer cutover.
+
 Status: **Current pre-freeze package, release, and locked-composition contract**
 
 This document defines the standalone Python package, immutable tooling release,

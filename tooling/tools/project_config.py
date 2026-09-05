@@ -11,6 +11,10 @@ from typing import Any, Sequence
 import yaml
 from jsonschema import Draft202012Validator
 
+from .composition import (
+    CompositionError, CompositionLock, UniqueKeyLoader, COMPOSITION_LOCK_FILENAME,
+    load_composition_lock, require_composition, validate_composition,
+)
 from .policy_sources import PolicySource, normalize_policy_sources
 from .release import ToolingReleaseIdentity
 from .release_lock import (
@@ -24,6 +28,7 @@ from .release_lock import (
 
 CONFIG_FILENAME = "compliance.yaml"
 CONFIG_SCHEMA = "compliance.example/project-config/v1alpha1"
+CONFIG_SCHEMA_V1ALPHA3 = "compliance.example/project-config/v1alpha3"
 CONFIG_SCHEMA_V1ALPHA2 = "compliance.example/project-config/v1alpha2"
 PROJECT_REGISTRY_SCHEMA = "compliance.example/project-registry/v1alpha1"
 _LOCKED_RUNTIME_OVERRIDE_FLAGS = ("--policy-source", "--policies", "--resource-schema")
@@ -38,6 +43,8 @@ def project_config_schema_path(schema: str = CONFIG_SCHEMA) -> Path:
         filename = "project-config.schema.json"
     elif schema == CONFIG_SCHEMA_V1ALPHA2:
         filename = "project-config-v1alpha2.schema.json"
+    elif schema == CONFIG_SCHEMA_V1ALPHA3:
+        filename = "project-config-v1alpha3.schema.json"
     else:
         raise ProjectConfigError(f"unsupported project config schema: {schema!r}")
     return Path(__file__).resolve().parent / "schemas" / filename
@@ -56,6 +63,8 @@ class ProjectConfig:
     paths: dict[str, Path] = field(default_factory=dict)
     policy_sources: tuple[PolicySource, ...] = ()
     release_lock: ReleaseLock | None = None
+    composition_lock: CompositionLock | None = None
+    expected_content: dict[str, dict] = field(default_factory=dict)
     project_registry_source: Path | None = None
     project_name: str | None = None
     default_project: str | None = None
@@ -93,6 +102,12 @@ class ProjectConfig:
                 for source in self.policy_sources
             ],
         }
+        if self.schema == CONFIG_SCHEMA_V1ALPHA3:
+            document["expectedContent"] = self.expected_content
+            document["expectedComposition"] = (
+                {"path": str(self.composition_lock.source), "digest": self.composition_lock.digest()}
+                if self.composition_lock else None
+            )
         if self.release_lock is not None:
             document["release_lock"] = {
                 "source": str(self.release_lock.source),
@@ -156,8 +171,12 @@ def _validate_document(
 def _load_document(source: Path) -> Any:
     try:
         with source.open(encoding="utf-8") as stream:
-            documents = list(yaml.safe_load_all(stream))
-    except (OSError, yaml.YAMLError) as error:
+            text = stream.read()
+            documents = list(yaml.safe_load_all(text))
+            if (len(documents) == 1 and isinstance(documents[0], dict)
+                    and documents[0].get("schema") == CONFIG_SCHEMA_V1ALPHA3):
+                documents = list(yaml.load_all(text, Loader=UniqueKeyLoader))
+    except (OSError, yaml.YAMLError, CompositionError) as error:
         raise ProjectConfigError(f"cannot read configuration {source}: {error}") from error
 
     if len(documents) != 1:
@@ -177,7 +196,7 @@ def _load_project_config(
 ) -> ProjectConfig:
     raw_document = _load_document(source)
     schema = raw_document.get("schema") if isinstance(raw_document, dict) else None
-    if schema not in {CONFIG_SCHEMA, CONFIG_SCHEMA_V1ALPHA2}:
+    if schema not in {CONFIG_SCHEMA, CONFIG_SCHEMA_V1ALPHA2, CONFIG_SCHEMA_V1ALPHA3}:
         raise ProjectConfigError(
             f"unsupported project config schema in {source}: {schema!r}"
         )
@@ -221,8 +240,26 @@ def _load_project_config(
                 f"locked project config requires valid {RELEASE_LOCK_FILENAME}: {error}"
             ) from error
 
+    composition_lock = None
+    expected_content = {}
+    if schema == CONFIG_SCHEMA_V1ALPHA3:
+        expected_content = {
+            definition["name"]: definition["expectedContent"]
+            for definition in source_definitions if "expectedContent" in definition
+        }
+        if "expectedComposition" in document:
+            lock_source = base / COMPOSITION_LOCK_FILENAME
+            if lock_source.is_symlink() or lock_source.resolve().parent != base.resolve():
+                raise ProjectConfigError("composition lock must be the regular adjacent compliance.lock.yaml")
+            try:
+                composition_lock = load_composition_lock(lock_source)
+            except CompositionError as error:
+                raise ProjectConfigError(str(error)) from error
+
     return ProjectConfig(
         schema=schema,
+        composition_lock=composition_lock,
+        expected_content=expected_content,
         source=source,
         paths=paths,
         policy_sources=policy_sources,
@@ -276,7 +313,7 @@ def load_config(path: Path, project: str | None = None) -> ProjectConfig:
         raise ProjectConfigError(f"configuration does not exist: {source}")
     document = _load_document(source)
     schema = document.get("schema") if isinstance(document, dict) else None
-    if schema in {CONFIG_SCHEMA, CONFIG_SCHEMA_V1ALPHA2}:
+    if schema in {CONFIG_SCHEMA, CONFIG_SCHEMA_V1ALPHA2, CONFIG_SCHEMA_V1ALPHA3}:
         if project is not None:
             raise ProjectConfigError(
                 f"--project requires a project registry; {source} is a project config"
@@ -318,7 +355,8 @@ def load_config(path: Path, project: str | None = None) -> ProjectConfig:
 
 
 def _argument_uses_flag(argument: str, flag: str) -> bool:
-    return argument == flag or argument.startswith(flag + "=")
+    option = argument.split("=", 1)[0]
+    return option.startswith("--") and flag.startswith(option)
 
 
 def _locked_runtime_overrides(argv: Sequence[str]) -> list[str]:
@@ -356,15 +394,17 @@ def select_config(
         else discover_config(working_directory)
     )
     config = load_config(source, selected.project) if source else ProjectConfig()
-    if config.is_locked:
+    if config.is_locked or config.schema == CONFIG_SCHEMA_V1ALPHA3:
         rejected = _locked_runtime_overrides(argv)
         if rejected:
             raise ProjectConfigError(
-                "locked project configuration does not permit runtime contract "
+                "selected project configuration does not permit runtime contract "
                 "overrides: " + ", ".join(rejected)
             )
     if validate_release:
         validate_locked_project(config)
+        if config.schema == CONFIG_SCHEMA_V1ALPHA3:
+            composition_validation(config, require=True)
     return config
 
 
@@ -397,3 +437,20 @@ def format_config(config: ProjectConfig, output_format: str) -> str:
             pin = f" ({source.expected_digest})" if source.expected_digest else ""
             lines.append(f"  {source.name}  {source.path}{pin}")
     return "\n".join(lines)
+
+
+def composition_validation(config: ProjectConfig, *, require: bool = False) -> dict[str, Any]:
+    """Observe actual v1alpha3 composition independently on every invocation."""
+    if config.schema != CONFIG_SCHEMA_V1ALPHA3:
+        raise ProjectConfigError("composition diagnostics require project-config/v1alpha3")
+    try:
+        # Re-read the selected lock so subsequent execution never uses a stale expectation.
+        lock = config.composition_lock
+        if lock:
+            if lock.source.is_symlink():
+                raise CompositionError("composition lock must be a regular adjacent file")
+            lock = load_composition_lock(lock.source)
+        operation = require_composition if require else validate_composition
+        return operation(config.policy_sources, direct=config.expected_content, lock=lock)
+    except CompositionError as error:
+        raise ProjectConfigError(str(error)) from error

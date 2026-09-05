@@ -1,5 +1,10 @@
 # Locked Generated-Artifact Provenance
 
+
+The ADR 0007 successor foundation and deliberate pre-v4 transition are documented
+in [Actual composition and expected enforcement](composition.md). Existing
+predecessor workflows described here remain supported pending consumer cutover.
+
 Status: **Current pre-freeze artifact provenance contract**
 
 ## Content-addressed locked artifacts
