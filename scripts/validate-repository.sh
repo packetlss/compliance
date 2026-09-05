@@ -15,6 +15,9 @@ require_file() {
 
 require_file AGENTS.md
 require_file README.md
+require_file t3.json
+require_file .github/ISSUE_TEMPLATE/implementation.md
+require_file .github/PULL_REQUEST_TEMPLATE.md
 require_file docs/adr/README.md
 require_file docs/history/pre-consolidation.md
 require_file toolchain/versions.env
@@ -87,6 +90,13 @@ require_file scripts/validate-verification-scenarios.sh
 [[ ! -e pyproject.toml ]] || fail "repository root must not be a Python project"
 [[ ! -e uv.lock ]] || fail "repository root must not own a uv lock"
 [[ ! -e .gitmodules ]] || fail "submodules are not part of the consolidated target"
+
+python3 -m json.tool t3.json >/dev/null \
+  || fail "t3.json is not valid JSON"
+
+if grep -nE 'COMPLIANCE_CI_|PERSONAL_ACCESS_TOKEN|GH_PAT|GH_TOKEN|packetlss-labs/compliance-' t3.json; then
+  fail "T3 project configuration must not contain historical acquisition or credentials"
+fi
 
 expected_toolchain='PYTHON_VERSION=3.13.15
 UV_VERSION=0.12.5

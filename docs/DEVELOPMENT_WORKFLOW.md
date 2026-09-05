@@ -1,6 +1,6 @@
 # Development workflow
 
-This document defines the engineering lifecycle for `packetlss/compliance`. It applies to human-written changes and work performed by ChatGPT, Codex, or a hybrid workflow.
+This document defines the engineering lifecycle for `packetlss/compliance`. It applies to human-written changes and work performed through T3 Code or another agent interface.
 
 The issue, PR, CI, review, and definition-of-done requirements are independent of implementation agent.
 
@@ -8,42 +8,44 @@ The issue, PR, CI, review, and definition-of-done requirements are independent o
 
 Durable repository artifacts are normative project state. Git is the handoff boundary between design, implementation, review, and future sessions.
 
-Chat history, Codex session history, AI memory, and scratch state are not normative. A fresh human or agent must be able to reconstruct required work from this repository, a bounded issue, and linked durable design material.
+Chat history, T3 thread history, provider session history, AI memory, and scratch state are not normative. A fresh human or agent must be able to reconstruct implementation work from this repository, its issue or PR-only contract, and linked durable design material.
 
 Use each artifact for one role:
 
 - architecture docs — current semantics, invariants, boundaries, ownership, public/cross-component contracts;
 - ADRs — significant decisions, alternatives, rationale and consequences;
-- issues — bounded implementation contracts;
+- issues — durable implementation contracts and multi-step coordination;
 - tests — executable behavior/invariant evidence;
 - PRs — proposed delta, validation, findings and review history;
 - Git/releases — reviewed implementation and historical provenance.
 
 A design decision constraining implementation must be recorded durably before implementation relies on it.
 
-## Design → implementation → feedback loop
+## Explore → promote → implement → review
 
 ```text
-research / design / clarify
+read-only exploration thread
+  -> no action, or a distilled promotion packet
   -> durable design decision when needed
-  -> bounded GitHub issue
-  -> implementation
-  -> local validation / findings
+  -> GitHub issue when durable coordination is required
+  -> new implementation thread in an isolated worktree
+  -> working-tree tests
+  -> committed candidate and canonical local validation
+  -> PR linked to the issue/thread
+  -> fresh-context review on the exact PR head
+       | no finding
+       |   -> exact-head CI -> human squash merge
        | implementation-local
-       |   -> resolve within issue
+       |   -> return to implementation -> re-review
        |
        + architectural finding
-           -> return to design
-           -> update durable contract/issue
-  -> short-lived branch + PR
-  -> CI on reviewed revision
-  -> independent review / re-review
-  -> squash merge
+           -> return to exploration
+           -> update durable design and contract before implementation resumes
 ```
 
 Implementation-local findings may be resolved when they do not alter semantic meaning, architecture/trust boundaries, public/cross-component contracts, release identity, a new common abstraction, or issue scope.
 
-Return to design when a proposed resolution would:
+Return to exploration when a proposed resolution would:
 
 - change semantic meaning;
 - add/remove/weaken an architecture invariant;
@@ -57,7 +59,7 @@ Implementation convenience must not silently become architecture.
 
 ## Change classification
 
-Use the narrowest scope that correctly satisfies the issue.
+Use the narrowest scope that correctly satisfies the implementation contract.
 
 | Class | Typical owner / integration behavior |
 | --- | --- |
@@ -67,31 +69,38 @@ Use the narrowest scope that correctly satisfies the issue.
 | Canonical integration | `verification/scenarios/`; complete public behavior/feature coverage |
 | Installed-release/provenance | `tooling/` plus release validation lane |
 | Pre-freeze compatibility removal | Owning component after current replacement and consumer cutover are explicit |
-| Repository retirement | Destination #29 and its bounded retirement issues; no semantic changes |
 
-Co-location permits atomic cross-component changes only when the issue contract explicitly authorizes that scope.
+Co-location permits atomic cross-component changes only when a durable issue explicitly authorizes that scope.
 
-## Implementation modes
+## T3 Code thread modes
 
-### ChatGPT
+Use one T3 Code project rooted at this repository. Logical component roots remain repository-level ownership boundaries, not separate T3 projects.
 
-Prefer ChatGPT for architecture, requirements, semantics, research, design alternatives, roadmaps, ADRs, issue construction, GitHub coordination, review, and bounded repository-visible edits where local execution adds little signal.
+### Exploration thread
 
-### Codex
+Use an ordinary thread against a clean default-branch checkout with a read-only task contract and a supervised permission mode. It may inspect source, run non-mutating checks, test assumptions, compare alternatives, and construct a promotion packet. It does not edit files, create branches, or mutate GitHub.
 
-Prefer Codex for work materially benefiting from a runnable checkout: substantial implementation, source exploration, refactoring, dependency/tool use, build/test/debug loops, OPA/compiler behavior, migration execution, performance work, and concrete review remediation.
+The promotion packet contains the objective, write scope, design basis, acceptance criteria, non-goals, invariants, expected invalid behavior, validation, escalation conditions, and dependencies. Only accepted decisions that constrain future work become repository documentation or ADRs.
 
-A normal handoff is concise: implement issue #N; read `AGENTS.md`, the issue, and linked durable design; inspect current repository state; implement only the bounded contract; run required validation; resolve implementation-local questions; return architectural findings rather than silently changing semantics/boundaries/contracts/scope; record findings and validation in the PR.
+### Implementation thread
 
-### Hybrid
+Create a new T3-managed worktree from current `main`. The initial prompt names the issue or PR-only contract, applicable instruction route, write scope, required validation, and escalation conditions. One implementation thread owns edits in a worktree at a time.
 
-Use hybrid flow when design/semantics and repository-local implementation are both material.
+Resolve implementation-local questions within the contract. Return architectural findings to exploration rather than silently changing semantics, boundaries, contracts, or scope. Use fast working-tree tests during development; create a checkpoint commit before canonical gates that validate committed exported inputs.
 
-Choose the least operationally expensive execution mode that preserves correctness.
+### Review thread
 
-## Implementation issues
+After a PR is ready, start a fresh-context thread against its exact head. The review is read-only and checks both the implementation contract and repository standards. It reports actionable findings with locations and evidence, and does not edit the implementation worktree.
 
-A meaningful implementation issue should state enough durable context for a fresh implementation session:
+Material fixes return to the implementation thread and require re-review of the new head. Record the reviewer/provider, reviewed head, findings, and disposition in the PR. A review from another agent context is useful evidence but is not a substitute for human final merge authority.
+
+## Implementation contracts
+
+A durable issue is required for architecture or semantic changes, trust/repository/release boundaries, public or cross-component contracts, dependent migrations, backlog coordination, and work expected to span threads or sessions.
+
+A narrow nonsemantic documentation, test, refactor, or mechanical change may use its PR body as the implementation contract when it is expected to complete in one worktree and does not need independent backlog identity.
+
+Every implementation contract states enough durable context for a fresh implementation session:
 
 - objective and write scope;
 - design basis;
@@ -103,11 +112,13 @@ A meaningful implementation issue should state enough durable context for a fres
 - required validation; and
 - dependencies/sequencing.
 
-Link authoritative ADRs rather than duplicating them.
+Link authoritative ADRs rather than duplicating them. A thread transcript may be referenced for convenience but cannot supply missing normative scope.
 
 ## Repository-local validation
 
-Substantial implementation uses a runnable checkout/worktree and the repository's accepted toolchain. CI is an independent clean-environment gate, not a substitute for material local implementation testing.
+Substantial implementation uses a T3 worktree and the repository's accepted toolchain. CI is an independent clean-environment gate, not a substitute for material local implementation testing.
+
+Fast focused tests may run against uncommitted changes. Canonical component and scenario gates export committed inputs and therefore run only after a checkpoint commit from a clean worktree.
 
 Normal validation must not recreate the retired multi-repository workspace dependency graph. Component gates use co-located explicit roots, repository-owned fixtures, installed artifacts, or canonical integration as appropriate.
 
@@ -133,30 +144,23 @@ Historical pre-freeze readability is not a default required gate unless an expli
 
 ## Branches and PRs
 
-Use short-lived branches from current `main`, conventionally:
+Use short-lived branches and isolated worktrees from current `main`. T3-generated branch names are accepted; branch names are operational metadata rather than durable task identity. Identify the task through its linked issue or PR and a clear T3 thread title. Do not implement directly on `main`.
 
-```text
-issue-<number>/<short-description>
-```
-
-Do not implement directly on `main`.
-
-Every PR links its issue and records:
+Every PR links its issue when one is required, or contains its narrow PR-only contract, and records:
 
 - what changed and why;
 - behavioral impact;
 - validation actually performed;
 - architecture/provenance/compatibility impact;
-- material implementation findings or `None`; and
+- material implementation findings or `None`;
+- the independently reviewed exact head and outcome; and
 - integration/migration impact where applicable.
 
-Squash merge is the normal merge method.
+Squash merge is the only normal merge method. Delete merged branches after merge and settle the linked T3 thread.
 
 ## Merge authority
 
-Normal implementation PRs require human final merge after review and green CI.
-
-Retirement controller #29 is a narrow temporary exception: bounded documentation, routing, provenance, and mechanical retirement PRs may be squash-merged automatically when the issue explicitly allows it, the exact reviewed head has all applicable stable CI contexts green, the diff matches the nonsemantic contract, and no active work/provenance is lost. Any architecture/release/trust/public-contract decision leaves this exception and returns to normal human design authority.
+All PRs require human final merge after independent review and green exact-head CI. Agents must not enable or invoke automatic merge unless a future durable decision explicitly creates a new bounded exception.
 
 ## CI and dependency direction
 
@@ -176,9 +180,11 @@ Normal destination CI uses one repository checkout. It must not depend on histor
 
 Stable context names should change only through bounded migration with replacement evidence.
 
+CI may cancel a superseded run for an older head of the same PR. It must not path-filter away a stable context or treat a stale green revision as evidence for the current head.
+
 ## Review and definition of done
 
-Review the current PR head, not a stale earlier revision. A PR is complete only when its issue contract is satisfied, required local/CI validation is recorded/green, implementation findings are captured, generated/temporary state is clean, and no unresolved architectural finding remains.
+Review the current PR head, not a stale earlier revision. A PR is complete only when its implementation contract is satisfied, required local/CI validation is recorded and green, fresh-context review is recorded, implementation findings are captured, generated/temporary state is clean, and no unresolved architectural finding remains.
 
 Historical preservation is distinct from current compatibility. Do not keep active complexity solely because an unfrozen historical artifact exists.
 

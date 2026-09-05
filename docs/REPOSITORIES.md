@@ -77,7 +77,7 @@ Normal validation uses the current destination revision and temporary non-Git ma
 
 ## Historical repositories
 
-These repositories retain pre-consolidation history and release/design provenance and are retired only after destination authority/readiness is complete:
+These archived repositories retain pre-consolidation history and release/design provenance:
 
 - `packetlss-labs/compliance-tooling`
 - `packetlss-labs/compliance-control-library`
@@ -85,7 +85,7 @@ These repositories retain pre-consolidation history and release/design provenanc
 - `packetlss-labs/compliance-development-projects`
 - `packetlss-labs/compliance-project-iam-realization`
 - `packetlss-labs/compliance-verification-scenarios`
-- `packetlss-labs/compliance-workspace` (archive last)
+- `packetlss-labs/compliance-workspace`
 
 Exact source cutover commits and digests are recorded in `docs/history/pre-consolidation.md`.
 

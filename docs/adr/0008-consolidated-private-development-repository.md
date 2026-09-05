@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Original date:** 2026-09-04
 - **Destination authority transfer:** 2026-09-04
+- **T3 Code workflow refinement:** 2026-09-05
 - **Historical source:** `packetlss-labs/compliance-workspace@098ef18c1384b34c532f705b3f5b3d1a25bd638f`, `docs/adr/0008-consolidated-private-development-repository.md`
 
 This is the destination-owned normative restatement of accepted/amended workspace ADR 0008. It records the accepted repository decision and the now-implemented source layout without changing semantic or trust-boundary decisions.
@@ -91,17 +92,20 @@ Historical releases remain attached to their original repositories. This ADR doe
 
 ### Development workflow and provider controls
 
-Normal development follows:
+Normal development uses one T3 Code project at the repository root and follows:
 
 ```text
-bounded issue
-  -> branch from current main
-  -> focused implementation
-  -> pull request
-  -> CI on reviewed revision
-  -> review/re-review
+read-only exploration
+  -> implementation promotion packet
+  -> durable issue when coordination requires one
+  -> isolated worktree from current main
+  -> focused implementation and local validation
+  -> pull request linked to its issue/thread
+  -> fresh-context exact-head review and CI
   -> human squash merge
 ```
+
+Architecture, semantic, trust/repository/release, public or cross-component contract, dependent migration, and multi-session work requires a durable issue. A narrow one-worktree documentation, test, refactor, or mechanical change that changes no semantics or boundary may use its PR body as the implementation contract. T3-generated branch names are permitted because branch names are operational metadata; issues and PRs provide durable task identity.
 
 Stable destination CI surfaces are:
 
@@ -111,9 +115,9 @@ verification-scenarios
 installed-release-provenance
 ```
 
-CI evidence must be observed on the reviewed head. Provider-enforced branch protection, rulesets, required-status enforcement, conversation-resolution enforcement, or similar plan-gated controls are optional operational hardening, not architecture/cutover prerequisites.
+CI evidence and fresh-context review must cover the current head. Provider-enforced branch protection, rulesets, required-status enforcement, conversation-resolution enforcement, or similar plan-gated controls are optional operational hardening, not architecture prerequisites. Human final squash merge remains mandatory.
 
-Destination retirement issue #29 narrowly authorizes automatic squash merges for bounded documentation/routing/mechanical retirement changes after exact-head CI is green. That exception does not alter the normal development workflow or authorize automatic semantic decisions.
+During repository retirement, destination issue #29 narrowly authorized automatic squash merges for bounded documentation/routing/mechanical retirement changes after exact-head CI was green. That exception expired when retirement completed and grants no current merge authority.
 
 ### No normal sibling-repository acquisition
 
@@ -139,7 +143,7 @@ A future downstream starter should be designed from post-consolidation release c
 
 The six migrated source domains have destination authority records in `docs/history/pre-consolidation.md`. Canonical integration now runs entirely from the destination checkout and owns all 20 retained public CLI leaves and 18 retained domain features. Normal validation contains no old sibling-repository acquisition path.
 
-Retirement and final documentation/authority cutover are coordinated by destination #29.
+Retirement and final documentation/authority cutover completed under destination #29. The archived repositories remain historical provenance.
 
 ## Non-decisions
 
