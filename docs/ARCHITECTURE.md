@@ -24,6 +24,32 @@ Actual composition provenance and expected enforcement are separate: every succe
 
 ADR 0007 `composition-lock` is the sole forward complete expected-composition abstraction. `release-lock/v1alpha2` is only a temporary migration contract pending #33. The #57 `workspace-config` → `project-registry` cutover is implemented: the registry selects one project configuration by explicit name or default without composing policy or merging project state. Registry data/location and repository/workspace topology are nonsemantic; the retired discriminator is unsupported without an alias. The changed tooling source bytes affect only existing tooling provenance; technical control/assurance resource names remain unchanged pending #37.
 
+## Primary intended user jobs
+
+The system preserves decided security intent through policy resolution, technical realization, infrastructure handoff, independent evidence, assessment, and explanation. Infrastructure tooling, repository topology, and evidence-collection mechanisms do not become authoritative for policy meaning.
+
+These jobs describe the intended product scope of the accepted core, not a claim that every operator workflow is complete in the current CLI.
+
+- **Policy owner:** trace a decided policy objective or technical policy to the concrete technical criteria intended to realize it. This includes direct technical policy through `Baseline` / `BaselineOverlay` and optional higher-level objectives through requirement → realization → technical controls, with resolved parameters, lineage, deviations, exclusions, and source provenance. An authored realization describes design intent; it does not prove deployment or effectiveness.
+- **Security operator:** determine whether decided technical controls are actually satisfied and understand policy and assessment coverage. Keep a decided criterion's `pass` / `fail` / `unknown` / `error` assessment state distinct from unassigned scope, explicit exclusions or deviations, an absent realization for an assigned objective, missing or stale evidence, and broader security conditions with no identified active criterion. Passing assigned controls does not prove complete security-policy coverage. Discovery of observed-but-unaddressed security conditions is a separate future capability, not an implemented assessment claim.
+- **Infrastructure operator:** consume exact resolved, subject-scoped technical intent with provenance and integrate it into independently owned infrastructure tooling. External systems may translate the assessment plan into Ansible, Terraform, MDM, cloud-init, ticketing, configuration-management, or other delivery mechanisms, within the [external-adapter boundary](#external-adapter-boundary). Backend capability selection, configuration compilation, credentials, approvals, execution/apply, and provider state remain outside the core. Generated configuration does not establish that intended state was deployed or remains effective.
+- **Auditor / reviewer:** obtain attributable evidence and explanations of whether decided controls were satisfied, failed, unknown, waived, or otherwise qualified, with the provenance needed to understand the conclusion. Provenance identifies the inputs and execution used; it does not itself authenticate observation truth or approval authority. A point-in-time assessment is not automatically proof of continuous effectiveness. Framework mappings are bounded assurance claims, not automatic certification or legal-compliance claims.
+- **Evidence operator:** understand evidence demand and health: required evidence types, the subjects and controls requiring them, freshness requirements, missing/stale/invalid/otherwise unusable evidence, and the assessment outcomes blocked by those problems. This is an intended product job even though the current CLI does not provide a complete evidence-operator workflow. It does not introduce a new evidence resource or collection-failure taxonomy.
+
+These jobs do not settle invalid-required-evidence `unknown` versus `error` handling, present-state/current-status freshness semantics, detailed manual/procedural assurance or N/A semantics owned by #37, policy-gap discovery, evidence-operator CLI design, collector failure taxonomy, durable evidence retention, or continuous-effectiveness claims. Those decisions remain with their applicable design work; existing evidence/result contracts are not changed here.
+
+### Assessment-plan meaning
+
+`assessment-plan` remains the artifact name and responsibility boundary. Semantically, it carries resolved, subject-scoped security intent for decided, modeled policy, together with the assessment-specific information required to evaluate that intent. This is why the same plan is the external-adapter handoff described below. [ADR 0006](adr/0006-regulatory-assurance-and-external-adapter-boundary.md) and [ADR 0007](adr/0007-unified-actual-and-expected-composition-provenance.md) retain one plan responsibility: no rename, split, or second in-core adapter-input/configuration artifact is implied.
+
+The plan is not:
+
+- a complete inventory of all security concerns or proof that all meaningful security decisions have been made;
+- a backend configuration specification or authorization to apply changes; or
+- evidence that settings were deployed or remain effective at the present moment.
+
+This clarifies existing artifact meaning, not a new payload or readiness claim: #31 establishes the composition foundation, while v1alpha3 assessment artifact generation remains unavailable until the v4 implementation owned by #32.
+
 ## First-core policy and assurance model
 
 The first core has two complementary paths.
