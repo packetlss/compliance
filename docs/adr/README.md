@@ -18,7 +18,7 @@ The historical workspace copies, issues, and PRs remain decision/migration prove
 Accepted destination decisions:
 
 - [ADR 0009 — Converge active compliance vocabulary](0009-active-compliance-vocabulary.md)
-- [ADR 0010 — Required evidence, attributable errors, and assessment refusal](0010-required-evidence-status-and-assessment-refusal.md) — accepted design; runtime implementation in #32, promotion #61, candidate-selection follow-up #62.
+- [ADR 0010 — Required evidence, attributable errors, and assessment refusal](0010-required-evidence-status-and-assessment-refusal.md) — accepted design; runtime implementation in #32, promotions #61 (invalid evidence) and #62 (evidence selection ambiguity).
 
 Current system-level documents:
 

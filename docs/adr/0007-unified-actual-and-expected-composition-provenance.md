@@ -7,7 +7,7 @@
 
 This is the destination-owned normative restatement of accepted workspace ADR 0007. It preserves the accepted contract and updates only ownership/topology references.
 
-[ADR 0010](0010-required-evidence-status-and-assessment-refusal.md) clarifies the status/refusal boundary. Its safely attributable schema-invalid required evidence → `unknown` correction is the sole accepted exception to this ADR’s preservation of current semantic meaning, implemented by #32 after #31; the superseded tooling → `error` rule is not preserved, and historical results are not reinterpreted.
+[ADR 0010](0010-required-evidence-status-and-assessment-refusal.md) clarifies the status/refusal boundary. Its safely attributable schema-invalid required evidence and evidence selection ambiguity → `unknown` corrections are the only accepted exceptions to this ADR’s preservation of current semantic meaning, implemented by #32 after #31; the superseded tooling → `error` and traversal-order selection rules are not preserved, and historical results are not reinterpreted.
 
 ## Context
 

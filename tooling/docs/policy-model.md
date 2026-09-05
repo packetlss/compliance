@@ -330,13 +330,30 @@ Evidence schemas define a **minimum compatibility contract**:
 
 System [ADR 0010](../../docs/adr/0010-required-evidence-status-and-assessment-refusal.md) owns the normative
 evidence-condition matrix and `unknown` / `error` / refusal boundary. Its
-accepted correction is not yet implemented; #32 owns the runtime cutover.
+accepted corrections are not yet implemented; #32 owns the runtime cutover.
 Validate every explicitly matching subject/type document before freshness or
 candidate selection. Safely attributable schema-invalid required evidence,
 including mixed valid/invalid candidates, makes affected controls `unknown`;
 invalid evidence never reaches OPA. Attributable criterion execution/decision
 failures are `error`; untrustworthy routing, shared prerequisites or result
 integrity require assessment-wide refusal. Do not infer routing from paths.
+
+After validation, use existing eligibility/freshness requirements to find the
+greatest eligible collection instant for the subject and required evidence type.
+Coalesce only complete canonical-document duplicates tied at that instant, for
+selection only. Select a unique remaining document; distinct tied documents
+produce attributable, provenance-bound `unknown` for dependent controls without
+invoking their OPA criteria. Independent controls remain assessable. Do not use
+ID/digest, collector identity, filenames, traversal/materialization/source order,
+or other undeclared precedence; do not fall back to older evidence or merge
+payloads. Same payload with different IDs, collector metadata, or extensions is
+still distinct. ADR 0010 owns the full matrix and structured ambiguity diagnostics
+(code, subject/type/schema, freshness requirement, evaluation/selection instants,
+and candidate ID/digest pairs), exposed in JSON and human explanations by #32.
+Evidence identity, envelope, collector semantics, and freshness semantics are
+unchanged; coalescing for selection preserves the complete subject snapshot,
+including ambiguous and nonselected evidence. The predecessor order-dependent
+selection behavior is superseded as normative authority pending #32.
 
 The predecessor evaluator's matching-schema-failure → `error` rule is superseded
 as normative authority; the historical rationale remains in the

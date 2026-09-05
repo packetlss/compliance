@@ -71,6 +71,14 @@ for attributable execution/decision failure and requires refusal for
 untrustworthy routing, shared prerequisites, provenance or result integrity.
 Valid additional fields remain preserved; missing or stale evidence is `unknown`.
 
+ADR 0010 also requires #32 to detect distinct equally latest eligible complete
+evidence documents before OPA and synthesize provenance-bound `unknown` for
+dependent controls. Canonical-identical duplicates coalesce for selection only;
+independent controls remain assessable. JSON and human explanations must expose
+structured evidence selection ambiguity diagnostics. This is accepted design
+pending #32, distinct from assessment-wide refusal; roll-up and fail-only waiver
+semantics remain unchanged.
+
 The eventual #32 operator behavior must make invalid-evidence `unknown`
 prominent, retain validation diagnostics in human and JSON explanations, and
 move its counts from `error` to `unknown`. Creating an artifact is not a passing
