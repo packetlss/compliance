@@ -38,7 +38,7 @@ flowchart TD
 | `production-saas-tenants` | `company.saas-foundation@1` |
 
 The example has its own project configuration at
-[`compliance.yaml`](compliance.yaml). It assembles reusable controls and
+[`compliance.yaml`](compliance.yaml). It assembles reusable controls and evidence/parameter
 schemas from the co-located, independently named `control-library` source with
 synthetic baselines from `verification-policy`. Neither source has precedence.
 The validation registry registers it as `mock-fleet`, so operators can select
@@ -194,3 +194,7 @@ unaltered CSA CCM conformance.
 
 Generated evidence, plans, and results live below `generated/` and should not
 be committed.
+
+The `project-config/v1alpha3` configuration uses executing tooling’s inventory and
+assignment schemas. Assessment plans/results use v4 actual composition, evaluator,
+and evidence provenance; generated state remains local to this project.

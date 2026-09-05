@@ -27,7 +27,7 @@ def is_digest(value: object) -> bool:
 
 
 def assert_assessment_plan_handoff(plan: dict, subject_id: str) -> None:
-    if plan.get("schema") != "compliance.example/assessment-plan/v1":
+    if plan.get("schema") != "compliance.example/assessment-plan/v4":
         fail(f"unexpected assessment-plan schema for {subject_id}")
     if not is_digest(plan.get("id")) or not is_digest(plan.get("policy_revision")):
         fail(f"assessment plan lost plan or final policy identity for {subject_id}")
