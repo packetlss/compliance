@@ -9,6 +9,9 @@ import base64
 import csv
 import hashlib
 import io
+import importlib.util
+import marshal
+import types
 import json
 import re
 import sys
@@ -101,6 +104,36 @@ def _wheel_payload(wheel: bytes, dist_info: str) -> tuple[dict[str, bytes], dict
         return payload, release
 
 
+def _verify_bytecode(path: Path, root: Path, payload: dict[str, bytes]) -> None:
+    """Generated cache bytes are nonsemantic, but their executable code must match source."""
+    if path.parent.name != "__pycache__" or path.is_symlink():
+        raise ToolingIdentityError(f"unsupported or sourceless installed bytecode: {path}")
+    try:
+        source = Path(importlib.util.source_from_cache(str(path)))
+        name = source.relative_to(root).as_posix()
+        source_bytes = payload[name]
+        data = path.read_bytes()
+        if data[:4] != importlib.util.MAGIC_NUMBER or len(data) < 16:
+            raise ValueError("invalid bytecode header")
+        if int.from_bytes(data[4:8], "little") not in (0, 1, 3):
+            raise ValueError("invalid bytecode flags")
+        stream = io.BytesIO(data[16:])
+        code = marshal.load(stream)
+        if stream.read() or not isinstance(code, types.CodeType):
+            raise ValueError("invalid bytecode payload")
+        optimization = 0
+        if ".opt-" in path.name:
+            tag = path.name.rsplit(".opt-", 1)[1].removesuffix(".pyc")
+            if tag not in ("1", "2"):
+                raise ValueError("unsupported bytecode optimization")
+            optimization = int(tag)
+        expected = compile(source_bytes, code.co_filename, "exec", dont_inherit=True, optimize=optimization)
+        if code != expected:
+            raise ValueError("cached executable code differs from verified wheel source")
+    except (OSError, ValueError, KeyError, EOFError, TypeError) as error:
+        raise ToolingIdentityError(f"installed bytecode validation failed: {path}: {error}") from error
+
+
 def _validate_installation(dist: metadata.Distribution, info: Path, wheel: bytes) -> dict:
     """Compare wheel RECORD payload bytes and revalidate installation RECORD files."""
     payload, release = _wheel_payload(wheel, info.name)
@@ -127,13 +160,19 @@ def _validate_installation(dist: metadata.Distribution, info: Path, wheel: bytes
             raise ToolingIdentityError(f"installed RECORD path escapes environment: {name}")
         if target.is_symlink() or not target.is_file():
             raise ToolingIdentityError(f"installed RECORD file unavailable: {name}")
-        if name == record_name or (name.endswith('.pyc') and entry == ('', '')):
+        if name == record_name:
+            continue
+        if name.endswith('.pyc') and entry == ('', ''):
+            _verify_bytecode(target, root, payload)
             continue
         _verify_bytes(target.read_bytes(), entry, name)
     # Unrecorded runtime modules/schema files must not expand the validated wheel.
     for directory in ('tools', 'schemas'):
         for path in (root / directory).rglob('*'):
-            if path.is_file() and not (path.suffix == '.pyc' and '__pycache__' in path.parts):
+            if path.is_file():
+                if path.suffix == '.pyc':
+                    _verify_bytecode(path, root, payload)
+                    continue
                 name = path.relative_to(root).as_posix()
                 if name not in installed:
                     raise ToolingIdentityError(f"unrecorded installed runtime file: {name}")

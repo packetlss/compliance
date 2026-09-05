@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import importlib.util
+import marshal
 import socket
 import subprocess
 import tempfile
@@ -61,6 +63,27 @@ def main_proof() -> None:
             path = Path(dist.locate_file(name))
             refuse_mutation(path, path.read_bytes()+b'\n# tampered\n')
             refuse_mutation(path, None)
+        # Cache headers may make Python execute cached code without checking source.
+        # Verification must compare executable code, not ignore generated cache files.
+        source = Path(dist.locate_file('tools/release.py'))
+        for optimization in ('', '1', '2'):
+            cache = Path(importlib.util.cache_from_source(str(source), optimization=optimization))
+            cache.parent.mkdir(exist_ok=True)
+            original = cache.read_bytes() if cache.exists() else None
+            try:
+                code = compile(source.read_bytes(), str(source), 'exec', dont_inherit=True,
+                               optimize=int(optimization or '0'))
+                header = importlib.util.MAGIC_NUMBER + (1).to_bytes(4, 'little') + b'0'*8
+                cache.write_bytes(header + marshal.dumps(code))
+                actual_tooling_identity()
+                changed = compile("altered_behavior = True", str(source), 'exec')
+                refuse_mutation(cache, header + marshal.dumps(changed))
+                refuse_mutation(cache, header + marshal.dumps(code) + b'trailing')
+            finally:
+                if original is None:
+                    cache.unlink()
+                else:
+                    cache.write_bytes(original)
         unrecorded = Path(dist.locate_file('tools/unrecorded.py'))
         try:
             unrecorded.write_text('x = 1\n')

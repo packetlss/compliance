@@ -136,9 +136,11 @@ On each installed observation, tooling verifies the receipt against the
 installed distribution, retained wheel SHA-256, and installed RECORD SHA-256.
 It then revalidates the wheel archive's complete file set through wheel RECORD,
 compares the installed payload with those exact bytes, and validates every
-hash-bearing installed RECORD entry. RECORD's self entry and generated hashless
-Python bytecode entries follow their special RECORD treatment; generated
-`__pycache__` files are not source identity. Unrecorded runtime modules/schemas,
+hash-bearing installed RECORD entry. RECORD's self entry is necessarily unhashed.
+All generated Python bytecode, including hashless/unrecorded caches, is checked
+against compilation of the verified wheel-owned source at its declared optimization
+level. Altered executable code, invalid/trailing cache data and sourceless bytecode
+are refused; cache bytes and compilation filenames remain nonsemantic. Unrecorded runtime modules/schemas,
 missing files, symlinked evidence, altered payload, missing/altered receipt,
 wheel or RECORD are refused. Embedded canonical source metadata is accepted
 only after verifying it as part of those wheel bytes.
