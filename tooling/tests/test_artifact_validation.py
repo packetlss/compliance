@@ -24,6 +24,20 @@ from tools.render_plan import (
 
 
 class AssessmentArtifactValidationTests(unittest.TestCase):
+    def test_unknown_results_require_complete_frozen_control_coverage(self):
+        from tools.assessment_provenance import artifact_digest
+        report = self.result_report()
+        self.assertFalse(report['provenance']['selectedEvidence'])
+        self.assertTrue(report['results'])
+        for mutate in (lambda r: r['resolved_policy'].update(controls=[]),
+                       lambda r: r['resolved_policy']['controls'].append(copy.deepcopy(r['resolved_policy']['controls'][0])),
+                       lambda r: r['results'][0].update(control_id='different.implementation')):
+            changed = copy.deepcopy(report)
+            mutate(changed)
+            changed['id'] = artifact_digest(changed)
+            with self.assertRaisesRegex(ArtifactValidationError, 'differs from frozen policy'):
+                validate_assessment_results(changed)
+
     def test_matching_freshness_copies_cannot_bypass_instance_fingerprint(self):
         from tools.assessment_provenance import artifact_digest
         plan = copy.deepcopy(self.plan)

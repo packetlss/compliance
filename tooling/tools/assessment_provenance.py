@@ -106,6 +106,10 @@ def validate_provenance(document: dict, *, plan: bool) -> None:
         raise ValueError('results require valid error-free frozen policy resolution')
     validate_frozen(document['resolved_policy'])
     frozen_controls = {item['instance_id']: item for item in document['resolved_policy']['controls']}
+    if len(frozen_controls) != len(document['resolved_policy']['controls']) or set(frozen_controls) != {item['instance_id'] for item in document['results']}:
+        raise ValueError('result control coverage differs from frozen policy')
+    if any(item['control_id'] != frozen_controls[item['instance_id']]['implementation'] for item in document['results']):
+        raise ValueError('result implementation differs from frozen policy')
     for use in provenance['selectedEvidence']:
         control = frozen_controls.get(use['instance_id'])
         if control is None or use['requirement_index'] >= len(control['evidence']) or use['requirement'] != control['evidence'][use['requirement_index']]:
