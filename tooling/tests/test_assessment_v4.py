@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import test_evaluate_plan as fixtures
+from assessment_fixture import freeze_policy_inputs
 from tools.assessment_provenance import (
     PLAN_SCHEMA, PROVENANCE_SCHEMA, PLAN_DIGEST_ALGORITHM, artifact_digest, stage,
     validate_selection_plan,
@@ -37,6 +38,7 @@ class AssessmentV4Tests(unittest.TestCase):
     def sign_plan(self):
         from tools.policy_sources import policy_revision
         self.plan['policy_revision'] = policy_revision(self.plan['policy_sources'])
+        freeze_policy_inputs(self.plan)
         self.plan['id'] = artifact_digest(self.plan)
         validate_assessment_plan(self.plan)
 
@@ -184,6 +186,7 @@ class AssessmentV4Tests(unittest.TestCase):
         schema_path.write_text(json.dumps(schema))
         independent = copy.deepcopy(self.plan['controls'][0])
         independent['instance_id'] = 'independent'
+        independent['implementation'] = 'test.independent'
         independent['evidence'] = []
         self.plan['controls'].append(independent)
         self.plan['coverage']['active_control_count'] = 2
@@ -404,6 +407,7 @@ class AssessmentV4Tests(unittest.TestCase):
     def test_same_document_selected_for_two_requirements_retains_attributable_error(self):
         requirement = copy.deepcopy(self.plan['controls'][0]['evidence'][0])
         requirement['max_age'] = '48h'
+        requirement['id'] = 'second-observation'
         self.plan['controls'][0]['evidence'].append(requirement)
         self.sign_plan()
         for effect in (RuntimeError('scoped'), lambda *args: None):

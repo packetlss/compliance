@@ -11,7 +11,14 @@
         "instance_id": "workstation.homebrew.required-formulae",
         "implementation": "macos.homebrew.formulae_required",
         "parameters": {
-          "required": ["git"]
+          "required": [
+            "git"
+          ]
+        },
+        "evidence": {
+          "observation": {
+            "max_age": "24h"
+          }
         }
       },
       {
@@ -20,6 +27,11 @@
         "parameters": {
           "setting": "sip",
           "expected": "enabled"
+        },
+        "evidence": {
+          "observation": {
+            "max_age": "24h"
+          }
         }
       }
     ]

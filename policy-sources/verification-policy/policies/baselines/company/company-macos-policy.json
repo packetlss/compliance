@@ -9,14 +9,14 @@
     "extends": [
       {
         "baseline": "benchmark.example.macos-hardening@2026.1",
-        "digest": "sha256:5141284a00bc0ba31fd865ea0befda3be4f44746d9da53e572d0634874a5eaf7"
+        "digest": "sha256:720bed5dfc2c2d22b884ff36b77fa19e31cd948d41968615ccaa2953b5c9050f"
       }
     ],
     "operations": [
       {
         "op": "tailor",
         "target": "benchmark.example.macos.minimum-version",
-        "expected_parent_fingerprint": "sha256:ae4e9613d237011e8594f9620c85eb0dd933fdd25dc6fbb2e0f82179fbecfd80",
+        "expected_parent_fingerprint": "sha256:7c793db86ac6eb5ac69475d50a2d3d3ad4c6f8f556059db2ab5e6e2e36c21f6f",
         "parameters": {
           "minimum": "26.0.0"
         },
@@ -31,7 +31,7 @@
       {
         "op": "exclude",
         "target": "benchmark.example.macos.audit-formula-required",
-        "expected_parent_fingerprint": "sha256:2ffd5f051c35c6e526c9f3de6fd6d0a9875b4952c85cf9f49470f844653b2672",
+        "expected_parent_fingerprint": "sha256:88103cfc471430fb952f1d1049a64ea4908b15a7615b80993243bb6a528397a5",
         "deviation": {
           "id": "DEV-MAC-002",
           "classification": "alternative-company-control",
@@ -43,8 +43,12 @@
       {
         "op": "seal",
         "target": "benchmark.example.macos.gatekeeper-enabled",
-        "expected_parent_fingerprint": "sha256:c0c124fe5d840dabdeeca93f87e60e818841780321966728dbeedac1990684ba",
-        "blocked_operations": ["tailor", "exclude", "substitute"],
+        "expected_parent_fingerprint": "sha256:2e28771b3f6d2bd2f3b787d725193e87523e73d121ca28d2c9459fe106f1b7d0",
+        "blocked_operations": [
+          "tailor",
+          "exclude",
+          "substitute"
+        ],
         "reason": "Use-case overlays may not weaken the company Gatekeeper requirement."
       },
       {
@@ -53,7 +57,14 @@
           "instance_id": "company.macos.opa-required",
           "implementation": "macos.homebrew.formulae_required",
           "parameters": {
-            "required": ["opa"]
+            "required": [
+              "opa"
+            ]
+          },
+          "evidence": {
+            "observation": {
+              "max_age": "24h"
+            }
           }
         }
       }

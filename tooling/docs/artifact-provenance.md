@@ -55,8 +55,11 @@ System [ADR 0012](../../docs/adr/0012-explicit-policy-parameter-resolution.md#im
 accepts successor resolved parameter, declaration/schema pin, binding/tailoring,
 consumption-edge, exact destination and policy-owned freshness facts in the same
 assessment plan/results boundary. [#73](https://github.com/packetlss/compliance/issues/73)
-owns their schema, validation and identity/fingerprint migration; they are not
-current v4 fields. That migration must preserve the historical selected-document
+implements their schema, validation and identity/fingerprint migration. Plans
+retain `parameter_derivation`, `parameter_facts` and per-control `policy_inputs`;
+results retain the corresponding frozen records in `resolved_policy`.
+[The parameter contract](policy-parameters.md) specifies the normalization and
+validation projection. This preserves the historical selected-document
 and exact assessed-dependency/`max_age` attribution below, without re-resolving
 parameters during evaluation or rewriting historical artifacts.
 
@@ -71,7 +74,7 @@ Each successful required-evidence selection is an entry in `provenance.selectedE
 {
   "instance_id": "host.setting",
   "requirement_index": 0,
-  "requirement": {"type": "host.settings/v1", "required": true, "max_age": "24h"},
+  "requirement": {"id": "settings", "type": "host.settings/v1", "required": true, "max_age": "86400s"},
   "id": "evidence:observation",
   "digest": "sha256:<complete-document digest>",
   "collected_at": "2026-09-05T10:00:00.123456Z"

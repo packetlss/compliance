@@ -120,6 +120,7 @@ class PolicyDiffTests(unittest.TestCase):
             if item["instance_id"] == "developer.macos.shellcheck-required"
         )
         control["parameters"] = {"required": ["shellcheck", "shfmt"]}
+        control["policy_inputs"]["instance"]["parameters"] = copy.deepcopy(control["parameters"])
         control["definition_fingerprint"] = "sha256:" + "0" * 64
         self.resign(after)
 
@@ -161,6 +162,8 @@ class PolicyDiffTests(unittest.TestCase):
             "evidence": template["evidence"],
             "implementation_sources": template["implementation_sources"],
         })
+        active["policy_inputs"]["definition"] = copy.deepcopy(template["policy_inputs"]["definition"])
+        active["policy_inputs"]["parameters_schema"] = copy.deepcopy(template["policy_inputs"]["parameters_schema"])
         before["controls"].append(active)
         before["controls"].sort(key=lambda item: item["instance_id"])
         before["coverage"]["active_control_count"] += 1
@@ -189,7 +192,11 @@ class PolicyDiffTests(unittest.TestCase):
         requirement = after["requirements"][0]
         requirement["reference"] = "company.iam.role-based-access@2"
         requirement["title"] = "Centrally governed interactive access"
-        requirement["digest"] = "sha256:" + "0" * 64
+        for baseline in after['resolved_requirement_baselines']:
+            for pin in baseline['requirements']:
+                pin['requirement'] = requirement['reference']
+        from assessment_fixture import freeze_policy_inputs
+        freeze_policy_inputs(after)
         self.resign(after)
 
         document = build_policy_diff(self.iam_plan, after)

@@ -14,26 +14,49 @@
       {
         "instance_id": "benchmark.example.macos.minimum-version",
         "implementation": "macos.system.minimum_version",
-        "external_refs": ["illustrative-benchmark:1.1"],
+        "external_refs": [
+          "illustrative-benchmark:1.1"
+        ],
         "parameters": {
           "minimum": "26.6.0"
+        },
+        "evidence": {
+          "observation": {
+            "max_age": "24h"
+          }
         }
       },
       {
         "instance_id": "benchmark.example.macos.gatekeeper-enabled",
         "implementation": "macos.security.setting_equals",
-        "external_refs": ["illustrative-benchmark:1.2"],
+        "external_refs": [
+          "illustrative-benchmark:1.2"
+        ],
         "parameters": {
           "setting": "gatekeeper",
           "expected": "enabled"
+        },
+        "evidence": {
+          "observation": {
+            "max_age": "24h"
+          }
         }
       },
       {
         "instance_id": "benchmark.example.macos.audit-formula-required",
         "implementation": "macos.homebrew.formulae_required",
-        "external_refs": ["illustrative-benchmark:1.3"],
+        "external_refs": [
+          "illustrative-benchmark:1.3"
+        ],
         "parameters": {
-          "required": ["example-audit-tool"]
+          "required": [
+            "example-audit-tool"
+          ]
+        },
+        "evidence": {
+          "observation": {
+            "max_age": "24h"
+          }
         }
       }
     ]

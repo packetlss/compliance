@@ -9,17 +9,20 @@
     "extends": [
       {
         "baseline": "company.linux-server-hardening@1",
-        "digest": "sha256:2e26e3268239d9c74e36b50165603ae512180bc4d192dfddf888efd049c7132f"
+        "digest": "sha256:77b70987626fc95cdd0a71183fbd517f684017ea79cf5aee77eb6f3f0a1b044b"
       }
     ],
     "operations": [
       {
         "op": "tailor",
         "target": "benchmark.example.linux-server.ip-forwarding-disabled",
-        "expected_parent_fingerprint": "sha256:d2dc5ee2f44b1b6830431041ae102bf2a1bc0b5c4ef7906b5e37d19e7324de3f",
+        "expected_parent_fingerprint": "sha256:e0093723d2740bd3a7e59717dc2832dee90784a2f770dee7ab92bcadbfd6b4bf",
         "parameters": {
           "settings": [
-            {"key": "net.ipv4.ip_forward", "value": "1"}
+            {
+              "key": "net.ipv4.ip_forward",
+              "value": "1"
+            }
           ]
         },
         "deviation": {
@@ -38,8 +41,15 @@
           "parameters": {
             "ecosystem": "linux-native",
             "required": [
-              {"id": "containerd"}
+              {
+                "id": "containerd"
+              }
             ]
+          },
+          "evidence": {
+            "observation": {
+              "max_age": "24h"
+            }
           }
         }
       }

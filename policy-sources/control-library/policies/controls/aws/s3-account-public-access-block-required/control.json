@@ -7,12 +7,14 @@
   },
   "spec": {
     "entrypoint": "data.compliance.controls.aws.s3_account_public_access_block_required.evaluate",
-    "applies_to": ["aws-account"],
+    "applies_to": [
+      "aws-account"
+    ],
     "evidence": [
       {
         "type": "aws.s3.account-public-access-block/v1",
         "required": true,
-        "max_age": "24h"
+        "id": "observation"
       }
     ],
     "parameters_schema": "parameters.schema.json",

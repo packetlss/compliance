@@ -1,6 +1,6 @@
 # ADR 0012: Explicit policy-parameter resolution and policy-owned evidence freshness
 
-- **Status:** Accepted design, not yet implemented
+- **Status:** Implemented under #73; experimental, not frozen
 - **Date:** 2026-09-05
 - **Parent architecture contract:** [#37](https://github.com/packetlss/compliance/issues/37)
 - **Runtime/schema migration:** [#73](https://github.com/packetlss/compliance/issues/73); no runtime change in this promotion
@@ -14,6 +14,10 @@ identity, resolution, direct typed consumption or unresolved-policy boundary.
 Complete #73 independently, then plan their coordinated successor under #37.
 Historical deferrals below describe this ADR's bounded scope, not unsettled
 invariants already decided by ADRs 0013–0015.
+
+The initial-current descriptions and migration table below record the pre-#73
+starting point. [The implementation contract](../../tooling/docs/policy-parameters.md)
+specifies the resulting experimental representation.
 
 ## Context and authority
 

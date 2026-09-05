@@ -24,7 +24,7 @@ ASSEMBLY_ROOTS = (
 TOP_LEVEL_ENTRIES = {"external-sources", "policy-sources", "tooling", "verification"}
 POLICY_SOURCE_ENTRIES = {"control-library", "verification-policy"}
 EXPECTED_PRIVATE_POLICY_DIGEST = (
-    "sha256:f94aea8ac3259219c8a745a9bcd057f7ccdb80c97bed36a923f4f2522e3644aa"
+    "sha256:c8c2915073803117de84c1d8a06d4adec4333c8f7c638c1fdfb1253b5fafbf74"
 )
 POLICY_SOURCE_DIGEST_ALGORITHM = (
     "compliance.example/policy-source-tree-digest/v1alpha1"
@@ -109,7 +109,7 @@ def materialize_private_source(root: Path) -> str:
     relocated_digest = source_tree_digest(fixture_policy)
     require(
         relocated_digest == EXPECTED_PRIVATE_POLICY_DIGEST,
-        "relocated fixture private-policy digest differs from historical policy/: "
+        "relocated fixture private-policy digest differs from current policy/: "
         f"expected {EXPECTED_PRIVATE_POLICY_DIGEST}, found {relocated_digest}",
     )
     require(not private_root.exists(), f"private source root already exists: {private_root}")
@@ -189,7 +189,7 @@ def verify(root: Path) -> None:
     )
     require(
         source_tree_digest(private_root) == EXPECTED_PRIVATE_POLICY_DIGEST,
-        "materialized environment-private digest differs from historical policy/",
+        "materialized environment-private digest differs from current policy/",
     )
     require(
         not any(path.name == ".git" for path in root.rglob(".git")),
@@ -210,7 +210,7 @@ def verify(root: Path) -> None:
         flush=True,
     )
     print(f"Digest algorithm: {POLICY_SOURCE_DIGEST_ALGORITHM}", flush=True)
-    print(f"Historical policy/: {EXPECTED_PRIVATE_POLICY_DIGEST}", flush=True)
+    print(f"Current policy/: {EXPECTED_PRIVATE_POLICY_DIGEST}", flush=True)
     print(f"Relocated fixture policy/: {EXPECTED_PRIVATE_POLICY_DIGEST}", flush=True)
     print(f"Materialized environment-private/: {source_tree_digest(private_root)}", flush=True)
     print(f"Execution fixture root: {fixture_root}", flush=True)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import copy
+
 import json
 import re
 import os
@@ -298,6 +300,7 @@ def evaluate_plan_document(
         "summary": summarize(results),
         "requirement_summary": summarize(requirement_assessments),
         "requirement_baseline_summary": summarize(requirement_baseline_assessments),
+        "resolved_policy": {key: copy.deepcopy(plan[key]) for key in ("controls", "requirements", "resolved_requirement_baselines", "resolution")},
         "results": results,
         "requirement_assessments": requirement_assessments,
         "requirement_baseline_assessments": requirement_baseline_assessments,

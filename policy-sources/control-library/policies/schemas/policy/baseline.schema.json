@@ -3,20 +3,35 @@
   "$id": "https://compliance.example/schemas/policy/baseline-v1.schema.json",
   "title": "Compliance baseline",
   "type": "object",
-  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "spec"
+  ],
   "additionalProperties": false,
   "properties": {
-    "apiVersion": {"const": "compliance.example/v1"},
-    "kind": {"const": "Baseline"},
-    "metadata": {"$ref": "#/$defs/metadata"},
+    "apiVersion": {
+      "const": "compliance.example/v1"
+    },
+    "kind": {
+      "const": "Baseline"
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    },
     "spec": {
       "type": "object",
-      "required": ["controls"],
+      "required": [
+        "controls"
+      ],
       "additionalProperties": false,
       "properties": {
         "controls": {
           "type": "array",
-          "items": {"$ref": "#/$defs/controlInstance"}
+          "items": {
+            "$ref": "#/$defs/controlInstance"
+          }
         }
       }
     }
@@ -24,13 +39,21 @@
   "$defs": {
     "revision": {
       "oneOf": [
-        {"type": "integer", "minimum": 1},
-        {"type": "string", "minLength": 1}
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "string",
+          "minLength": 1
+        }
       ]
     },
     "metadata": {
       "type": "object",
-      "required": ["id"],
+      "required": [
+        "id"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -38,35 +61,78 @@
           "minLength": 1,
           "pattern": "^[a-z0-9][a-z0-9._-]*$"
         },
-        "version": {"$ref": "#/$defs/revision"},
-        "revision": {"$ref": "#/$defs/revision"},
+        "version": {
+          "$ref": "#/$defs/revision"
+        },
+        "revision": {
+          "$ref": "#/$defs/revision"
+        },
         "origin": {
           "type": "object",
-          "required": ["type", "name"],
+          "required": [
+            "type",
+            "name"
+          ],
           "additionalProperties": true,
           "properties": {
-            "type": {"type": "string", "minLength": 1},
-            "name": {"type": "string", "minLength": 1}
+            "type": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         }
       },
       "oneOf": [
-        {"required": ["version"], "not": {"required": ["revision"]}},
-        {"required": ["revision"], "not": {"required": ["version"]}}
+        {
+          "required": [
+            "version"
+          ],
+          "not": {
+            "required": [
+              "revision"
+            ]
+          }
+        },
+        {
+          "required": [
+            "revision"
+          ],
+          "not": {
+            "required": [
+              "version"
+            ]
+          }
+        }
       ]
     },
     "severity": {
       "type": "string",
-      "enum": ["info", "low", "medium", "high", "critical"]
+      "enum": [
+        "info",
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
     },
     "externalRefs": {
       "type": "array",
       "uniqueItems": true,
-      "items": {"type": "string", "minLength": 1}
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "controlInstance": {
       "type": "object",
-      "required": ["instance_id", "implementation"],
+      "required": [
+        "instance_id",
+        "implementation"
+      ],
       "additionalProperties": false,
       "properties": {
         "instance_id": {
@@ -79,10 +145,36 @@
           "minLength": 1,
           "pattern": "^[a-z0-9][a-z0-9._-]*$"
         },
-        "parameters": {"type": "object", "additionalProperties": true},
-        "severity": {"$ref": "#/$defs/severity"},
-        "remediation": {"type": "string"},
-        "external_refs": {"$ref": "#/$defs/externalRefs"}
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "severity": {
+          "$ref": "#/$defs/severity"
+        },
+        "remediation": {
+          "type": "string"
+        },
+        "external_refs": {
+          "$ref": "#/$defs/externalRefs"
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "max_age": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*[smhd]$"
+              },
+              "inputs": {
+                "type": "object"
+              }
+            },
+            "required": []
+          }
+        }
       }
     }
   }

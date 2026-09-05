@@ -803,7 +803,8 @@
         "reference",
         "digest",
         "policy_sources",
-        "requirements"
+        "requirements",
+        "parameter_derivation"
       ],
       "additionalProperties": false,
       "properties": {
@@ -839,6 +840,9 @@
           "items": {
             "$ref": "#/$defs/requirementPin"
           }
+        },
+        "parameter_derivation": {
+          "type": "object"
         }
       }
     },
@@ -1000,7 +1004,8 @@
         "adoption",
         "satisfaction",
         "technical_instance_ids",
-        "provenance"
+        "provenance",
+        "parameter_facts"
       ],
       "additionalProperties": false,
       "properties": {
@@ -1070,6 +1075,9 @@
         },
         "realization": {
           "$ref": "#/$defs/realization"
+        },
+        "parameter_facts": {
+          "type": "object"
         }
       }
     },
@@ -1078,7 +1086,8 @@
       "required": [
         "type",
         "required",
-        "max_age"
+        "max_age",
+        "id"
       ],
       "additionalProperties": false,
       "properties": {
@@ -1092,6 +1101,13 @@
         "max_age": {
           "type": "string",
           "pattern": "^[1-9][0-9]*[smhd]$"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inputs": {
+          "type": "object"
         }
       }
     },
@@ -1161,6 +1177,9 @@
             "evaluate",
             "excluded"
           ]
+        },
+        "evidence": {
+          "type": "object"
         }
       }
     },
@@ -1304,7 +1323,8 @@
         "deviations",
         "lineage",
         "provenance",
-        "implementation_sources"
+        "implementation_sources",
+        "policy_inputs"
       ],
       "additionalProperties": false,
       "properties": {
@@ -1406,6 +1426,9 @@
         "equivalence_ref": {
           "type": "string",
           "minLength": 1
+        },
+        "policy_inputs": {
+          "type": "object"
         }
       }
     },
@@ -1480,6 +1503,9 @@
         },
         "overlay_policy": {
           "$ref": "#/$defs/overlayPolicy"
+        },
+        "policy_inputs": {
+          "type": "object"
         }
       }
     },

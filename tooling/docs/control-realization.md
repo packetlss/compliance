@@ -135,9 +135,10 @@ accepts technology-neutral parameter declarations and explicit RequirementBaseli
 bindings/parameter-only derivation, with realization links from exact semantic
 slots into required technical/evidence/freshness dependency inputs. Plans
 materialize those values with provenance; copied literals do not supply the
-semantic linkage. This is **accepted design, not yet implemented**; [#73](https://github.com/packetlss/compliance/issues/73)
-owns the coordinated migration. The current schemas and examples below retain
-complete literal checks until cutover. Missing realization/coverage behavior,
+semantic linkage. [#73](https://github.com/packetlss/compliance/issues/73) implements this migration;
+[the parameter contract](policy-parameters.md) defines its concrete fields and identity
+projection. Realizations still declare their complete checks, with explicit symbolic
+links for semantic parameters. Missing realization/coverage behavior,
 `allOf` and provenance-only `based_on` are unchanged; broader #37 assurance and
 external-claim authority remain separate work.
 

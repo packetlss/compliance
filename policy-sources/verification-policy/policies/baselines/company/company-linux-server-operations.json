@@ -13,8 +13,15 @@
         "parameters": {
           "ecosystem": "linux-native",
           "required": [
-            {"id": "auditd"}
+            {
+              "id": "auditd"
+            }
           ]
+        },
+        "evidence": {
+          "observation": {
+            "max_age": "24h"
+          }
         }
       }
     ]

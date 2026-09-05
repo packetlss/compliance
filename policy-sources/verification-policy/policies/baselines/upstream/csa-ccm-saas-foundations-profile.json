@@ -16,31 +16,52 @@
       {
         "instance_id": "csa-ccm.saas.sso-enforced",
         "implementation": "saas.tenant.setting_equals",
-        "external_refs": ["CSA-CCM-v4.1:IAM-domain"],
+        "external_refs": [
+          "CSA-CCM-v4.1:IAM-domain"
+        ],
         "parameters": {
           "section": "authentication",
           "setting": "sso_enforced",
           "expected": true
+        },
+        "evidence": {
+          "observation": {
+            "max_age": "24h"
+          }
         }
       },
       {
         "instance_id": "csa-ccm.saas.mfa-enforced",
         "implementation": "saas.tenant.setting_equals",
-        "external_refs": ["CSA-CCM-v4.1:IAM-domain"],
+        "external_refs": [
+          "CSA-CCM-v4.1:IAM-domain"
+        ],
         "parameters": {
           "section": "authentication",
           "setting": "mfa_enforced",
           "expected": true
+        },
+        "evidence": {
+          "observation": {
+            "max_age": "24h"
+          }
         }
       },
       {
         "instance_id": "csa-ccm.saas.audit-log-retention",
         "implementation": "saas.tenant.number_at_least",
-        "external_refs": ["CSA-CCM-v4.1:LOG-domain"],
+        "external_refs": [
+          "CSA-CCM-v4.1:LOG-domain"
+        ],
         "parameters": {
           "section": "audit_log",
           "setting": "retention_days",
           "minimum": 365
+        },
+        "evidence": {
+          "observation": {
+            "max_age": "24h"
+          }
         }
       }
     ]

@@ -31,6 +31,8 @@ class PolicyDiffExampleTests(unittest.TestCase):
             "company.aws.s3-account-public-access-block"
         )
 
+        base["controls"][0]["policy_inputs"]["instance"]["instance_id"] = base["controls"][0]["instance_id"]
+
         def sample(_project, subject_id):
             plan = copy.deepcopy(base)
             plan["subject"]["id"] = subject_id

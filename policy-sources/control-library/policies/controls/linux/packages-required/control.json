@@ -7,12 +7,14 @@
   },
   "spec": {
     "entrypoint": "data.compliance.controls.linux.packages_required.evaluate",
-    "applies_to": ["linux-host"],
+    "applies_to": [
+      "linux-host"
+    ],
     "evidence": [
       {
         "type": "linux.packages/v1",
         "required": true,
-        "max_age": "24h"
+        "id": "observation"
       }
     ],
     "parameters_schema": "parameters.schema.json",

@@ -7,12 +7,14 @@
   },
   "spec": {
     "entrypoint": "data.compliance.controls.macos.security_setting_equals.evaluate",
-    "applies_to": ["macos-workstation"],
+    "applies_to": [
+      "macos-workstation"
+    ],
     "evidence": [
       {
         "type": "macos.security/v1",
         "required": true,
-        "max_age": "24h"
+        "id": "observation"
       }
     ],
     "parameters_schema": "parameters.schema.json",

@@ -843,6 +843,11 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
             f'{requirement["title"]}'
         )
         lines.append(f'    adoption: {requirement["adoption"]["status"]}')
+        facts = requirement.get('parameter_facts', {})
+        for name, slot in sorted(facts.get('states', {}).items()):
+            lines.append(f"    parameter {name}: " + json.dumps(slot, sort_keys=True))
+        for consumption in facts.get('consumption', []):
+            lines.append("    consumption: " + json.dumps(consumption, sort_keys=True))
         if requirement.get("external_refs"):
             lines.append("    external refs: " + ", ".join(requirement["external_refs"]))
         if realization := requirement.get("realization"):
@@ -890,6 +895,7 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
                 f'      digest: {waiver["digest"]}',
             ])
         lines.append(f"    effective criteria: {effective_criteria(control)}")
+        lines.append("    policy evidence requirements: " + json.dumps(control['evidence'], sort_keys=True))
         if control.get("external_refs"):
             lines.append("    external refs: " + ", ".join(control["external_refs"]))
         if lineage := lineage_description(control):
@@ -905,6 +911,7 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
     for control in plan["excluded_controls"]:
         lines.append(f'  ○ EXCLUDED  {control["instance_id"]}')
         lines.append(f"    effective criteria: {effective_criteria(control)}")
+        lines.append("    policy evidence requirements: " + json.dumps(control['evidence'], sort_keys=True))
         if control.get("external_refs"):
             lines.append("    external refs: " + ", ".join(control["external_refs"]))
         if lineage := lineage_description(control):

@@ -101,6 +101,12 @@ def validate_provenance(document: dict, *, plan: bool) -> None:
         if document['policy_sources'] != [{'name': item['name'], 'digest': item['content']['digest']} for item in planning]:
             raise ValueError('plan policy sources do not match planning composition')
         return
+    from .policy_parameters import validate_frozen
+    validate_frozen(document['resolved_policy'])
+    frozen_controls = {item['instance_id']: item for item in document['resolved_policy']['controls']}
+    for use in provenance['selectedEvidence']:
+        if use['requirement'] != frozen_controls[use['instance_id']]['evidence'][use['requirement_index']]:
+            raise ValueError('selected evidence differs from frozen policy dependency')
     validate_stage(provenance['evaluationComposition'])
     if planning != provenance['evaluationComposition']['actual']['policySources']:
         raise ValueError('evaluation policy composition differs from planning composition')
