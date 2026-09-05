@@ -139,13 +139,14 @@ for relative in (
     "schemas/project-config-v1alpha2.schema.json",
     "schemas/release-lock-v1alpha2.schema.json",
     "schemas/tooling-release-manifest-v2.schema.json",
-    "schemas/workspace-config.schema.json",
+    "schemas/project-registry.schema.json",
 ):
     resource = package_root.joinpath(relative)
     assert resource.is_file(), relative
     json.loads(resource.read_text(encoding="utf-8"))
 
 for removed in (
+    "schemas/workspace-config.schema.json",
     "schemas/configuration-explanation.schema.json",
     "schemas/configuration-explanation-v3.schema.json",
     "schemas/assessment-plan-v2.schema.json",
@@ -354,6 +355,43 @@ YAML
 "$venv_compliance" --config "$project/compliance.yaml" config validate
 "$venv_compliance" --no-config inventory validate --inventory "$project/inventory" --assignments "$project/assignments"
 "$venv_compliance" --no-config waiver validate --waivers "$project/waivers"
+
+cat > "$temporary/runtime/compliance.yaml" <<'YAML'
+schema: compliance.example/project-registry/v1alpha1
+defaultProject: installed
+projects:
+  installed:
+    config: project/compliance.yaml
+YAML
+PATH="$runtime_path" "$venv_compliance" config validate
+PATH="$runtime_path" "$venv_compliance" --project installed config show --format json > registry-show.json
+PATH="$runtime_path" "$venv_compliance" config list --format json > registry-list.json
+PATH="$runtime_path" "$venv_python" - <<'PY'
+import json
+from pathlib import Path
+from tools.project_config import load_config, ProjectConfigError
+
+registry = Path("compliance.yaml")
+direct = load_config(Path("project/compliance.yaml"))
+selected = load_config(registry)
+assert selected.source == direct.source
+assert selected.paths == direct.paths
+assert selected.policy_sources == direct.policy_sources
+shown = json.loads(Path("registry-show.json").read_text())
+listed = json.loads(Path("registry-list.json").read_text())
+assert shown["project_registry"] == str(registry.resolve()), shown
+assert listed["schema"] == "compliance.example/project-registry-list/v1", listed
+assert listed["selected_project"] == listed["default_project"] == "installed", listed
+assert "workspace" not in shown and "workspace" not in listed
+retired = Path("retired.yaml")
+retired.write_text(registry.read_text().replace("project-registry/v1alpha1", "workspace-config/v1alpha1"))
+try:
+    load_config(retired)
+except ProjectConfigError as error:
+    assert "unsupported configuration schema" in str(error), error
+else:
+    raise AssertionError("retired registry discriminator was accepted")
+PY
 
 printf '\n== Locked content-addressed project from installed wheel ==\n'
 locked_project="$temporary/runtime/locked-project"

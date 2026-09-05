@@ -8,7 +8,7 @@ from examples.verify_examples import project_fixture_root
 
 
 class ExampleProjectPathTests(unittest.TestCase):
-    def test_fixture_root_follows_workspace_project_config(self) -> None:
+    def test_fixture_root_follows_project_registry_project_config(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             project = root / "compliance-development-projects/projects/mock-fleet"
@@ -29,9 +29,9 @@ paths:
 """,
                 encoding="utf-8",
             )
-            workspace = root / "compliance.yaml"
-            workspace.write_text(
-                """schema: compliance.example/workspace-config/v1alpha1
+            project_registry = root / "compliance.yaml"
+            project_registry.write_text(
+                """schema: compliance.example/project-registry/v1alpha1
 defaultProject: mock-fleet
 projects:
   mock-fleet:
@@ -41,7 +41,7 @@ projects:
             )
 
             self.assertEqual(
-                project_fixture_root("mock-fleet", workspace_config=workspace),
+                project_fixture_root("mock-fleet", project_registry=project_registry),
                 project.resolve() / "fixtures",
             )
 

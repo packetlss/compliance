@@ -220,7 +220,7 @@ by its CLI and generated artifacts. The wheel contains the schemas currently
 owned below `tools/schemas/`, including:
 
 - project configuration `v1alpha1` and locked project configuration `v1alpha2`;
-- workspace configuration;
+- project-registry configuration;
 - release lock `v1alpha2`;
 - provider-neutral tooling release manifest `v2`;
 - generic policy-source release manifest `v1` and the two immutable legacy

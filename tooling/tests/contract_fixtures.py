@@ -608,7 +608,7 @@ def build_fixture(root):
         root,
         "compliance.yaml",
         {
-            "schema": "compliance.example/workspace-config/v1alpha1",
+            "schema": "compliance.example/project-registry/v1alpha1",
             "defaultProject": "cloud",
             "projects": {
                 name: {"config": f"{name}/compliance.yaml"}

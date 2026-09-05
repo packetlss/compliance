@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://compliance.example/schemas/config/workspace-config-v1alpha1.schema.json",
-  "title": "Compliance workspace configuration",
+  "$id": "https://compliance.example/schemas/config/project-registry-v1alpha1.schema.json",
+  "title": "Compliance project registry",
   "type": "object",
   "required": ["schema", "defaultProject", "projects"],
   "additionalProperties": false,
   "properties": {
-    "schema": {"const": "compliance.example/workspace-config/v1alpha1"},
+    "schema": {"const": "compliance.example/project-registry/v1alpha1"},
     "defaultProject": {"$ref": "#/$defs/projectName"},
     "projects": {
       "type": "object",

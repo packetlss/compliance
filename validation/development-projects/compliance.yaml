@@ -1,4 +1,4 @@
-schema: compliance.example/workspace-config/v1alpha1
+schema: compliance.example/project-registry/v1alpha1
 defaultProject: mock-fleet
 projects:
   mock-fleet:

@@ -24,7 +24,7 @@ missing or duplicate catalog entries.
 
 | Command | Contract exercised |
 |---|---|
-| `config show`, `config validate`, `config list` | Project/workspace selection and resolved paths |
+| `config show`, `config validate`, `config list` | Project selection and resolved paths |
 | `inventory validate`, `inventory list`, `inventory graph`, `inventory explain` | Typed inventory, references, DAG membership, and assignment provenance |
 | `policy validate` | Named sources, controls, parameter schemas, baselines, overlays, requirements, realizations, and Rego entrypoints |
 | `policy diff`, `policy diff-set` | Stored-plan semantic comparison with distinct context changes |

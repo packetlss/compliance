@@ -50,7 +50,7 @@
         "requirements.realization-roll-up"
       ]
     },
-    "workspace-composition": {
+    "project-selection": {
       "role": "boundary",
       "project": null,
       "features": [

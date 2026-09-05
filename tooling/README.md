@@ -132,8 +132,8 @@ uv run compliance assessment explain cloud-account/aws-111122223333
 ```
 
 Command-line path options override configuration. Use `--project NAME` to
-select a registered workspace project, `--config PATH` to select an explicit
-workspace or project file, or `--no-config` to require explicit paths. See
+select a registered project, `--config PATH` to select an explicit
+project registry or project file, or `--no-config` to require explicit paths. See
 [`docs/cli.md`](docs/cli.md) for the complete discovery, precedence, and
 path-resolution contract.
 

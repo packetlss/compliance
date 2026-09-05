@@ -125,7 +125,7 @@ mkdir -p \
 
 cd "$INTEGRATION_ROOT"
 # These existing tooling interfaces use the explicit registry and temporary outputs.
-export COMPLIANCE_EXAMPLE_WORKSPACE_CONFIG="$INTEGRATION_ROOT/compliance.yaml"
+export COMPLIANCE_EXAMPLE_PROJECT_REGISTRY="$INTEGRATION_ROOT/compliance.yaml"
 export PYTHONDONTWRITEBYTECODE=1
 export UV_PROJECT_ENVIRONMENT="$RUN_ROOT/venv"
 uv sync --project "$TOOLING_ROOT" --frozen --python "$PYTHON_VERSION"

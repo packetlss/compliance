@@ -1,7 +1,7 @@
-# Operator CLI, Workspaces, and Project Configuration
+# Operator CLI, Project Registries, and Project Configuration
 
 Status: **Implemented prototype (v0.2)**
-Last updated: **2026-09-04**
+Last updated: **2026-09-05**
 
 The control-plane workflows share one `compliance` command. Inventory
 inspection, plan rendering, evaluation, and reporting remain separate modules
@@ -184,15 +184,15 @@ an upstream-framework conformance claim. The command supports exact
 all repeatable with OR semantics. Its JSON output preserves claim type,
 alignment, current/outdated status, subject, and policy-object identity.
 
-## Workspaces and project configuration
+## Project registries and project configuration
 
 Canonical verification materializes `verification/scenarios/integration/compliance.yaml`
 at its temporary assembly root as a registry of independently configured projects.
-The current schema remains `workspace-config`; #57 accepts `project-registry`
-but defers its implementation to Tranche 2:
+The `project-registry` contract maps project names to configuration locations.
+It requires a valid `defaultProject`; omitting `--project` selects that default:
 
 ```yaml
-schema: compliance.example/workspace-config/v1alpha1
+schema: compliance.example/project-registry/v1alpha1
 defaultProject: linux-hardening-rollout
 projects:
   linux-hardening-rollout:
@@ -240,14 +240,20 @@ locations; explicit names and content digests define policy identity. Destinatio
 [architecture](../../docs/ARCHITECTURE.md), and the
 [repository map](../../docs/REPOSITORIES.md) govern current authority.
 
-Workspace and project files are versioned configuration, not Kubernetes
+Project registry and project files are versioned configuration, not Kubernetes
 resources. They have no
-resource identity, lifecycle, grouping, or API-storage semantics, so it does
+resource identity, lifecycle, grouping, or API-storage semantics, so they do
 not use `kind`, `metadata`, and `spec`. Kubernetes-shaped contracts remain the
 right choice for inventory objects that do have those semantics.
 
-The workspace does not merge project inventories or artifacts. A project is an
-operator boundary with its own inventory, assignments, evidence, plans, and
+A project registry only selects one project configuration. It does not compose
+policy, acquire sources, or merge inventories, assignments, waivers, evidence,
+plans, or results. Registry content and location do not enter policy composition
+identity; repository/workspace topology is nonsemantic. Selecting the same
+project directly or through a registry resolves equivalent runtime inputs.
+The retired `workspace-config` discriminator is unsupported, with no alias.
+
+A project is an operator boundary with its own inventory, assignments, evidence, plans, and
 results; projects may reference a shared policy catalog. From the destination
 root, select an ordinary project explicitly:
 
@@ -266,19 +272,19 @@ uv run compliance --project iam-realization assessment frameworks \
   --level objective
 ```
 
-If `--project` is omitted, the workspace's `defaultProject` is used. Thus
-unqualified root commands operate on `mock-fleet`.
+If `--project` is omitted, the project registry's `defaultProject` is used. In the canonical
+assembly above, unqualified commands select `linux-hardening-rollout`.
 `compliance config list` shows all projects, the selected project, and the
 default. Running from inside an example directory discovers that example's
 project config directly, so `--project` is unnecessary there.
 
 Configuration behavior is deterministic:
 
-1. `--config PATH` selects an explicit workspace or project file.
+1. `--config PATH` selects an explicit project registry or project file.
 2. `--no-config` disables discovery and cannot be combined with `--project`.
 3. Otherwise, the nearest `compliance.yaml` is selected by searching from the
    current directory toward the filesystem root.
-4. A workspace selects `--project NAME`, or its `defaultProject` when omitted;
+4. A project registry selects `--project NAME`, or its `defaultProject` when omitted;
    a standalone project config rejects `--project` rather than silently
    ignoring it.
 5. Command-line path options override configured paths. Repeating
@@ -309,12 +315,12 @@ development projects omit it because they are editable development trees.
 The IAM validation assembly additionally supplies the independently materialized
 `environment-private` source; see the [fixture boundary](../../verification/fixtures/iam-private-boundary/README.md).
 
-Only documented fields are accepted. Workspace and project files are validated
-against `tools/schemas/workspace-config.schema.json` and
+Only documented fields are accepted. Project registry and project files are validated
+against `tools/schemas/project-registry.schema.json` and
 `tools/schemas/project-config.schema.json`. Unknown fields, unknown path names,
 empty values, invalid project names, multiple YAML documents, missing project
 files, unknown project selections, and unsupported schema versions fail rather
-than being ignored. `compliance config show` prints the workspace, selected
+than being ignored. `compliance config show` prints the project registry (`project_registry` in JSON), selected
 project file, fully resolved paths, and named policy sources; its JSON form is
 suitable for automation:
 
@@ -357,7 +363,7 @@ passed to OPA for the current assessment.
 Every authored `.yaml` or `.yml` file in the repository starts with a portable
 `yaml-language-server` schema directive. Inventory resources point to the
 combined inventory resource schema; root and project `compliance.yaml` files
-point to their respective workspace or project configuration schemas; waiver
+point to their respective project registry or project configuration schemas; waiver
 resources point to the tooling-owned waiver resource schema. Tests
 resolve every directive and validate every YAML document, so a new YAML file
 without a schema association fails the build.

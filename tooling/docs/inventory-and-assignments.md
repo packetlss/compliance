@@ -361,7 +361,7 @@ The inventory and policy interface should expose:
 - **Compare subjects** — plan IDs and policy differences across a group.
 
 The prototype exposes the first inventory-oriented views through the unified
-operator CLI. The root workspace selects an isolated named project whose paths
+operator CLI. The project registry selects an isolated named project whose paths
 are loaded from that project's `compliance.yaml`:
 
 ```sh
@@ -372,7 +372,7 @@ uv run compliance inventory graph
 uv run compliance inventory explain cloud-account/aws-111122223333
 ```
 
-The `mock-fleet` project is the workspace default and exercises the contract
+The development validation registry defaults to `mock-fleet`, which exercises the contract
 with `aws-account` and `saas-tenant` subjects, while the
 `iam-realization` project exercises a `linux-host` and requirement-baseline
 assignment. They are selected from the checkout root with `--project`. Each

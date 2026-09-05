@@ -30,10 +30,10 @@ class PolicyDiffTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.root = fixture_root(cls)
-        workspace_config = cls.root / "compliance.yaml"
+        project_registry = cls.root / "compliance.yaml"
 
         def render_project_plan(project: str, subject_id: str):
-            config = load_config(workspace_config, project)
+            config = load_config(project_registry, project)
             subject, groups, assignments = load_inventory_inputs(
                 config.path("inventory"),
                 config.path("assignments"),
@@ -48,7 +48,7 @@ class PolicyDiffTests(unittest.TestCase):
             )
 
         macos_fixture = Path(__file__).resolve().parent / "fixtures/macos-project"
-        mock_config = load_config(workspace_config, "cloud")
+        mock_config = load_config(project_registry, "cloud")
         subject, groups, assignments = load_inventory_inputs(
             macos_fixture / "inventory",
             macos_fixture / "assignments",

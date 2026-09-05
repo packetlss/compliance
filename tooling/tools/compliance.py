@@ -194,9 +194,9 @@ def _run_config_show(args: argparse.Namespace) -> None:
 def _run_config_validate(args: argparse.Namespace) -> None:
     if args.project_config.source is None:
         raise ValueError("no project config found; pass --config or create compliance.yaml")
-    if args.project_config.workspace_source:
+    if args.project_config.project_registry_source:
         print(
-            f"valid workspace: {args.project_config.workspace_source}; "
+            f"valid project registry: {args.project_config.project_registry_source}; "
             f"project {args.project_config.project_name}: {args.project_config.source} "
             f"({len(args.project_config.paths)} configured path(s), "
             f"{len(args.project_config.policy_sources)} policy source(s), {CONFIG_SCHEMA})"
@@ -212,10 +212,10 @@ def _run_config_validate(args: argparse.Namespace) -> None:
 def _run_config_list(args: argparse.Namespace) -> None:
     config = args.project_config
     if not config.available_projects:
-        raise ValueError("selected configuration is a project, not a workspace")
+        raise ValueError("selected configuration is a project, not a project registry")
     document = {
-        "schema": "compliance.example/workspace-project-list/v1",
-        "workspace": str(config.workspace_source),
+        "schema": "compliance.example/project-registry-list/v1",
+        "project_registry": str(config.project_registry_source),
         "default_project": config.default_project,
         "selected_project": config.project_name,
         "projects": [
@@ -226,7 +226,7 @@ def _run_config_list(args: argparse.Namespace) -> None:
     if args.format == "json":
         print(json.dumps(document, indent=2, sort_keys=True))
         return
-    print(f"Workspace: {config.workspace_source}")
+    print(f"Project registry: {config.project_registry_source}")
     print(f"Selected:  {config.project_name}")
     print("")
     print("PROJECT     DEFAULT  CONFIG")
@@ -765,7 +765,7 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--project",
-        help="project name from a discovered or explicitly selected workspace",
+        help="project name from a discovered or explicitly selected project registry",
     )
     parser.set_defaults(project_config=config)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -777,7 +777,7 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
     _set_handler(config_show, _run_config_show)
     config_validate = config_commands.add_parser("validate", help="validate project configuration")
     _set_handler(config_validate, _run_config_validate)
-    config_list = config_commands.add_parser("list", help="list workspace projects")
+    config_list = config_commands.add_parser("list", help="list registered projects")
     config_list.add_argument("--format", choices=("table", "json"), default="table")
     _set_handler(config_list, _run_config_list)
 

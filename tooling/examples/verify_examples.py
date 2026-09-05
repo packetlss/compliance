@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the synthetic examples using workspace-registry project locations."""
+"""Run the synthetic examples using project-registry project locations."""
 
 from __future__ import annotations
 
@@ -16,18 +16,18 @@ except ImportError:  # Direct execution by path.
     import _verify_examples_core as _core
 
 
-_workspace_override = os.environ.get("COMPLIANCE_EXAMPLE_WORKSPACE_CONFIG")
-if _workspace_override:
-    _core.WORKSPACE_CONFIG = Path(_workspace_override).resolve()
+_project_registry_override = os.environ.get("COMPLIANCE_EXAMPLE_PROJECT_REGISTRY")
+if _project_registry_override:
+    _core.PROJECT_REGISTRY = Path(_project_registry_override).resolve()
 
 
 def project_fixture_root(
     project: str,
     *,
-    workspace_config: Path | None = None,
+    project_registry: Path | None = None,
 ) -> Path:
-    """Resolve a project's fixture directory from the workspace registry."""
-    source = (workspace_config or _core.WORKSPACE_CONFIG).resolve()
+    """Resolve a project's fixture directory from the project registry."""
+    source = (project_registry or _core.PROJECT_REGISTRY).resolve()
     try:
         config = load_config(source, project)
     except ProjectConfigError as error:
@@ -71,7 +71,7 @@ def _collect(self, project: str, *, fixtures: Path | None = None) -> Path:
 
 
 # Preserve the existing executable coverage engine while replacing its only
-# repository-name-derived fixture resolver with workspace-registry resolution.
+# repository-name-derived fixture resolver with project-registry resolution.
 _core.ExampleRunner.collect = _collect
 
 # Re-export the established public names so imports of examples.verify_examples
@@ -80,7 +80,7 @@ for _name, _value in vars(_core).items():
     if not _name.startswith("_") and _name not in globals():
         globals()[_name] = _value
 
-WORKSPACE_CONFIG = _core.WORKSPACE_CONFIG
+PROJECT_REGISTRY = _core.PROJECT_REGISTRY
 ExampleRunner = _core.ExampleRunner
 main = _core.main
 
