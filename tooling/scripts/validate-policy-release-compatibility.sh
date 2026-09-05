@@ -220,7 +220,7 @@ acquisition_metadata = {
 }
 assert set(acquisition_metadata).isdisjoint(
     key
-    for source in lock.semantic_document()["expected"]["policySources"].values()
+    for source in lock.semantic_document()["expected"]["policySources"]
     for key in source
 )
 semantic_text = json.dumps(lock.semantic_document(), sort_keys=True)
