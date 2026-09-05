@@ -177,6 +177,20 @@ def declared_path(schema, path):
         current = current['properties'][part]
 
 
+def partial_parameter_schema(schema, paths):
+    """Leave symbolic leaf values open until full post-materialization validation."""
+    result = copy.deepcopy(schema)
+    for path in paths:
+        declared_path(schema, path)
+        parts = [p.replace('~1', '/').replace('~0', '~') for p in path[1:].split('/')]
+        parent = result
+        for part in parts[:-1]:
+            parent = parent['properties'][part]
+        parent['required'] = [name for name in parent.get('required', []) if name != parts[-1]]
+        parent['properties'][parts[-1]] = {}
+    return result
+
+
 def evidence_for(instance, definition):
     contracts = definition['spec']['evidence']
     identifiers = [item['id'] for item in contracts]
@@ -249,6 +263,14 @@ def validate_frozen(plan):
     """Check stored derivations and destinations without reopening policy sources."""
     if plan['resolution']['status'] != 'valid':
         return
+    assignments = {item['id']: item for item in plan['assignments']}
+    expected_selections = {(a['id'], a['group'], reference) for a in assignments.values() for reference in a['baselines']}
+    actual_selections = [(b['assignment'], b['group'], b['reference'])
+                         for b in [*plan['resolved_baselines'], *plan['resolved_requirement_baselines']]]
+    require(len(actual_selections) == len(set(actual_selections)) and set(actual_selections) == expected_selections,
+            'frozen derivation coverage differs from selected assignments')
+    expected_requirements = {pin['requirement'] for baseline in plan['resolved_requirement_baselines'] for pin in baseline['requirements']}
+    require(expected_requirements == {r['reference'] for r in plan['requirements']}, 'frozen requirement membership coverage is incomplete')
     controls = {}
     for control in plan['controls']:
         facts = control['policy_inputs']
@@ -256,6 +278,7 @@ def validate_frozen(plan):
         definition['_parameters_schema'] = facts['parameters_schema']
         definition['_implementation_modules'] = facts.get('implementation_modules', [])
         instance = facts['instance']
+        require(definition['metadata']['id'] == control['implementation'], 'frozen implementation definition identity mismatch')
         require(instance['instance_id'] == control['instance_id'] and instance['implementation'] == control['implementation'],
                 'frozen technical input identity mismatch')
         require(equal(instance.get('parameters', {}), control['parameters']), 'frozen technical value mismatch')
@@ -278,19 +301,43 @@ def validate_frozen(plan):
         complete(states)
         require(equal(states, facts['states']) and equal(ancestry, facts['ancestry']), 'frozen derivation inconsistent')
         require(baseline['digest'] == ancestry[-1]['digest'], 'selected baseline digest mismatch')
+        require(equal(baseline['requirements'], ancestry[-1]['document']['spec']['requirements']),
+                'frozen baseline membership differs from selected policy')
         for reference, slots in states.items():
             record = by_reference[reference]
             frozen = record['parameter_facts']
             require(digest(frozen['document']) == record['digest'], 'frozen requirement digest mismatch')
+            declaration_document = frozen['document']
+            require(reference == f"{declaration_document['metadata']['id']}@{declaration_document['metadata']['revision']}",
+                    'frozen requirement reference mismatch')
+            for field in ('title', 'statement', 'external_refs'):
+                require(equal(record[field], declaration_document['spec'].get(field, [])), 'frozen requirement explanation mismatch')
             require(equal(slots, frozen['states']), 'assigned parameter state conflict')
             if 'realization' not in frozen:
-                require(record['adoption']['status'] != 'implemented', 'implemented requirement lacks frozen realization')
+                require(record['adoption'] == {'status': 'not_implemented', 'method': 'none', 'owner': 'unassigned'}
+                        and record['satisfaction'] == {'allOf': []} and record['technical_instance_ids'] == []
+                        and 'realization' not in record, 'missing-realization record differs from frozen coverage')
                 continue
             realization = frozen['realization']
             require(digest(realization) == record['realization']['digest'], 'frozen realization digest mismatch')
+            require(record['realization']['reference'] == f"{realization['metadata']['id']}@{realization['metadata']['revision']}",
+                    'frozen realization reference mismatch')
+            require(realization['spec']['requirement'] == {'requirement': reference, 'digest': record['digest']},
+                    'frozen realization requirement pin mismatch')
+            require(equal(record['adoption'], realization['spec']['adoption'])
+                    and equal(record['satisfaction'], realization['spec'].get('satisfaction', {'allOf': []}))
+                    and equal(record['technical_instance_ids'], realization['spec'].get('satisfaction', {'allOf': []})['allOf']),
+                    'evaluated requirement differs from frozen realization satisfaction')
             checks, records = consume(realization, slots, controls)
             require(equal(records, frozen['consumption']), 'frozen consumption records mismatch')
             planned = {control['instance_id']: control for control in plan['controls']}
             for check in checks:
                 require(equal(check, planned[check['instance_id']]['policy_inputs']['instance']),
                         'frozen materialized destination mismatch')
+    for record in plan['requirements']:
+        expected = [{'group': b['group'], 'assignment': b['assignment'], 'baseline': b['reference']}
+                    for b in plan['resolved_requirement_baselines']
+                    if any(pin['requirement'] == record['reference'] and pin['digest'] == record['digest'] and pin['required']
+                           for pin in b['requirements'])]
+        require(equal(sorted(record['provenance'], key=canonical_json_bytes), sorted(expected, key=canonical_json_bytes)),
+                'frozen requirement assignment attribution mismatch')

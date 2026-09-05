@@ -105,8 +105,13 @@ def validate_provenance(document: dict, *, plan: bool) -> None:
     validate_frozen(document['resolved_policy'])
     frozen_controls = {item['instance_id']: item for item in document['resolved_policy']['controls']}
     for use in provenance['selectedEvidence']:
-        if use['requirement'] != frozen_controls[use['instance_id']]['evidence'][use['requirement_index']]:
+        control = frozen_controls.get(use['instance_id'])
+        if control is None or use['requirement_index'] >= len(control['evidence']) or use['requirement'] != control['evidence'][use['requirement_index']]:
             raise ValueError('selected evidence differs from frozen policy dependency')
+    from .control_realization import roll_up_plan_requirements
+    requirements, baselines = roll_up_plan_requirements(document['resolved_policy'], document['results'])
+    if requirements != document['requirement_assessments'] or baselines != document['requirement_baseline_assessments']:
+        raise ValueError('result rollup differs from frozen policy satisfaction')
     validate_stage(provenance['evaluationComposition'])
     if planning != provenance['evaluationComposition']['actual']['policySources']:
         raise ValueError('evaluation policy composition differs from planning composition')

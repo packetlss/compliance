@@ -155,3 +155,19 @@ class PolicyParameterTests(unittest.TestCase):
         instance = {'evidence': {}, 'parameters': {}}
         with self.assertRaisesRegex(p.ParameterResolutionError, 'explicit policy freshness'):
             p.evidence_for(instance, self.definition)
+
+    def test_nested_symbolic_input_validates_after_materialization(self):
+        from jsonschema import Draft202012Validator
+        schema = {'type': 'object', 'properties': {'settings': {'type': 'object',
+                  'properties': {'age': {'type': 'string'}}, 'required': ['age']}}, 'required': ['settings']}
+        self.definition['_parameters_schema'] = schema
+        self.realization['spec']['checks'][0]['parameters'] = {'settings': {}}
+        for link in self.realization['spec']['parameter_links']:
+            link['destination']['implementation'] = p.implementation_pin(self.definition)
+            if link['destination']['kind'] == 'parameters': link['destination']['path'] = '/settings/age'
+        partial = p.partial_parameter_schema(schema, ['/settings/age'])
+        Draft202012Validator(partial).validate({'settings': {}})
+        with self.assertRaises(ValidationError): Draft202012Validator(schema).validate({'settings': {}})
+        checks, _ = p.consume(self.realization, self.states(), self.controls)
+        self.assertEqual(checks[0]['parameters'], {'settings': {'age': '2592000s'}})
+        Draft202012Validator(schema).validate(checks[0]['parameters'])

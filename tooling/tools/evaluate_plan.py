@@ -300,7 +300,7 @@ def evaluate_plan_document(
         "summary": summarize(results),
         "requirement_summary": summarize(requirement_assessments),
         "requirement_baseline_summary": summarize(requirement_baseline_assessments),
-        "resolved_policy": {key: copy.deepcopy(plan[key]) for key in ("controls", "requirements", "resolved_requirement_baselines", "resolution")},
+        "resolved_policy": {key: copy.deepcopy(plan[key]) for key in ("controls", "requirements", "resolved_requirement_baselines", "resolved_baselines", "assignments", "policy_sources", "resolution")},
         "results": results,
         "requirement_assessments": requirement_assessments,
         "requirement_baseline_assessments": requirement_baseline_assessments,

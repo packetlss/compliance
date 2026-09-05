@@ -316,7 +316,7 @@ class AssessmentV4Tests(unittest.TestCase):
 
     def test_requirement_rollups_keep_unknown_error_fail_and_waived_meaning(self):
         shell = fixtures.assessment_plan(self.plan['policy_sources'], with_requirement=True)
-        for key in ('requirements','resolved_requirement_baselines'):
+        for key in ('requirements','resolved_requirement_baselines','resolved_baselines'):
             self.plan[key] = shell[key]
         self.plan['coverage']['requirement_count'] = 1
         self.sign_plan()

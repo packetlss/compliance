@@ -1236,9 +1236,12 @@ def load_requirement_catalogs(
                     "instance_id": instance["instance_id"],
                     "subject_types": unsupported_types,
                 })
-            linked_paths = {link["destination"]["path"].split("/")[1] for link in spec.get("parameter_links", []) if link["destination"]["instance_id"] == instance["instance_id"] and link["destination"]["kind"] == "parameters"}
-            parameter_schema = copy.deepcopy(definition["_parameters_schema"])
-            parameter_schema["required"] = [name for name in parameter_schema.get("required", []) if name not in linked_paths]
+            linked_paths = {link["destination"]["path"] for link in spec.get("parameter_links", []) if link["destination"]["instance_id"] == instance["instance_id"] and link["destination"]["kind"] == "parameters"}
+            try:
+                parameter_schema = pp.partial_parameter_schema(definition["_parameters_schema"], linked_paths)
+            except ValueError as error:
+                errors.append({"type": "parameter-destination-invalid", "realization": realization_reference, "message": str(error)})
+                continue
             parameter_errors = sorted(
                 Draft202012Validator(
                     parameter_schema,

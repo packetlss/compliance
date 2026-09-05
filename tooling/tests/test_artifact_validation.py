@@ -24,6 +24,25 @@ from tools.render_plan import (
 
 
 class AssessmentArtifactValidationTests(unittest.TestCase):
+    def test_frozen_realization_cannot_lose_required_checks(self):
+        from tools.assessment_provenance import artifact_digest
+        plan = copy.deepcopy(self.iam_plan)
+        requirement = plan['requirements'][0]
+        self.assertGreater(len(requirement['technical_instance_ids']), 1)
+        requirement['technical_instance_ids'] = requirement['technical_instance_ids'][:1]
+        requirement['satisfaction']['allOf'] = requirement['technical_instance_ids'][:]
+        plan['id'] = artifact_digest(plan)
+        with self.assertRaisesRegex(ArtifactValidationError, 'frozen realization satisfaction'):
+            validate_assessment_plan(plan)
+
+    def test_frozen_derivation_records_cannot_be_omitted(self):
+        from tools.assessment_provenance import artifact_digest
+        plan = copy.deepcopy(self.iam_plan)
+        plan['resolved_requirement_baselines'] = []
+        plan['id'] = artifact_digest(plan)
+        with self.assertRaisesRegex(ArtifactValidationError, 'derivation coverage'):
+            validate_assessment_plan(plan)
+
     @classmethod
     def setUpClass(cls):
         cls.root = fixture_root(cls)

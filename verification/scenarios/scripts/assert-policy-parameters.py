@@ -75,7 +75,9 @@ def run(root):
         assert realization_path.read_bytes() == realization_bytes
         assert all(c['evidence'][0]['max_age'] == '3600s' for c in second['controls'])
         assert build_policy_diff(first, second)['summary']['changed']
-        for mutate in [lambda d: d['requirements'][0]['parameter_facts']['states']['privileged_evidence_max_age'].update(value='7200s'),
+        for mutate in [lambda d: d.update(resolved_requirement_baselines=[]),
+                       lambda d: (d['requirements'][0].update(technical_instance_ids=d['requirements'][0]['technical_instance_ids'][:1]), d['requirements'][0]['satisfaction'].update(allOf=d['requirements'][0]['technical_instance_ids'])),
+                       lambda d: d['requirements'][0]['parameter_facts']['states']['privileged_evidence_max_age'].update(value='7200s'),
                        lambda d: d['controls'][0]['evidence'][0].update(max_age='7200s'),
                        lambda d: d['resolved_requirement_baselines'][0]['parameter_derivation']['states'][requirement['reference']]['privileged_evidence_max_age']['history'][-1]['operation'].update({'from':'2h'}),
                        lambda d: d['requirements'][0]['parameter_facts']['consumption'][0]['link']['destination']['implementation'].update(version=99)]:

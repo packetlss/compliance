@@ -20,10 +20,17 @@ def freeze_policy_inputs(plan):
                       'spec': {'entrypoint': control['entrypoint'],
                                'evidence': [{k: v for k, v in e.items() if k != 'max_age'} for e in control['evidence']]}}
         control['policy_inputs'] = {'instance': instance, 'definition': definition, 'parameters_schema': {'type': 'object'}}
+    if not plan['resolved_baselines'] and not plan['resolved_requirement_baselines']:
+        for assignment in plan['assignments']:
+            for reference in assignment['baselines']:
+                identity = pp.digest({'reference': reference})
+                plan['resolved_baselines'].append({'assignment': assignment['id'], 'group': assignment['group'],
+                    'reference': reference, 'digest': identity, 'lineage': [{'reference': reference, 'digest': identity}],
+                    'deviations': [], 'policy_sources': [{'policy_source': plan['policy_sources'][0]['name'], 'path': 'baselines/test.json'}]})
     requirements = {}
     for record in plan['requirements']:
         identifier, revision = record['reference'].rsplit('@', 1)
-        doc = {'metadata': {'id': identifier, 'revision': revision}, 'spec': {'title': record['title'], 'statement': record['statement']}}
+        doc = {'metadata': {'id': identifier, 'revision': revision}, 'spec': {'title': record['title'], 'statement': record['statement'], 'external_refs': copy.deepcopy(record['external_refs'])}}
         record['digest'] = pp.digest(doc)
         requirements[record['reference']] = doc
         facts = {'document': doc, 'states': {}}
