@@ -30,7 +30,7 @@ the separate materialization. The historical, relocated, and materialized
 policy-tree digests must all equal:
 
 ```text
-sha256:f0755442c73b29c4d8f6198bfd3c223056c4357744a1a85d6ad162ee41610f6d
+sha256:9ee2208821f625343058e7e986cb0aa3a743ab10318b4c4e131a009cc742b91d
 ```
 
 The inventory contains `host/restricted-linux-01`. Its trusted
@@ -74,7 +74,7 @@ must not be committed. Real private inventories, realizations, evidence,
 parameters, credentials, provider state, and operational data remain in their
 separate authorized environments.
 
-The additional `policy/realizations/operation/` realization belongs to the canonical
-closed-world scenario. It remains in this separately materialized private root and
+The additional `company-iam-policy-assessment` realization belongs to the canonical
+two-host IAM scenario. It remains in this separately materialized private root and
 introduces a named shared IAM dependency plus an attributable consumer relationship.
 The original restricted Linux scenario and its four checks remain unchanged.

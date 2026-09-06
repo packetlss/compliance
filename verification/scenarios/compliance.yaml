@@ -4,3 +4,7 @@ defaultProject: linux-hardening-rollout
 projects:
   linux-hardening-rollout:
     config: projects/linux-hardening-rollout/compliance.yaml
+  company-iam-policy-assessment:
+    config: projects/company-iam-policy-assessment/compliance.yaml
+  technical-only-packages:
+    config: projects/technical-only-packages/compliance.yaml

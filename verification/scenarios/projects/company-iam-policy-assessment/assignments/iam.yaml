@@ -1,0 +1,7 @@
+apiVersion: compliance.example/v1alpha1
+kind: PolicyAssignment
+metadata: {name: company-iam}
+spec:
+  targetRef: {kind: InventoryGroup, name: company-iam-hosts}
+  baselineRefs:
+    - {name: company.identity-access-objectives, revision: "1"}

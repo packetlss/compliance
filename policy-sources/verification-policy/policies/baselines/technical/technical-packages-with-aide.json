@@ -1,0 +1,27 @@
+{
+  "apiVersion": "compliance.example/v1",
+  "kind": "BaselineOverlay",
+  "metadata": {"id": "verification.technical-packages-with-aide", "revision": 1},
+  "spec": {
+    "extends": [{
+      "baseline": "verification.technical-packages@1",
+      "digest": "sha256:d19ec687281359bbd2ada4596ca9520754466824835f0a69fee6f6f56db3d995"
+    }],
+    "operations": [{
+      "op": "tailor",
+      "target": "verification.technical-packages.required",
+      "expected_parent_fingerprint": "sha256:e816919bc4d090b2f7823895d44db0bc702820a2eb0fefffb42b58471969527a",
+      "parameters": {
+        "ecosystem": "linux-native",
+        "required": [{"id": "auditd"}, {"id": "aide"}]
+      },
+      "deviation": {
+        "id": "TECHNICAL-PACKAGES-AIDE",
+        "classification": "synthetic-conformance",
+        "rationale": "Exercise an explicit deterministic package-policy tailoring.",
+        "approval_ref": "synthetic-review/issue-82",
+        "review_after": "2027-09-01"
+      }
+    }]
+  }
+}

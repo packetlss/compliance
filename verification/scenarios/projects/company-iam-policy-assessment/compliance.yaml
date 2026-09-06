@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=../../../../tooling/tools/schemas/project-config-v1alpha3.schema.json
+schema: compliance.example/project-config/v1alpha3
+policySources:
+  - name: control-library
+    path: ../../../../policy-sources/control-library/policies
+  - name: verification-policy
+    path: ../../../../policy-sources/verification-policy/policies
+  - name: environment-private
+    path: ../../../../external-sources/environment-private
+paths:
+  inventory: inventory
+  assignments: assignments
+  evidence: generated/evidence
+  plan: generated/plans
+  results: generated/results
+  waivers: waivers

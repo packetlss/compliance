@@ -1,0 +1,1 @@
+{"subject":{"id":"host/B","type":"linux-host"},"type":"linux.access.configuration/v1","collector":{"id":"synthetic/linux-access","version":"1"},"payload":{"packages":{"sssd_installed":true},"sssd":{"domain":"restricted.example"},"ssh":{"allowed_groups":["linux-production-operators"]},"accounts":{"unmanaged_interactive_accounts":[]}}}

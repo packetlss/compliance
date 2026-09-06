@@ -17,7 +17,7 @@ from pathlib import Path
 
 FIXED_INSTANT = "2026-09-01T00:00:00Z"
 PRIVATE_POLICY_DIGEST = (
-    "sha256:f0755442c73b29c4d8f6198bfd3c223056c4357744a1a85d6ad162ee41610f6d"
+    "sha256:9ee2208821f625343058e7e986cb0aa3a743ab10318b4c4e131a009cc742b91d"
 )
 SOURCE_NAMES = ["control-library", "environment-private", "verification-policy"]
 CONTROL_INSTANCES = {

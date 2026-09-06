@@ -1,0 +1,5 @@
+apiVersion: compliance.example/v1alpha1
+kind: InventoryGroup
+metadata: {name: company-iam-hosts}
+spec:
+  selector: {matchLabels: {fleet: company-iam}}

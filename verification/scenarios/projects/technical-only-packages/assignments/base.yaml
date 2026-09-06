@@ -1,0 +1,11 @@
+apiVersion: compliance.example/v1alpha1
+kind: PolicyAssignment
+metadata:
+  name: managed-linux-packages
+spec:
+  targetRef:
+    kind: InventoryGroup
+    name: managed-linux
+  baselineRefs:
+    - name: verification.technical-packages
+      revision: "1"
