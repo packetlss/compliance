@@ -222,6 +222,9 @@ def validate_result_against_plan(report: dict, plan: dict) -> None:
         raise ValueError('result does not reference the exact assessed plan')
     if report['subject_id'] != plan['subject']['id']:
         raise ValueError('result subject differs from assessed plan')
+    from .operation import plan_disposition
+    if plan_disposition(plan) != 'result_required':
+        raise ValueError('result supplied for non-assessable plan')
     planning_sources = plan['provenance']['planningComposition']['actual']['policySources']
     evaluation_sources = report['provenance']['evaluationComposition']['actual']['policySources']
     if evaluation_sources != planning_sources:

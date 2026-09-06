@@ -270,10 +270,24 @@ class OperationTests(unittest.TestCase):
 
     def test_unassigned_accounted_without_pass_and_empty_selection_rejected(self):
         plans = self.plans(non_assessable=True)
-        result = account_operation(plans[0], self.evaluate(plans), self.instant, plans)
+        reports = self.evaluate(plans)
+        result = account_operation(plans[0], reports, self.instant, plans)
         self.assertTrue(result['accounting_complete'])
         self.assertFalse(result['all_passed'])
         self.assertEqual(result['members'][1]['state'], 'unassigned')
+        forged = copy.deepcopy(reports[0])
+        forged['subject_id'] = plans[1]['subject']['id']
+        forged['plan_id'] = plans[1]['id']
+        forged['results'] = []
+        forged['requirement_assessments'] = []
+        forged['requirement_baseline_assessments'] = []
+        forged['provenance']['selectedEvidence'] = []
+        from tools.artifact_validation import result_outcome
+        forged['outcome'] = result_outcome(forged)
+        forged['id'] = artifact_digest(forged)
+        validate_assessment_results(forged)
+        with self.assertRaisesRegex(ValueError, 'non-assessable operation member'):
+            account_operation(plans[0], [*reports, forged], self.instant, [plans[0]])
         with self.assertRaisesRegex(ValueError, 'empty operation'):
             select_subjects({}, [], {'subjects':[], 'groups':[], 'all':True})
 

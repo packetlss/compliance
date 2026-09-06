@@ -414,6 +414,8 @@ def account_operation(anchor, reports, evaluated_at, assessed_plans=()):
             raise ValueError('multiple distinct results for exact operation member and instant')
         result = next(iter(unique.values()), None)
         disposition = member_disposition(member, projection['assignments'])
+        if result is not None and disposition != 'result_required':
+            raise ValueError('result supplied for non-assessable operation member')
         assessed_plan = plan_by_id.get(plan_id)
         interpretation = 'unavailable'
         if result is not None and assessed_plan is not None:

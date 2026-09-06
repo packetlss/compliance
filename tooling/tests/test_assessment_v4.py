@@ -8,12 +8,14 @@ from pathlib import Path
 from unittest.mock import patch
 
 import test_evaluate_plan as fixtures
-from assessment_fixture import freeze_policy_inputs
+from assessment_fixture import freeze_policy_inputs, refresh_operation
 from tools.assessment_provenance import (
     PLAN_SCHEMA, PROVENANCE_SCHEMA, PLAN_DIGEST_ALGORITHM, artifact_digest, stage,
     result_identity_projection, validate_result_against_plan,
 )
-from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
+from tools.artifact_validation import (
+    result_outcome, validate_assessment_plan, validate_assessment_results,
+)
 from tools.composition import require_composition, CompositionLock
 from tools.evaluator import EvaluatorIdentity
 from tools.evidence_provenance import evidence_document_digest
@@ -407,6 +409,57 @@ class AssessmentV4Tests(unittest.TestCase):
             changed_plan['resolution'] = resolution
             with self.assertRaises(ValueError):
                 validate_result_against_plan(report, changed_plan)
+
+    def test_relational_validation_rejects_non_result_required_plans(self):
+        report, _ = self.run_assessment([self.document()])
+        validate_result_against_plan(report, self.plan)
+
+        variants = {}
+        retired = copy.deepcopy(self.plan)
+        retired['subject']['status'] = 'retired'
+        variants['inactive'] = retired
+
+        unassigned = copy.deepcopy(self.plan)
+        unassigned['assignments'] = []
+        unassigned['resolved_groups'] = []
+        unassigned['resolved_baselines'] = []
+        unassigned['resolved_requirement_baselines'] = []
+        unassigned['requirements'] = []
+        unassigned['controls'] = []
+        unassigned['excluded_controls'] = []
+        variants['unassigned'] = unassigned
+
+        no_policy = copy.deepcopy(self.plan)
+        no_policy['controls'] = []
+        no_policy['requirements'] = []
+        no_policy['resolved_requirement_baselines'] = []
+        variants['no_assessable_policy'] = no_policy
+
+        invalid = copy.deepcopy(self.plan)
+        invalid['resolution'] = {
+            'status': 'invalid',
+            'errors': [{'type': 'synthetic-diagnostic-invalid'}],
+        }
+        variants['invalid'] = invalid
+
+        from tools.operation import plan_disposition
+        for expected, plan in variants.items():
+            with self.subTest(disposition=expected):
+                refresh_operation(plan)
+                validate_assessment_plan(plan)
+                self.assertEqual(plan_disposition(plan), expected)
+                changed = copy.deepcopy(report)
+                changed['plan_id'] = plan['id']
+                if not plan['controls']:
+                    changed['results'] = []
+                    changed['requirement_assessments'] = []
+                    changed['requirement_baseline_assessments'] = []
+                    changed['provenance']['selectedEvidence'] = []
+                changed['outcome'] = result_outcome(changed)
+                changed['id'] = artifact_digest(changed)
+                validate_assessment_results(changed)
+                with self.assertRaisesRegex(ValueError, 'non-assessable plan'):
+                    validate_result_against_plan(changed, plan)
 
     def test_requirement_rollups_keep_unknown_error_fail_and_waived_meaning(self):
         sources = [{'name': item['name'], 'digest': item['content']['digest']}
