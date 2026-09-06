@@ -94,7 +94,7 @@ def assert_framework_filters(run_root: Path) -> None:
         "saas/acme-projects/company",
     }:
         fail(f"framework report lost cloud or SaaS subjects: {subjects}")
-    if not any(mapping.get("alignment") == "tailored" for mapping in mappings):
+    if not any(mapping.get("policy_alignment") == "tailored" for mapping in mappings):
         fail("framework alignment output lost tailored mappings")
     if not any(str(mapping.get("external_ref", "")).startswith("CSA-CCM-v4.1:") for mapping in mappings):
         fail("framework alignment output lost CSA CCM mappings")

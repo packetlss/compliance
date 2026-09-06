@@ -90,11 +90,12 @@ class ExampleCoverageTests(unittest.TestCase):
         filtered_status = {
             "filters": {
                 "groups": ["aws-production-accounts"],
-                "states": ["fail"],
+                "outcomes": ["fail"],
+                "plan_alignment": [],
             },
             "subjects": [{
                 "subject_id": MOCK_FLEET_PRIMARY_AWS_SUBJECT,
-                "state": "fail",
+                "historical_outcome": "fail",
             }],
         }
         filtered_frameworks = {
@@ -102,6 +103,8 @@ class ExampleCoverageTests(unittest.TestCase):
                 "external_refs": ["CSA-CCM-v4.1:LOG-domain"],
                 "groups": ["aws-production-accounts"],
                 "levels": ["technical"],
+                "outcomes": [],
+                "plan_alignment": [],
             },
             "mappings": [
                 {

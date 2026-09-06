@@ -236,7 +236,7 @@ def assert_frameworks(frameworks: dict) -> None:
         for mapping in mappings
         if mapping.get("external_ref") == "example-regulatory-framework:IAM-01"
     ]
-    if len(matches) != 1 or matches[0].get("status") != "fail":
+    if len(matches) != 1 or matches[0].get("historical_outcome") != "fail":
         fail(f"IAM objective framework mapping changed: {matches}")
 
 

@@ -108,9 +108,34 @@ evaluate := {
         assert account['accounting_complete'] and account['all_passed'], account
         multi_plan = json.loads(plan_path.read_text())
         assert multi_plan['id'] != plan['id']
-        historical = json.loads(run('assessment','status','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z','--format','json'))
+        historical = json.loads(run('assessment','status','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z','--as-of','2026-08-23T12:00:00Z','--format','json'))
         assert historical['all_passed']
         (project/'generated/results/host__installed-second.json').unlink()
-        historical = json.loads(run('assessment','status','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z','--format','json'))
+        historical = json.loads(run('assessment','status','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z','--as-of','2026-08-23T12:00:00Z','--format','json'))
         assert not historical['accounting_complete'] and not historical['all_passed']
+        no_assessment = json.loads(run(
+            'assessment','status','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z',
+            '--as-of','2026-08-23T12:00:00Z','--outcome','no_assessment','--format','json'
+        ))
+        assert [row['historical_outcome'] for row in no_assessment['visible_members']] == ['no_assessment']
+        filtered_groups = json.loads(run(
+            'assessment','groups','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z',
+            '--as-of','2026-08-23T12:00:00Z','--outcome','no_assessment','--format','json'
+        ))
+        assert filtered_groups['groups']
+        assert all(
+            summary['qualification_summary'].get('historical_outcomes.pass', 0) == 0
+            and summary['qualification_summary'].get('historical_outcomes.no_assessment', 0) <= 1
+            for summary in filtered_groups['groups']
+        )
+        filtered_frameworks = json.loads(run(
+            'assessment','frameworks','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z',
+            '--as-of','2026-08-23T12:00:00Z','--outcome','no_assessment','--format','json'
+        ))
+        assert {row['subject_id'] for row in filtered_frameworks['visible_members']} == {second_subject}
+        assert all(
+            mapping['subject_id'] == second_subject
+            and mapping['historical_outcome'] == 'no_assessment'
+            for mapping in filtered_frameworks['mappings']
+        )
         return report['provenance']['evaluationComposition']['actual']['tooling']['execution']['kind']

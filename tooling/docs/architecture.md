@@ -140,7 +140,7 @@ The reporting service consumes immutable decisions and evidence references. It
 maintains finding lifecycles, history, dashboards, notifications, exports, and
 audit views. It does not recalculate policy outcomes.
 
-System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) owns immutable historical outcomes, exact current-plan alignment and query-time operational evidence timeliness. Its state matrix, separate dimension aggregation and continuous-effectiveness boundaries are accepted design, not yet implemented. A historical result never ages into another logical outcome; only support from its exact selected evidence and recorded waiver interval receives temporal qualification. #32 retains the validated identity-bound selection/temporal facts in v4; a later operational-view tranche owns their derivation and presentation. See [artifact provenance](artifact-provenance.md#accepted-v4-temporal-provenance) and [CLI behavior](cli.md#historical-results-and-operational-views).
+System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) owns immutable historical outcomes, exact operation-bound plan alignment and query-time operational evidence timeliness. #80 implements its derived historical view and separate dimension aggregation. A historical result never ages into another logical outcome; only support from its exact selected evidence and recorded waiver interval receives temporal qualification. #32 retains the validated identity-bound selection/temporal facts in v4. See [artifact provenance](artifact-provenance.md#accepted-v4-temporal-provenance) and [CLI behavior](cli.md#historical-results-and-operational-views).
 
 ### Policy management plane
 
