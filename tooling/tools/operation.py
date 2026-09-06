@@ -150,6 +150,10 @@ def select_from_witness(request, witness):
             raise ValueError('duplicate selector candidate identity')
         if [row['subject_id'] for row in candidates] != sorted(subject_rows):
             raise ValueError('selector candidates must use canonical subject order')
+        explicit_members = {member for group in groups
+                            for member in group.get('members', [])}
+        if explicit_members - subject_rows.keys():
+            raise ValueError('explicit group member is absent from selector candidate domain')
         for row in candidates:
             if set(row['labels']) - selector_keys:
                 raise ValueError('selector candidate contains an unconsulted label')
@@ -365,6 +369,17 @@ def validate_operation(document, *, plan):
     if sid not in rows:
         raise ValueError('artifact subject is absent from frozen operation')
     row = rows[sid]
+    source = document if plan else document['resolved_policy']
+    artifact_assignments = sorted(({
+        'id': assignment['id'],
+        'target_group': assignment['group'],
+        'baselines': sorted(assignment['baselines']),
+    } for assignment in source['assignments']), key=lambda item: item['id'])
+    row_groups = {group['id'] for group in row['resolved_groups']}
+    expected_assignments = [assignment for assignment in assignments
+                            if assignment['target_group'] in row_groups]
+    if artifact_assignments != expected_assignments:
+        raise ValueError('artifact assignments differ from frozen operation attribution')
     if plan:
         if member_facts(document) != row or member_plan_digest(document) != row['member_plan_digest']:
             raise ValueError('subject plan differs from frozen operation')

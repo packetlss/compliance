@@ -482,16 +482,9 @@ see [artifact provenance](artifact-provenance.md) for the complete envelope.
       "via": "production-linux"
     }
   ],
-  "assignments": ["production-linux-policy"],
-  "coverage": {
-    "status": "assigned",
-    "assessable": true,
-    "reason": "policy-assigned",
-    "assignment_count": 1,
-    "active_control_count": 1,
-    "excluded_control_count": 0,
-    "requirement_count": 1
-  },
+  "assignments": [
+    {"id": "production-linux-policy", "group": "production-linux", "baselines": ["linux-web-server@3"]}
+  ],
   "resolved_requirement_baselines": [
     {"reference": "company.identity-access-objectives@1", "digest": "sha256:..."}
   ],
@@ -532,13 +525,14 @@ what policy applied at a point in time.
 schema before it is returned or persisted and whenever a stored plan is read by
 the evaluator, explanation view, or plan display. The
 stable envelope, normalized subject, group and assignment paths, baseline and
-realization provenance, effective controls, exclusions, coverage, and
+realization provenance, effective controls, exclusions, and
 resolution structures reject unknown fields. Domain payloads that are meant to
 remain extensible—control parameters, subject attributes, and structured
 resolution-error details—retain explicit open JSON boundaries. Semantic
-validation additionally verifies the plan content digest, exact coverage
-counts, unique identities, active/excluded separation, realization check
-references, and agreement between resolution and coverage state.
+validation additionally recomputes the member-plan commitment, operation ID,
+and operation-bound plan ID; rederives the frozen denominator; and verifies
+unique identities, assignment attribution, active/excluded separation, and
+realization check references.
 
 Every requirement or technical instance retains its `external_refs` in the
 plan. Evaluation copies those mappings and technical alignment into immutable
@@ -548,11 +542,10 @@ objective, while a technical mapping is supporting traceability. A tailored
 technical check retains its company result and `TAILORED` alignment rather than
 being reported as unaltered parent-framework conformance.
 
-Coverage is part of the plan rather than inferred from the number of decisions.
-Its mutually exclusive `status` is `assigned`, `unassigned`, `inactive`, or
-`invalid`. `assessable` is true only when an active subject has valid assigned
-policy and at least one active control or rendered requirement. A missing
-applicable realization remains assessable as `not_implemented` so it yields an
+Accounting disposition is derived from frozen lifecycle, relevant assignment,
+active-control, and requirement membership. Retired, unassigned, and
+no-assessable-policy members require no result and receive no synthetic pass or
+N/A. A missing applicable realization remains assessable as `not_implemented` so it yields an
 explicit failed objective instead of disappearing. A fully excluded baseline remains
 assigned, but is explicitly non-assessable with reason `no-active-controls`;
 it must not produce a successful empty assessment.

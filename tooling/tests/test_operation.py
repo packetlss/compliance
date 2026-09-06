@@ -8,7 +8,7 @@ from unittest.mock import patch
 from assessment_fixture import refresh_operation
 import test_assessment_v4 as fixtures
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
-from tools.assessment_provenance import artifact_digest
+from tools.assessment_provenance import artifact_digest, digest
 from tools.evaluate_plan import evaluate_plan_document, control_error_result
 from tools.operation import (
     account_operation, freeze_operation, freeze_selection_witness, normalize_request,
@@ -114,6 +114,16 @@ class OperationTests(unittest.TestCase):
         self.assertNotEqual([p['id'] for p in without_c], [p['id'] for p in nonmatching_c])
         self.assertEqual(nonmatching_c[0]['operation']['selection_witness']['candidates'][-1],
                          {'subject_id':'host/C','labels':{'env':'dev'}})
+
+        incomplete = copy.deepcopy(nonmatching_c[0]['operation']['selection_witness'])
+        incomplete['groups'][0]['members'] = ['host/A']
+        incomplete['candidates'] = [row for row in incomplete['candidates']
+                                    if row['subject_id'] != 'host/A']
+        with self.assertRaisesRegex(ValueError, 'explicit group member'):
+            select_from_witness(
+                {'all':False,'subjects':['host/B'],'groups':['selected']},
+                incomplete,
+            )
 
         matching_subjects = copy.deepcopy(subjects)
         matching_subjects['host/C']['labels']['env'] = 'prod'
@@ -269,6 +279,17 @@ class OperationTests(unittest.TestCase):
             changed['id'] = artifact_digest(changed)
             with self.assertRaises(ValueError):
                 validate_assessment_plan(changed)
+
+    def test_resigned_operation_assignment_must_match_member_plan(self):
+        changed = copy.deepcopy(self.plans(('host/A',))[0])
+        changed['operation']['assignments'][0]['baselines'] = ['fabricated.baseline@9']
+        semantic = {key: value for key, value in changed['operation'].items()
+                    if key != 'operation_id'}
+        changed['operation']['operation_id'] = digest(semantic)
+        changed['id'] = artifact_digest(changed)
+
+        with self.assertRaisesRegex(ValueError, 'artifact assignments differ'):
+            validate_assessment_plan(changed)
 
     def test_sibling_member_commitment_tampering_is_rejected(self):
         anchor = self.plans()[0]
