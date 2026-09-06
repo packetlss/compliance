@@ -103,6 +103,8 @@ class ExampleCoverageTests(unittest.TestCase):
                 "external_refs": ["CSA-CCM-v4.1:LOG-domain"],
                 "groups": ["aws-production-accounts"],
                 "levels": ["technical"],
+                "outcomes": [],
+                "plan_alignment": [],
             },
             "mappings": [
                 {

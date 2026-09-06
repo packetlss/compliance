@@ -183,6 +183,8 @@ def mock_fleet_filter_contract_holds(
             "external_refs": ["CSA-CCM-v4.1:LOG-domain"],
             "groups": ["aws-production-accounts"],
             "levels": ["technical"],
+            "outcomes": [],
+            "plan_alignment": [],
         }
         and framework_subjects == MOCK_FLEET_AWS_SUBJECTS
         and all(
