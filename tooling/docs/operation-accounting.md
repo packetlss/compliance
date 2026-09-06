@@ -30,11 +30,19 @@ frozen supplied facts; it does not authenticate their real-world truth.
 
 ## Identity
 
-The provisional plan-digest algorithm first hashes the existing semantic plan
-projection with `id` and `operation` removed. It then hashes the JCS object
-`{"plan_content_digest": digest, "operation": projection}`. The frozen rows contain
-these content digests, so exact expected enclosing plan IDs are reconstructible
-without embedding foreign plan bodies or introducing recursive digest references.
+The provisional plan-digest algorithm hashes the existing semantic plan projection
+with `id` and `operation` removed as `plan_body_digest`. Each frozen row retains
+that compact commitment, alongside its subject, revision, membership, assignment,
+coverage and policy facts. `plan_content_digest` hashes all those row fields;
+validation recomputes it for every member, including siblings whose full plan
+bodies are absent. Correlated edits to sibling coverage and policy membership
+cannot retain the original member commitment merely by recomputing the enclosing
+artifact digest. The actual child also derives these same facts and its body
+commitment from its full plan.
+
+The enclosing plan ID hashes the JCS object
+`{"plan_content_digest": digest, "operation": projection}`. Exact expected plan IDs
+are reconstructible without embedding foreign plan bodies or recursive references.
 Composition descriptive metadata and expected enforcement remain nonsemantic.
 Operation planning composition includes only actual composition and its digest.
 

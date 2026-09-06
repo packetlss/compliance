@@ -651,7 +651,8 @@
               "resolved_groups",
               "assignments",
               "coverage",
-              "policy"
+              "policy",
+              "plan_body_digest"
             ],
             "properties": {
               "subject_id": {
@@ -1275,6 +1276,10 @@
                     "uniqueItems": true
                   }
                 }
+              },
+              "plan_body_digest": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
               }
             }
           },

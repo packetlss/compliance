@@ -121,6 +121,31 @@ class OperationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 validate_assessment_plan(changed)
 
+    def test_correlated_sibling_membership_changes_cannot_keep_plan_commitment(self):
+        anchor = self.plans()[0]
+        for mutation in ('omit-controls', 'exclude-controls', 'replace-body-commitment'):
+            with self.subTest(mutation=mutation):
+                changed = copy.deepcopy(anchor)
+                row = changed['operation']['members'][1]
+                if mutation == 'replace-body-commitment':
+                    row['plan_body_digest'] = 'sha256:' + '0' * 64
+                else:
+                    if mutation == 'omit-controls':
+                        row['policy']['controls'].clear()
+                        for baseline in row['policy']['baselines']:
+                            baseline['control_ids'] = []
+                    else:
+                        for control in row['policy']['controls']:
+                            control['disposition'] = 'excluded'
+                        row['coverage']['excluded_control_count'] = len(row['policy']['controls'])
+                    row['coverage'].update(assessable=False, active_control_count=0,
+                                           reason='no-active-controls')
+                changed['id'] = artifact_digest(changed)
+                with self.assertRaisesRegex(ValueError, 'member facts differ from plan content commitment'):
+                    validate_assessment_plan(changed)
+                with self.assertRaises(ValueError):
+                    account_operation(changed, [], self.instant)
+
     def test_historical_accounting_does_not_reopen_policy_or_evidence(self):
         plans = self.plans()
         reports = self.evaluate(plans)

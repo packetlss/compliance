@@ -68,6 +68,21 @@ def select_subjects(subjects, groups, selection):
     return sorted(selected)
 
 
+def member_facts(plan):
+    """Bind exposed sibling accounting facts to a compact full-body commitment."""
+    from .assessment_provenance import plan_body_digest
+    return {
+        'subject_id': plan['subject']['id'],
+        'plan_body_digest': plan_body_digest(plan),
+        'inventory_revision': plan['inventory_revision'],
+        'assignment_revision': plan['assignment_revision'],
+        'resolved_groups': copy.deepcopy(sorted(plan['resolved_groups'], key=lambda g: g['id'])),
+        'assignments': copy.deepcopy(plan['assignments']),
+        'coverage': copy.deepcopy(plan['coverage']),
+        'policy': policy_membership(plan),
+    }
+
+
 def freeze_operation(plans, subjects, groups, assignments, selection):
     """Freeze all rows before evaluation; mutate only the generated subject plans."""
     from .assessment_provenance import artifact_digest, plan_content_digest
@@ -86,16 +101,8 @@ def freeze_operation(plans, subjects, groups, assignments, selection):
                       'groups': sorted(set(selection['groups']))},
         'subjects': [copy.deepcopy(subjects[s]) for s in sorted(subjects)],
         'groups': canonical_groups, 'assignments': canonical_assignments,
-        'members': [{
-            'subject_id': plan['subject']['id'],
-            'plan_content_digest': plan_content_digest(plan),
-            'inventory_revision': plan['inventory_revision'],
-            'assignment_revision': plan['assignment_revision'],
-            'resolved_groups': copy.deepcopy(sorted(plan['resolved_groups'], key=lambda g: g['id'])),
-            'assignments': copy.deepcopy(plan['assignments']),
-            'coverage': copy.deepcopy(plan['coverage']),
-            'policy': policy_membership(plan),
-        } for plan in sorted(plans, key=lambda p: p['subject']['id'])],
+        'members': [{**member_facts(plan), 'plan_content_digest': plan_content_digest(plan)}
+                    for plan in sorted(plans, key=lambda p: p['subject']['id'])],
     }
     for plan in plans:
         plan['operation'] = copy.deepcopy(projection)
@@ -149,6 +156,8 @@ def validate_operation(document, *, plan):
     if any(a['target']['group'] not in groups for a in assignments):
         raise ValueError('unresolved frozen assignment target')
     for row in projection['members']:
+        if digest({k: v for k, v in row.items() if k != 'plan_content_digest'}) != row['plan_content_digest']:
+            raise ValueError('frozen member facts differ from plan content commitment')
         sid = row['subject_id']
         resolved = resolve_groups(groups, subjects[sid])
         applicable = [{'id': a['id'], 'group': a['target']['group'], 'baselines': a['baselines']}

@@ -22,7 +22,8 @@ The plan and results algorithms are respectively
 8785/JCS bytes after this explicit projection:
 
 - Results remove only the top-level `id`. Plans first hash the semantic body
-  without `id` or `operation`, then hash the JCS object containing
+  without `id` or `operation`, bind that digest together with the exposed member
+  accounting facts as `plan_content_digest`, then hash the JCS object containing
   `plan_content_digest` and `operation`, as specified in
   [operation accounting](operation-accounting.md).
 - For each composition stage retain its normalized `actual`,

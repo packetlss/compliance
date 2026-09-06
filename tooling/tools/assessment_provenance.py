@@ -61,10 +61,15 @@ def _artifact_projection(document: dict) -> dict:
     return projected
 
 
-def plan_content_digest(document: dict) -> str:
+def plan_body_digest(document: dict) -> str:
     projected = _artifact_projection(document)
     projected.pop('operation', None)
     return digest(projected)
+
+
+def plan_content_digest(document: dict) -> str:
+    from .operation import member_facts
+    return digest(member_facts(document))
 
 
 def operation_plan_id(content_digest: str, operation: dict) -> str:
