@@ -73,3 +73,8 @@ Generated evidence, plans, results, and direct roll-up output are temporary and
 must not be committed. Real private inventories, realizations, evidence,
 parameters, credentials, provider state, and operational data remain in their
 separate authorized environments.
+
+The additional `policy/realizations/operation/` realization belongs to the canonical
+closed-world scenario. It remains in this separately materialized private root and
+introduces a named shared IAM dependency plus an attributable consumer relationship.
+The original restricted Linux scenario and its four checks remain unchanged.

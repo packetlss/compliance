@@ -15,6 +15,8 @@ from tools.render_plan import load_policy_catalogs, validate_rego_entrypoints
 ROOT = Path(__file__).resolve().parents[1]
 POLICIES = ROOT / "policies"
 EXPECTED_CONTROL_IDS = {
+    "organization.assertion.required",
+    "iam.integration.required",
     "aws.account.number_at_least",
     "aws.account.setting_equals",
     "aws.s3.account_public_access_block_required",

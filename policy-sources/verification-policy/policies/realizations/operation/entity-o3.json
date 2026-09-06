@@ -1,0 +1,49 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "ControlRealization",
+  "metadata": {
+    "id": "verification.operation.entity.o3.realization",
+    "revision": 1,
+    "classification": "internal"
+  },
+  "spec": {
+    "requirement": {
+      "requirement": "verification.operation.entity.o3@1",
+      "digest": "sha256:1b92e6b31c5aee054ce092eff4f9b7a96509da0dfd9ca1146f8ebf6e2676eb94"
+    },
+    "applies_to": {
+      "subject_types": [
+        "entity"
+      ],
+      "match_labels": {
+        "operation-profile": "synthetic"
+      }
+    },
+    "adoption": {
+      "status": "implemented",
+      "method": "automated",
+      "owner": "synthetic-governance",
+      "implementation_ref": "synthetic/procedure"
+    },
+    "checks": [
+      {
+        "instance_id": "verification.operation.entity.o3.check",
+        "implementation": "organization.assertion.required",
+        "parameters": {},
+        "evidence": {
+          "assertion": {
+            "max_age": "24h",
+            "inputs": {
+              "scheme": "CE+"
+            }
+          }
+        }
+      }
+    ],
+    "satisfaction": {
+      "allOf": [
+        "verification.operation.entity.o3.check"
+      ]
+    }
+  }
+}

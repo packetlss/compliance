@@ -69,6 +69,8 @@ class PolicyDiffTests(unittest.TestCase):
         cls.invalid_plan = copy.deepcopy(cls.macos_plan)
         cls.invalid_plan["resolution"] = {"status": "invalid", "errors": [{"type": "test-conflict"}]}
         cls.invalid_plan["coverage"].update(status="invalid", assessable=False, reason="resolution-errors")
+        from assessment_fixture import refresh_operation
+        refresh_operation(cls.invalid_plan)
         cls.invalid_plan.pop("id")
         cls.invalid_plan["id"] = artifact_digest(cls.invalid_plan)
         cls.standard_plan = render_project_plan(
@@ -78,6 +80,8 @@ class PolicyDiffTests(unittest.TestCase):
 
     @staticmethod
     def resign(plan):
+        from assessment_fixture import refresh_operation
+        refresh_operation(plan)
         plan.pop("id", None)
         plan["id"] = artifact_digest(plan)
         validate_assessment_plan(plan)
@@ -110,7 +114,7 @@ class PolicyDiffTests(unittest.TestCase):
         self.assertTrue(document["context"]["changed"])
         self.assertEqual(
             document["context"]["changed_fields"],
-            ["plan_id", "inventory_revision"],
+            ["plan_id", "inventory_revision", "operation_digest"],
         )
 
     def test_control_criteria_change_is_exact_and_attributable(self):

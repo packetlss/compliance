@@ -7,22 +7,17 @@ This document defines how governed assets enter the inventory, how they become
 members of a group DAG, and how group-level policy assignments resolve to
 baselines and ultimately to control checks.
 
-## Closed-world successor boundary
+## Closed-world operation accounting
 
-[ADR 0016](../../docs/adr/0016-closed-world-policy-assessment.md) is the accepted,
-not-yet-implemented accounting successor. Inventory describes supplied subjects; core
-resolution does not establish real-world exhaustiveness. Retain stable Subject identity,
-group DAG union and every membership/assignment path, deterministic conflicts and exact
-host/entity/system requirement instances. Unresolved references, cycles and ambiguous
-identities fail closed. No second inventory/scope hierarchy is introduced.
-
-Future operation accounting must retain the exact resolved expected assessment set
-and detect omitted results: supplied A/B/C cannot succeed from A/B results alone.
-Unsupplied real-world C is outside that guarantee; exact A/B success claims nothing
-about C. No assignment means unassigned, not automatic N/A. This obligation chooses
-no artifact family or wire representation. #37 routes narrow repository-grounded
-exploration, not implementation. External inventory authority is a governance choice,
-not an in-core external applicability or population-completeness subsystem.
+[ADR 0016](../../docs/adr/0016-closed-world-policy-assessment.md) is implemented by
+[#78](https://github.com/packetlss/compliance/issues/78). The embedded
+[operation projection](operation-accounting.md) freezes supplied selection,
+Subject/group/assignment facts and expected policy membership before evaluation.
+Dangling explicit Subject references fail catalog loading. Direct membership
+retains simultaneous inherited edges; each Subject is assessed once.
+Accounting is exact to supplied inputs, never a guarantee of external inventory
+exhaustiveness. Unassigned remains distinct from explicit N/A. #37 owns residual
+architecture and escalation; no second inventory hierarchy is introduced.
 
 ## 1. Complete relationship
 

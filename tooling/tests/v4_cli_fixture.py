@@ -87,4 +87,30 @@ evaluate := {
         else:
             raise AssertionError('unsafe evidence did not refuse')
         assert result_path.read_bytes() == before
+        # Installed, non-Git operation cutover: two exact subjects and one instant.
+        (evidence/'second.json').unlink()
+        first_subject = 'host/configuration-linux-01'
+        second_subject = 'host/installed-second'
+        for resource_path in list((project/'inventory').rglob('*.json')):
+            resource = json.loads(resource_path.read_text())
+            if resource['kind'] == 'Subject' and resource['spec']['id'] == first_subject:
+                resource['metadata']['name'] = 'installed-second'
+                resource['spec']['id'] = second_subject
+                (resource_path.parent/'installed-second.json').write_text(json.dumps(resource))
+            elif resource['kind'] == 'InventoryGroup':
+                members = resource['spec'].get('subjectRefs', [])
+                if {'id':first_subject} in members:
+                    members.append({'id':second_subject})
+                    resource_path.write_text(json.dumps(resource))
+        (evidence/'second-subject.json').write_text(json.dumps({**doc, 'id':'second:observation',
+            'subject':{'id':second_subject,'type':'linux-host'}}))
+        account = json.loads(run('assessment','run',first_subject,second_subject,'--at','2026-08-23T12:00:00Z'))
+        assert account['accounting_complete'] and account['all_passed'], account
+        multi_plan = json.loads(plan_path.read_text())
+        assert multi_plan['id'] != plan['id']
+        historical = json.loads(run('assessment','status','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z','--format','json'))
+        assert historical['all_passed']
+        (project/'generated/results/host__installed-second.json').unlink()
+        historical = json.loads(run('assessment','status','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z','--format','json'))
+        assert not historical['accounting_complete'] and not historical['all_passed']
         return report['provenance']['evaluationComposition']['actual']['tooling']['execution']['kind']

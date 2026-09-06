@@ -1,0 +1,19 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "PolicyAssignment",
+  "metadata": {
+    "name": "entities"
+  },
+  "spec": {
+    "targetRef": {
+      "kind": "InventoryGroup",
+      "name": "entities"
+    },
+    "baselineRefs": [
+      {
+        "name": "verification.operation.entity",
+        "revision": "1"
+      }
+    ]
+  }
+}

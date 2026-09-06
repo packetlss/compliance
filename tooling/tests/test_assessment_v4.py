@@ -440,6 +440,10 @@ class V4JcsProjectionVectors(unittest.TestCase):
             ('results','sha256:bbc52bac753f18c0cb328b8ea19cae5cdec347a75f5cd1f883463b53aa35382e'),
         ):
             document = {'schema':f'compliance.example/assessment-{kind}/v4','digestAlgorithm':f'compliance.example/assessment-{kind}-digest/v1alpha1','provenance':{'schema':PROVENANCE_SCHEMA,'planningComposition':copy.deepcopy(record)},'payload':{'😀':1e-7,'€':333333333.33333329,'value':-0.0}}
+            if kind == 'plan':
+                from tools.assessment_provenance import operation_plan_id
+                document['operation'] = {'selection': ['subject/A']}
+                expected = operation_plan_id(expected, document['operation'])
             self.assertEqual(artifact_digest(document),expected)
             document['id'] = 'ignored self reference'
             document['provenance']['planningComposition']['metadata'] = {'distribution':'descriptive','version':'99'}

@@ -105,7 +105,7 @@ plan, not the adapter or authorization artifact surface.
 ## Closed-world policy assessment
 
 [ADR 0016](adr/0016-closed-world-policy-assessment.md) supersedes ADRs 0013–0015
-and is **accepted design, not yet implemented**. The core evaluates explicitly
+and is **experimental, implemented under #78**. The core evaluates explicitly
 supplied company policy against attributable reality. Governance owns inventory
 exhaustiveness, external applicability and the legal/regulatory sufficiency of
 chosen policy and demonstration. Optional company objective assurance remains core
@@ -168,7 +168,7 @@ No assignment is unassigned/outside supplied assessment scope, not automatic N/A
 Existing explicit N/A remains distinct pending separate architecture review. Never
 infer external N/A from absent assignments, evidence or realizations.
 
-### Deliberate narrowing and next exploration
+### Deliberate narrowing and implementation routing
 
 The core relinquishes external real-world inventory exhaustiveness, authoritative
 external obligation-universe completeness, external legal/applicability authority
@@ -178,14 +178,12 @@ reporting and ordinary explicit assurance dependencies mitigate this narrowing.
 There is no separate runtime applicability/authority-acceptance/recognition engine
 or mandatory external completeness gate.
 
-[#37](https://github.com/packetlss/compliance/issues/37) remains open. Next is narrow
-read-only repository-grounded exploration of expected assessment/run accounting,
-typed external/procedural assurance dependencies and qualification, exact beneficiary/
-scope attribution, and whether explicit common-assurance reuse is needed. #73 is
-complete; inspect the actual representation. Do not presume direct result consumption
-or the superseded three-ADR migration. ADR 0016 owns conformance and escalation;
-no runtime/schema/fixture change, N/A redesign or wire/algorithm freeze is authorized.
-
+[#78](https://github.com/packetlss/compliance/issues/78) implements embedded frozen
+operation accounting and concrete external assertions through existing typed evidence.
+The [operation contract](../tooling/docs/operation-accounting.md) specifies exact
+selection, membership, plan identity, result matching and historical reporting.
+#37 remains open for residual architecture and mandatory escalation. No direct result
+graph, external conformity engine or certificate subsystem is introduced.
 
 ## Historical assessment and operational interpretation
 

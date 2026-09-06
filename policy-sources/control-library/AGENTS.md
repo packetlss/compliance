@@ -18,8 +18,8 @@ This root owns reusable controls and helpers, control parameter schemas, policy/
 company policy; governance owns external applicability and sufficiency. Mappings
 are attributable policy/reporting content. Selected evidence contracts and exact
 beneficiary dependencies constrain assurance; no generic certificate, recognition
-or external completeness machinery is required. #37 remains open for the narrow
-exploration specified by ADR 0016; promotion authorizes no runtime/schema changes.
+or external completeness machinery is required. #78 implements the bounded accounting and typed assertion cutover. #37 remains
+open for residual architecture and escalation; no broader assurance subsystem is authorized.
 
 ## Validation
 

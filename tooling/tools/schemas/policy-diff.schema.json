@@ -3,58 +3,108 @@
   "$id": "https://compliance.example/schemas/policy-diff-v1alpha1.schema.json",
   "type": "object",
   "required": [
-    "schema", "subject_id", "comparison", "context", "summary",
-    "scope_changes", "requirement_changes", "control_changes"
+    "schema",
+    "subject_id",
+    "comparison",
+    "context",
+    "summary",
+    "scope_changes",
+    "requirement_changes",
+    "control_changes"
   ],
   "additionalProperties": false,
   "properties": {
-    "schema": {"const": "compliance.example/policy-diff/v1alpha1"},
-    "subject_id": {"type": "string", "minLength": 3, "pattern": "^[^/]+/.+$"},
-    "comparison": {"$ref": "#/$defs/comparison"},
-    "context": {"$ref": "#/$defs/context"},
-    "summary": {"$ref": "#/$defs/summary"},
+    "schema": {
+      "const": "compliance.example/policy-diff/v1alpha1"
+    },
+    "subject_id": {
+      "type": "string",
+      "minLength": 3,
+      "pattern": "^[^/]+/.+$"
+    },
+    "comparison": {
+      "$ref": "#/$defs/comparison"
+    },
+    "context": {
+      "$ref": "#/$defs/context"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
     "scope_changes": {
       "type": "array",
       "uniqueItems": true,
-      "items": {"$ref": "#/$defs/change"}
+      "items": {
+        "$ref": "#/$defs/change"
+      }
     },
     "requirement_changes": {
       "type": "array",
       "uniqueItems": true,
-      "items": {"$ref": "#/$defs/change"}
+      "items": {
+        "$ref": "#/$defs/change"
+      }
     },
     "control_changes": {
       "type": "array",
       "uniqueItems": true,
-      "items": {"$ref": "#/$defs/change"}
+      "items": {
+        "$ref": "#/$defs/change"
+      }
     }
   },
   "$defs": {
-    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-    "nonEmptyString": {"type": "string", "minLength": 1},
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
     "comparison": {
       "oneOf": [
         {
           "type": "object",
-          "required": ["status", "reason"],
+          "required": [
+            "status",
+            "reason"
+          ],
           "additionalProperties": false,
           "properties": {
-            "status": {"const": "complete"},
-            "reason": {"const": "valid-plans"}
+            "status": {
+              "const": "complete"
+            },
+            "reason": {
+              "const": "valid-plans"
+            }
           }
         },
         {
           "type": "object",
-          "required": ["status", "reason", "invalid_sides"],
+          "required": [
+            "status",
+            "reason",
+            "invalid_sides"
+          ],
           "additionalProperties": false,
           "properties": {
-            "status": {"const": "incomplete"},
-            "reason": {"const": "invalid-resolution"},
+            "status": {
+              "const": "incomplete"
+            },
+            "reason": {
+              "const": "invalid-resolution"
+            },
             "invalid_sides": {
               "type": "array",
               "minItems": 1,
               "uniqueItems": true,
-              "items": {"enum": ["before", "after"]}
+              "items": {
+                "enum": [
+                  "before",
+                  "after"
+                ]
+              }
             }
           }
         }
@@ -63,100 +113,209 @@
     "planContext": {
       "type": "object",
       "required": [
-        "path", "plan_id", "policy_revision", "policy_sources",
-        "inventory_revision", "assignment_revision"
+        "path",
+        "plan_id",
+        "policy_revision",
+        "policy_sources",
+        "inventory_revision",
+        "assignment_revision",
+        "operation_digest"
       ],
       "additionalProperties": false,
       "properties": {
-        "path": {"$ref": "#/$defs/nonEmptyString"},
-        "plan_id": {"$ref": "#/$defs/digest"},
-        "policy_revision": {"$ref": "#/$defs/digest"},
+        "path": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "plan_id": {
+          "$ref": "#/$defs/digest"
+        },
+        "policy_revision": {
+          "$ref": "#/$defs/digest"
+        },
         "policy_sources": {
           "type": "array",
           "uniqueItems": true,
           "items": {
             "type": "object",
-            "required": ["name", "digest"],
+            "required": [
+              "name",
+              "digest"
+            ],
             "additionalProperties": false,
             "properties": {
-              "name": {"$ref": "#/$defs/nonEmptyString"},
-              "digest": {"$ref": "#/$defs/digest"}
+              "name": {
+                "$ref": "#/$defs/nonEmptyString"
+              },
+              "digest": {
+                "$ref": "#/$defs/digest"
+              }
             }
           }
         },
-        "inventory_revision": {"$ref": "#/$defs/digest"},
-        "assignment_revision": {"$ref": "#/$defs/digest"}
+        "inventory_revision": {
+          "$ref": "#/$defs/digest"
+        },
+        "assignment_revision": {
+          "$ref": "#/$defs/digest"
+        },
+        "operation_digest": {
+          "$ref": "#/$defs/digest"
+        }
       }
     },
     "context": {
       "type": "object",
-      "required": ["changed", "changed_fields", "before", "after"],
+      "required": [
+        "changed",
+        "changed_fields",
+        "before",
+        "after"
+      ],
       "additionalProperties": false,
       "properties": {
-        "changed": {"type": "boolean"},
+        "changed": {
+          "type": "boolean"
+        },
         "changed_fields": {
           "type": "array",
           "uniqueItems": true,
           "items": {
             "enum": [
-              "plan_id", "policy_revision", "policy_sources",
-              "inventory_revision", "assignment_revision"
+              "plan_id",
+              "policy_revision",
+              "policy_sources",
+              "inventory_revision",
+              "assignment_revision",
+              "operation_digest"
             ]
           }
         },
-        "before": {"$ref": "#/$defs/planContext"},
-        "after": {"$ref": "#/$defs/planContext"}
+        "before": {
+          "$ref": "#/$defs/planContext"
+        },
+        "after": {
+          "$ref": "#/$defs/planContext"
+        }
       }
     },
     "counts": {
       "type": "object",
-      "required": ["added", "removed", "modified", "activated", "excluded"],
+      "required": [
+        "added",
+        "removed",
+        "modified",
+        "activated",
+        "excluded"
+      ],
       "additionalProperties": false,
       "properties": {
-        "added": {"type": "integer", "minimum": 0},
-        "removed": {"type": "integer", "minimum": 0},
-        "modified": {"type": "integer", "minimum": 0},
-        "activated": {"type": "integer", "minimum": 0},
-        "excluded": {"type": "integer", "minimum": 0}
+        "added": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "removed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "modified": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activated": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "excluded": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "summary": {
       "type": "object",
-      "required": ["changed", "total_changes", "scope", "requirements", "controls"],
+      "required": [
+        "changed",
+        "total_changes",
+        "scope",
+        "requirements",
+        "controls"
+      ],
       "additionalProperties": false,
       "properties": {
-        "changed": {"type": "boolean"},
-        "total_changes": {"type": "integer", "minimum": 0},
-        "scope": {"$ref": "#/$defs/counts"},
-        "requirements": {"$ref": "#/$defs/counts"},
-        "controls": {"$ref": "#/$defs/counts"}
+        "changed": {
+          "type": "boolean"
+        },
+        "total_changes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scope": {
+          "$ref": "#/$defs/counts"
+        },
+        "requirements": {
+          "$ref": "#/$defs/counts"
+        },
+        "controls": {
+          "$ref": "#/$defs/counts"
+        }
       }
     },
     "change": {
       "type": "object",
       "required": [
-        "kind", "identity", "change", "changed_fields", "before", "after"
+        "kind",
+        "identity",
+        "change",
+        "changed_fields",
+        "before",
+        "after"
       ],
       "additionalProperties": false,
       "properties": {
         "kind": {
           "enum": [
-            "subject", "group", "assignment", "baseline",
-            "requirement_baseline", "coverage", "resolution",
-            "requirement", "control"
+            "subject",
+            "group",
+            "assignment",
+            "baseline",
+            "requirement_baseline",
+            "coverage",
+            "resolution",
+            "requirement",
+            "control"
           ]
         },
-        "identity": {"$ref": "#/$defs/nonEmptyString"},
+        "identity": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
         "change": {
-          "enum": ["added", "removed", "modified", "activated", "excluded"]
+          "enum": [
+            "added",
+            "removed",
+            "modified",
+            "activated",
+            "excluded"
+          ]
         },
         "changed_fields": {
           "type": "array",
           "uniqueItems": true,
-          "items": {"$ref": "#/$defs/nonEmptyString"}
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
         },
-        "before": {"type": ["object", "null"]},
-        "after": {"type": ["object", "null"]}
+        "before": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "after": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
       }
     }
   }

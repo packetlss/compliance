@@ -179,6 +179,7 @@ tooling_run python "$SCENARIOS_ROOT/scripts/assert-v4-composition.py" \
   --run-root "$RUN_ROOT"
 
 tooling_run python "$SCENARIOS_ROOT/scripts/assert-policy-parameters.py" --integration-root "$INTEGRATION_ROOT"
+tooling_run python "$SCENARIOS_ROOT/scripts/assert-operation.py" --integration-root "$INTEGRATION_ROOT"
 
 printf '\n== Feature ownership/completeness integration ==\n'
 tooling_run python "$TOOLING_ROOT"/examples/verify_examples.py --output "$RUN_ROOT/features"

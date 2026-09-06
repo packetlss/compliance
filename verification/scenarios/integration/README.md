@@ -71,6 +71,10 @@ proves that identical actual composition produces the unlocked semantic plan ID
 while recording distinct expected enforcement. Direct and complete-lock
 mismatches must refuse before plan/domain execution.
 
+The additional closed-world scenario exercises #78 operation accounting and typed
+external assertions through the public CLI with a separately materialized private
+realization. Its proof is `scripts/assert-operation.py`.
+
 The complete feature runner executes once and requires exactly one owner for
 each of the 20 retained CLI leaves and 18 retained domain features. Generated
 outputs stay in a temporary run directory and are removed. Before and after

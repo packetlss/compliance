@@ -46,7 +46,7 @@ def _semantic(value: Any) -> Any:
     return result
 
 
-def artifact_digest(document: dict) -> str:
+def _artifact_projection(document: dict) -> dict:
     projected = _semantic(document)
     projected.pop('id', None)
     provenance = projected['provenance']
@@ -58,7 +58,23 @@ def artifact_digest(document: dict) -> str:
                 'compositionDigestAlgorithm': record['compositionDigestAlgorithm'],
                 'compositionDigest': record['compositionDigest'],
             }
+    return projected
+
+
+def plan_content_digest(document: dict) -> str:
+    projected = _artifact_projection(document)
+    projected.pop('operation', None)
     return digest(projected)
+
+
+def operation_plan_id(content_digest: str, operation: dict) -> str:
+    return digest({'plan_content_digest': content_digest, 'operation': operation})
+
+
+def artifact_digest(document: dict) -> str:
+    if document['schema'] == PLAN_SCHEMA:
+        return operation_plan_id(plan_content_digest(document), document['operation'])
+    return digest(_artifact_projection(document))
 
 
 def validate_stage(record: dict) -> None:
@@ -92,6 +108,10 @@ def validate_provenance(document: dict, *, plan: bool) -> None:
     validate_stage(provenance['planningComposition'])
     if document['id'] != artifact_digest(document):
         raise ValueError('assessment v4 semantic digest mismatch')
+    if not plan and document['resolved_policy']['resolution'] != {'status': 'valid', 'errors': []}:
+        raise ValueError('results require valid error-free frozen policy resolution')
+    from .operation import validate_operation
+    validate_operation(document, plan=plan)
     planning = provenance['planningComposition']['actual']['policySources']
     from .policy_sources import policy_revision
     revisions = [{'name': item['name'], 'digest': item['content']['digest']} for item in planning]

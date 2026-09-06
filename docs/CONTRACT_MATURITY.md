@@ -84,32 +84,24 @@ The predecessor status view still calls an exact-plan result `current`, a differ
 
 Current requirement/realization schemas support explicit pinned slots and direct typed consumption. Policy bindings own effective `max_age`; Control manifests provide dependency contracts. The experimental frozen records are specified in [policy parameters](../tooling/docs/policy-parameters.md). Successor schema, fingerprint, validation, explanation and policy-diff obligations are in ADR 0012's migration table. Development artifacts may need regeneration; historical artifacts retain their original identity and meaning. ADR 0016 below supersedes ADRs 0013–0015 and narrows core responsibility; ADR 0012 semantics remain unchanged.
 
-## Closed-world assessment successor
+## Closed-world operation accounting
 
-[ADR 0016](adr/0016-closed-world-policy-assessment.md) is **Accepted design, not yet
-implemented** under [#37](https://github.com/packetlss/compliance/issues/37). ADRs
-0013–0015 are superseded historical design, including their migration obligations.
-Existing inventory and experimental assurance contracts remain executable foundations;
-this documentation promotion changes no runtime, schema, fixture or assessment behavior.
+[ADR 0016](adr/0016-closed-world-policy-assessment.md) is **Experimental,
+implemented under [#78](https://github.com/packetlss/compliance/issues/78)**.
+ADRs 0013–0015 remain superseded historical design. The sole new shared runtime
+representation is the embedded frozen operation projection inside existing v4
+plans/results. [The operation contract](../tooling/docs/operation-accounting.md)
+defines its normalization and identity. This pre-freeze cutover changes the
+provisional plan digest projection without adding a compatibility reader or
+changing algorithm identifiers to `/v1`.
 
-Retain exact supplied Subject/group/assignment/policy resolution, expected assessment
-set accounting, typed attributable dependencies/evidence, immutable results and bounded
-company reporting. Aggregate success must detect omitted expected results; it is not
-proof of external inventory or obligation-universe completeness. No new artifact family,
-wire representation, version, identity algorithm or compatibility freeze is selected.
-
-Governance owns external sufficiency/applicability/authority judgments. Separate external
-applicability acceptance, recognition and conformity engines and mandatory external
-completeness gates are no longer successor obligations. Typed evidence may model
-selected assurance requirements and named beneficiaries; direct result consumption
-requires separate review if needed. Preserve ADR 0010 outcomes/refusal, ADR 0012 unresolved
-policy, missing-realization coverage/failure, existing explicit N/A and fail-only waivers.
-
-#73 is complete. Next exploration is limited to closed-world run accounting, typed
-external/procedural evidence dependencies/qualification, exact beneficiary attribution,
-and whether explicit common-assurance reuse is needed. #37 remains open; this does not
-authorize implementation or the superseded coordinated migration. Historical results
-remain immutable; future cutover needs its own repository-grounded contract.
+Complete accounting remains separate from assessment success. Typed assertions
+and observed consumer relationships use ordinary evidence dependencies. Governance
+owns external applicability, sufficiency and inventory exhaustiveness; mappings
+never establish external conformity. ADR 0010/0012, explicit N/A, missing-realization
+failure, fail-only waivers and technical-only assessment remain unchanged.
+#37 remains the parent architecture/escalation issue. Historical artifacts require
+their historical tooling; no historical result is reinterpreted.
 
 ## Accepted vocabulary convergence
 
@@ -136,13 +128,10 @@ None of these are frozen merely by this classification.
 
 ### Design pass required
 
-Destination #37 retains residual assurance questions. ADR 0016 limits the next
-exploration to expected assessment/run accounting, typed external/procedural assurance
-qualification, exact beneficiary/scope attribution and need for common-assurance reuse.
-Manual/procedural methodology, explicit N/A changes and any direct result graph need
-architecture decisions before implementation depends on them. Sampling inference and
-broader residual questions do not broaden that exploration. Do not present unresolved
-fields as frozen regulatory vocabulary.
+Destination #37 retains residual assurance questions, including methodology,
+sampling, N/A changes and any direct result dependency graphs. #78 implements
+only its bounded frozen accounting and typed assertion successor. Any new common
+abstraction, semantics or trust boundary requires renewed architecture review.
 
 ### Experimental generated/public views
 

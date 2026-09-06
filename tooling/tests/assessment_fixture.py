@@ -53,6 +53,27 @@ def freeze_policy_inputs(plan):
         states, ancestry = pp.resolve(baseline['reference'], {baseline['reference']: {**doc, '_sources': baseline['policy_sources']}}, requirements)
         baseline['digest'] = pp.digest(doc)
         baseline['parameter_derivation'] = {'states': states, 'ancestry': ancestry}
+    refresh_operation(plan)
+
+
+def refresh_operation(plan):
+    """Re-author singleton operation facts when a test intentionally edits policy."""
+    from tools.operation import freeze_operation
+    groups = {g['id']: {'id': g['id'], 'parents': []} for g in plan['resolved_groups']}
+    for resolved in plan['resolved_groups']:
+        group = groups[resolved['id']]
+        for source in resolved['sources']:
+            if source['membership'] == 'explicit':
+                group['members'] = [plan['subject']['id']]
+            elif source['membership'] == 'selector':
+                group['selector'] = source['source']
+            else:
+                for child in source['via']:
+                    groups[child]['parents'].append(resolved['id'])
+    assignments = [{'id': a['id'], 'target': {'group': a['group']}, 'baselines': a['baselines']}
+                   for a in plan['assignments']]
+    freeze_operation([plan], {plan['subject']['id']: plan['subject']}, list(groups.values()), assignments,
+                     {'subjects': [plan['subject']['id']], 'groups': [], 'all': False})
 
 
 def planning_fields(sources):
