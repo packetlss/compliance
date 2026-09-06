@@ -10,7 +10,7 @@ import test_assessment_v4 as fixtures
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
 from tools.assessment_provenance import artifact_digest
 from tools.evaluate_plan import evaluate_plan_document, control_error_result
-from tools.operation import account_operation, freeze_operation, select_subjects
+from tools.operation import account_operation, freeze_operation, qualify_operation, select_subjects
 from tools.policy_diff import build_policy_diff
 from tools.render_plan import resolve_groups
 
@@ -153,6 +153,87 @@ class OperationTests(unittest.TestCase):
         self.fixture.write([])
         with patch('tools.render_plan.load_policy_catalogs', side_effect=AssertionError('mutable policy')):
             self.assertEqual(account_operation(plans[0], reports, self.instant), expected)
+
+    def test_query_time_timeliness_is_independent_and_inclusive(self):
+        plans = self.plans(('host/A',))
+        report = self.evaluate(plans)[0]
+        collected = report['provenance']['selectedEvidence'][0]['collected_at']
+        from tools.waivers import parse_timestamp
+        boundary = parse_timestamp(collected) + timedelta(hours=24)
+        at_boundary = qualify_operation(
+            account_operation(plans[0], [report], self.instant), [report], boundary
+        )
+        row = at_boundary['members'][0]
+        self.assertEqual(row['historical_outcome'], 'pass')
+        self.assertEqual(row['plan_alignment'], 'plan_alignment_unavailable')
+        self.assertEqual(row['evidence_timeliness']['timely_selected_dependencies'], 1)
+        later = qualify_operation(
+            account_operation(plans[0], [report], self.instant), [report],
+            boundary + timedelta(seconds=1), plans[0]
+        )
+        row = later['members'][0]
+        self.assertEqual(row['historical_outcome'], 'pass')
+        self.assertEqual(row['plan_alignment'], 'plan_aligned')
+        self.assertEqual(row['evidence_timeliness']['stale_selected_dependencies'], 1)
+
+    def test_future_selected_timestamp_retains_adr_0011_rule(self):
+        plans = self.plans(('host/A',))
+        report = self.evaluate(plans)[0]
+        query = self.fixture.now - timedelta(days=30)
+        qualified = qualify_operation(
+            account_operation(plans[0], [report], self.instant), [report], query
+        )
+        dependency = qualified['members'][0]['evidence_timeliness']['dependencies'][0]
+        self.assertEqual(dependency['qualification'], 'timely')
+
+    def test_stale_and_unavailable_dependencies_coexist_per_control(self):
+        from tools.operation import _evidence_timeliness
+        plans = self.plans(('host/A',))
+        report = self.evaluate(plans)[0]
+        missing = copy.deepcopy(report['resolved_policy']['controls'][0]['evidence'][0])
+        missing.update(id='missing-observation', type='missing.observation/v1')
+        report['resolved_policy']['controls'][0]['evidence'].append(missing)
+        timing = _evidence_timeliness(report, self.fixture.now + timedelta(days=2))
+        self.assertEqual(timing['stale_selected_dependencies'], 1)
+        self.assertEqual(timing['unavailable_required_dependencies'], 1)
+        self.assertTrue(timing['controls'][0]['reassessment_due'])
+        self.assertTrue(timing['controls'][0]['timeliness_unavailable'])
+
+    def test_different_operation_plan_and_missing_result_qualify_without_rewriting(self):
+        historical = self.plans(('host/A',))
+        comparison = self.plans(('host/A', 'host/B'))
+        account = qualify_operation(
+            account_operation(historical[0], [], self.instant), [], self.fixture.now,
+            comparison[0]
+        )
+        row = account['members'][0]
+        self.assertEqual(row['state'], 'missing')
+        self.assertEqual(row['historical_outcome'], 'no_assessment')
+        self.assertEqual(row['plan_alignment'], 'different_plan')
+        self.assertEqual(row['evidence_timeliness'], {'qualification': 'unavailable'})
+
+    def test_recorded_waiver_window_qualifies_but_never_rewrites_waived(self):
+        waivers = self.fixture.root/'waivers'
+        waivers.mkdir()
+        (waivers/'exception.yaml').write_text(fixtures.fixtures.EvidenceFreshnessTests.waiver_resource())
+        report, _ = self.fixture.run_assessment(
+            [self.fixture.document()], status='fail', waiver_path=waivers
+        )
+        for query, expected in (
+            ('2026-07-31T23:59:59Z', 'not_yet_in_window'),
+            ('2026-08-23T12:00:00Z', 'within_window'),
+            ('2026-09-01T00:00:00Z', 'expired'),
+        ):
+            from tools.waivers import parse_timestamp
+            qualified = qualify_operation(
+                account_operation(self.fixture.plan, [report], self.instant),
+                [report], parse_timestamp(query),
+            )
+            row = qualified['members'][0]
+            self.assertEqual(row['historical_outcome'], 'waived')
+            self.assertEqual(
+                row['recorded_waiver_qualification']['waivers'][0]['qualification'], expected
+            )
 
     def test_direct_and_inherited_sources_are_both_preserved(self):
         subject = {'id':'host/A', 'labels':{}}

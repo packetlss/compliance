@@ -639,6 +639,8 @@ def _run_assessment_view(args: argparse.Namespace) -> None:
     if args.plan:
         _run_historical_operation_view(args)
         return
+    if args.as_of or args.comparison_plan:
+        raise ValueError('--as-of and --comparison-plan require --plan')
     subjects, groups, assignments, reports, known_groups = _assessment_context(args)
     use_color = not args.no_color and "NO_COLOR" not in os.environ and sys.stdout.isatty()
 
@@ -737,13 +739,17 @@ def _run_assessment(args: argparse.Namespace) -> None:
 
 
 def _run_historical_operation_view(args):
-    from .operation import account_operation
-    if not args.at:
-        raise ValueError('historical operation reporting requires --at and --plan')
+    from .operation import account_operation, qualify_operation, summarize_qualifications
+    if not args.at or not args.as_of:
+        raise ValueError('historical operation reporting requires --at, --as-of, and --plan')
     anchor = load_json(args.plan)
     instant = parse_timestamp(args.at, field='--at').isoformat().replace('+00:00', 'Z')
+    query_instant = parse_timestamp(args.as_of, field='--as-of')
+    comparison_anchor = load_json(args.comparison_plan) if args.comparison_plan else None
     reports = load_result_reports(args.results) if args.results and args.results.exists() else []
-    account = account_operation(anchor, reports, instant)
+    account = qualify_operation(
+        account_operation(anchor, reports, instant), reports, query_instant, comparison_anchor
+    )
     by_id = {r['id']: r for r in reports}
     selected = [r for r in account['members'] if not args.group or
                 set(args.group) & {g['id'] for g in r['resolved_groups']}]
@@ -766,8 +772,28 @@ def _run_historical_operation_view(args):
                                 'mapping_level': kind, 'policy_object': item.get('reference', item.get('instance_id')),
                                 'status': ('excluded' if item.get('disposition') == 'excluded' else
                                            statuses.get(item.get('reference',item.get('instance_id')), row['state'])),
-                                'plan_id': row['plan_id'], 'result_id': row['result_id']})
+                                'plan_id': row['plan_id'], 'result_id': row['result_id'],
+                                'plan_alignment': row['plan_alignment'],
+                                'evidence_timeliness': (
+                                    next((control for control in row['evidence_timeliness'].get('controls', [])
+                                          if control['instance_id'] == item.get('instance_id')), None)
+                                    if kind == 'technical' else None),
+                                'recorded_waiver_qualification': (
+                                    next((waiver for waiver in row['recorded_waiver_qualification']['waivers']
+                                          if waiver['instance_id'] == item.get('instance_id')), None)
+                                    if kind == 'technical' else None)})
         account['mappings'] = mappings
+    if args.assessment_command == 'groups':
+        group_ids = sorted(set(args.group)) if args.group else sorted({
+            group['id'] for row in account['members'] for group in row['resolved_groups']
+        })
+        account['groups'] = [{
+            'group_id': group_id,
+            'qualification_summary': summarize_qualifications([
+                row for row in account['members']
+                if group_id in {group['id'] for group in row['resolved_groups']}
+            ]),
+        } for group_id in group_ids]
     account['filtered'] = bool(args.group or args.state or args.assessment_command == 'explain' or
                                getattr(args, 'reference', []) or getattr(args, 'level', []))
     account['visible_members'] = [r for r in selected if not args.state or r['state'] in args.state]
@@ -775,13 +801,28 @@ def _run_historical_operation_view(args):
         print(json.dumps(account, indent=2, sort_keys=True))
     else:
         print(account['claim'])
-        print(f"Accounting complete: {account['accounting_complete']}; all selected subjects passed: {account['all_passed']}")
+        print(f"Accounting complete: {account['accounting_complete']}; historical all passed: {account['all_passed']}")
+        print(f"Qualifications as of {account['query_instant']}")
         if account['filtered']:
             print('Filtered view; whole-operation accounting is shown separately.')
         for row in account['visible_members']:
-            print(f"{row['subject_id']}: {row['state']} ({row['plan_id']})")
+            print(f"{row['subject_id']}: historical {row['historical_outcome']} at {instant}")
+            print(f"  Plan: {row['plan_alignment'].replace('_', ' ')}")
+            timing = row['evidence_timeliness']
+            if timing.get('qualification') == 'unavailable':
+                print('  Evidence timeliness unavailable')
+            else:
+                if timing['controls_within_recorded_age_limits']:
+                    print('  Selected evidence within recorded age limits')
+                if timing['controls_needing_reassessment']:
+                    print('  Evidence stale — reassessment due')
+                if timing['controls_with_unavailable_timeliness']:
+                    print('  Evidence timeliness unavailable')
         if args.assessment_command in ('explain', 'frameworks', 'groups'):
-            print(json.dumps(account.get('mappings', account['visible_members']), indent=2, sort_keys=True))
+            detail = (account.get('mappings') if args.assessment_command == 'frameworks' else
+                      account.get('groups') if args.assessment_command == 'groups' else
+                      account['visible_members'])
+            print(json.dumps(detail, indent=2, sort_keys=True))
         if args.assessment_command == 'explain':
             print(json.dumps(account['assessment_results'], indent=2, sort_keys=True))
 
@@ -804,6 +845,9 @@ def _add_assessment_view_options(
             action.required = False
     parser.add_argument('--plan', type=Path, help='stored plan anchoring an exact historical operation')
     parser.add_argument('--at', help='exact recorded operation assessment instant')
+    parser.add_argument('--as-of', help='explicit query instant for historical qualifications')
+    parser.add_argument('--comparison-plan', type=Path,
+                        help='validated v4 plan anchoring the comparison operation')
     _add_path(
         parser,
         "--results",

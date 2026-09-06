@@ -1,10 +1,10 @@
 # ADR 0011: Separate historical assessment outcomes from operational evidence timeliness
 
-- **Status:** Accepted design, not yet implemented
+- **Status:** Accepted and implemented for v4 historical operation reporting
 - **Date:** 2026-09-05
 - **Promotion contract:** [#66](https://github.com/packetlss/compliance/issues/66)
 - **V4 representation implementation:** [#32](https://github.com/packetlss/compliance/issues/32)
-- **Operational view implementation:** Later tranche, dependent on #32; not authorized by this promotion
+- **Operational view implementation:** [#80](https://github.com/packetlss/compliance/issues/80)
 
 ## Context and authority
 
@@ -28,10 +28,10 @@ and criterion-reported evidence IDs alone do not expose all immutable factual
 selection and temporal provenance needed for a later view without evidence bytes.
 This clarification adds facts to v4, not stored operational judgments.
 
-This promotion changes documentation and contracts only. Predecessor runtime,
+The original promotion changed documentation and contracts only. Predecessor runtime,
 schemas and tests remain unchanged. #32 implements the representation obligation
 below alongside its existing ADR 0010 corrections. The derived operational view
-is accepted future semantics and requires a separate later implementation tranche.
+was accepted future semantics and is implemented by #80 as a derived reporting tranche.
 No historical artifact is rewritten or reinterpreted; no compatibility freeze is
 created.
 

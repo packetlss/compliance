@@ -125,9 +125,9 @@ otherwise they use the current UTC time. They support table and JSON output.
 reports `WAIVED` distinctly, and `assessment explain` displays the underlying
 failure plus validity, rationale, ownership, approval, and immutable digest.
 
-### Accepted historical validity qualification
+### Historical validity qualification
 
-System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is **accepted design, not yet implemented**.
+System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is implemented for frozen v4 historical operation views by #80.
 A stored historical `waived` result remains waived after its recorded exception
 expires. Future assessment views qualify that immutable applied snapshot separately:
 **Recorded waiver within validity window** when `validFrom <= q < expiresAt`, or
@@ -143,8 +143,8 @@ waiver bytes or their revision; it changes applicability to future evaluations.
 Recorded waiver qualification is independent of historical outcomes, plan alignment,
 evidence timeliness and coverage, and does not recompute historical assurance
 roll-ups. Fail-only application remains unchanged and a waiver never proves compliance.
-#32's ADR 0011 addition is factual evidence provenance only; derived assessment
-presentation belongs to the later operational-view tranche.
+#32's ADR 0011 addition remains factual evidence provenance only; #80 derives the
+assessment presentation without changing the waiver catalog or result artifact.
 
 ## 6. Ownership and limitations
 

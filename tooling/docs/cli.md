@@ -208,7 +208,7 @@ from unaltered mappings, so a company-policy pass is not silently promoted into
 an upstream-framework conformance claim. The command supports exact
 `--reference`, `--level {objective,technical}`, and resolved `--group` filters,
 all repeatable with OR semantics. Its JSON output preserves claim type,
-alignment, current/outdated status, subject, and policy-object identity.
+alignment, matching-plan/different-plan status, subject, and policy-object identity.
 
 ## Frozen operation selection and reporting
 
@@ -232,8 +232,8 @@ calls a different-plan result `outdated`, and calls absence `pending`. Its repor
 timestamp is query time; it does not re-evaluate selected evidence or waiver age.
 The `current/outdated` wording above describes that predecessor behavior only.
 
-System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) has its factual v4 representation implemented under #32; its operational view remains **accepted design, not yet implemented**.
-Future status/explanation/group views must separately expose historical outcomes
+System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) has its factual v4 representation implemented under #32 and its derived historical operational view implemented under #80.
+Anchored status/explanation/group views separately expose historical outcomes
 at `evaluated_at`, **Plan-aligned / Different plan / Plan alignment unavailable**,
 selected-evidence timeliness as of explicit `q`, recorded waiver validity, and
 existing coverage/applicability. Prefer **Selected evidence within recorded age
@@ -248,12 +248,16 @@ does not establish refusal: show **Assessment refused — no new result** only f
 explicit trustworthy attempt information, retaining any older result as history.
 No persisted attempt/status artifact is introduced.
 
-#32 retains factual v4 provenance only for ADR 0011 and does not derive query-time
-fresh/stale/current state. The later operational-view tranche depends on #32 and
-owns temporal derivation, presentation, temporal tests and one canonical time-advance
-scenario. It consumes a validated v4 result, exact assessed plan, current comparison
-plan and explicit query instant. No new CLI grammar or runtime change is implemented
-by this promotion; ADR 0010 assessment-time behavior remains separately owned.
+Every anchored historical view requires `--as-of RFC3339`; wall-clock time is never
+substituted. Optional `--comparison-plan PLAN` supplies the validated comparison
+operation. Without it, alignment is unavailable while evidence and recorded-waiver
+qualifications remain available. JSON exposes dependency/control details and separate
+whole-operation and group summaries; framework mappings retain historical status and
+may carry the applicable qualifications. Filters do not alter frozen accounting.
+
+#32 retains factual v4 provenance only for ADR 0011. #80 derives the view from a
+validated v4 result, exact assessed plan, optional comparison plan and explicit query
+instant. ADR 0010 assessment-time behavior remains separately owned.
 
 ## Project registries and project configuration
 

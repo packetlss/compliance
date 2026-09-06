@@ -450,11 +450,11 @@ whose coverage is not both assigned and assessable.
 
 The operator overview derives a display state without discarding either
 dimension. Coverage failures take precedence, followed by current evaluation
-outcomes. A result for a different plan ID is `outdated`; no result for the
-current assessable plan is `pending`. Result precedence is error, fail, unknown,
+outcomes. A result for a different plan ID is `different_plan`; no result for the
+rendered assessable plan is `no_assessment`. Result precedence is error, fail, unknown,
 waived, pass, then not-applicable. Machine-readable output retains the coverage
 object, result counters, resolution errors, plan ID, and evaluation timestamp.
-The subject explanation additionally shows current versus outdated result
+The subject explanation additionally shows matching-plan versus different-plan result
 provenance, control reasons, remediation, assignment paths, and documented
 excluded controls. Group aggregation never reduces these distinct states to a
 single compliance percentage.

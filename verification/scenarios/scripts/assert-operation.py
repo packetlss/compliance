@@ -67,10 +67,30 @@ def run(root, private_source):
         try: validate_assessment_results(omitted)
         except ValueError: pass
         else: raise AssertionError('O2 omitted despite frozen required company target')
-        def history(command_name='status', *args):
+        def history(command_name='status', *args, as_of=instant, comparison=None):
+            comparison_args = ('--comparison-plan', str(comparison)) if comparison else ()
             return json.loads(cli('assessment',command_name,*args,'--plan',str(anchor),'--results',str(results),
-                                  '--at',instant,'--format','json',historical=True))
-        assert history()['all_passed']
+                                  '--at',instant,'--as-of',as_of,*comparison_args,
+                                  '--format','json',historical=True))
+        initial_history = history(comparison=anchor)
+        assert initial_history['all_passed']
+        assert {row['historical_outcome'] for row in initial_history['members']} == {'pass'}
+        assert {row['plan_alignment'] for row in initial_history['members']} == {'plan_aligned'}
+        assert initial_history['qualification_summary'].get(
+            'evidence_timeliness.stale_selected_dependencies', 0) == 0
+        aged_history = history(as_of='2027-09-01T00:00:00Z', comparison=anchor)
+        assert aged_history['all_passed']
+        assert aged_history['qualification_summary'][
+            'evidence_timeliness.stale_selected_dependencies'] > 0
+        assert aged_history['qualification_summary']['subjects.needing_reassessment'] > 0
+        # A newer mutable document is neither selected nor consulted retrospectively.
+        (evidence/'newer-after-assessment.json').write_text(json.dumps({
+            **next(iter(json.loads(content) for content in original.values())),
+            'id': 'synthetic:newer-after-assessment',
+            'collected_at': '2027-08-31T23:59:59Z',
+        }))
+        assert history(as_of='2027-09-01T00:00:00Z', comparison=anchor) == aged_history
+        (evidence/'newer-after-assessment.json').unlink()
         (results/'copy.json').write_text(json.dumps(reports['host__A.json'],sort_keys=True))
         assert history()['all_passed']
         (results/'copy.json').unlink()

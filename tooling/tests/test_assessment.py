@@ -87,7 +87,7 @@ class AssessmentStatusTests(unittest.TestCase):
         row = status_row(self.plan, [self.result_report(**{"pass": 5, "fail": 1})])
 
         self.assertEqual(row["state"], "fail")
-        self.assertTrue(row["current_result"])
+        self.assertTrue(row["matching_plan_result"])
         self.assertEqual(row["result_summary"]["fail"], 1)
 
     def test_failed_requirement_baseline_controls_subject_state(self):
@@ -103,8 +103,8 @@ class AssessmentStatusTests(unittest.TestCase):
     def test_result_for_old_plan_is_outdated(self):
         row = status_row(self.plan, [self.result_report(plan_id="sha256:old", **{"pass": 6})])
 
-        self.assertEqual(row["state"], "outdated")
-        self.assertFalse(row["current_result"])
+        self.assertEqual(row["state"], "different_plan")
+        self.assertFalse(row["matching_plan_result"])
 
     def test_unassigned_coverage_takes_precedence_over_old_results(self):
         unassigned = render_plan(

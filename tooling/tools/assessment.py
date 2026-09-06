@@ -24,10 +24,10 @@ STATE_PRIORITY = {
     "error": 1,
     "fail": 2,
     "unknown": 3,
-    "outdated": 4,
+    "different_plan": 4,
     "unassigned": 5,
     "no_controls": 6,
-    "pending": 7,
+    "no_assessment": 7,
     "waived": 8,
     "pass": 9,
     "not_applicable": 10,
@@ -38,10 +38,10 @@ STATE_SYMBOLS = {
     "error": "!",
     "fail": "×",
     "unknown": "?",
-    "outdated": "↻",
+    "different_plan": "↻",
     "unassigned": "!",
     "no_controls": "!",
-    "pending": "…",
+    "no_assessment": "…",
     "waived": "◇",
     "pass": "✓",
     "not_applicable": "○",
@@ -52,10 +52,10 @@ STATE_COLORS = {
     "error": "\033[31m",
     "fail": "\033[31m",
     "unknown": "\033[33m",
-    "outdated": "\033[33m",
+    "different_plan": "\033[33m",
     "unassigned": "\033[33m",
     "no_controls": "\033[33m",
-    "pending": "\033[36m",
+    "no_assessment": "\033[36m",
     "waived": "\033[35m",
     "pass": "\033[32m",
     "not_applicable": "\033[2m",
@@ -131,9 +131,9 @@ def status_row(plan: JsonObject, reports: list[JsonObject]) -> JsonObject:
     elif current is not None:
         state = result_state(current)
     elif previous is not None:
-        state = "outdated"
+        state = "different_plan"
     else:
-        state = "pending"
+        state = "no_assessment"
 
     visible_report = current or previous
     summary = {
@@ -152,7 +152,7 @@ def status_row(plan: JsonObject, reports: list[JsonObject]) -> JsonObject:
         "state": state,
         "coverage": coverage,
         "plan_id": plan["id"],
-        "current_result": current is not None,
+        "matching_plan_result": current is not None,
         "evaluated_at": (visible_report or {}).get("evaluated_at"),
         "result_summary": summary,
         "requirement_summary": requirement_summary,
@@ -184,7 +184,7 @@ def invalid_status_row(
             "excluded_control_count": 0,
         },
         "plan_id": None,
-        "current_result": False,
+        "matching_plan_result": False,
         "evaluated_at": None,
         "result_summary": {status: 0 for status in SUMMARY_STATUSES},
         "requirement_summary": {status: 0 for status in SUMMARY_STATUSES},
@@ -315,11 +315,11 @@ def _mapped_result_status(
             None,
         )
         return (
-            "outdated",
+            "different_plan",
             previous.get("evaluated_at"),
             previous_result.get("status") if previous_result else None,
         )
-    return "pending", None, None
+    return "no_assessment", None, None
 
 
 def build_framework_report(
@@ -804,10 +804,10 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
         )
 
     if current is not None:
-        lines.append(f'Assessment: current, evaluated {current["evaluated_at"]}')
+        lines.append(f'Assessment: historical result for matching plan, evaluated {current["evaluated_at"]}')
     elif previous is not None:
         lines.append(
-            f'Assessment: outdated result from {previous["evaluated_at"]} '
+            f'Assessment: historical result for a different plan from {previous["evaluated_at"]} '
             f'for plan {previous["plan_id"]}'
         )
     else:
@@ -823,7 +823,7 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
             continue
         seen_requirement_baselines.add(reference)
         result = baseline_result_by_reference.get(reference)
-        baseline_state = result.get("status", "pending") if result else "pending"
+        baseline_state = result.get("status", "no_assessment") if result else "no_assessment"
         lines.append(f'  {state_label(baseline_state, color)}  {reference}')
         if result and result.get("reason"):
             lines.append(f'    {result["reason"]}')
@@ -837,7 +837,7 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
         lines.append("  none")
     for requirement in plan.get("requirements", []):
         result = requirement_result_by_reference.get(requirement["reference"])
-        requirement_state = result.get("status", "pending") if result else "pending"
+        requirement_state = result.get("status", "no_assessment") if result else "no_assessment"
         lines.append(
             f'  {state_label(requirement_state, color)}  {requirement["reference"]}: '
             f'{requirement["title"]}'
@@ -866,8 +866,8 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
         lines.append("  none")
     for control in plan["controls"]:
         result = result_by_instance.get(control["instance_id"])
-        control_state = result.get("status", "pending") if result else "pending"
-        suffix = " (outdated)" if previous is not None and current is None and result else ""
+        control_state = result.get("status", "no_assessment") if result else "no_assessment"
+        suffix = " (different plan)" if previous is not None and current is None and result else ""
         lines.append(
             f'  {state_label(control_state, color)}  {control["instance_id"]}{suffix}'
         )

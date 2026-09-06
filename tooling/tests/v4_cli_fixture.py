@@ -108,9 +108,9 @@ evaluate := {
         assert account['accounting_complete'] and account['all_passed'], account
         multi_plan = json.loads(plan_path.read_text())
         assert multi_plan['id'] != plan['id']
-        historical = json.loads(run('assessment','status','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z','--format','json'))
+        historical = json.loads(run('assessment','status','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z','--as-of','2026-08-23T12:00:00Z','--format','json'))
         assert historical['all_passed']
         (project/'generated/results/host__installed-second.json').unlink()
-        historical = json.loads(run('assessment','status','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z','--format','json'))
+        historical = json.loads(run('assessment','status','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z','--as-of','2026-08-23T12:00:00Z','--format','json'))
         assert not historical['accounting_complete'] and not historical['all_passed']
         return report['provenance']['evaluationComposition']['actual']['tooling']['execution']['kind']

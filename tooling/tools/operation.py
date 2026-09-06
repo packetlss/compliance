@@ -6,6 +6,8 @@ artifact. Sibling policy bodies are committed by digest, never embedded as plans
 from __future__ import annotations
 
 import copy
+from collections import Counter
+from datetime import datetime
 
 from .assessment_provenance import digest
 
@@ -260,3 +262,166 @@ def account_operation(anchor, reports, evaluated_at):
             'accounting_complete': all(r['state'] != 'missing' for r in rows),
             'all_passed': all(r['state'] == 'pass' for r in rows),
             'claim': 'Exact supplied company policy only; no external conformity or inventory exhaustiveness.'}
+
+
+def _evidence_timeliness(report, query_instant):
+    """Derive age qualifications solely from frozen dependency/selection facts."""
+    from .evaluate_plan import parse_duration
+    from .waivers import parse_timestamp
+
+    selected = {
+        (item['instance_id'], item['requirement_index']): item
+        for item in report['provenance']['selectedEvidence']
+    }
+    results = {item['instance_id']: item for item in report['results']}
+    dependencies = []
+    controls = []
+    for control in report['resolved_policy']['controls']:
+        required = [
+            (index, requirement)
+            for index, requirement in enumerate(control['evidence'])
+            if requirement['required']
+        ]
+        if not required:
+            continue
+        stale = False
+        unavailable = False
+        for index, requirement in required:
+            use = selected.get((control['instance_id'], index))
+            if use is None:
+                unavailable = True
+                result = results[control['instance_id']]
+                dependencies.append({
+                    'instance_id': control['instance_id'],
+                    'requirement_index': index,
+                    'requirement': copy.deepcopy(requirement),
+                    'qualification': 'unavailable',
+                    'historical_result': {
+                        'status': result['status'],
+                        'reason': result.get('reason'),
+                        'observed': copy.deepcopy(result.get('observed', {})),
+                    },
+                })
+                continue
+            collected = parse_timestamp(use['collected_at'], field='selected collected_at')
+            qualification = (
+                'timely'
+                if query_instant - collected <= parse_duration(requirement['max_age'])
+                else 'stale'
+            )
+            stale = stale or qualification == 'stale'
+            dependencies.append({
+                'instance_id': control['instance_id'],
+                'requirement_index': index,
+                'requirement': copy.deepcopy(requirement),
+                'evidence_id': use['id'],
+                'evidence_digest': use['digest'],
+                'collected_at': use['collected_at'],
+                'recorded_max_age': requirement['max_age'],
+                'qualification': qualification,
+            })
+        controls.append({
+            'instance_id': control['instance_id'],
+            'within_recorded_age_limits': not stale and not unavailable,
+            'reassessment_due': stale,
+            'timeliness_unavailable': unavailable,
+        })
+    counts = Counter(item['qualification'] for item in dependencies)
+    return {
+        'dependencies': dependencies,
+        'controls': controls,
+        'timely_selected_dependencies': counts['timely'],
+        'stale_selected_dependencies': counts['stale'],
+        'unavailable_required_dependencies': counts['unavailable'],
+        'controls_within_recorded_age_limits': sum(c['within_recorded_age_limits'] for c in controls),
+        'controls_needing_reassessment': sum(c['reassessment_due'] for c in controls),
+        'controls_with_unavailable_timeliness': sum(c['timeliness_unavailable'] for c in controls),
+    }
+
+
+def _recorded_waiver_qualification(report, query_instant):
+    from .waivers import parse_timestamp
+
+    waivers = []
+    for result in report['results']:
+        waiver = result.get('waiver')
+        if waiver is None:
+            continue
+        valid_from = parse_timestamp(waiver['valid_from'], field='recorded waiver valid_from')
+        expires_at = parse_timestamp(waiver['expires_at'], field='recorded waiver expires_at')
+        qualification = ('not_yet_in_window' if query_instant < valid_from else
+                         'within_window' if query_instant < expires_at else 'expired')
+        waivers.append({
+            'instance_id': result['instance_id'],
+            'waiver_id': waiver['id'],
+            'valid_from': waiver['valid_from'],
+            'expires_at': waiver['expires_at'],
+            'qualification': qualification,
+        })
+    counts = Counter(item['qualification'] for item in waivers)
+    return {'waivers': waivers, 'counts': {key: counts[key] for key in
+            ('within_window', 'expired', 'not_yet_in_window')}}
+
+
+def qualify_operation(account, reports, query_instant: datetime, comparison_anchor=None):
+    """Add independent query-time dimensions without changing frozen accounting."""
+    from .artifact_validation import validate_assessment_plan
+    from .assessment_provenance import operation_plan_id
+
+    comparison_members = {}
+    if comparison_anchor is not None:
+        validate_assessment_plan(comparison_anchor)
+        comparison_members = {
+            row['subject_id']: operation_plan_id(
+                row['plan_content_digest'], comparison_anchor['operation']
+            )
+            for row in comparison_anchor['operation']['members']
+        }
+    reports_by_id = {report['id']: report for report in reports}
+    for row in account['members']:
+        comparison_plan_id = comparison_members.get(row['subject_id'])
+        alignment = ('plan_alignment_unavailable' if comparison_anchor is None or comparison_plan_id is None
+                     else 'plan_aligned' if comparison_plan_id == row['plan_id'] else 'different_plan')
+        row['plan_alignment'] = alignment
+        row['historical_outcome'] = row['state'] if row['result_id'] else 'no_assessment'
+        report = reports_by_id.get(row['result_id'])
+        if report is None:
+            row['evidence_timeliness'] = {'qualification': 'unavailable'}
+            row['recorded_waiver_qualification'] = {'waivers': [], 'counts': {
+                'within_window': 0, 'expired': 0, 'not_yet_in_window': 0}}
+            continue
+        timeliness = _evidence_timeliness(report, query_instant)
+        row['evidence_timeliness'] = timeliness
+        row['recorded_waiver_qualification'] = _recorded_waiver_qualification(report, query_instant)
+    account['query_instant'] = query_instant.isoformat().replace('+00:00', 'Z')
+    account['qualification_summary'] = summarize_qualifications(account['members'])
+    account['all_passed_meaning'] = (
+        'all frozen historical member outcomes passed at the selected assessment instant'
+    )
+    return account
+
+
+def summarize_qualifications(rows):
+    """Aggregate each operational dimension without imposing precedence."""
+    totals = Counter()
+    for row in rows:
+        totals['historical_outcomes.' + row['historical_outcome']] += 1
+        totals['plan_alignment.' + row['plan_alignment']] += 1
+        totals['coverage.' + row['coverage']['status']] += 1
+        timing = row['evidence_timeliness']
+        if timing.get('qualification') == 'unavailable':
+            totals['subjects.evidence_timeliness_unavailable'] += 1
+        else:
+            if timing['controls_needing_reassessment']:
+                totals['subjects.needing_reassessment'] += 1
+            if timing['controls_with_unavailable_timeliness']:
+                totals['subjects.evidence_timeliness_unavailable'] += 1
+            if timing['controls'] and all(c['within_recorded_age_limits'] for c in timing['controls']):
+                totals['subjects.within_recorded_age_limits'] += 1
+            for key in ('timely_selected_dependencies', 'stale_selected_dependencies',
+                        'unavailable_required_dependencies', 'controls_within_recorded_age_limits',
+                        'controls_needing_reassessment', 'controls_with_unavailable_timeliness'):
+                totals['evidence_timeliness.' + key] += timing[key]
+        for key, value in row['recorded_waiver_qualification']['counts'].items():
+            totals['recorded_waivers.' + key] += value
+    return dict(sorted(totals.items()))

@@ -92,8 +92,18 @@ fail-only waivers and independent technical assessment retain their behavior.
 
 Historical mapping filters are visibly filtered. Mapping references and whole-operation
 accounting remain separate, and mappings never produce external conformity. Current
-inventory views without `--plan` retain their operator comparison role; ADR 0011
-query-time evidence ageing remains separately routed.
+inventory views without `--plan` retain their legacy operator comparison role.
+
+Historical operation views additionally require explicit `--as-of q` and may accept
+a validated `--comparison-plan`. They derive, without changing artifacts or accounting,
+exact operation-bound plan alignment, selected required-evidence timeliness, and the
+recorded applied-waiver window. Dependency timeliness uses only frozen successful-use
+facts and the exact rule `q - collected_at <= max_age`; equality and future collection
+timestamps are timely. Missing successful use is unavailable and never triggers
+reselection. Stale and unavailable dependencies may coexist for one control, while a
+control with no required evidence receives no timeliness claim. Comparison membership
+never changes the historical denominator. Historical outcomes and roll-ups remain
+unchanged, and `all_passed` is labeled only as a frozen historical fact.
 
 ## Concrete typed assertion contracts
 

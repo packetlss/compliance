@@ -69,8 +69,9 @@ parameters during evaluation or rewriting historical artifacts.
 
 The representation requirement of system
 [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md#v4-factual-temporal-provenance-option-b)
-is implemented by #32. Operational evidence timeliness derivation remains
-unimplemented and requires its separate future tranche.
+is implemented by #32. #80 consumes those immutable facts in the historical
+reporting path to derive query-time qualification; it adds no artifact or
+provenance fields and does not alter any identity projection.
 
 Each successful required-evidence selection is an entry in `provenance.selectedEvidence`:
 
