@@ -12,7 +12,7 @@ placing policy on the governed object.
 The evaluation service has one job:
 
 > Given a subject, its typed evidence, its resolved baseline, active waivers,
-> and an immutable policy revision, produce deterministic control results.
+> and its operation-bound member plan, produce deterministic control results.
 
 Collectors do not know the desired state. Reporters do not reinterpret Rego.
 Governed objects do not receive policy bundles.
@@ -461,14 +461,11 @@ see [artifact provenance](artifact-provenance.md) for the complete envelope.
 {
   "schema": "compliance.example/assessment-plan/v4",
   "id": "sha256:...",
-  "policy_revision": "sha256:...",
-  "policy_sources": [
-    {"name": "control-library", "digest": "sha256:..."},
-    {"name": "verification-policy", "digest": "sha256:..."},
-    {"name": "environment-private", "digest": "sha256:..."}
-  ],
-  "inventory_revision": "sha256:...",
-  "assignment_revision": "sha256:...",
+  "operation": {
+    "operation_id": "sha256:...",
+    "request": {"all": false, "subjects": ["host/system-x"], "groups": []},
+    "selection_witness": {"mode": "explicit"}
+  },
   "subject": {
     "id": "host/system-x",
     "type": "linux-host"
@@ -485,16 +482,9 @@ see [artifact provenance](artifact-provenance.md) for the complete envelope.
       "via": "production-linux"
     }
   ],
-  "assignments": ["production-linux-policy"],
-  "coverage": {
-    "status": "assigned",
-    "assessable": true,
-    "reason": "policy-assigned",
-    "assignment_count": 1,
-    "active_control_count": 1,
-    "excluded_control_count": 0,
-    "requirement_count": 1
-  },
+  "assignments": [
+    {"id": "production-linux-policy", "group": "production-linux", "baselines": ["linux-web-server@3"]}
+  ],
   "resolved_requirement_baselines": [
     {"reference": "company.identity-access-objectives@1", "digest": "sha256:..."}
   ],
@@ -535,13 +525,14 @@ what policy applied at a point in time.
 schema before it is returned or persisted and whenever a stored plan is read by
 the evaluator, explanation view, or plan display. The
 stable envelope, normalized subject, group and assignment paths, baseline and
-realization provenance, effective controls, exclusions, coverage, and
+realization provenance, effective controls, exclusions, and
 resolution structures reject unknown fields. Domain payloads that are meant to
 remain extensible—control parameters, subject attributes, and structured
 resolution-error details—retain explicit open JSON boundaries. Semantic
-validation additionally verifies the plan content digest, exact coverage
-counts, unique identities, active/excluded separation, realization check
-references, and agreement between resolution and coverage state.
+validation additionally recomputes the member-plan commitment, operation ID,
+and operation-bound plan ID; rederives the frozen denominator; and verifies
+unique identities, assignment attribution, active/excluded separation, and
+realization check references.
 
 Every requirement or technical instance retains its `external_refs` in the
 plan. Evaluation copies those mappings and technical alignment into immutable
@@ -551,11 +542,10 @@ objective, while a technical mapping is supporting traceability. A tailored
 technical check retains its company result and `TAILORED` alignment rather than
 being reported as unaltered parent-framework conformance.
 
-Coverage is part of the plan rather than inferred from the number of decisions.
-Its mutually exclusive `status` is `assigned`, `unassigned`, `inactive`, or
-`invalid`. `assessable` is true only when an active subject has valid assigned
-policy and at least one active control or rendered requirement. A missing
-applicable realization remains assessable as `not_implemented` so it yields an
+Accounting disposition is derived from frozen lifecycle, relevant assignment,
+active-control, and requirement membership. Retired, unassigned, and
+no-assessable-policy members require no result and receive no synthetic pass or
+N/A. A missing applicable realization remains assessable as `not_implemented` so it yields an
 explicit failed objective instead of disappearing. A fully excluded baseline remains
 assigned, but is explicitly non-assessable with reason `no-active-controls`;
 it must not produce a successful empty assessment.
@@ -603,9 +593,9 @@ after criteria, derivations, deviations, approval metadata, and selection
 paths.
 
 The initial command deliberately separates envelope context from effective
-policy. Plan IDs and inventory, assignment, policy, and policy-source revisions
-are visible, but revision-only churn does not make a claim that this subject's
-effective policy changed. Exit status is `0` for no effective change, `1` for
+policy. Plan IDs, member-plan digests, operation IDs, and planning-composition
+digests are visible, but identity-context-only churn does not make a claim that
+this subject's effective policy changed. Exit status is `0` for no effective change, `1` for
 effective change, and `2` for malformed, different-subject, or incomplete
 comparisons.
 
@@ -644,9 +634,6 @@ network calls during evaluation.
   "assessment": {
     "id": "01J...",
     "evaluated_at": "2026-08-23T08:16:00Z",
-    "policy_revision": "sha256:...",
-    "inventory_revision": "sha256:...",
-    "assignment_revision": "sha256:...",
     "plan_id": "sha256:..."
   },
   "subject": {
@@ -702,8 +689,6 @@ Every control implementation returns the same result shape:
   "instance_id": "linux.packages.web-server",
   "subject_id": "host/system-x",
   "plan_id": "sha256:...",
-  "inventory_revision": "sha256:...",
-  "assignment_revision": "sha256:...",
   "waiver_revision": "sha256:...",
   "status": "fail",
   "severity": "high",
@@ -711,8 +696,7 @@ Every control implementation returns the same result shape:
   "expected": {"packages": ["a", "b", "c"]},
   "observed": {"missing": ["b"]},
   "evidence_ids": ["01H..."],
-  "remediation": "Install package b using the approved repository",
-  "policy_revision": "sha256:..."
+  "remediation": "Install package b using the approved repository"
 }
 ```
 
@@ -734,16 +718,17 @@ waiver-result resolver.
 
 When an active waiver covers the failure, the stored technical result retains
 the same reason, expected/observed data, severity, remediation, evidence, and
-policy revisions; its status becomes `waived` and a strict `waiver` object
+resolved policy facts; its status becomes `waived` and a strict `waiver` object
 records `underlying_status: fail` plus the complete approved snapshot. Assessment envelopes and their children share one `waiver_revision`.
 
 The persisted `assessment-results/v4` envelope also has a strict tooling-owned
-schema. Every technical result carries the plan, policy, inventory, and
-assignment revisions from its envelope together with the common status,
-severity, reason, expected/observed, evidence, remediation, mapping, and
-alignment fields. Requirement and requirement-baseline results have explicit
-contracts. Cross-field validation recalculates all three summary objects,
-rejects duplicate identities or child revision mismatches, and verifies the
+schema. Every technical result carries the exact operation-bound plan ID from
+its envelope together with the common status, severity, reason,
+expected/observed, evidence, remediation, mapping, and alignment fields. The
+envelope carries the frozen operation and resolved member policy. Requirement
+and requirement-baseline results have explicit contracts. Cross-field
+validation recalculates all three summary objects, rejects duplicate identities
+or child attribution mismatches, and verifies the
 declared conservative `allOf` and top-baseline roll-ups. A stored document that
 claims either artifact schema but violates its contract is an operator-visible
 error rather than being ignored or partially displayed.
@@ -930,16 +915,16 @@ every unique non-test Rego module to OPA without creating a merged directory. A
 private tree containing only `realizations/` is therefore valid when the shared
 tree supplies its schemas and implementations.
 
-The assessment plan records the canonical sorted `{name, digest}` list as
-`policy_sources`. Its `policy_revision` is a content digest of that list and is
-independent of checkout paths. Evaluation verifies that the current source
-revisions still match the plan before invoking OPA. Production deployments
-should pin immutable source artifacts; unpinned sibling directories are the
-prototype's local-development transport.
+The assessment plan records normalized actual source content once under
+`provenance.planningComposition.actual.policySources`; the composition algorithm
+and digest validate that record. Evaluation verifies the actual evaluation source
+composition against planning before invoking OPA. Production deployments should
+pin immutable source artifacts; unpinned sibling directories are the prototype's
+local-development transport.
 
 ## 10. Policy build gates
 
-A policy revision is releasable only if it passes:
+A policy-source candidate is releasable only if it passes:
 
 1. formatting and static analysis;
 2. Rego unit tests, including missing and stale evidence cases;

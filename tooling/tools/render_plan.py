@@ -22,8 +22,6 @@ from .policy_sources import (
     PolicySource,
     PolicySources,
     normalize_policy_sources,
-    policy_revision,
-    policy_source_revisions,
     rego_module_paths,
     source_pin_errors,
     source_tree_digest as _source_tree_digest,
@@ -1595,10 +1593,6 @@ def render_plan(
     from .project_config import composition_validation
     report = composition_validation(config, require=True) if config and config.source else require_composition(policy_sources)
     normalized_policy_sources = normalize_policy_sources(policy_sources)
-    try:
-        source_revisions = policy_source_revisions(normalized_policy_sources)
-    except ValueError:
-        source_revisions = []
     canonical_groups = []
     for source_group in sorted(groups_document, key=lambda group: group["id"]):
         group = copy.deepcopy(source_group)
@@ -1989,37 +1983,10 @@ def render_plan(
                         "incoming_provenance": candidate["provenance"],
                     })
 
-    if resolution_errors:
-        coverage_status = "invalid"
-        coverage_reason = "resolution-errors"
-    elif subject["status"] == "retired":
-        coverage_status = "inactive"
-        coverage_reason = "subject-retired"
-    elif not applicable_assignments:
-        coverage_status = "unassigned"
-        coverage_reason = "no-policy-assignment"
-    else:
-        coverage_status = "assigned"
-        coverage_reason = (
-            "policy-assigned"
-            if rendered_controls or rendered_requirements
-            else "no-active-controls"
-        )
-
-    assessable = coverage_status == "assigned" and bool(
-        rendered_controls or rendered_requirements
-    )
     plan: JsonObject = {
         "schema": PLAN_SCHEMA,
         "digestAlgorithm": PLAN_DIGEST_ALGORITHM,
         "provenance": {"schema": PROVENANCE_SCHEMA, "planningComposition": stage(report)},
-        "policy_revision": policy_revision(source_revisions),
-        "policy_sources": source_revisions,
-        "inventory_revision": content_digest({
-            "subject": subject,
-            "groups": canonical_groups,
-        }),
-        "assignment_revision": content_digest(canonical_assignments),
         "subject": subject,
         "resolved_groups": resolved_groups,
         "assignments": [{
@@ -2041,15 +2008,6 @@ def render_plan(
         ),
         "controls": sorted(rendered_controls.values(), key=lambda control: control["instance_id"]),
         "excluded_controls": sorted(excluded_controls.values(), key=lambda control: control["instance_id"]),
-        "coverage": {
-            "status": coverage_status,
-            "assessable": assessable,
-            "reason": coverage_reason,
-            "assignment_count": len(applicable_assignments),
-            "active_control_count": len(rendered_controls),
-            "excluded_control_count": len(excluded_controls),
-            "requirement_count": len(rendered_requirements),
-        },
         "resolution": {
             "status": "valid" if not resolution_errors else "invalid",
             "errors": resolution_errors,

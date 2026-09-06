@@ -36,8 +36,6 @@ class AssessmentV4Tests(unittest.TestCase):
         self.addCleanup(patch.stopall)
 
     def sign_plan(self):
-        from tools.policy_sources import policy_revision
-        self.plan['policy_revision'] = policy_revision(self.plan['policy_sources'])
         freeze_policy_inputs(self.plan)
         self.plan['id'] = artifact_digest(self.plan)
         validate_assessment_plan(self.plan)
@@ -189,10 +187,8 @@ class AssessmentV4Tests(unittest.TestCase):
         independent['implementation'] = 'test.independent'
         independent['evidence'] = []
         self.plan['controls'].append(independent)
-        self.plan['coverage']['active_control_count'] = 2
         self.plan['controls'][0]['evidence'].append({'type':'second/v1','max_age':'24h'})
         actual = require_composition(self.sources)
-        self.plan['policy_sources'] = [{'name':x['name'],'digest':x['content']['digest']} for x in actual['actual']['policySources']]
         self.plan['provenance']['planningComposition'] = stage(actual)
         self.sign_plan()
         good = self.document()
@@ -277,7 +273,6 @@ class AssessmentV4Tests(unittest.TestCase):
         (other/'unrelated.txt').write_text('source content')
         self.sources = (self.source,PolicySource('additional',other))
         actual = require_composition(self.sources)
-        self.plan['policy_sources'] = [{'name':x['name'],'digest':x['content']['digest']} for x in actual['actual']['policySources']]
         self.plan['provenance']['planningComposition'] = stage(actual)
         self.sign_plan()
         first, _ = self.run_assessment([self.document()])
@@ -324,10 +319,11 @@ class AssessmentV4Tests(unittest.TestCase):
                 validate_assessment_results(changed)
 
     def test_requirement_rollups_keep_unknown_error_fail_and_waived_meaning(self):
-        shell = fixtures.assessment_plan(self.plan['policy_sources'], with_requirement=True)
+        sources = [{'name': item['name'], 'digest': item['content']['digest']}
+                   for item in self.plan['provenance']['planningComposition']['actual']['policySources']]
+        shell = fixtures.assessment_plan(sources, with_requirement=True)
         for key in ('requirements','resolved_requirement_baselines','resolved_baselines'):
             self.plan[key] = shell[key]
-        self.plan['coverage']['requirement_count'] = 1
         self.sign_plan()
         for status in ('pass','fail','unknown','error'):
             report, _ = self.run_assessment([self.document()], status=status)
@@ -413,22 +409,9 @@ class AssessmentV4Tests(unittest.TestCase):
 
 
 class V4JcsProjectionVectors(unittest.TestCase):
-    def test_fixed_unicode_numeric_and_enforcement_projection_vectors(self):
-        from tools.composition import composition_digest
-        actual = {'tooling':{'source':{'digestAlgorithm':'compliance.example/tooling-source-tree-digest/v1alpha1','digest':'sha256:'+'1'*64},'execution':{'kind':'source'}},'policySources':[{'name':'source','content':{'digestAlgorithm':'compliance.example/policy-source-tree-digest/v1alpha1','digest':'sha256:'+'2'*64}}]}
-        record = {'actual':actual,'compositionDigestAlgorithm':'compliance.example/composition-digest/v1alpha1','compositionDigest':composition_digest(actual),'enforcement':{'directExpectedContent':{},'compositionLock':None}}
-        # Projection-layer vectors, independent of full domain envelope validation.
-        for kind, expected in (
-            ('plan','sha256:d992280bae05164423efe0bd99c2b020334b496b26a0b6772dbe9a0f9ba5ae01'),
-            ('results','sha256:bbc52bac753f18c0cb328b8ea19cae5cdec347a75f5cd1f883463b53aa35382e'),
-        ):
-            document = {'schema':f'compliance.example/assessment-{kind}/v4','digestAlgorithm':f'compliance.example/assessment-{kind}-digest/v1alpha1','provenance':{'schema':PROVENANCE_SCHEMA,'planningComposition':copy.deepcopy(record)},'payload':{'😀':1e-7,'€':333333333.33333329,'value':-0.0}}
-            if kind == 'plan':
-                from tools.assessment_provenance import plan_body_digest
-                document['operation'] = {'selection': ['subject/A']}
-            project = plan_body_digest if kind == 'plan' else artifact_digest
-            self.assertEqual(project(document),expected)
-            document['id'] = 'ignored self reference'
-            document['provenance']['planningComposition']['metadata'] = {'distribution':'descriptive','version':'99'}
-            document['provenance']['planningComposition']['enforcement']['directExpectedContent'] = {'source':actual['policySources'][0]['content']}
-            self.assertEqual(project(document),expected)
+    def test_operation_bound_plan_id_vector(self):
+        from tools.assessment_provenance import operation_plan_id
+        self.assertEqual(
+            operation_plan_id('sha256:' + '1' * 64, 'host/😀'),
+            'sha256:afa65ce31505eb476b07e08d9e9523dfbbd6ea7f93c32b1d41818705fc800f40',
+        )

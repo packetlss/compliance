@@ -30,6 +30,7 @@ from tools.render_plan import (
     validate_rego_entrypoints,
 )
 from tools.policy_sources import PolicySource
+from tools.operation import plan_coverage
 
 
 class InventoryResourceTests(unittest.TestCase):
@@ -517,7 +518,7 @@ class PolicySchemaTests(unittest.TestCase):
 
         self.assertEqual(first, reordered)
         self.assertEqual(
-            [source["name"] for source in first["policy_sources"]],
+            [source["name"] for source in first["provenance"]["planningComposition"]["actual"]["policySources"]],
             ["control-library", "environment-private", "verification-policy"],
         )
         self.assertEqual(
@@ -842,7 +843,7 @@ class PolicySchemaTests(unittest.TestCase):
             )
 
         self.assertEqual(plan["resolution"]["status"], "invalid")
-        self.assertFalse(plan["coverage"]["assessable"])
+        self.assertFalse(plan_coverage(plan)["assessable"])
         self.assertEqual(plan["resolution"]["errors"][0]["type"], "baseline-schema-invalid")
         self.assertEqual(plan["resolution"]["errors"][0]["path"], "/spec/controls/0")
 
@@ -865,7 +866,7 @@ class PolicySchemaTests(unittest.TestCase):
             plan = render_plan(subject, groups, assignments, policies)
 
         self.assertEqual(plan["resolution"]["status"], "invalid")
-        self.assertFalse(plan["coverage"]["assessable"])
+        self.assertFalse(plan_coverage(plan)["assessable"])
         self.assertEqual(
             plan["resolution"]["errors"][0]["type"],
             "control-manifest-schema-invalid",
@@ -909,11 +910,9 @@ class PlanRevisionTests(unittest.TestCase):
             self.policy_sources,
         )
 
-        self.assertEqual(first["inventory_revision"], reordered["inventory_revision"])
-        self.assertEqual(first["assignment_revision"], reordered["assignment_revision"])
         self.assertEqual(first["id"], reordered["id"])
 
-    def test_inventory_change_produces_new_revision(self):
+    def test_resolution_consumed_inventory_change_produces_new_identity(self):
         changed_subject = copy.deepcopy(self.subject)
         changed_subject["labels"]["persona"] = "standard"
 
@@ -930,7 +929,6 @@ class PlanRevisionTests(unittest.TestCase):
             self.policy_sources,
         )
 
-        self.assertNotEqual(first["inventory_revision"], changed["inventory_revision"])
         self.assertNotEqual(first["id"], changed["id"])
 
     def test_overlapping_assignments_refuse_divergent_control_instances(self):
@@ -950,7 +948,7 @@ class PlanRevisionTests(unittest.TestCase):
                 PolicySource("verification-policy", selection),
             ))
         self.assertEqual(plan["resolution"]["status"], "invalid")
-        self.assertFalse(plan["coverage"]["assessable"])
+        self.assertFalse(plan_coverage(plan)["assessable"])
         self.assertIn("control-instance-conflict", {
             error["type"] for error in plan["resolution"]["errors"]
         })
@@ -963,10 +961,11 @@ class PlanRevisionTests(unittest.TestCase):
             self.policy_sources,
         )
 
-        self.assertEqual(plan["coverage"]["status"], "assigned")
-        self.assertTrue(plan["coverage"]["assessable"])
-        self.assertEqual(plan["coverage"]["active_control_count"], 3)
-        self.assertEqual(plan["coverage"]["excluded_control_count"], 1)
+        coverage = plan_coverage(plan)
+        self.assertEqual(coverage["status"], "assigned")
+        self.assertTrue(coverage["assessable"])
+        self.assertEqual(coverage["active_control_count"], 3)
+        self.assertEqual(coverage["excluded_control_count"], 1)
 
     def test_assessment_plan_is_sufficient_external_adapter_handoff(self):
         plan = render_plan(
@@ -1007,12 +1006,13 @@ class PlanRevisionTests(unittest.TestCase):
             {"policy_source", "path"},
         )
         self.assertTrue(plan["resolved_baselines"])
-        self.assertTrue(plan["policy_sources"])
-        self.assertTrue(all(source["name"] for source in plan["policy_sources"]))
+        sources = plan['provenance']['planningComposition']['actual']['policySources']
+        self.assertTrue(sources)
+        self.assertTrue(all(source["name"] for source in sources))
         self.assertTrue(
-            all(source["digest"].startswith("sha256:") for source in plan["policy_sources"])
+            all(source["content"]["digest"].startswith("sha256:") for source in sources)
         )
-        self.assertTrue(plan["policy_revision"].startswith("sha256:"))
+        self.assertTrue(plan['provenance']['planningComposition']['compositionDigest'].startswith('sha256:'))
         self.assertTrue(plan["id"].startswith("sha256:"))
         self.assertEqual(plan["subject"]["id"], "workstation/tooling-macos-fixture")
         self.assertEqual(plan["subject"]["type"], "macos-workstation")
@@ -1048,7 +1048,7 @@ class PlanRevisionTests(unittest.TestCase):
             changed_active["definition_fingerprint"],
             active["definition_fingerprint"],
         )
-        self.assertNotEqual(changed["policy_sources"], plan["policy_sources"])
+        self.assertNotEqual(changed['provenance']['planningComposition']['actual']['policySources'], sources)
         self.assertNotEqual(changed["id"], plan["id"])
 
         subject, groups, assignments = load_inventory_inputs(
@@ -1087,9 +1087,10 @@ class PlanRevisionTests(unittest.TestCase):
         )
 
         self.assertEqual(plan["resolution"]["status"], "valid")
-        self.assertEqual(plan["coverage"]["status"], "unassigned")
-        self.assertFalse(plan["coverage"]["assessable"])
-        self.assertEqual(plan["coverage"]["reason"], "no-policy-assignment")
+        coverage = plan_coverage(plan)
+        self.assertEqual(coverage["status"], "unassigned")
+        self.assertFalse(coverage["assessable"])
+        self.assertEqual(coverage["reason"], "no-policy-assignment")
 
     def test_retired_subject_is_inactive(self):
         retired = copy.deepcopy(self.subject)
@@ -1102,8 +1103,8 @@ class PlanRevisionTests(unittest.TestCase):
             self.policy_sources,
         )
 
-        self.assertEqual(plan["coverage"]["status"], "inactive")
-        self.assertFalse(plan["coverage"]["assessable"])
+        self.assertEqual(plan_coverage(plan)["status"], "inactive")
+        self.assertFalse(plan_coverage(plan)["assessable"])
 
     def test_unknown_lifecycle_makes_coverage_invalid(self):
         unknown = copy.deepcopy(self.subject)
@@ -1116,8 +1117,8 @@ class PlanRevisionTests(unittest.TestCase):
             self.policy_sources,
         )
 
-        self.assertEqual(plan["coverage"]["status"], "invalid")
-        self.assertFalse(plan["coverage"]["assessable"])
+        self.assertEqual(plan_coverage(plan)["status"], "invalid")
+        self.assertFalse(plan_coverage(plan)["assessable"])
         self.assertEqual(plan["resolution"]["errors"][0]["type"], "subject-lifecycle-unknown")
 
 

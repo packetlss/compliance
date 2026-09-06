@@ -1,4 +1,4 @@
-from tools.assessment_provenance import artifact_digest
+from tools.assessment_provenance import artifact_digest, digest
 import copy
 import io
 import json
@@ -68,7 +68,6 @@ class PolicyDiffTests(unittest.TestCase):
         )
         cls.invalid_plan = copy.deepcopy(cls.macos_plan)
         cls.invalid_plan["resolution"] = {"status": "invalid", "errors": [{"type": "test-conflict"}]}
-        cls.invalid_plan["coverage"].update(status="invalid", assessable=False, reason="resolution-errors")
         from assessment_fixture import refresh_operation
         refresh_operation(cls.invalid_plan)
         cls.invalid_plan.pop("id")
@@ -103,10 +102,16 @@ class PolicyDiffTests(unittest.TestCase):
         self.assertEqual(document["comparison"]["status"], "complete")
         validate_policy_diff(document)
 
-    def test_revision_only_churn_is_context_not_effective_policy(self):
+    def test_operation_request_change_is_context_not_effective_policy(self):
         after = copy.deepcopy(self.macos_plan)
-        after["inventory_revision"] = "sha256:" + "0" * 64
-        self.resign(after)
+        group_id = after['resolved_groups'][0]['id']
+        after['operation']['request'] = {'all': False, 'subjects': [], 'groups': [group_id]}
+        after['operation']['selection_witness'] = {
+            'mode': 'groups', 'groups': [{'id': group_id, 'parents': [],
+                                          'members': [after['subject']['id']]}]}
+        after['operation']['operation_id'] = digest({
+            key: value for key, value in after['operation'].items() if key != 'operation_id'})
+        after['id'] = artifact_digest(after)
 
         document = build_policy_diff(self.macos_plan, after)
 
@@ -114,7 +119,7 @@ class PolicyDiffTests(unittest.TestCase):
         self.assertTrue(document["context"]["changed"])
         self.assertEqual(
             document["context"]["changed_fields"],
-            ["plan_id", "inventory_revision", "operation_digest"],
+            ["plan_id", "operation_id"],
         )
 
     def test_control_criteria_change_is_exact_and_attributable(self):
@@ -171,8 +176,6 @@ class PolicyDiffTests(unittest.TestCase):
         active["policy_inputs"]["parameters_schema"] = copy.deepcopy(template["policy_inputs"]["parameters_schema"])
         before["controls"].append(active)
         before["controls"].sort(key=lambda item: item["instance_id"])
-        before["coverage"]["active_control_count"] += 1
-        before["coverage"]["excluded_control_count"] -= 1
         self.resign(before)
 
         document = build_policy_diff(before, self.macos_plan)
@@ -338,8 +341,14 @@ class PolicyDiffTests(unittest.TestCase):
 
     def test_plan_set_context_only_change_is_unchanged(self):
         after_plan = copy.deepcopy(self.macos_plan)
-        after_plan["inventory_revision"] = "sha256:" + "0" * 64
-        self.resign(after_plan)
+        group_id = after_plan['resolved_groups'][0]['id']
+        after_plan['operation']['request'] = {'all': False, 'subjects': [], 'groups': [group_id]}
+        after_plan['operation']['selection_witness'] = {
+            'mode': 'groups', 'groups': [{'id': group_id, 'parents': [],
+                                          'members': [after_plan['subject']['id']]}]}
+        after_plan['operation']['operation_id'] = digest({
+            key: value for key, value in after_plan['operation'].items() if key != 'operation_id'})
+        after_plan['id'] = artifact_digest(after_plan)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             before = root / "before"

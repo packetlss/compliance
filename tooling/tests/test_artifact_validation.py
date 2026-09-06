@@ -35,7 +35,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             changed = copy.deepcopy(report)
             mutate(changed)
             changed['id'] = artifact_digest(changed)
-            with self.assertRaisesRegex(ArtifactValidationError, 'differs from frozen policy'):
+        with self.assertRaisesRegex(ArtifactValidationError, 'differs from frozen (?:operation|policy)'):
                 validate_assessment_results(changed)
 
     def test_matching_freshness_copies_cannot_bypass_instance_fingerprint(self):
@@ -128,8 +128,6 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             "instance_id": control["instance_id"],
             "subject_id": assessment_input["subject"]["id"],
             "plan_id": assessment["plan_id"],
-            "inventory_revision": assessment["inventory_revision"],
-            "assignment_revision": assessment["assignment_revision"],
             "status": "pass",
             "severity": control["severity"],
             "reason": "Synthetic unit-test pass.",
@@ -139,7 +137,6 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             "remediation": control["remediation"],
             "external_refs": control.get("external_refs", []),
             "alignment": control["alignment"],
-            "policy_revision": assessment["policy_revision"],
         }
 
     def result_report(self, plan=None):
@@ -215,22 +212,19 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         ):
             validate_assessment_plan(document)
 
-    def test_plan_rejects_stale_content_digest(self):
+    def test_unconsumed_subject_label_is_not_identity_bearing(self):
         document = copy.deepcopy(self.plan)
         document["subject"]["labels"]["changed"] = "true"
+        validate_assessment_plan(document)
+        self.assertEqual(document['id'], self.plan['id'])
 
-        with self.assertRaisesRegex(ArtifactValidationError, "semantic digest"):
-            validate_assessment_plan(document)
-
-    def test_plan_rejects_inconsistent_coverage_counts(self):
+    def test_plan_rejects_stale_member_commitment(self):
         document = copy.deepcopy(self.plan)
-        document["coverage"]["active_control_count"] += 1
-        document.pop("id")
-        document["id"] = content_digest(document)
+        document['controls'][0]['remediation'] = 'tampered'
 
         with self.assertRaisesRegex(
             ArtifactValidationError,
-            "/coverage/active_control_count",
+            "subject plan differs from frozen operation",
         ):
             validate_assessment_plan(document)
 

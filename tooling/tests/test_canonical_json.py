@@ -5,7 +5,6 @@ import unittest
 
 from tools._canonical_json import canonical_json_bytes
 from tools.artifact_validation import _content_digest as validation_content_digest
-from tools.policy_sources import policy_revision
 from tools.render_plan import content_digest
 
 
@@ -60,16 +59,6 @@ class SemanticIdentityVectorTests(unittest.TestCase):
         expected = "sha256:1531e7cc8993627321363a8b4aa683a03bd68205286da4a2b02e4bfe87c588a2"
         self.assertEqual(content_digest(value), expected)
         self.assertEqual(validation_content_digest(value), expected)
-
-    def test_policy_revision_normalization_vector(self) -> None:
-        revisions = [
-            {"name": "zeta", "digest": "sha256:" + "f" * 64},
-            {"name": "alpha", "digest": "sha256:" + "a" * 64},
-        ]
-        expected = "sha256:39af4e6a6f641753f24f564b899c7149f9f215e715ee538de221c49b4839c962"
-        self.assertEqual(policy_revision(revisions), expected)
-        self.assertEqual(policy_revision(list(reversed(revisions))), expected)
-
 
 if __name__ == "__main__":
     unittest.main()

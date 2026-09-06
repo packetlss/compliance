@@ -18,6 +18,8 @@ RESULTS_SCHEMA = 'compliance.example/assessment-results/v4'
 PROVENANCE_SCHEMA = 'compliance.example/assessment-provenance/v1alpha1'
 PLAN_DIGEST_ALGORITHM = 'compliance.example/assessment-plan-digest/v1alpha1'
 RESULTS_DIGEST_ALGORITHM = 'compliance.example/assessment-results-digest/v1alpha1'
+MEMBER_PLAN_DOMAIN = 'compliance.example/member-plan/v1alpha1'
+OPERATION_PLAN_DOMAIN = 'compliance.example/operation-bound-plan/v1alpha1'
 
 
 def digest(value: Any) -> str:
@@ -61,24 +63,40 @@ def _artifact_projection(document: dict) -> dict:
     return projected
 
 
-def plan_body_digest(document: dict) -> str:
-    projected = _artifact_projection(document)
-    projected.pop('operation', None)
-    return digest(projected)
+def member_plan_projection(document: dict) -> dict:
+    """Project complete resolved member intent without operation context."""
+    source = document.get('resolved_policy', document)
+    from .operation import _member_resolved_groups, _member_subject
+    subject = _member_subject(document)
+    return {
+        'domain': MEMBER_PLAN_DOMAIN,
+        'subject': copy.deepcopy(subject),
+        'resolved_groups': _member_resolved_groups(document),
+        'assignments': copy.deepcopy(source['assignments']),
+        'resolved_baselines': copy.deepcopy(source['resolved_baselines']),
+        'resolved_requirement_baselines': copy.deepcopy(source['resolved_requirement_baselines']),
+        'requirements': copy.deepcopy(source['requirements']),
+        'controls': copy.deepcopy(source['controls']),
+        'excluded_controls': copy.deepcopy(source['excluded_controls']),
+        'resolution': copy.deepcopy(source['resolution']),
+    }
 
 
-def plan_content_digest(document: dict) -> str:
-    from .operation import member_facts
-    return digest(member_facts(document))
+def member_plan_digest(document: dict) -> str:
+    return digest(member_plan_projection(document))
 
 
-def operation_plan_id(content_digest: str, operation: dict) -> str:
-    return digest({'plan_content_digest': content_digest, 'operation': operation})
+def operation_plan_id(operation_id: str, subject_id: str) -> str:
+    return digest({
+        'domain': OPERATION_PLAN_DOMAIN,
+        'operation_id': operation_id,
+        'subject_id': subject_id,
+    })
 
 
 def artifact_digest(document: dict) -> str:
     if document['schema'] == PLAN_SCHEMA:
-        return operation_plan_id(plan_content_digest(document), document['operation'])
+        return operation_plan_id(document['operation']['operation_id'], document['subject']['id'])
     return digest(_artifact_projection(document))
 
 
@@ -117,15 +135,9 @@ def validate_provenance(document: dict, *, plan: bool) -> None:
         raise ValueError('results require valid error-free frozen policy resolution')
     from .operation import validate_operation
     validate_operation(document, plan=plan)
-    planning = provenance['planningComposition']['actual']['policySources']
-    from .policy_sources import policy_revision
-    revisions = [{'name': item['name'], 'digest': item['content']['digest']} for item in planning]
-    if document['policy_revision'] != policy_revision(revisions):
-        raise ValueError('policy revision differs from actual planning source composition')
     if plan:
-        if document['policy_sources'] != [{'name': item['name'], 'digest': item['content']['digest']} for item in planning]:
-            raise ValueError('plan policy sources do not match planning composition')
         return
+    planning = provenance['planningComposition']['actual']['policySources']
     from .policy_parameters import validate_frozen
     if document['resolved_policy']['resolution'] != {'status': 'valid', 'errors': []}:
         raise ValueError('results require valid error-free frozen policy resolution')

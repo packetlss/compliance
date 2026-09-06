@@ -89,8 +89,9 @@ The CLI
 validates plans before persistence and whenever they
 are displayed or evaluated. Result files
 are validated before persistence and when assessment views load them. A file
-that declares one of these schemas but has malformed provenance, a stale plan
-digest, inconsistent counts, mismatched child revisions, or an invalid
+that declares one of these schemas but has malformed provenance, inconsistent
+member/operation/bound-plan identity, inconsistent counts, mismatched child
+attribution, or an invalid
 objective roll-up fails with its file and JSON Pointer instead of being treated
 as usable history.
 `policy validate` validates every reusable `Control` manifest and its local
@@ -128,13 +129,14 @@ evidence and must reference its source assessment plan when it records
 provenance.
 
 `policy diff` compares two stored assessment plans (v4) for the same
-subject. Both inputs are validated against the strict schema, content digest,
-coverage counts, and cross-field invariants before comparison. The command
+subject. Both inputs are validated against the strict schema, recomputed
+member/operation/bound-plan identities, and cross-field invariants before
+comparison. The command
 does not load or re-resolve the current policy catalog, so its explanation is
 based only on the immutable policy and provenance captured in the two plans.
 
 The initial scope compares policy-relevant subject context, resolved groups,
-assignments, technical and requirement baselines, coverage, resolution,
+assignments, technical and requirement baselines, resolution,
 requirements, and active or excluded controls. Controls are matched by stable
 `instance_id`; a transition from active to excluded or back is reported as
 `excluded` or `activated`. Requirements and resolved baselines are matched by
@@ -145,10 +147,10 @@ retains effective parameters, implementation, disposition, inheritance
 lineage, derivation records, deviations, approval references, and provenance
 for review without reconstructing history from current sources.
 
-Plan IDs, policy-source digests, and inventory, assignment, and policy
-revisions are reported as comparison context. A change to those envelope
-revisions alone does not claim that this subject's effective policy changed;
-actual scope, requirement, control, coverage, or resolution changes do. The
+Plan IDs, member-plan digests, operation IDs, and planning-composition digests
+are reported as comparison context. A change to that identity context alone
+does not claim that this subject's effective policy changed; actual scope,
+requirement, control, or resolution changes do. The
 machine-readable output uses the schema
 `compliance.example/policy-diff/v1alpha1`.
 
@@ -173,7 +175,7 @@ pass one project-scoped plan snapshot on each side.
 
 Valid subjects present on only one side are `added` or `removed`; paired
 subjects are `modified` or `unchanged` according to the effective-policy diff.
-Revision-only context churn remains `unchanged`. Any subject with an invalid
+Identity-context-only churn remains `unchanged`. Any subject with an invalid
 resolution is `incomplete`, including a one-sided invalid plan. The aggregate
 report uses `compliance.example/policy-diff-set/v1alpha1`, embeds the complete
 single-subject diff for each pair, and summarizes added, removed, modified,

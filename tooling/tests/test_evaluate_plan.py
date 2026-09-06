@@ -18,10 +18,6 @@ def assessment_plan(policy_sources, *, with_requirement=False):
     requirement_digest = "sha256:" + "5" * 64
     baseline_digest = "sha256:" + "6" * 64
     plan = {
-                "policy_revision": "sha256:" + "1" * 64,
-        "policy_sources": policy_sources,
-        "inventory_revision": "sha256:" + "2" * 64,
-        "assignment_revision": "sha256:" + "3" * 64,
         "subject": {
             "schema": "compliance.example/inventory-subject/v1",
             "id": "host/test",
@@ -71,15 +67,6 @@ def assessment_plan(policy_sources, *, with_requirement=False):
             }],
         }],
         "excluded_controls": [],
-        "coverage": {
-            "status": "assigned",
-            "assessable": True,
-            "reason": "policy-assigned",
-            "assignment_count": 1,
-            "active_control_count": 1,
-            "excluded_control_count": 0,
-            "requirement_count": 0,
-        },
         "resolution": {"status": "valid", "errors": []},
     }
     if with_requirement:
@@ -134,8 +121,7 @@ def assessment_plan(policy_sources, *, with_requirement=False):
                 "required": True,
             }],
         }]
-        plan["coverage"]["requirement_count"] = 1
-    plan.update(planning_fields(plan["policy_sources"]))
+    plan.update(planning_fields(policy_sources))
     freeze_policy_inputs(plan)
     plan["id"] = artifact_digest(plan)
     return plan
@@ -249,8 +235,6 @@ spec:
             "instance_id": "test.check",
             "subject_id": "host/test",
             "plan_id": plan["id"],
-            "inventory_revision": plan["inventory_revision"],
-            "assignment_revision": plan["assignment_revision"],
             "status": status,
             "severity": "medium",
             "reason": "Synthetic control result.",
@@ -260,7 +244,6 @@ spec:
             "remediation": "",
             "external_refs": [],
             "alignment": "unaltered",
-            "policy_revision": plan["policy_revision"],
         }
 
     @patch("tools.evaluate_plan.subprocess.run")
@@ -319,7 +302,7 @@ spec:
                 {
                     "control": {"implementation": "test", "instance_id": "test.one"},
                     "subject": {"id": "host/test"},
-                    "assessment": {"plan_id": "sha256:plan", "policy_revision": "sha256:policy"},
+                    "assessment": {"plan_id": "sha256:plan"},
                     "evidence": [],
                 },
                 "data.test.evaluate",
@@ -458,8 +441,6 @@ spec:
                 "instance_id": "test.check",
                 "subject_id": "host/test",
                 "plan_id": plan["id"],
-                "inventory_revision": plan["inventory_revision"],
-                "assignment_revision": plan["assignment_revision"],
                 "status": "pass",
                 "severity": "medium",
                 "reason": "Test condition passed.",
@@ -469,7 +450,6 @@ spec:
                 "remediation": "",
                 "external_refs": [],
                 "alignment": "unaltered",
-                "policy_revision": plan["policy_revision"],
             }
             with patch(
                 "tools.evaluate_plan.evaluate_control",

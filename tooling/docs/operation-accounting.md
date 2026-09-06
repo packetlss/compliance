@@ -1,54 +1,77 @@
 # Frozen operation accounting
 
-Implementation contract: [#78](https://github.com/packetlss/compliance/issues/78),
-under [ADR 0016](../../docs/adr/0016-closed-world-policy-assessment.md).
+Implementation contracts: [#78](https://github.com/packetlss/compliance/issues/78)
+and the pre-freeze identity simplification
+[#87](https://github.com/packetlss/compliance/issues/87), under
+[ADR 0016](../../docs/adr/0016-closed-world-policy-assessment.md).
 The representation is experimental and remains inside assessment plan/results v4.
 
-`operation` embeds explicit selection, normalized supplied Subjects, group DAG,
-assignments, planning composition and one expected accounting row per selected
-Subject. Explicit subject selection retains the selected Subjects and projects
-explicit group references onto them. Group/all selection retains the supplied
-inventory needed to reproduce that selection. Catalog loading rejects dangling
-explicit references before selecting a subset. Group definitions retain every
-direct source and applicable inherited edge; no full path enumeration is needed.
-Subject/group/assignment and membership lists use deterministic identity order.
+`operation` embeds one exact normalized request, a mode-sensitive frozen selection
+witness, the relevant assignment union, a compact actual-composition commitment,
+and one compact row per selected Subject. Catalog loading still rejects dangling
+references before selection. Domain-owned sets and lists use deterministic order;
+RFC 8785/JCS is only the final serialization step.
 
-Each row contains the subject's coverage, resolved membership and assignments,
-inventory/assignment revisions, compact policy membership and plan-content digest.
-The compact policy facts retain selected baseline references/digests, required
-requirement pins, named check membership, adoption/satisfaction, mapping references,
-control document digests and assignment attribution. They omit complete sibling
-plans, evaluator interfaces, parameter derivations and evidence bodies. Each
-actual child retains its existing full resolved policy and ADR 0012 validation.
+The request contains `all`, sorted unique `subjects`, and sorted unique `groups`.
+`all=true` is exclusive. Otherwise at least one explicit subject or group is
+required. The request itself is identity-bearing: explicit A and group G are
+different operations even when G currently selects only A.
 
-Validation independently recomputes selection, group closure, applicable assignments,
-baseline membership, required instance membership and coverage from frozen facts.
-It checks those facts against each actual plan/result and preserves existing
-parameter, provenance and roll-up validation. Recomputing the outer artifact digest
-does not repair inconsistent expected membership. Content identity identifies the
-frozen supplied facts; it does not authenticate their real-world truth.
+The selection witness has three modes:
+
+- `explicit` retains no candidate inventory. Its denominator is exactly the
+  request's subjects, so supplying nonselected C cannot affect an A/B operation.
+- `all` retains only the sorted unique supplied subject-ID domain.
+- `groups` retains each requested group plus its complete reverse-reachable
+  descendant closure, direct parent edges, selectors, and supplied direct-member
+  edges. If any retained group has a selector, `candidates` contains every supplied
+  subject ID and only the label presence/value facts for keys consulted by the
+  closure. Matching and nonmatching candidates are included. Without selectors,
+  no candidate label domain is stored.
+
+This projection preserves empty-but-valid group identity, unmatched descendant
+selectors and closed-world omission proof without annotations, display metadata,
+source paths, document boundaries, precomputed inherited paths or unrelated groups.
+Mixed selection is the union of explicit subjects and frozen group resolution.
+
+Each selected-member row contains `subject_id`, resolution-consumed type/lifecycle
+and label facts, assignment-relevant resolved membership attribution,
+`member_plan_digest`, and compact expected control/requirement/mapping membership.
+It does not repeat assignments, baseline bodies or digests, control bodies/digests,
+requirement document digests, realization/adoption/satisfaction bodies, full
+provenance, inventory acquisition facts or derived coverage counters.
+
+Assignments appear once per operation as `{id, target_group, baselines}` and only
+when their target resolves for a selected member. Applicability is rederived from
+member group facts. Validation recomputes the witness denominator, operation ID,
+member commitment for the concrete plan/result, compact expected membership,
+assignment applicability and the existing parameter/provenance/roll-up invariants.
+Content identity identifies the frozen supplied facts; it does not authenticate
+their real-world truth or claim inventory exhaustiveness.
 
 ## Identity
 
-The provisional plan-digest algorithm hashes the existing semantic plan projection
-with `id` and `operation` removed as `plan_body_digest`. Each frozen row retains
-that compact commitment, alongside its subject, revision, membership, assignment,
-coverage and policy facts. `plan_content_digest` hashes all those row fields;
-validation recomputes it for every member, including siblings whose full plan
-bodies are absent. Correlated edits to sibling coverage and policy membership
-cannot retain the original member commitment merely by recomputing the enclosing
-artifact digest. The actual child also derives these same facts and its body
-commitment from its full plan.
+`member_plan_digest` hashes the complete resolved intent for one member without
+operation or composition context. It includes resolution-consumed subject facts,
+assignment-relevant membership, applicable assignments, resolved baselines,
+requirements, controls, exclusions and resolution state. A result carries the same
+resolved-policy projection so validation independently recomputes the commitment.
+No predecessor digest is retained as an alias.
 
-The enclosing plan ID hashes the JCS object
-`{"plan_content_digest": digest, "operation": projection}`. Exact expected plan IDs
-are reconstructible without embedding foreign plan bodies or recursive references.
-Composition descriptive metadata and expected enforcement remain nonsemantic.
-Operation planning composition includes only actual composition and its digest.
+`operation_id` hashes the operation domain tag, exact request, selection witness,
+relevant assignments, planning-composition algorithm/digest, compact expected
+membership/mappings and sorted member commitments. The composition reference is
+checked against the artifact's independently validated ADR 0007 actual composition.
+
+The exact bound plan ID hashes only the operation-bound-plan domain tag,
+`operation_id` and `subject_id`. Exact expected plan IDs are reconstructible without
+foreign member bodies or recursive references. Composition descriptive metadata and
+expected enforcement remain nonsemantic.
 
 A in `[A]` has a different enclosing identity from A in `[A,B]`. There is no
-cross-operation result equivalence. Policy diff exposes `operation_digest` among
-context changes; unchanged effective subject policy remains distinguishable.
+cross-operation result equivalence. Policy diff exposes `operation_id`,
+`member_plan_digest` and the composition digest as independently meaningful context;
+unchanged effective subject policy remains distinguishable.
 Results carry the same operation, exact plan reference and one recorded assessment
 instant shared by multi-subject execution. The result digest retains these fields.
 
@@ -82,8 +105,10 @@ reporting; there is no latest-file precedence. Another operation/plan/instant ca
 fill a missing slot. Historical reporting works without inventory, policy or evidence
 paths; `--no-config` also avoids reopening project configuration.
 
-`accounting_complete` means every assessable expected member has an exact result.
-Unassigned, inactive and assigned-with-no-active-policy rows require no result.
+`accounting_complete` means every result-required member has an exact result.
+Member disposition is derived from frozen lifecycle, membership, assignments and
+expected policy: inactive, unassigned, no assessable policy, or result required.
+The first three require no result.
 `all_passed` additionally requires a passing state for every selected member. Thus
 A pass plus B unassigned is complete accounting without unqualified A/B success.
 An operation consisting entirely of non-assessable members has no passing basis.

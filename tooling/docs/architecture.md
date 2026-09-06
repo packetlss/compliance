@@ -122,11 +122,11 @@ calculates group membership for policy resolution. It is a read-only consumer:
 the upstream systems remain authoritative, and inventory ingestion does not
 write lifecycle, ownership, labels, or configuration back to them.
 
-The projection may persist immutable source snapshots and normalized revisions
-so an assessment can be reproduced. This persistence is a cache and audit
-record, not a claim that the compliance platform owns the imported facts. The
-platform is authoritative only for its own concerns, including group rules,
-policy assignments, policies, rendered plans, decisions, and findings.
+An eventual immutable source snapshot is a separate ingestion/provenance concern,
+not a current assessment identity or artifact. Historical assessment reproduction
+uses the operation's mode-sensitive frozen selection and resolution facts. The
+platform is authoritative only for its own concerns, including group rules, policy
+assignments, policies, rendered plans, decisions, and findings.
 
 ### Evaluation plane
 
@@ -151,16 +151,16 @@ rollback are independent of collector and reporting releases.
 
 A deployed environment may assemble several named releases or partial policy
 trees locally. Source order has no precedence: identical identities coalesce
-with provenance and divergent identities fail. The plan retains each source
-digest plus a deterministic final policy revision. This lets a restricted
+with provenance and divergent identities fail. The plan retains actual named
+source content once in its ADR 0007 planning composition. This lets a restricted
 environment combine verified shared policy with private overlays or complete
 realizations without exposing those details to central CI.
 
 ### External adapter boundary
 
 Core tooling ends at resolved desired technical controls plus evidence-backed
-assessment. The provenance-bearing assessment plan exposes subject and plan
-identity, named policy-source digests, final policy revision, stable
+assessment. The provenance-bearing assessment plan exposes subject, operation,
+member-plan and bound-plan identity, actual planning composition, stable
 `implementation` and `instance_id`, resolved `parameters`,
 `definition_fingerprint`, disposition, derivations, deviations, source and
 baseline lineage, and requirement/realization lineage where applicable.
@@ -177,7 +177,7 @@ assessment plan.
 | Concept | Meaning |
 |---|---|
 | **Asset** | A resource in scope: repository, cluster, cloud account, workload, identity, etc. |
-| **Inventory projection** | A revisioned, normalized view of subjects and policy-selecting metadata imported from external authorities. |
+| **Inventory projection** | A normalized supplied view of subjects and policy-selecting metadata imported from external authorities; it is not an assessment-wide snapshot identity. |
 | **Evidence document** | A typed JSON observation about a subject, with provenance, collection time, and freshness. |
 | **Control requirement** | A technology-neutral company outcome that may map to an external framework objective. |
 | **Control implementation** | Reusable Rego that evaluates one technical condition against a particular evidence contract. |
@@ -244,8 +244,8 @@ remain distinguishable from a pass.
 1. Discover subjects and collect source-specific observations.
 2. Validate observations against versioned evidence schemas.
 3. Resolve the group DAG and baseline assignments into an assessment plan.
-4. Validate the rendered plan's strict schema, content digest, coverage counts,
-   and provenance invariants.
+4. Validate the rendered plan's strict schema, member/operation identity,
+   derived accounting disposition, and provenance invariants.
 5. Resolve active waivers and evaluate the plan's controls.
 6. Validate and persist the decision envelope and evidence references.
 7. Open, update, suppress, or close findings based on state transitions.
@@ -497,6 +497,17 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-06 — Frozen operation and bound-plan identity simplification (#87)
+
+The pre-freeze operation representation now uses one exact normalized request,
+a mode-sensitive selection witness, relevant assignments, a compact ADR 0007
+composition commitment, compact expected membership, and sorted member-plan
+commitments. Catalog-wide inventory/assignment revisions and the predecessor
+plan digest wrappers are removed. Each bound plan ID derives only from operation
+ID and subject ID. Accounting disposition is derived rather than frozen as
+coverage counters. No compatibility alias, inventory snapshot artifact, result
+redesign, evidence/composition identity change or freeze is introduced.
+
 ### 2026-09-06 — Frozen operation accounting and typed assertions (#78)
 
 The [operation contract](operation-accounting.md) specifies the embedded frozen
@@ -645,7 +656,7 @@ and commands are unsupported, and adaptation is external.
 | 2026-08-28 | Freeze normative overlay derivations as parent fingerprint, inherited lineage, and exact before/after criteria in the rendered assessment plan instead of reconstructing historical differences from current policy | Accepted and implemented; consumed by the initial stored-plan `policy diff` |
 | 2026-08-28 | Model temporary exceptions as project-owned, exact subject/control, approved and bounded waiver resources resolved at evaluation time; only an underlying failure may become waived, while plans and configuration intent remain unchanged | Accepted and implemented initial contract |
 | 2026-08-29 | Version the integration workspace separately, pin component repositories as submodules, use branches only as review lanes and immutable tags for tested compositions, keep separate workspaces for need-to-know boundaries, and make runtime independent of Git metadata | Historical initial workspace contract; its upstream development/topology role is superseded by workspace ADR 0005, while exact leaf-integration metadata, real need-to-know separation, and runtime independence from Git remain |
-| 2026-08-29 | Compare validated stored plans for the same subject as the initial policy-diff scope, preserve exact effective-policy and provenance changes without re-resolution, treat revision-only churn as context, and reserve CI exits 0/1/2 for unchanged/changed/incomplete comparisons | Accepted and implemented initial contract; authored baseline diff remains future work |
+| 2026-08-29 | Compare validated stored plans for the same subject as the initial policy-diff scope, preserve exact effective-policy and provenance changes without re-resolution, treat identity-context-only churn as context, and reserve CI exits 0/1/2 for unchanged/changed/incomplete comparisons | Accepted and implemented initial contract; authored baseline diff remains future work |
 | 2026-08-29 | Compare two strict project plan snapshots by stable subject identity, reuse the immutable per-subject policy diff, report valid additions/removals and effective modifications, and fail the aggregate comparison closed for invalid-resolution subjects, mixed artifacts, empty sets, or duplicate identities | Accepted and implemented as `policy diff-set`; authored baseline diff remains future work |
 | 2026-08-29 | Enforce the pinned evidence-type JSON Schemas after exact subject routing and before freshness selection; preserve valid extension fields, report matching schema failures as independently attributable control errors without invoking OPA, and refuse unreadable or non-object evidence that cannot be routed safely | Historical implemented rule; schema-invalid evidence → `error` classification superseded by system [ADR 0010](../../docs/adr/0010-required-evidence-status-and-assessment-refusal.md). Runtime correction to `unknown` is implemented by #32; historical rationale retained |
 | 2026-08-29 | Separate stable scenario-first verification from exploratory development and boundary examples; use credible deterministic synthetic situations, explicit feature coverage, normal production contracts, and project isolation even when several projects share one repository | Accepted verification strategy; first scenario migration implemented, broader repository migration remains proposed |

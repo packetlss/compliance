@@ -114,33 +114,6 @@ def validate_assessment_plan(
             "/resolution: valid requires no errors and invalid requires at least one error"
         )
 
-    coverage = document["coverage"]
-    expected_counts = {
-        "assignment_count": len(document["assignments"]),
-        "active_control_count": len(document["controls"]),
-        "excluded_control_count": len(document["excluded_controls"]),
-        "requirement_count": len(document["requirements"]),
-    }
-    for field, expected in expected_counts.items():
-        if coverage[field] != expected:
-            errors.append(
-                f"/coverage/{field}: expected {expected}, got {coverage[field]}"
-            )
-
-    expected_assessable = (
-        coverage["status"] == "assigned"
-        and bool(document["controls"] or document["requirements"])
-    )
-    if coverage["assessable"] != expected_assessable:
-        errors.append(
-            "/coverage/assessable: must be true exactly for assigned policy with "
-            "at least one active control or requirement"
-        )
-    if (resolution["status"] == "invalid") != (coverage["status"] == "invalid"):
-        errors.append(
-            "/coverage/status: invalid coverage and invalid resolution must agree"
-        )
-
     identity_sets = {
         "/assignments": [item["id"] for item in document["assignments"]],
         "/resolved_groups": [item["id"] for item in document["resolved_groups"]],
@@ -314,9 +287,6 @@ def validate_assessment_results(
         expected_fields = {
             "subject_id": document["subject_id"],
             "plan_id": document["plan_id"],
-            "policy_revision": document["policy_revision"],
-            "inventory_revision": document["inventory_revision"],
-            "assignment_revision": document["assignment_revision"],
         }
         if "waiver_revision" in document:
             expected_fields["waiver_revision"] = document["waiver_revision"]

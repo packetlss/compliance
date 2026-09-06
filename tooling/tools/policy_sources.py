@@ -8,9 +8,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, TypeAlias
 
-from ._canonical_json import canonical_json_bytes
-
-
 SOURCE_NAME = re.compile(r"^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$")
 
 
@@ -77,13 +74,6 @@ def policy_source_revisions(sources: PolicySources) -> list[dict[str, str]]:
         {"name": source.name, "digest": source_tree_digest(source.path)}
         for source in normalize_policy_sources(sources)
     ]
-
-
-def policy_revision(revisions: list[dict[str, str]]) -> str:
-    """Digest a source-name/revision set without incorporating checkout paths."""
-    canonical = sorted(revisions, key=lambda revision: revision["name"])
-    encoded = canonical_json_bytes(canonical)
-    return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
 def source_pin_errors(sources: PolicySources) -> list[dict[str, Any]]:

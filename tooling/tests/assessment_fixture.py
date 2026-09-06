@@ -2,13 +2,13 @@
 from tools.assessment_provenance import PLAN_SCHEMA, PLAN_DIGEST_ALGORITHM, PROVENANCE_SCHEMA, artifact_digest
 from tools.composition import COMPOSITION_DIGEST_ALGORITHM, composition_digest, POLICY_SOURCE_DIGEST_ALGORITHM
 from tools.tooling_identity import actual_tooling_identity
-from tools.policy_sources import policy_revision
 
 
 def freeze_policy_inputs(plan):
     """Author explicit synthetic input facts for hand-built evaluator fixtures."""
     import copy
     from tools import policy_parameters as pp
+    policy_source_name = plan['provenance']['planningComposition']['actual']['policySources'][0]['name']
     for control in plan['controls']:
         for index, dependency in enumerate(control['evidence']):
             dependency.setdefault('id', f'observation-{index + 1}')
@@ -28,7 +28,7 @@ def freeze_policy_inputs(plan):
                 identity = pp.digest({'reference': reference})
                 plan['resolved_baselines'].append({'assignment': assignment['id'], 'group': assignment['group'],
                     'reference': reference, 'digest': identity, 'lineage': [{'reference': reference, 'digest': identity}],
-                    'deviations': [], 'policy_sources': [{'policy_source': plan['policy_sources'][0]['name'], 'path': 'baselines/test.json'}]})
+                    'deviations': [], 'policy_sources': [{'policy_source': policy_source_name, 'path': 'baselines/test.json'}]})
     requirements = {}
     for record in plan['requirements']:
         identifier, revision = record['reference'].rsplit('@', 1)
@@ -81,7 +81,6 @@ def planning_fields(sources):
         {'name': item['name'], 'content': {'digest': item['digest'], 'digestAlgorithm': POLICY_SOURCE_DIGEST_ALGORITHM}}
         for item in sorted(sources, key=lambda item: item['name'])]}
     return {'schema': PLAN_SCHEMA, 'digestAlgorithm': PLAN_DIGEST_ALGORITHM,
-            'policy_revision': policy_revision(sources),
             'provenance': {'schema': PROVENANCE_SCHEMA, 'planningComposition': {
                 'actual': actual, 'compositionDigestAlgorithm': COMPOSITION_DIGEST_ALGORITHM,
                 'compositionDigest': composition_digest(actual),

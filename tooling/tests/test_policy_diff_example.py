@@ -42,9 +42,6 @@ class PolicyDiffExampleTests(unittest.TestCase):
                     "status": "invalid",
                     "errors": [{"type": "test-conflict"}],
                 }
-                plan["coverage"].update(
-                    status="invalid", assessable=False, reason="resolution-errors"
-                )
             from assessment_fixture import refresh_operation
             refresh_operation(plan)
             plan.pop("id")

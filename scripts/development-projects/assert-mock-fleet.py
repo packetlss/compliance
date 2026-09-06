@@ -29,17 +29,23 @@ def is_digest(value: object) -> bool:
 def assert_assessment_plan_handoff(plan: dict, subject_id: str) -> None:
     if plan.get("schema") != "compliance.example/assessment-plan/v4":
         fail(f"unexpected assessment-plan schema for {subject_id}")
-    if not is_digest(plan.get("id")) or not is_digest(plan.get("policy_revision")):
-        fail(f"assessment plan lost plan or final policy identity for {subject_id}")
+    operation = plan.get("operation", {})
+    member = next((row for row in operation.get("members", [])
+                   if row.get("subject_id") == subject_id), {})
+    if not all(is_digest(value) for value in (
+        plan.get("id"), operation.get("operation_id"), member.get("member_plan_digest")
+    )):
+        fail(f"assessment plan lost bound, operation, or member identity for {subject_id}")
     subject = plan.get("subject", {})
     if subject.get("id") != subject_id or not subject.get("type"):
         fail(f"assessment plan lost subject identity for {subject_id}")
 
-    policy_sources = plan.get("policy_sources", [])
+    policy_sources = plan.get("provenance", {}).get("planningComposition", {}).get(
+        "actual", {}).get("policySources", [])
     source_names = {source.get("name") for source in policy_sources}
     if source_names != {"control-library", "verification-policy"}:
         fail(f"assessment plan lost named policy sources for {subject_id}: {source_names}")
-    if any(not is_digest(source.get("digest")) for source in policy_sources):
+    if any(not is_digest(source.get("content", {}).get("digest")) for source in policy_sources):
         fail(f"assessment plan has invalid policy-source content identity for {subject_id}")
 
     active = plan.get("controls")

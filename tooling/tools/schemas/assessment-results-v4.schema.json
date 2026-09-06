@@ -7,9 +7,6 @@
     "assessment_id",
     "evaluated_at",
     "plan_id",
-    "policy_revision",
-    "inventory_revision",
-    "assignment_revision",
     "subject_id",
     "summary",
     "requirement_summary",
@@ -37,15 +34,6 @@
       "format": "date-time"
     },
     "plan_id": {
-      "$ref": "#/$defs/digest"
-    },
-    "policy_revision": {
-      "$ref": "#/$defs/digest"
-    },
-    "inventory_revision": {
-      "$ref": "#/$defs/digest"
-    },
-    "assignment_revision": {
       "$ref": "#/$defs/digest"
     },
     "waiver_revision": {
@@ -843,29 +831,109 @@
       ]
     },
     "resolved_policy": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject",
+        "resolved_groups",
+        "controls",
+        "excluded_controls",
+        "requirements",
+        "resolved_requirement_baselines",
+        "resolved_baselines",
+        "assignments",
+        "resolution"
+      ],
+      "properties": {
+        "subject": {
+          "type": "object"
+        },
+        "resolution": {
+          "type": "object"
+        },
+        "resolved_groups": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "uniqueItems": true
+        },
+        "controls": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "uniqueItems": true
+        },
+        "excluded_controls": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "uniqueItems": true
+        },
+        "requirements": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "uniqueItems": true
+        },
+        "resolved_requirement_baselines": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "uniqueItems": true
+        },
+        "resolved_baselines": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "uniqueItems": true
+        },
+        "assignments": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "uniqueItems": true
+        }
+      }
     },
     "operation": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "selection",
-        "subjects",
-        "groups",
+        "domain",
+        "operation_id",
+        "request",
+        "selection_witness",
         "assignments",
         "members",
         "planning_composition"
       ],
       "properties": {
-        "selection": {
+        "domain": {
+          "const": "compliance.example/frozen-operation/v1alpha1"
+        },
+        "operation_id": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "request": {
           "type": "object",
           "additionalProperties": false,
           "required": [
+            "all",
             "subjects",
-            "groups",
-            "all"
+            "groups"
           ],
           "properties": {
+            "all": {
+              "type": "boolean"
+            },
             "subjects": {
               "type": "array",
               "items": {
@@ -881,143 +949,131 @@
                 "minLength": 1
               },
               "uniqueItems": true
-            },
-            "all": {
-              "type": "boolean"
             }
           }
         },
-        "subjects": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "schema",
-              "id",
-              "type",
-              "status",
-              "labels",
-              "inventory"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "schema": {
-                "const": "compliance.example/inventory-subject/v1"
-              },
-              "id": {
-                "type": "string",
-                "minLength": 3,
-                "pattern": "^[^/]+/.+$"
-              },
-              "type": {
-                "type": "string",
-                "minLength": 1
-              },
-              "status": {
-                "enum": [
-                  "active",
-                  "retired",
-                  "unknown"
-                ]
-              },
-              "labels": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "string"
-                }
-              },
-              "annotations": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "string"
-                }
-              },
-              "attributes": {
-                "type": "object",
-                "additionalProperties": true
-              },
-              "inventory": {
-                "type": "object",
-                "required": [
-                  "source",
-                  "external_id",
-                  "observed_at"
-                ],
-                "additionalProperties": false,
-                "properties": {
-                  "source": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "external_id": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "observed_at": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "revision": {
-                    "type": "string",
-                    "minLength": 1
-                  }
+        "selection_witness": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "mode"
+              ],
+              "properties": {
+                "mode": {
+                  "const": "explicit"
                 }
               }
-            }
-          },
-          "uniqueItems": true
-        },
-        "groups": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "id",
-              "parents"
-            ],
-            "properties": {
-              "id": {
-                "type": "string",
-                "minLength": 1
-              },
-              "parents": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "mode",
+                "subject_ids"
+              ],
+              "properties": {
+                "mode": {
+                  "const": "all"
                 },
-                "uniqueItems": true
-              },
-              "members": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1
+                "subject_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "mode",
+                "groups"
+              ],
+              "properties": {
+                "mode": {
+                  "const": "groups"
                 },
-                "uniqueItems": true
-              },
-              "selector": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "match_labels"
-                ],
-                "properties": {
-                  "match_labels": {
+                "groups": {
+                  "type": "array",
+                  "items": {
                     "type": "object",
-                    "additionalProperties": {
-                      "type": "string"
+                    "additionalProperties": false,
+                    "required": [
+                      "id",
+                      "parents"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "parents": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "uniqueItems": true
+                      },
+                      "members": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "uniqueItems": true
+                      },
+                      "selector": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "match_labels"
+                        ],
+                        "properties": {
+                          "match_labels": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
                     }
-                  }
+                  },
+                  "uniqueItems": true
+                },
+                "candidates": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "subject_id",
+                      "labels"
+                    ],
+                    "properties": {
+                      "subject_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "labels": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "uniqueItems": true
                 }
-              },
-              "metadata": {
-                "type": "object"
               }
             }
-          },
-          "uniqueItems": true
+          ]
         },
         "assignments": {
           "type": "array",
@@ -1026,7 +1082,7 @@
             "additionalProperties": false,
             "required": [
               "id",
-              "target",
+              "target_group",
               "baselines"
             ],
             "properties": {
@@ -1034,18 +1090,9 @@
                 "type": "string",
                 "minLength": 1
               },
-              "target": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "group"
-                ],
-                "properties": {
-                  "group": {
-                    "type": "string",
-                    "minLength": 1
-                  }
-                }
+              "target_group": {
+                "type": "string",
+                "minLength": 1
               },
               "baselines": {
                 "type": "array",
@@ -1066,42 +1113,53 @@
             "additionalProperties": false,
             "required": [
               "subject_id",
-              "plan_content_digest",
-              "inventory_revision",
-              "assignment_revision",
+              "subject",
+              "member_plan_digest",
               "resolved_groups",
-              "assignments",
-              "coverage",
-              "policy",
-              "plan_body_digest"
+              "policy"
             ],
             "properties": {
-              "subject_id": {
-                "type": "string",
-                "minLength": 1
+              "subject": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "status",
+                  "labels"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "status": {
+                    "enum": [
+                      "active",
+                      "retired",
+                      "unknown"
+                    ]
+                  },
+                  "labels": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                }
               },
-              "plan_content_digest": {
-                "type": "string",
-                "pattern": "^sha256:[0-9a-f]{64}$"
-              },
-              "inventory_revision": {
-                "type": "string",
-                "pattern": "^sha256:[0-9a-f]{64}$"
-              },
-              "assignment_revision": {
+              "member_plan_digest": {
                 "type": "string",
                 "pattern": "^sha256:[0-9a-f]{64}$"
               },
               "resolved_groups": {
                 "type": "array",
-                "uniqueItems": true,
                 "items": {
                   "type": "object",
+                  "additionalProperties": false,
                   "required": [
                     "id",
                     "sources"
                   ],
-                  "additionalProperties": false,
                   "properties": {
                     "id": {
                       "type": "string",
@@ -1109,260 +1167,47 @@
                     },
                     "sources": {
                       "type": "array",
-                      "minItems": 1,
-                      "uniqueItems": true,
                       "items": {
-                        "oneOf": [
-                          {
-                            "type": "object",
-                            "required": [
-                              "membership",
-                              "source"
-                            ],
-                            "additionalProperties": false,
-                            "properties": {
-                              "membership": {
-                                "const": "explicit"
-                              },
-                              "source": {
-                                "const": "group.members"
-                              }
-                            }
-                          },
-                          {
-                            "type": "object",
-                            "required": [
-                              "membership",
-                              "source"
-                            ],
-                            "additionalProperties": false,
-                            "properties": {
-                              "membership": {
-                                "const": "selector"
-                              },
-                              "source": {
-                                "type": "object",
-                                "required": [
-                                  "match_labels"
-                                ],
-                                "additionalProperties": false,
-                                "properties": {
-                                  "match_labels": {
-                                    "type": "object",
-                                    "additionalProperties": {
-                                      "type": "string"
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          },
-                          {
-                            "type": "object",
-                            "required": [
-                              "membership",
-                              "via"
-                            ],
-                            "additionalProperties": false,
-                            "properties": {
-                              "membership": {
-                                "const": "inherited"
-                              },
-                              "via": {
-                                "type": "array",
-                                "minItems": 1,
-                                "uniqueItems": true,
-                                "items": {
-                                  "type": "string",
-                                  "minLength": 1
-                                }
-                              }
-                            }
-                          }
-                        ]
+                        "type": "object"
                       }
                     }
                   }
-                }
-              },
-              "assignments": {
-                "type": "array",
-                "uniqueItems": true,
-                "items": {
-                  "type": "object",
-                  "required": [
-                    "id",
-                    "group",
-                    "baselines"
-                  ],
-                  "additionalProperties": false,
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "group": {
-                      "type": "string",
-                      "minLength": 1
-                    },
-                    "baselines": {
-                      "type": "array",
-                      "minItems": 1,
-                      "uniqueItems": true,
-                      "items": {
-                        "type": "string",
-                        "minLength": 3,
-                        "pattern": "^.+@.+$"
-                      }
-                    }
-                  }
-                }
-              },
-              "coverage": {
-                "type": "object",
-                "required": [
-                  "status",
-                  "assessable",
-                  "reason",
-                  "assignment_count",
-                  "active_control_count",
-                  "excluded_control_count",
-                  "requirement_count"
-                ],
-                "additionalProperties": false,
-                "properties": {
-                  "status": {
-                    "enum": [
-                      "assigned",
-                      "unassigned",
-                      "inactive",
-                      "invalid"
-                    ]
-                  },
-                  "assessable": {
-                    "type": "boolean"
-                  },
-                  "reason": {
-                    "enum": [
-                      "policy-assigned",
-                      "no-active-controls",
-                      "no-policy-assignment",
-                      "subject-retired",
-                      "resolution-errors"
-                    ]
-                  },
-                  "assignment_count": {
-                    "type": "integer",
-                    "minimum": 0
-                  },
-                  "active_control_count": {
-                    "type": "integer",
-                    "minimum": 0
-                  },
-                  "excluded_control_count": {
-                    "type": "integer",
-                    "minimum": 0
-                  },
-                  "requirement_count": {
-                    "type": "integer",
-                    "minimum": 0
-                  }
-                }
+                },
+                "uniqueItems": true
               },
               "policy": {
                 "type": "object",
                 "additionalProperties": false,
                 "required": [
-                  "baselines",
-                  "requirements",
-                  "controls"
+                  "controls",
+                  "requirements"
                 ],
                 "properties": {
-                  "baselines": {
+                  "controls": {
                     "type": "array",
                     "items": {
                       "type": "object",
                       "additionalProperties": false,
                       "required": [
-                        "reference",
-                        "digest",
-                        "assignment",
-                        "group"
+                        "instance_id",
+                        "disposition",
+                        "external_refs"
                       ],
                       "properties": {
-                        "reference": {
+                        "instance_id": {
                           "type": "string",
                           "minLength": 1
                         },
-                        "digest": {
-                          "type": "string",
-                          "pattern": "^sha256:[0-9a-f]{64}$"
+                        "disposition": {
+                          "enum": [
+                            "evaluate",
+                            "excluded"
+                          ]
                         },
-                        "assignment": {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "group": {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "control_ids": {
-                          "type": "array",
-                          "items": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "uniqueItems": true
-                        },
-                        "requirements": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "required": [
-                              "requirement",
-                              "digest",
-                              "required"
-                            ],
-                            "properties": {
-                              "requirement": {
-                                "type": "string",
-                                "minLength": 1
-                              },
-                              "digest": {
-                                "type": "string",
-                                "pattern": "^sha256:[0-9a-f]{64}$"
-                              },
-                              "required": {
-                                "type": "boolean"
-                              }
-                            }
-                          },
-                          "uniqueItems": true
+                        "external_refs": {
+                          "$ref": "#/$defs/externalRefs"
                         }
-                      },
-                      "oneOf": [
-                        {
-                          "required": [
-                            "control_ids"
-                          ],
-                          "not": {
-                            "required": [
-                              "requirements"
-                            ]
-                          }
-                        },
-                        {
-                          "required": [
-                            "requirements"
-                          ],
-                          "not": {
-                            "required": [
-                              "control_ids"
-                            ]
-                          }
-                        }
-                      ]
+                      }
                     },
                     "uniqueItems": true
                   },
@@ -1373,324 +1218,19 @@
                       "additionalProperties": false,
                       "required": [
                         "reference",
-                        "digest",
                         "required",
-                        "external_refs",
-                        "technical_instance_ids",
-                        "adoption",
-                        "satisfaction",
-                        "provenance"
+                        "external_refs"
                       ],
                       "properties": {
                         "reference": {
                           "type": "string",
-                          "minLength": 3,
-                          "pattern": "^.+@.+$"
-                        },
-                        "digest": {
-                          "type": "string",
-                          "pattern": "^sha256:[0-9a-f]{64}$"
+                          "minLength": 1
                         },
                         "required": {
                           "type": "boolean"
                         },
                         "external_refs": {
-                          "type": "array",
-                          "uniqueItems": true,
-                          "items": {
-                            "type": "string",
-                            "minLength": 1
-                          }
-                        },
-                        "technical_instance_ids": {
-                          "type": "array",
-                          "uniqueItems": true,
-                          "items": {
-                            "type": "string",
-                            "minLength": 1
-                          }
-                        },
-                        "adoption": {
-                          "type": "object",
-                          "required": [
-                            "status",
-                            "method",
-                            "owner"
-                          ],
-                          "additionalProperties": false,
-                          "properties": {
-                            "status": {
-                              "enum": [
-                                "implemented",
-                                "not_implemented",
-                                "not_applicable"
-                              ]
-                            },
-                            "method": {
-                              "enum": [
-                                "automated",
-                                "hybrid",
-                                "manual",
-                                "none"
-                              ]
-                            },
-                            "owner": {
-                              "type": "string",
-                              "minLength": 1
-                            },
-                            "implementation_ref": {
-                              "type": "string",
-                              "minLength": 1
-                            },
-                            "determination": {
-                              "type": "object",
-                              "required": [
-                                "rationale",
-                                "approval_ref",
-                                "review_after"
-                              ],
-                              "additionalProperties": false,
-                              "properties": {
-                                "rationale": {
-                                  "type": "string",
-                                  "minLength": 1
-                                },
-                                "approval_ref": {
-                                  "type": "string",
-                                  "minLength": 1
-                                },
-                                "review_after": {
-                                  "type": "string",
-                                  "format": "date"
-                                }
-                              }
-                            }
-                          }
-                        },
-                        "satisfaction": {
-                          "type": "object",
-                          "required": [
-                            "allOf"
-                          ],
-                          "additionalProperties": false,
-                          "properties": {
-                            "allOf": {
-                              "type": "array",
-                              "uniqueItems": true,
-                              "items": {
-                                "type": "string",
-                                "minLength": 1
-                              }
-                            }
-                          }
-                        },
-                        "provenance": {
-                          "type": "array",
-                          "minItems": 1,
-                          "uniqueItems": true,
-                          "items": {
-                            "type": "object",
-                            "required": [
-                              "group",
-                              "assignment",
-                              "baseline"
-                            ],
-                            "additionalProperties": false,
-                            "properties": {
-                              "group": {
-                                "type": "string",
-                                "minLength": 1
-                              },
-                              "assignment": {
-                                "type": "string",
-                                "minLength": 1
-                              },
-                              "baseline": {
-                                "type": "string",
-                                "minLength": 3,
-                                "pattern": "^.+@.+$"
-                              },
-                              "requirement": {
-                                "type": "string",
-                                "minLength": 3,
-                                "pattern": "^.+@.+$"
-                              },
-                              "realization": {
-                                "type": "string",
-                                "minLength": 3,
-                                "pattern": "^.+@.+$"
-                              }
-                            },
-                            "dependentRequired": {
-                              "requirement": [
-                                "realization"
-                              ],
-                              "realization": [
-                                "requirement"
-                              ]
-                            }
-                          }
-                        },
-                        "realization": {
-                          "type": "object",
-                          "required": [
-                            "reference",
-                            "digest",
-                            "classification",
-                            "policy_sources"
-                          ],
-                          "additionalProperties": false,
-                          "properties": {
-                            "reference": {
-                              "type": "string",
-                              "minLength": 3,
-                              "pattern": "^.+@.+$"
-                            },
-                            "digest": {
-                              "type": "string",
-                              "pattern": "^sha256:[0-9a-f]{64}$"
-                            },
-                            "classification": {
-                              "enum": [
-                                "internal",
-                                "confidential",
-                                "restricted"
-                              ]
-                            },
-                            "policy_sources": {
-                              "type": "array",
-                              "minItems": 1,
-                              "uniqueItems": true,
-                              "items": {
-                                "type": "object",
-                                "required": [
-                                  "policy_source",
-                                  "path"
-                                ],
-                                "additionalProperties": false,
-                                "properties": {
-                                  "policy_source": {
-                                    "type": "string",
-                                    "minLength": 1
-                                  },
-                                  "path": {
-                                    "type": "string",
-                                    "minLength": 1
-                                  }
-                                }
-                              }
-                            },
-                            "based_on": {
-                              "type": "object",
-                              "required": [
-                                "realization",
-                                "digest"
-                              ],
-                              "additionalProperties": false,
-                              "properties": {
-                                "realization": {
-                                  "type": "string",
-                                  "minLength": 3,
-                                  "pattern": "^.+@.+$"
-                                },
-                                "digest": {
-                                  "type": "string",
-                                  "pattern": "^sha256:[0-9a-f]{64}$"
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    },
-                    "uniqueItems": true
-                  },
-                  "controls": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "required": [
-                        "instance_id",
-                        "implementation",
-                        "disposition",
-                        "digest",
-                        "external_refs",
-                        "provenance"
-                      ],
-                      "properties": {
-                        "instance_id": {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "implementation": {
-                          "type": "string",
-                          "minLength": 1
-                        },
-                        "disposition": {
-                          "enum": [
-                            "evaluate",
-                            "excluded"
-                          ]
-                        },
-                        "digest": {
-                          "type": "string",
-                          "pattern": "^sha256:[0-9a-f]{64}$"
-                        },
-                        "external_refs": {
-                          "type": "array",
-                          "items": {
-                            "type": "string",
-                            "minLength": 1
-                          },
-                          "uniqueItems": true
-                        },
-                        "provenance": {
-                          "type": "array",
-                          "minItems": 1,
-                          "uniqueItems": true,
-                          "items": {
-                            "type": "object",
-                            "required": [
-                              "group",
-                              "assignment",
-                              "baseline"
-                            ],
-                            "additionalProperties": false,
-                            "properties": {
-                              "group": {
-                                "type": "string",
-                                "minLength": 1
-                              },
-                              "assignment": {
-                                "type": "string",
-                                "minLength": 1
-                              },
-                              "baseline": {
-                                "type": "string",
-                                "minLength": 3,
-                                "pattern": "^.+@.+$"
-                              },
-                              "requirement": {
-                                "type": "string",
-                                "minLength": 3,
-                                "pattern": "^.+@.+$"
-                              },
-                              "realization": {
-                                "type": "string",
-                                "minLength": 3,
-                                "pattern": "^.+@.+$"
-                              }
-                            },
-                            "dependentRequired": {
-                              "requirement": [
-                                "realization"
-                              ],
-                              "realization": [
-                                "requirement"
-                              ]
-                            }
-                          }
+                          "$ref": "#/$defs/externalRefs"
                         }
                       }
                     },
@@ -1698,124 +1238,22 @@
                   }
                 }
               },
-              "plan_body_digest": {
+              "subject_id": {
                 "type": "string",
-                "pattern": "^sha256:[0-9a-f]{64}$"
+                "minLength": 1
               }
             }
           },
-          "uniqueItems": true,
-          "minItems": 1
+          "uniqueItems": true
         },
         "planning_composition": {
           "type": "object",
           "additionalProperties": false,
+          "required": [
+            "compositionDigestAlgorithm",
+            "compositionDigest"
+          ],
           "properties": {
-            "actual": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "tooling",
-                "policySources"
-              ],
-              "properties": {
-                "tooling": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "source",
-                    "execution"
-                  ],
-                  "properties": {
-                    "source": {
-                      "type": "object",
-                      "additionalProperties": false,
-                      "required": [
-                        "digest",
-                        "digestAlgorithm"
-                      ],
-                      "properties": {
-                        "digest": {
-                          "type": "string",
-                          "pattern": "^sha256:[0-9a-f]{64}$"
-                        },
-                        "digestAlgorithm": {
-                          "const": "compliance.example/tooling-source-tree-digest/v1alpha1"
-                        }
-                      }
-                    },
-                    "execution": {
-                      "oneOf": [
-                        {
-                          "type": "object",
-                          "additionalProperties": false,
-                          "required": [
-                            "kind"
-                          ],
-                          "properties": {
-                            "kind": {
-                              "const": "source"
-                            }
-                          }
-                        },
-                        {
-                          "type": "object",
-                          "additionalProperties": false,
-                          "required": [
-                            "kind",
-                            "wheelSha256"
-                          ],
-                          "properties": {
-                            "kind": {
-                              "const": "installed-wheel"
-                            },
-                            "wheelSha256": {
-                              "type": "string",
-                              "pattern": "^sha256:[0-9a-f]{64}$"
-                            }
-                          }
-                        }
-                      ]
-                    }
-                  }
-                },
-                "policySources": {
-                  "type": "array",
-                  "minItems": 1,
-                  "items": {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "required": [
-                      "name",
-                      "content"
-                    ],
-                    "properties": {
-                      "name": {
-                        "type": "string",
-                        "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$"
-                      },
-                      "content": {
-                        "type": "object",
-                        "additionalProperties": false,
-                        "required": [
-                          "digest",
-                          "digestAlgorithm"
-                        ],
-                        "properties": {
-                          "digest": {
-                            "type": "string",
-                            "pattern": "^sha256:[0-9a-f]{64}$"
-                          },
-                          "digestAlgorithm": {
-                            "const": "compliance.example/policy-source-tree-digest/v1alpha1"
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            },
             "compositionDigestAlgorithm": {
               "const": "compliance.example/composition-digest/v1alpha1"
             },
@@ -1823,12 +1261,7 @@
               "type": "string",
               "pattern": "^sha256:[0-9a-f]{64}$"
             }
-          },
-          "required": [
-            "actual",
-            "compositionDigestAlgorithm",
-            "compositionDigest"
-          ]
+          }
         }
       }
     }
@@ -1964,8 +1397,6 @@
         "instance_id",
         "subject_id",
         "plan_id",
-        "inventory_revision",
-        "assignment_revision",
         "status",
         "severity",
         "reason",
@@ -1974,8 +1405,7 @@
         "evidence_ids",
         "remediation",
         "external_refs",
-        "alignment",
-        "policy_revision"
+        "alignment"
       ],
       "additionalProperties": false,
       "properties": {
@@ -1993,12 +1423,6 @@
           "pattern": "^[^/]+/.+$"
         },
         "plan_id": {
-          "$ref": "#/$defs/digest"
-        },
-        "inventory_revision": {
-          "$ref": "#/$defs/digest"
-        },
-        "assignment_revision": {
           "$ref": "#/$defs/digest"
         },
         "waiver_revision": {
@@ -2285,9 +1709,6 @@
             "realization",
             "unmapped"
           ]
-        },
-        "policy_revision": {
-          "$ref": "#/$defs/digest"
         },
         "waiver": {
           "$ref": "#/$defs/appliedWaiver"

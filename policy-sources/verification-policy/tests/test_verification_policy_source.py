@@ -144,7 +144,8 @@ class VerificationPolicySourceTests(unittest.TestCase):
         plan = render_plan(subject, groups, assignments, sources(self.root))
 
         self.assertEqual(plan["resolution"]["status"], "invalid")
-        self.assertFalse(plan["coverage"]["assessable"])
+        from tools.operation import plan_disposition
+        self.assertEqual(plan_disposition(plan), "invalid")
         conflict = next(
             error
             for error in plan["resolution"]["errors"]

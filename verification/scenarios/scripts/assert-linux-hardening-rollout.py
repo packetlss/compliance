@@ -14,6 +14,7 @@ from tools.assessment_provenance import validate_selection_plan, validate_select
 from tools.evaluator import opa_evaluator_identity
 from tools.evidence_provenance import evidence_document_digest, evidence_set_provenance
 from tools.policy_sources import source_tree_digest
+from tools.operation import plan_coverage
 from tools.project_config import load_config
 from tools.tooling_source import TOOLING_SOURCE_DIGEST_ALGORITHM, tooling_source_digest
 
@@ -70,18 +71,19 @@ def assert_assessment_plan_handoff(plan: dict, actual: dict) -> None:
     require(plan.get("schema") == "compliance.example/assessment-plan/v4", "unexpected assessment-plan schema")
     validate_assessment_plan(plan)
     require(is_digest(plan.get("id")), "assessment plan ID is not content-addressed")
-    require(is_digest(plan.get("policy_revision")), "final policy revision is not content-addressed")
+    require(is_digest(plan["provenance"]["planningComposition"]["compositionDigest"]),
+            "planning composition is not content-addressed")
 
     subject = plan.get("subject", {})
     require(subject.get("id") == "host/container-app-01", "adapter handoff subject identity changed")
     require(subject.get("type") == "linux-host", "adapter handoff subject type changed")
 
-    sources = plan.get("policy_sources", [])
+    sources = plan["provenance"]["planningComposition"]["actual"]["policySources"]
     require(
         {source.get("name") for source in sources} == {"control-library", "verification-policy"},
         f"unexpected named policy sources: {sources}",
     )
-    require(all(is_digest(source.get("digest")) for source in sources), "policy source digest is missing")
+    require(all(is_digest(source.get("content", {}).get("digest")) for source in sources), "policy source digest is missing")
     planning = plan.get("provenance", {}).get("planningComposition", {})
     require(planning.get("actual") == actual, "planning composition differs from assembled runtime bytes")
     require(
@@ -374,7 +376,7 @@ def main() -> None:
         ),
         "contradictory persona lost its no-precedence conflict evidence",
     )
-    require(conflict.get("coverage", {}).get("assessable") is False, "contradictory persona became assessable")
+    require(plan_coverage(conflict)["assessable"] is False, "contradictory persona became assessable")
     require(not (run_root / "results/host__persona-conflict-01.json").exists(), "assessment result was emitted for contradictory persona")
 
     assert_assurance_narrative(scenario_root / "README.md")
