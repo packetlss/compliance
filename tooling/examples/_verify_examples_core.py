@@ -1055,6 +1055,11 @@ class ExampleRunner:
                 contains=("Policy plan-set diff",),
             )
 
+        self.cli(
+            ("plan", "render"),
+            ["--config", str(WORKSPACE_ROOT / "verification/scenarios/projects/closed-world/compliance.json"),
+             "plan", "render", "host/A", "entity/A", "--output", str(self.root / "closed-world-plans")],
+        )
         declared_implementations = {
             self._read(path)["metadata"]["id"]
             for path in (

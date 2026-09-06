@@ -60,6 +60,13 @@ def run(root, private_source):
         assert len(next(m for m in frozen['operation']['members'] if m['subject_id']=='entity/A')['policy']['requirements']) == 3
         reports = {p.name:json.loads(p.read_text()) for p in results.glob('*.json')}
         for report in reports.values(): validate_assessment_results(report)
+        omitted = copy.deepcopy(reports['entity__A.json'])
+        omitted['requirement_assessments'].pop(1)
+        omitted['requirement_summary']['pass'] -= 1
+        omitted['id'] = artifact_digest(omitted)
+        try: validate_assessment_results(omitted)
+        except ValueError: pass
+        else: raise AssertionError('O2 omitted despite frozen required company target')
         def history(command_name='status', *args):
             return json.loads(cli('assessment',command_name,*args,'--plan',str(anchor),'--results',str(results),
                                   '--at',instant,'--format','json',historical=True))
@@ -134,6 +141,11 @@ def run(root, private_source):
         system=json.loads((work/'all-results/system__S.json').read_text())
         assert system['requirement_summary']['fail']==1
         assert system['resolved_policy']['requirements'][0]['adoption']['status']=='not_implemented'
+        no_assessment = json.loads(cli('assessment','run','entity/B','host/retired','--at',instant,
+                                      '--plan-output',str(work/'no-assessment-plans'),
+                                      '--output',str(work/'no-assessment-results')))
+        assert no_assessment['accounting_complete'] and not no_assessment['all_passed']
+        assert not (work/'no-assessment-results').exists()
         cli('plan','render',success=False)
         # Destroy mutable inputs. No-config historical reporting still needs only
         # the old anchor and exact result envelopes, including frozen mappings.
