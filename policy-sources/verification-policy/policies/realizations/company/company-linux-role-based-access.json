@@ -96,7 +96,7 @@
           "implementation": {
             "id": "linux.access.setting_equals",
             "version": 1,
-            "fingerprint": "sha256:9c680a911610cb855e1b7dc88f0594e181b93212949508326379c47b3a45ecbd"
+            "fingerprint": "sha256:053f8f4c52cff0780ab19ea10eacfd93d78986ff87aa11eec31b611443be130e"
           },
           "kind": "freshness",
           "dependency": "observation",
@@ -117,7 +117,7 @@
           "implementation": {
             "id": "linux.access.setting_equals",
             "version": 1,
-            "fingerprint": "sha256:9c680a911610cb855e1b7dc88f0594e181b93212949508326379c47b3a45ecbd"
+            "fingerprint": "sha256:053f8f4c52cff0780ab19ea10eacfd93d78986ff87aa11eec31b611443be130e"
           },
           "kind": "freshness",
           "dependency": "observation",
@@ -138,7 +138,7 @@
           "implementation": {
             "id": "linux.access.setting_equals",
             "version": 1,
-            "fingerprint": "sha256:9c680a911610cb855e1b7dc88f0594e181b93212949508326379c47b3a45ecbd"
+            "fingerprint": "sha256:053f8f4c52cff0780ab19ea10eacfd93d78986ff87aa11eec31b611443be130e"
           },
           "kind": "freshness",
           "dependency": "observation",
@@ -159,7 +159,7 @@
           "implementation": {
             "id": "linux.access.setting_equals",
             "version": 1,
-            "fingerprint": "sha256:9c680a911610cb855e1b7dc88f0594e181b93212949508326379c47b3a45ecbd"
+            "fingerprint": "sha256:053f8f4c52cff0780ab19ea10eacfd93d78986ff87aa11eec31b611443be130e"
           },
           "kind": "freshness",
           "dependency": "observation",

@@ -74,7 +74,7 @@ printf '\n== Partial source ownership boundary ==\n'
 tooling_run python "$POLICY_ROOT/scripts/check-source-boundary.py" "$POLICY_ROOT/policies"
 
 printf '\n== Deterministic source-tree identity ==\n'
-expected_policy_digest="sha256:d78243147728af0551da17ccf66953ef2c1d86cc032de3d8fc580115112e3566"
+expected_policy_digest="sha256:db183419df8f0368666f66e3a8b668de02875eb4174ea0563795b36eccbb3579"
 policy_digest="$(tooling_run python - "$POLICY_ROOT/policies" <<'PY'
 import sys
 from pathlib import Path
