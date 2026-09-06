@@ -817,7 +817,9 @@ def _run_historical_operation_view(args):
             if timing.get('qualification') == 'unavailable':
                 print('  Evidence timeliness unavailable')
             else:
-                if timing['controls_within_recorded_age_limits']:
+                if timing['controls'] and all(
+                    control['within_recorded_age_limits'] for control in timing['controls']
+                ):
                     print('  Selected evidence within recorded age limits')
                 if timing['controls_needing_reassessment']:
                     print('  Evidence stale — reassessment due')
