@@ -89,8 +89,9 @@ There is deliberately no unqualified `remove` or arbitrary `replace` operation.
 These fields do not change the technical condition evaluated by Rego, but they
 are still versioned policy metadata. An annotation overrides the reusable
 control manifest default for that inherited instance, is recorded in the
-rendered plan, and is propagated into the immutable result. Reporting tools
-must display that resolved value rather than inventing their own remediation.
+rendered plan, and is not copied into the compact immutable result. Reporting
+tools with a validated exact plan/result pair must display that plan-owned
+resolved value rather than inventing their own remediation.
 
 ## 4. Stable identity and lineage
 

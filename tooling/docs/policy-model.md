@@ -633,7 +633,6 @@ network calls during evaluation.
 {
   "schema": "compliance.example/assessment-input/v1",
   "assessment": {
-    "id": "01J...",
     "evaluated_at": "2026-08-23T08:16:00Z",
     "plan_id": "sha256:..."
   },
