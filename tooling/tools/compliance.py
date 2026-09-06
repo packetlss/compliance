@@ -796,7 +796,12 @@ def _run_historical_operation_view(args):
         } for group_id in group_ids]
     account['filtered'] = bool(args.group or args.state or args.assessment_command == 'explain' or
                                getattr(args, 'reference', []) or getattr(args, 'level', []))
-    account['visible_members'] = [r for r in selected if not args.state or r['state'] in args.state]
+    account['visible_members'] = [
+        row for row in selected
+        if not args.state or set(args.state) & {
+            row['state'], row['historical_outcome'], row['plan_alignment']
+        }
+    ]
     if args.format == 'json':
         print(json.dumps(account, indent=2, sort_keys=True))
     else:
@@ -818,6 +823,9 @@ def _run_historical_operation_view(args):
                     print('  Evidence stale — reassessment due')
                 if timing['controls_with_unavailable_timeliness']:
                     print('  Evidence timeliness unavailable')
+            for waiver in row['recorded_waiver_qualification']['waivers']:
+                label = waiver['qualification'].replace('_', ' ')
+                print(f"  Recorded waiver {waiver['waiver_id']}: {label}")
         if args.assessment_command in ('explain', 'frameworks', 'groups'):
             detail = (account.get('mappings') if args.assessment_command == 'frameworks' else
                       account.get('groups') if args.assessment_command == 'groups' else
