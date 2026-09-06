@@ -232,7 +232,9 @@ def member_disposition(member, assignments):
     applicable = [assignment for assignment in assignments if assignment['target_group'] in groups]
     if not applicable:
         return 'unassigned'
-    if not member['policy']['controls'] and not member['policy']['requirements']:
+    active_controls = [control for control in member['policy']['controls']
+                       if control['disposition'] == 'evaluate']
+    if not active_controls and not member['policy']['requirements']:
         return 'no_assessable_policy'
     return 'result_required'
 

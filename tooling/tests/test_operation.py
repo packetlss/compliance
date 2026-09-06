@@ -12,7 +12,8 @@ from tools.assessment_provenance import artifact_digest
 from tools.evaluate_plan import evaluate_plan_document, control_error_result
 from tools.operation import (
     account_operation, freeze_operation, freeze_selection_witness, normalize_request,
-    qualify_operation, plan_disposition, select_from_witness, select_subjects,
+    qualify_operation, member_disposition, plan_disposition, select_from_witness,
+    select_subjects,
 )
 from tools.policy_diff import build_policy_diff
 from tools.render_plan import resolve_groups
@@ -417,6 +418,23 @@ class OperationTests(unittest.TestCase):
         self.assertTrue(account['accounting_complete'])
         self.assertFalse(account['all_passed'])
         self.assertEqual([r['state'] for r in account['members']], ['no_assessable_policy','no_assessable_policy'])
+
+    def test_excluded_only_member_requires_no_result(self):
+        plan = self.plans(('host/A',))[0]
+        member = copy.deepcopy(plan['operation']['members'][0])
+        member['policy'] = {
+            'controls': [{
+                'instance_id': 'excluded.control',
+                'disposition': 'excluded',
+                'external_refs': [],
+            }],
+            'requirements': [],
+        }
+
+        self.assertEqual(
+            member_disposition(member, plan['operation']['assignments']),
+            'no_assessable_policy',
+        )
 
     def test_freeze_is_independent_of_subject_assignment_and_group_traversal(self):
         plans=self.plans()
