@@ -770,18 +770,26 @@ def _run_historical_operation_view(args):
     ]
     if args.assessment_command == 'frameworks':
         mappings = []
-        for row in visible_members:
+        framework_members = [
+            row for row in selected
+            if not args.plan_alignment or row['plan_alignment'] in args.plan_alignment
+        ]
+        for row in framework_members:
             report = by_id.get(row['result_id'], {})
             for kind, key in (('objective', 'requirements'), ('technical', 'controls')):
                 assessments = report.get('requirement_assessments' if kind == 'objective' else 'results', [])
                 statuses = {a['requirement' if kind == 'objective' else 'instance_id']:a['status'] for a in assessments}
                 for item in row['policy'][key]:
+                    identity = item.get('reference', item.get('instance_id'))
+                    historical_outcome = statuses.get(identity, 'no_assessment')
                     for reference in item['external_refs']:
-                        if (not args.reference or reference in args.reference) and (not args.level or kind in args.level):
+                        if ((not args.outcome or historical_outcome in args.outcome)
+                                and (not args.reference or reference in args.reference)
+                                and (not args.level or kind in args.level)):
                             mappings.append({'subject_id': row['subject_id'], 'external_ref': reference,
-                                'mapping_level': kind, 'policy_object': item.get('reference', item.get('instance_id')),
-                                'status': ('excluded' if item.get('disposition') == 'excluded' else
-                                           statuses.get(item.get('reference',item.get('instance_id')), row['state'])),
+                                'mapping_level': kind, 'policy_object': identity,
+                                'historical_outcome': historical_outcome,
+                                'policy_disposition': item.get('disposition', 'active'),
                                 'plan_id': row['plan_id'], 'result_id': row['result_id'],
                                 'plan_alignment': row['plan_alignment'],
                                 'evidence_timeliness': (

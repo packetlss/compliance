@@ -135,6 +135,7 @@ evaluate := {
         assert {row['subject_id'] for row in filtered_frameworks['visible_members']} == {second_subject}
         assert all(
             mapping['subject_id'] == second_subject
+            and mapping['historical_outcome'] == 'no_assessment'
             for mapping in filtered_frameworks['mappings']
         )
         return report['provenance']['evaluationComposition']['actual']['tooling']['execution']['kind']
