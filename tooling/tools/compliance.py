@@ -461,10 +461,12 @@ def _render_selected_plans(args, *, diagnostic=False):
 
 
 def _check_operation_outputs(plans, *roots):
+    all_paths = []
     for root in roots:
         paths = [subject_artifact_path(root, p['subject']['id']) for p in plans]
-        if len(paths) != len(set(paths)):
-            raise ValueError('operation output paths collide; use a per-subject directory')
+        all_paths.extend(path.resolve() for path in paths)
+    if len(all_paths) != len(set(all_paths)):
+        raise ValueError('operation output paths collide; use distinct per-subject plan/result directories')
 
 
 def _format_plan_summary(plan: dict) -> str:
@@ -740,22 +742,31 @@ def _run_historical_operation_view(args):
         raise ValueError('historical operation reporting requires --at and --plan')
     anchor = load_json(args.plan)
     instant = parse_timestamp(args.at, field='--at').isoformat().replace('+00:00', 'Z')
-    account = account_operation(anchor, load_result_reports(args.results), instant)
+    reports = load_result_reports(args.results) if args.results and args.results.exists() else []
+    account = account_operation(anchor, reports, instant)
+    by_id = {r['id']: r for r in reports}
     selected = [r for r in account['members'] if not args.group or
                 set(args.group) & {g['id'] for g in r['resolved_groups']}]
     if args.assessment_command == 'explain':
         selected = [r for r in selected if r['subject_id'] == args.subject_id]
         if not selected:
             raise ValueError('subject is absent from frozen operation selection')
+        account['assessment_results'] = [by_id[row['result_id']] for row in selected if row['result_id']]
     if args.assessment_command == 'frameworks':
         mappings = []
         for row in selected:
+            report = by_id.get(row['result_id'], {})
             for kind, key in (('objective', 'requirements'), ('technical', 'controls')):
+                assessments = report.get('requirement_assessments' if kind == 'objective' else 'results', [])
+                statuses = {a['requirement' if kind == 'objective' else 'instance_id']:a['status'] for a in assessments}
                 for item in row['policy'][key]:
                     for reference in item['external_refs']:
                         if (not args.reference or reference in args.reference) and (not args.level or kind in args.level):
                             mappings.append({'subject_id': row['subject_id'], 'external_ref': reference,
-                                'mapping_level': kind, 'policy_object': item.get('reference', item.get('instance_id'))})
+                                'mapping_level': kind, 'policy_object': item.get('reference', item.get('instance_id')),
+                                'status': ('excluded' if item.get('disposition') == 'excluded' else
+                                           statuses.get(item.get('reference',item.get('instance_id')), row['state'])),
+                                'plan_id': row['plan_id'], 'result_id': row['result_id']})
         account['mappings'] = mappings
     account['filtered'] = bool(args.group or args.state or args.assessment_command == 'explain' or
                                getattr(args, 'reference', []) or getattr(args, 'level', []))
@@ -771,6 +782,8 @@ def _run_historical_operation_view(args):
             print(f"{row['subject_id']}: {row['state']} ({row['plan_id']})")
         if args.assessment_command in ('explain', 'frameworks', 'groups'):
             print(json.dumps(account.get('mappings', account['visible_members']), indent=2, sort_keys=True))
+        if args.assessment_command == 'explain':
+            print(json.dumps(account['assessment_results'], indent=2, sort_keys=True))
 
 
 def _set_handler(parser: argparse.ArgumentParser, handler: Handler) -> None:

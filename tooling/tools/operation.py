@@ -31,6 +31,9 @@ def policy_membership(plan):
         'reference', 'digest', 'required', 'external_refs', 'technical_instance_ids',
         'adoption', 'satisfaction', 'provenance')}
         for r in plan['requirements']]
+    for requirement, original in zip(requirements, plan['requirements']):
+        if 'realization' in original:
+            requirement['realization'] = copy.deepcopy(original['realization'])
     baselines = []
     for field in ('resolved_baselines', 'resolved_requirement_baselines'):
         for baseline in plan[field]:

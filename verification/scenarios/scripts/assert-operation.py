@@ -85,6 +85,9 @@ def run(root, private_source):
         mappings = history('frameworks','--reference','synthetic-framework:Q')
         assert mappings['filtered'] and mappings['mappings']
         assert 'no external conformity' in mappings['claim']
+        assert {m['status'] for m in mappings['mappings']} == {'pass'}
+        explanation=history('explain','entity/A')
+        assert explanation['assessment_results'][0]['results'][0]['observed']['assertions'][0]['beneficiary']=='entity/A'
         # Recomputing the outer digest does not repair an omitted required row.
         tampered = copy.deepcopy(frozen)
         tampered['operation']['members'].pop()
@@ -155,6 +158,7 @@ def run(root, private_source):
         for source in sources: shutil.rmtree(source['path'])
         assert history()==before
         assert history('frameworks','--reference','synthetic-framework:Q')==mappings
+        assert history('explain','entity/A')==explanation
     print('Closed-world operation and typed external assertion conformance passed.')
 
 
