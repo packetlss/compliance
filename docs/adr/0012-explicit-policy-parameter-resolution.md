@@ -4,6 +4,7 @@
 - **Date:** 2026-09-05
 - **Parent architecture contract:** [#37](https://github.com/packetlss/compliance/issues/37)
 - **Runtime/schema migration:** [#73](https://github.com/packetlss/compliance/issues/73); no runtime change in this promotion
+- **Accepted result ownership alignment:** [#90](https://github.com/packetlss/compliance/issues/90); parameter semantics unchanged
 
 Current authority routing: [ADR 0014](0014-attributable-applicability-and-authority-acceptance.md)
 and [ADR 0015](0015-bounded-external-claims-and-assurance-recognition.md) now accept
@@ -200,9 +201,10 @@ destination is one implementation-local input in an exact resolved check.
 `substitute` may preserve control-instance lineage while changing implementation
 and interface. A retained instance ID cannot authorize a stale input link after
 substitution. Links must resolve and type-check against the selected final check.
-Evidence dependencies likewise need unambiguous stable targeting identities where
-required; an ambiguous evidence type or incidental file/list position cannot
-stand in for the authored destination identity.
+Evidence dependencies have unambiguous stable authored `dependency_id` identities.
+The result's successful-selection attribution uses the exact control instance plus
+that dependency identity; an ambiguous evidence type or incidental file/list
+position cannot stand in for the authored destination identity.
 
 ### External fixed and delegated/open bindings
 
@@ -254,8 +256,9 @@ ages remain the executable migration contract until coordinated consumer cutover
 removing them requires explicit policy-owned replacement values.
 
 Preserve ADR 0010 assessment-time eligibility/status/selection and ADR 0011
-immutable successful evidence ID-plus-document-digest, `collected_at` and exact
-assessed-plan dependency/`max_age` attribution. Changed policy freshness cannot
+immutable successful `(instance_id, dependency_id)` plus evidence ID/document
+digest and `collected_at` attribution. The exact assessed plan supplies the
+dependency body and `max_age`; the result does not copy it. Changed policy freshness cannot
 rewrite historical selection facts or outcomes. This promotion does **not** decide
 `collected_at > evaluated_at`, the subsequently simplified required-only evidence
 model, or query-time views.
@@ -328,8 +331,9 @@ contract-specific normalization followed by JCS where specified and the existing
 separation of semantic content from acquisition/location and expected-enforcement
 metadata. Digests retain evidence of inputs, not proof of external authority.
 
-The assessment plan remains the sole external-adapter handoff, with attributable
-results/provenance retaining the corresponding resolved facts. There is no second
+The assessment plan remains the sole external-adapter handoff and retains the
+complete resolved parameter/linkage/freshness facts. Attributable results reference
+the exact plan and retain only evaluation-owned outcome/provenance facts. There is no second
 adapter-input artifact or separate authorization artifact. Evaluation still
 verifies applicable composition and plan integrity; consuming resolved values
 does not bypass ADR 0007's actual-versus-expected checks.
@@ -346,8 +350,8 @@ new resource discriminator, artifact version or algorithm freeze is selected her
 | `ControlRealization` | Complete embedded literal technical instances, pinned requirement, `allOf`; `based_on` provenance only | Explicit requirement-slot-to-dependency-input links; preserve complete selection and current satisfaction model |
 | `Baseline` / `BaselineOverlay` | Literal technical parameters and pinned typed operations | Retain technical role; explicit policy-owned freshness targeting/binding/tailoring where needed |
 | `Control` | Parameter schema and evidence contracts requiring effective `max_age` | Retain dependency contracts/capability restrictions; remove effective freshness ownership only after coordinated consumer migration |
-| Evidence dependencies | Type/required/`max_age`; v4 historical association uses exact plan instance/index and copied requirement | Stable targeting identities where required for authored links, preserving unambiguous historical assessed-dependency attribution |
-| Assessment plan/results/provenance | V4 literal parameters, derivations and successful-selection facts | Resolved parameter/linkage/freshness facts, validation and semantic identity participation |
+| Evidence dependencies | Stable authored IDs, type and effective `max_age`; current v4 result association still uses exact plan instance/index and a copied requirement | Exact `(instance_id, dependency_id)` historical attribution with the dependency body and `max_age` owned by the assessed plan |
+| Assessment plan/results/provenance | V4 duplicates resolved parameter/linkage/freshness records in `resolved_policy` | Exact plan retains those records; result references `plan_id` and retains only evaluation-owned facts, with mandatory relational validation |
 | Fingerprints, validation, explanation and policy diff | Current literal instance fingerprints and frozen derivations | Include applicable slot/schema/operation/linkage/destination/freshness facts; explain and compare frozen facts without mutable-policy resolution |
 | Maintained policy/projects/fixtures/scenarios | Current literals, pins and Control-owned ages | Explicit synthetic bindings/edges/freshness, coordinated schema and consumer cutover, deliberate changed expectations and regenerated development artifacts |
 

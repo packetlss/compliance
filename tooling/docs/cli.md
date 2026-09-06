@@ -6,7 +6,7 @@ in [Actual composition and expected enforcement](composition.md). All maintained
 consumers use successor contracts; historical artifacts require historical tooling.
 
 Status: **Implemented prototype (v0.2)**
-Last updated: **2026-09-05**
+Last updated: **2026-09-06**
 
 The control-plane workflows share one `compliance` command. Inventory
 inspection, plan rendering, evaluation, and reporting remain separate modules
@@ -264,6 +264,15 @@ may carry the applicable qualifications. Filters do not alter frozen accounting.
 #32 retains factual v4 provenance only for ADR 0011. #80 derives the view from a
 validated v4 result, exact assessed plan, optional comparison plan and explicit query
 instant. ADR 0010 assessment-time behavior remains separately owned.
+
+The accepted [#90](https://github.com/packetlss/compliance/issues/90) successor
+requires every historical result that is fully interpreted to resolve its assessed
+plan solely by exact `plan_id` and pass plan/result relational validation. An exact
+plan file or bounded plan directory/set may be ordinary input. Filename, traversal
+order, subject-only matching, latest, current-plan substitution, and approximate
+semantic equality cannot resolve the assessed plan. This does not add a history
+store, result index, run object, retention service, latest-result database, or
+unbounded artifact discovery.
 
 ## Project registries and project configuration
 

@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Original date:** 2026-09-04
 - **Destination authority transfer:** 2026-09-04
+- **Accepted result/plan ownership refinement:** [#90](https://github.com/packetlss/compliance/issues/90); implementation pending
 - **Historical source:** `packetlss-labs/compliance-workspace@098ef18c1384b34c532f705b3f5b3d1a25bd638f`, `docs/adr/0007-unified-actual-and-expected-composition-provenance.md`
 
 This is the destination-owned normative restatement of accepted workspace ADR 0007. It preserves the accepted contract and updates only ownership/topology references.
@@ -88,7 +89,14 @@ Source/file order never grants precedence. Identical-only coalescing remains per
 
 Actual composition is exactly actual tooling identity plus the sorted actual policy-source identities. `composition-digest/v1alpha1` is SHA-256 over RFC 8785/JCS bytes of that canonical projection. Tooling/policy descriptive metadata, paths, acquisition data, and expected enforcement are excluded.
 
-A plan records `planningComposition`, the actual composition that resolved its subject/policy/controls. A result copies the validated plan's planning composition and records a newly calculated `evaluationComposition`.
+A plan records `planningComposition`, the actual composition that resolved its
+subject/policy/controls, and the planning enforcement actually performed. A result
+references that exact bound plan by `plan_id`; it does not copy the planning stage.
+The result records a newly calculated `evaluationComposition`, including its actual
+composition, digest algorithm/digest, and the evaluation enforcement actually
+performed. Planning and evaluation enforcement remain non-identity-bearing
+provenance. Removing the copied planning stage does not remove evaluation enforcement
+or collapse actual composition into expected enforcement.
 
 Even in unlocked mode, evaluation policy-source names, algorithms, and digests must exactly equal the persisted plan's policy-source set. Changed policy content requires regenerating the plan. Evaluation may use a different provenance-complete tooling build that supports the contract; the result records the actual evaluation tooling identity.
 
@@ -106,25 +114,89 @@ Locked enforcement requires exact equality between actual composition and normal
 
 ### Assessment provenance envelope
 
-Plan/results v4 record actual planning composition and the enforcement actually performed. Direct expected-source enforcement and complete lock enforcement are recorded separately. An expected identity is never labeled as actual.
+Plan v4 records actual planning composition and the planning enforcement actually
+performed. Direct expected-source enforcement and complete lock enforcement are
+recorded separately. An expected identity is never labeled as actual.
 
-Results additionally record:
+The accepted result successor records:
 
-- actual `evaluationComposition` and evaluation enforcement;
-- exact evaluator identity, including executable SHA-256; and
-- a snapshotted subject-scoped evidence set with document and set digests.
+- the exact bound `plan_id` and direct `subject_id`;
+- actual `evaluationComposition`, its algorithm/digest, and evaluation enforcement;
+- exact evaluator identity, including executable SHA-256;
+- a complete snapshotted subject evidence descriptor with document and set digests;
+- exact successful stable-dependency-to-document selections captured by trusted
+  orchestration; and
+- immutable technical, compact requirement/baseline, and exact applied-waiver
+  outcome facts.
 
-The evaluator executable is resolved/hashed once and then used for evaluation. Evidence is snapshotted before evaluation; the same snapshot is digested and consumed. Filesystem paths are not provenance identity.
+The evaluator executable is resolved/hashed once and then used for evaluation.
+Evidence is snapshotted before evaluation; the same snapshot is digested and
+consumed. Filesystem paths are not provenance identity. Evaluator-reported evidence
+IDs do not replace orchestration-owned successful selections.
 
 Future typed manual/procedural assurance evidence defined by destination #37 uses the same actual evidence provenance when it becomes an evaluator input; this ADR does not decide which assurance documents qualify or how objective states roll up.
 
+### Exact plan/result historical record and validation
+
+The accepted historical representation is an explicit retained pair:
+
+```text
+exact valid bound plan + intrinsically valid result
+    + successful relational validation
+    = trustworthy historical assertion
+```
+
+The plan owns resolved policy intent, the operation relationship, planning
+composition/enforcement, parameters, evidence dependencies, mappings, and other
+plan semantics. The result owns what evaluation actually concluded under that exact
+plan. It does not retain a complete operation, complete resolved policy, copied
+planning composition, `assessment_id`, summary-count objects, or plan-owned facts
+repeated in children. An orphaned result may expose raw recorded facts, but without
+its exact valid plan it cannot establish validated policy interpretation, historical
+timeliness, requirement meaning, or plan alignment.
+
+Intrinsic result validation covers its schema/version, canonical order, identity,
+evaluation composition and enforcement structure, evaluator identity, complete
+evidence snapshot, successful-selection references, applied-waiver snapshots, and
+unique outcome identities. Before publication or full historical interpretation,
+mandatory relational validation additionally requires exact plan/subject equality,
+evaluation source authorization by planning composition, exact active control and
+stable evidence-dependency correspondence, selected documents present in the
+complete snapshot, valid compact roll-ups, and exact evaluation-time waiver
+applicability. Failure refuses publication.
+
 ### Plan and results identity
 
-Assessment plan/results v4 retain the semantic payload needed for technical assessment, requirement/realization lineage, waivers, policy diff, explanation, and external-adapter handoff. Their identity includes the applicable semantic payload plus actual provenance under the contract-specific normalized/JCS projection.
+Assessment plan v4 retains the semantic payload needed for technical assessment,
+requirement/realization lineage, policy diff, explanation, and external-adapter
+handoff. The plan identity includes that resolved semantic payload plus planning
+provenance under its contract-specific normalized/JCS projection.
 
-Enforcement metadata and descriptive/acquisition/location metadata are validated and persisted where useful but excluded from semantic artifact identity. Two runs with identical actual semantic/runtime inputs must not get different semantic identities merely because one was pre-locked and the other was not.
+The result domain has its own explicit semantic projection. Domain normalization
+and ordering precede RFC 8785/JCS serialization. It commits to independently
+meaningful result facts: exact `plan_id`, `subject_id`, `evaluated_at`, stored
+historical outcome, evaluation-composition identity, evaluator identity,
+evidence-set identity, exact successful-selection records, technical outcomes,
+compact requirement/baseline outcomes, and exact applied-waiver application facts.
+Self-validating descriptors remain where needed, but the result references their
+owning domain identities instead of wrapping or reinventing their projections.
 
-Waivers remain distinct from desired state and evidence. Result identity binds the waiver revision/application actually used where applicable.
+Successful selections order by `(instance_id, dependency_id)`, technical outcomes
+by `instance_id`, requirement outcomes by stable requirement reference, and
+requirement-baseline outcomes by stable baseline reference. Duplicate semantic
+identities fail. Evidence dependency identity is stable and authored; list position,
+filename, source order, and traversal order are not identity.
+
+Enforcement metadata and descriptive/acquisition/location metadata are validated
+and persisted where useful but excluded from semantic artifact identity. Two runs
+with identical actual semantic/runtime inputs must not get different semantic
+identities merely because one was pre-locked and the other was not.
+
+Waivers remain distinct from desired state and evidence. Result identity binds only
+an exact normalized applied-waiver snapshot and its exact subject/control,
+evaluation-time applicability, digest/identity, and underlying failure. A whole
+waiver-catalog revision is not result identity or historical assertion semantics;
+an unrelated waiver and the absence of any applied waiver do not perturb identity.
 
 ### No configuration-artifact successor
 
@@ -143,6 +215,15 @@ Destination implementation sequencing is owned by:
 - #36 — canonical scenario consumer migration; and
 - #33 — old-reader retirement after all consumers are migrated.
 
+[#90](https://github.com/packetlss/compliance/issues/90) owns the later pre-freeze
+result/plan ownership cutover, including intrinsic and relational validation and
+the result-domain identity projection. It introduces no compatibility reader.
+
 ## Invariants retained
 
-This ADR does not change JCS/domain normalization rules, policy-source conflict semantics, pass/fail/unknown meaning, waiver semantics, requirement/realization semantics, evaluator/evidence identity, private-source boundaries, release coordinates, or firewall/network-policy architecture.
+This refinement does not change JCS serialization, policy-source conflict semantics,
+pass/fail/unknown/error/refusal boundaries, fail-only waiver application,
+requirement/realization semantics, evaluator/evidence identities, private-source
+boundaries, release coordinates, or firewall/network-policy architecture. It does
+not introduce core history/retention, a run artifact, a result graph, mutable waiver
+substitution, query-time roll-up rewriting, or compatibility with pre-freeze results.

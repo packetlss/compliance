@@ -1,7 +1,7 @@
 # Policy and Baseline Model
 
 Status: **Working draft (v0.1)**  
-Last updated: **2026-08-29**
+Last updated: **2026-09-06**
 
 This document describes how policy as code can represent host configuration,
 software baselines, SaaS settings, and other state expressible as JSON without
@@ -672,8 +672,9 @@ Both use the same assessment plan and result contract. We should prototype and
 measure both before selecting the evaluator API.
 
 The waiver catalog is a separate project input resolved after plan rendering.
-Its deterministic revision belongs to the assessment event, not the plan: a
-waiver must not change the desired-policy digest. Rego deliberately receives
+Its deterministic revision belongs to the current pre-#90 assessment representation,
+not the plan: a waiver must not change the desired-policy digest. Rego deliberately
+receives
 `waiver: null`, so an exception cannot influence the underlying technical
 decision. The evaluator applies an exact active match only after OPA returns
 `fail`. Exact matching, approval/lifecycle validation, and the immutable result
@@ -719,7 +720,8 @@ waiver-result resolver.
 When an active waiver covers the failure, the stored technical result retains
 the same reason, expected/observed data, severity, remediation, evidence, and
 resolved policy facts; its status becomes `waived` and a strict `waiver` object
-records `underlying_status: fail` plus the complete approved snapshot. Assessment envelopes and their children share one `waiver_revision`.
+records `underlying_status: fail` plus the complete approved snapshot. Current
+assessment envelopes and their children share one `waiver_revision`.
 
 The persisted `assessment-results/v4` envelope also has a strict tooling-owned
 schema. Every technical result carries the exact operation-bound plan ID from
@@ -732,6 +734,15 @@ or child attribution mismatches, and verifies the
 declared conservative `allOf` and top-baseline roll-ups. A stored document that
 claims either artifact schema but violates its contract is an operator-visible
 error rather than being ignored or partially displayed.
+
+The accepted [#90](https://github.com/packetlss/compliance/issues/90) successor
+removes these result copies. The exact bound plan owns the frozen operation,
+resolved policy, planning composition, parameter/dependency/mapping facts, and
+policy-side severity/remediation/alignment. The result owns compact immutable
+outcomes and evaluation provenance and is relationally validated against that exact
+plan before publication or interpretation. It retains only an exact applied-waiver
+snapshot where an underlying fail was waived; whole-catalog revision and unrelated
+waivers are not result identity.
 
 ## 8. Baselines and hierarchy
 
@@ -966,13 +977,15 @@ the required-only dependency model or freshness eligibility. A later fresh docum
 refresh an old result. Historical logical outcomes and assurance roll-ups remain
 immutable; timely evidence is not present-state certainty or continuous effectiveness.
 
-#32 preserves each control's successful selection ID/digest, selected collection
+#32 currently preserves each control's successful selection ID/digest, selected collection
 instant and unambiguous assessed-plan requirement association as validated,
 result-identity-bound orchestration facts resolving into the complete snapshot.
-See [v4 temporal provenance](artifact-provenance.md#accepted-v4-temporal-provenance).
+See [current v4 temporal provenance](artifact-provenance.md#current-v4-temporal-provenance-before-90).
 Rejected/ambiguous/nonselected candidates and selection diagnostics cannot stand in
 for those facts. #80 implements query-time derivation and separate aggregation as
 the operational-view tranche, distinct from #32's representation clarification.
+Under #90, the association becomes stable `(instance_id, dependency_id)` and the
+exact assessed plan supplies the dependency body and `max_age`.
 
 ## 12. OPA references
 

@@ -1,7 +1,7 @@
 # OPA Compliance Toolset — Architecture
 
 Status: **Working draft (v0.1)**  
-Last updated: **2026-09-04**
+Last updated: **2026-09-06**
 
 This document is a shared design surface, not a finished specification. It
 records our current model, the reasoning behind it, and the questions that
@@ -140,7 +140,7 @@ The reporting service consumes immutable decisions and evidence references. It
 maintains finding lifecycles, history, dashboards, notifications, exports, and
 audit views. It does not recalculate policy outcomes.
 
-System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) owns immutable historical outcomes, exact operation-bound plan alignment and query-time operational evidence timeliness. #80 implements its derived historical view and separate dimension aggregation. A historical result never ages into another logical outcome; only support from its exact selected evidence and recorded waiver interval receives temporal qualification. #32 retains the validated identity-bound selection/temporal facts in v4. See [artifact provenance](artifact-provenance.md#accepted-v4-temporal-provenance) and [CLI behavior](cli.md#historical-results-and-operational-views).
+System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) owns immutable historical outcomes, exact operation-bound plan alignment and query-time operational evidence timeliness. #80 implements its derived historical view and separate dimension aggregation. A historical result never ages into another logical outcome; only support from its exact selected evidence and recorded waiver interval receives temporal qualification. #32 retains the validated identity-bound selection/temporal facts in current v4. See [artifact provenance](artifact-provenance.md#current-v4-temporal-provenance-before-90) and [CLI behavior](cli.md#historical-results-and-operational-views).
 
 ### Policy management plane
 
@@ -496,6 +496,19 @@ and [`waivers.md`](waivers.md).
   verification boundaries.
 
 ## 11. Decision log
+
+### 2026-09-06 — Exact bound-plan/result historical pair (#90)
+
+Accepted for later implementation: replace the duplicated self-contained result
+with an explicit exact bound-plan/result pair. The plan owns resolved intent,
+operation context, planning composition/enforcement, parameters, dependencies and
+mappings; the result owns immutable conclusions, actual evaluation composition and
+evaluation enforcement, evaluator, evidence snapshot/selections, compact outcomes,
+and exact applied-waiver facts. Whole-catalog waiver revision and unrelated waivers
+do not enter result identity. Intrinsic result validation is distinct from mandatory
+plan/result relational validation. Historical plan resolution uses exact `plan_id`
+from bounded input, without a new history/run/discovery system or compatibility path.
+Runtime/schema implementation remains pending under #90.
 
 ### 2026-09-06 — Frozen operation and bound-plan identity simplification (#87)
 

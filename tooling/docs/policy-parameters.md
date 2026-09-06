@@ -45,8 +45,11 @@ Frozen plan facts retain declaration documents, exact pins, source locators,
 selected baseline ancestry, authored operations, intermediate state fingerprints,
 effective values, authored links, implementation interfaces and destinations.
 Persisted validation checks the frozen derivation and materialization, independently
-of the outer artifact digest. Results retain the corresponding resolved facts;
-historical evidence selection continues to reference the exact assessed dependency.
+of the outer artifact digest. Under the accepted
+[#90](https://github.com/packetlss/compliance/issues/90) successor, results reference
+the exact plan rather than retaining corresponding resolved facts; historical
+evidence selection identifies the exact assessed dependency by stable
+`(instance_id, dependency_id)`.
 
 Identity uses the existing provisional digest contracts and JCS. Object keys are
 canonicalized; operations and consumption records are ordered by their explicit
@@ -63,8 +66,10 @@ JCS; source composition independently binds shared helpers. Changes in local mod
 content or version invalidate destination pins. `parameter_facts` contains the
 requirement document, resolved slot states, selected realization and consumption
 records. `parameter_derivation` freezes the selected baseline ancestry and states.
-Results retain the corresponding records under `resolved_policy`, in addition to
-ADR 0011 successful selection facts. Stored policy diff compares all these fields;
+Current results retain corresponding records under `resolved_policy`; #90 removes
+that duplication because the exact relationally validated plan owns those records.
+ADR 0011 successful selections retain stable dependency attribution. Stored policy
+diff compares the plan-owned fields;
 subject explanation prints effective ages and complete slot/link provenance.
 
 The canonical private-source scenario exercises explicit 24h → 1h tailoring with

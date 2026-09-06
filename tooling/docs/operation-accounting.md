@@ -4,7 +4,10 @@ Implementation contracts: [#78](https://github.com/packetlss/compliance/issues/7
 and the pre-freeze identity simplification
 [#87](https://github.com/packetlss/compliance/issues/87), under
 [ADR 0016](../../docs/adr/0016-closed-world-policy-assessment.md).
-The representation is experimental and remains inside assessment plan/results v4.
+The current representation is experimental and remains inside assessment
+plan/results v4. The accepted [#90](https://github.com/packetlss/compliance/issues/90)
+successor retains the frozen operation only in the plan and makes a result's exact
+`plan_id` the sole link to that operation context; implementation is pending.
 
 `operation` embeds one exact normalized request, a mode-sensitive frozen selection
 witness, the relevant assignment union, a compact actual-composition commitment,
@@ -54,9 +57,11 @@ their real-world truth or claim inventory exhaustiveness.
 `member_plan_digest` hashes the complete resolved intent for one member without
 operation or composition context. It includes resolution-consumed subject facts,
 assignment-relevant membership, applicable assignments, resolved baselines,
-requirements, controls, exclusions and resolution state. A result carries the same
-resolved-policy projection so validation independently recomputes the commitment.
-No predecessor digest is retained as an alias.
+requirements, controls, exclusions and resolution state. The current result carries
+the same resolved-policy projection so validation independently recomputes the
+commitment. #90 removes that copy: the exact plan owns the member projection and
+mandatory plan/result relational validation establishes the relationship. No
+predecessor digest is retained as an alias.
 
 `operation_id` hashes the operation domain tag, exact request, selection witness,
 relevant assignments, planning-composition algorithm/digest, compact expected
@@ -72,8 +77,10 @@ A in `[A]` has a different enclosing identity from A in `[A,B]`. There is no
 cross-operation result equivalence. Policy diff exposes `operation_id`,
 `member_plan_digest` and the composition digest as independently meaningful context;
 unchanged effective subject policy remains distinguishable.
-Results carry the same operation, exact plan reference and one recorded assessment
-instant shared by multi-subject execution. The result digest retains these fields.
+Current results carry the same operation, exact plan reference and one recorded
+assessment instant shared by multi-subject execution. Under #90, results retain only
+the exact plan reference and assessment instant; different operation context still
+changes the bound plan and therefore the result assertion.
 
 ## Planning, execution and history
 
@@ -99,11 +106,15 @@ Already trustworthy children remain independently valid if a later member refuse
 
 Historical `status`, `groups`, `explain` and `frameworks` accept `--plan` and `--at`.
 They use the anchor's frozen denominator and accept only results matching exact
-subject, expected plan, operation and recorded instant. Complete canonical document
-copies coalesce as copies. Distinct competing results for one exact slot refuse
-reporting; there is no latest-file precedence. Another operation/plan/instant cannot
-fill a missing slot. Historical reporting works without inventory, policy or evidence
-paths; `--no-config` also avoids reopening project configuration.
+subject, expected plan and recorded instant. Complete canonical document copies
+coalesce as copies. Distinct competing results for one exact slot refuse reporting;
+there is no latest-file precedence. Another operation/plan/subject/instant cannot
+fill a missing slot. Under #90, every result requiring full interpretation resolves
+its assessed plan solely by exact `plan_id` from an explicit plan file or bounded plan
+set and passes relational validation; filename, traversal order, subject-only/latest,
+current-plan substitution, and approximate equality are forbidden. Historical
+reporting works without inventory, policy or evidence paths; `--no-config` also avoids
+reopening project configuration.
 
 `accounting_complete` means every result-required member has an exact result.
 Member disposition is derived from frozen lifecycle, membership, assignments and
@@ -129,6 +140,12 @@ reselection. Stale and unavailable dependencies may coexist for one control, whi
 control with no required evidence receives no timeliness claim. Comparison membership
 never changes the historical denominator. Historical outcomes and roll-ups remain
 unchanged, and `all_passed` is labeled only as a frozen historical fact.
+
+A multi-subject historical view retains one operation-bearing plan as denominator
+anchor, each exact bound plan needed to interpret a retained result, and the results.
+The anchor alone proves missing expected slots; no plan artifact is invented for a
+member whose result is absent. Deleting a historical result plan makes full
+interpretation of that result unavailable without affecting future assessment.
 
 ## Concrete typed assertion contracts
 

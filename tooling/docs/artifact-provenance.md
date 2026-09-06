@@ -4,7 +4,82 @@
 `project-config/v1alpha3` produces assessment plan/results v4 in unlocked,
 direct-expected and composition-locked execution. All current consumers use this successor line. Historical artifacts require their historical tooling.
 
-Status: **Current experimental artifact provenance contract; not frozen**
+Status: **Current experimental artifact provenance contract; accepted successor
+under [#90](https://github.com/packetlss/compliance/issues/90) is not yet implemented
+or frozen**
+
+## Accepted exact-plan/result successor
+
+The accepted pre-freeze successor replaces the duplicated self-contained result
+with an explicit retained `{exact bound plan, assessment result}` historical pair.
+The plan owns the complete resolved member intent, frozen operation relationship,
+planning composition/enforcement, parameters, stable evidence dependencies,
+mappings, and all other plan semantics. The result references only the exact
+`plan_id` and direct `subject_id` and owns what evaluation concluded under that plan.
+
+The minimum result retains its explicit schema/version and identity discriminator,
+`plan_id`, `subject_id`, `evaluated_at`, immutable outcome, actual evaluation
+composition plus evaluation enforcement, exact evaluator, complete subject evidence
+snapshot descriptor/evidence-set identity, exact successful selections, technical
+outcomes, compact requirement/baseline outcomes, and exact applied-waiver snapshots.
+It does not copy the operation, resolved policy, planning composition, summary
+counts, or whole-catalog waiver revision. Evaluation enforcement remains validated
+non-identity-bearing provenance; changing only enforcement cannot change result
+identity when actual semantic composition is identical.
+
+Each successful selection is equivalent to:
+
+```json
+{
+  "instance_id": "host.setting",
+  "dependency_id": "settings",
+  "evidence_id": "evidence:observation",
+  "evidence_digest": "sha256:<complete-document digest>",
+  "collected_at": "2026-09-05T10:00:00.123456Z"
+}
+```
+
+The assessed plan, not the result, supplies the dependency body and effective
+`max_age`. List position, filename, source order, and traversal order are not
+dependency identity. Successful selections sort by `(instance_id, dependency_id)`;
+technical results sort by `instance_id`; requirement and baseline outcomes sort by
+their stable references. Duplicate semantic identities fail. The complete snapshot
+descriptor and successful-selection table remain separate facts.
+
+The explicit result-domain projection commits to exact plan and subject IDs,
+evaluation instant and stored outcome, evaluation-composition identity, evaluator
+identity, evidence-set identity, successful selections, compact outcomes, and exact
+applied-waiver facts. Contract-specific domain normalization/ordering precedes RFC
+8785/JCS. Embedded descriptors remain self-validating where necessary, while the
+projection references their owning domain identities and adds no meaningless
+digest-of-digest wrapper.
+
+Intrinsic validation covers result schema/version/order/identity, evaluation
+composition and enforcement structure, evaluator shape, evidence snapshot identity,
+successful-selection uniqueness and snapshot references, waiver snapshot integrity,
+and outcome uniqueness. Publication and full historical interpretation additionally
+require exact relational validation against the plan: plan/subject equality,
+evaluation policy sources authorized by planning composition, exact active-control
+and stable-dependency correspondence, selected documents in the complete snapshot,
+valid compact roll-ups, and exact evaluation-time fail-only waiver application.
+Failure refuses publication. An orphaned result may expose raw recorded facts but
+cannot establish full policy interpretation, historical timeliness, requirement
+meaning, or plan alignment.
+
+Whole-catalog `waiver_revision` is deliberately absent. A waived outcome binds the
+exact normalized applied snapshot, identity/digest, subject/control target,
+evaluation-time applicability, and underlying `fail`. No applied waiver requires no
+catalog proof; unrelated waiver content cannot perturb result identity. Historical
+waived and later window qualification remain immutable/derived respectively.
+
+Historical tooling resolves the assessed plan solely by exact `plan_id` from an
+explicit plan file or bounded plan directory/set and validates the pair before
+interpretation. Filename, traversal order, subject-only matching, latest, current-plan
+substitution, and approximate equality are forbidden. This is ordinary artifact input
+resolution, not a history store, index, run object, retention service, latest-result
+database, or discovery subsystem.
+
+## Current executable v4 before #90
 
 ## V4 provenance and semantic identity
 
@@ -54,7 +129,7 @@ Schema diagnostic references use type plus source-name/relative-schema-path
 locators resolved in the trusted composition, not a new schema identity algorithm.
 Materialization paths are never source identity.
 
-## Accepted v4 temporal provenance
+## Current v4 temporal provenance before #90
 
 System [ADR 0012](../../docs/adr/0012-explicit-policy-parameter-resolution.md#immutable-plan-and-provenance-obligations)
 accepts successor resolved parameter, declaration/schema pin, binding/tailoring,
@@ -62,14 +137,15 @@ consumption-edge, exact destination and policy-owned freshness facts in the same
 assessment plan/results boundary. [#73](https://github.com/packetlss/compliance/issues/73)
 implements their schema, validation and identity/fingerprint migration. Plans
 retain `parameter_derivation`, `parameter_facts` and per-control `policy_inputs`;
-results retain the corresponding frozen records in `resolved_policy`.
+results currently retain the corresponding frozen records in `resolved_policy`;
+#90 removes that duplication in favor of the exact validated plan reference.
 [The parameter contract](policy-parameters.md) specifies the normalization and
 validation projection. This preserves the historical selected-document
 and exact assessed-dependency/`max_age` attribution below, without re-resolving
 parameters during evaluation or rewriting historical artifacts.
 
-The representation requirement of system
-[ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md#v4-factual-temporal-provenance-option-b)
+The original representation requirement of system
+[ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md#factual-temporal-provenance-and-exact-plan-relation)
 is implemented by #32. #80 consumes those immutable facts in the historical
 reporting path to derive query-time qualification; it adds no artifact or
 provenance fields and does not alter any identity projection.
