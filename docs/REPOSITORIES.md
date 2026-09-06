@@ -53,7 +53,7 @@ Stable complete end-to-end behavior belongs to `verification/scenarios/`. Compon
 
 Current system architecture, repository/trust boundaries, workflow, and accepted ADRs belong to `packetlss/compliance/docs/` after documentation-authority transfer.
 
-Destination #37 owns unresolved detailed assurance semantics. Destination #31–#36 own ADR 0007 implementation/consumer cutover. Destination #38 is a dormant product-owner alignment follow-up and authorizes no firewall work.
+Destination #37 owns residual assurance architecture and escalation. #78 implements its bounded operation-accounting and typed-assertion successor. Destination #31–#36 are completed ADR 0007 implementation/consumer-cutover history. Destination #38 is a dormant product-owner alignment follow-up and authorizes no firewall work.
 
 ## Release units
 

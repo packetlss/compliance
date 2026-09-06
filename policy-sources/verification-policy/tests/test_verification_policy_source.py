@@ -54,7 +54,7 @@ class VerificationPolicySourceTests(unittest.TestCase):
         self.assertEqual(errors, [])
         requirements, objectives, realizations, errors = load_requirement_catalogs(sources(self.root), controls)
         self.assertEqual(errors, [])
-        self.assertEqual((len(baselines), len(requirements), len(objectives), len(realizations)), (13, 1, 1, 1))
+        self.assertEqual((len(baselines), len(requirements), len(objectives), len(realizations)), (13, 6, 4, 4))
         self.assertEqual(len(list(self.root.rglob("*.json"))), 16)
         for catalog in (baselines, requirements, objectives, realizations):
             self.assertTrue(all(item["_source"].startswith("verification-policy:") for item in catalog.values()))

@@ -55,6 +55,9 @@ compliance --no-config assessment status --plan generated/plans/host__A.json \
   --results generated/results --at 2026-09-01T00:00:00Z --format json
 ```
 
+`assessment run --format json` emits machine-readable operation accounting; the
+default text output summarizes counts and member states.
+
 Explicit subject IDs and repeated groups select a union; `--all` selects supplied
 inventory. Empty selection fails. Invalid selected policy prevents operation
 execution. Existing single-subject `plan render` may still emit an invalid

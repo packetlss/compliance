@@ -120,12 +120,12 @@ supplied inventory -> deterministic groups -> applicable assignments
 Preserve Subject identity, InventoryGroup DAG semantics, PolicyAssignment resolution,
 all membership/assignment paths, deterministic conflicts and exact governed subjects.
 Host/entity/system requirements retain their quantification; do not form a Cartesian
-product. The future core must account for the exact expected assessment set of the
+product. The core accounts for the exact expected assessment set of the
 supplied operation and detect omitted results. A/B passing supports exact A/B target
 success; unsupplied real-world C is outside that guarantee. Supplied A/B/C with C's
 result absent cannot produce aggregate success. No ClaimScope, PopulationSnapshot,
-external completeness artifact, parallel inventory hierarchy or wire representation
-is selected.
+external completeness artifact or parallel inventory hierarchy is introduced. #78
+selects only the embedded frozen operation projection.
 
 Policy determines requirements and accepted demonstration; governance owns why
 those choices are appropriate; evidence asserts facts about reality; the core tests

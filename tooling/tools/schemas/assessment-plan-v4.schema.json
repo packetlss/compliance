@@ -1155,10 +1155,50 @@
                         },
                         "provenance": {
                           "type": "array",
+                          "minItems": 1,
+                          "uniqueItems": true,
                           "items": {
-                            "type": "object"
-                          },
-                          "uniqueItems": true
+                            "type": "object",
+                            "required": [
+                              "group",
+                              "assignment",
+                              "baseline"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                              "group": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "assignment": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "baseline": {
+                                "type": "string",
+                                "minLength": 3,
+                                "pattern": "^.+@.+$"
+                              },
+                              "requirement": {
+                                "type": "string",
+                                "minLength": 3,
+                                "pattern": "^.+@.+$"
+                              },
+                              "realization": {
+                                "type": "string",
+                                "minLength": 3,
+                                "pattern": "^.+@.+$"
+                              }
+                            },
+                            "dependentRequired": {
+                              "requirement": [
+                                "realization"
+                              ],
+                              "realization": [
+                                "requirement"
+                              ]
+                            }
+                          }
                         }
                       }
                     },

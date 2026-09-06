@@ -31,6 +31,8 @@ def run(root, private_source):
         instant = '2026-09-01T00:00:00Z'
 
         def cli(*args, success=True, historical=False):
+            if args[:2] == ('assessment','run'):
+                args = (*args, '--format', 'json')
             result = subprocess.run([*(['compliance','--no-config'] if historical else command),*args],
                                     capture_output=True, text=True)
             if success:

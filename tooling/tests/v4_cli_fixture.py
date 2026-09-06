@@ -104,7 +104,7 @@ evaluate := {
                     resource_path.write_text(json.dumps(resource))
         (evidence/'second-subject.json').write_text(json.dumps({**doc, 'id':'second:observation',
             'subject':{'id':second_subject,'type':'linux-host'}}))
-        account = json.loads(run('assessment','run',first_subject,second_subject,'--at','2026-08-23T12:00:00Z'))
+        account = json.loads(run('assessment','run',first_subject,second_subject,'--at','2026-08-23T12:00:00Z','--format','json'))
         assert account['accounting_complete'] and account['all_passed'], account
         multi_plan = json.loads(plan_path.read_text())
         assert multi_plan['id'] != plan['id']

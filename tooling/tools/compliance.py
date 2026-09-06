@@ -725,7 +725,13 @@ def _run_assessment(args: argparse.Namespace) -> None:
         reports.append(report)
     from .operation import account_operation
     account = account_operation(plans[0], reports, instant.isoformat().replace('+00:00', 'Z'))
-    print(json.dumps(account, indent=2, sort_keys=True))
+    if args.format == 'json':
+        print(json.dumps(account, indent=2, sort_keys=True))
+    else:
+        print(f"wrote {len(plans)} subject plan(s) and {sum(len(r['results']) for r in reports)} control result(s)")
+        print(f"Accounting complete: {account['accounting_complete']}; all selected subjects passed: {account['all_passed']}")
+        for row in account['members']:
+            print(f"{row['subject_id']}: {row['state']}")
 
 
 def _run_historical_operation_view(args):
@@ -1009,6 +1015,7 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
         help="evaluate at an RFC 3339 instant (for deterministic verification)",
     )
     assessment_run.add_argument("--opa", default="opa", help="OPA executable")
+    assessment_run.add_argument('--format', choices=('table','json'), default='table')
     _set_handler(assessment_run, _run_assessment)
 
     assessment_status = assessment_commands.add_parser("status", help="show fleet status")
