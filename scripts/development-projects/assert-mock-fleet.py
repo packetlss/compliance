@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 from pathlib import Path
 
@@ -144,7 +145,7 @@ def assert_runtime(run_root: Path) -> None:
     }
     for filename, (expected_pass, expected_fail) in expected.items():
         document = load(run_root / "results" / filename)
-        summary = document["summary"]
+        summary = Counter(result["status"] for result in document["results"])
         if summary != {"pass": expected_pass, "fail": expected_fail, "unknown": 0, "error": 0, "not_applicable": 0, "waived": 0}:
             fail(f"unexpected assessment summary for {filename}: {summary}")
         if document.get("evaluated_at") != FIXED_INSTANT:
@@ -174,7 +175,7 @@ def assert_runtime(run_root: Path) -> None:
     assert_assessment_plan_handoff(secondary_plan, "cloud-account/aws-444455556666")
 
     unknown = load(run_root / "unknown-results" / "saas__acme-projects__company.json")
-    unknown_summary = unknown.get("summary", {})
+    unknown_summary = Counter(result["status"] for result in unknown["results"])
     if unknown_summary.get("unknown") != 4 or any(
         unknown_summary.get(state, 0) for state in ("pass", "fail", "error", "waived")
     ):

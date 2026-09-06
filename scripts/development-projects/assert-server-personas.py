@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 from pathlib import Path
 
@@ -113,8 +114,9 @@ def assert_runtime(run_root: Path) -> None:
             fail(f"unexpected collection instant in {path.name}")
 
     standard = load(run_root / "results" / "host__standard-app-01.json")
-    if standard["summary"] != {"pass": 2, "fail": 0, "unknown": 0, "error": 0, "not_applicable": 0, "waived": 1}:
-        fail(f"unexpected standard-host summary: {standard['summary']}")
+    standard_summary = Counter(result["status"] for result in standard["results"])
+    if standard_summary != {"pass": 2, "waived": 1}:
+        fail(f"unexpected standard-host summary: {standard_summary}")
     waived = [result for result in standard.get("results", []) if result.get("status") == "waived"]
     if len(waived) != 1:
         fail(f"expected one waived standard-host failure, found {len(waived)}")
@@ -139,8 +141,8 @@ def assert_runtime(run_root: Path) -> None:
         fail("temporary waiver rewrote assessed policy; auditd is no longer required")
 
     container_result = load(run_root / "results" / "host__container-app-01.json")
-    summary = container_result.get("summary", {})
-    if summary != {"pass": 4, "fail": 0, "unknown": 0, "error": 0, "not_applicable": 0, "waived": 0}:
+    summary = Counter(result["status"] for result in container_result["results"])
+    if summary != {"pass": 4}:
         fail(f"container persona no longer passes its expected technical controls: {summary}")
 
     container_plan = load(run_root / "plans" / "host__container-app-01.json")

@@ -172,7 +172,8 @@ def iam(root, private_source):
         reports = documents(results)
         for report in reports.values():
             validate_assessment_results(report)
-            require(report["requirement_summary"]["pass"] == 1 and set(statuses(report)) == {"pass"}, "IAM roll-up")
+            require(report["requirement_assessments"][0]["status"] == "pass"
+                    and set(statuses(report)) == {"pass"}, "IAM roll-up")
             baseline_assessments = report["requirement_baseline_assessments"]
             require(len(baseline_assessments) == 1
                     and baseline_assessments[0]["baseline"] == "company.identity-access-objectives@1"
@@ -196,9 +197,13 @@ def iam(root, private_source):
             _, _, out = s.assess("host/A", evidence=evidence, tag=tag)
             return json.loads((out / "host__A.json").read_text())
         local = mutate("host-A-linux*", lambda d:d["payload"]["packages"].update(sssd_installed=False), tag="local-fail")
-        require("fail" in statuses(local) and local["requirement_summary"]["fail"] == 1, "local failure roll-up")
+        require("fail" in statuses(local)
+                and local["requirement_assessments"][0]["status"] == "fail",
+                "local failure roll-up")
         negative = mutate("host-A-iam-service*", lambda d:d["payload"]["source_assertion"].update(outcome="negative"), tag="service-fail")
-        require("fail" in statuses(negative) and negative["requirement_summary"]["fail"] == 1, "service failure roll-up")
+        require("fail" in statuses(negative)
+                and negative["requirement_assessments"][0]["status"] == "fail",
+                "service failure roll-up")
         wrong = mutate("host-A-iam-service*", lambda d:d["payload"]["source_assertion"].update(subject_id="service/other"), tag="wrong-service")
         require("unknown" in statuses(wrong), "wrong service was substituted by routing")
         require("unknown" in statuses(mutate("host-A-iam-relationship*", remove=True, tag="missing-relationship")), "missing relationship")

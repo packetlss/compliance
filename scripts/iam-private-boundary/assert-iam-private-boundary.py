@@ -4,10 +4,11 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
-from tools.assessment_provenance import validate_selection_plan, validate_selection_snapshot
+from tools.assessment_provenance import validate_result_against_plan, validate_selection_snapshot
 from tools.evaluator import opa_evaluator_identity
 from tools.evidence_provenance import evidence_set_provenance
 from tools.policy_sources import source_tree_digest
@@ -148,11 +149,9 @@ def assert_result(result: dict) -> None:
         fail("IAM result changed assessment schema")
     if result.get("evaluated_at") != FIXED_INSTANT:
         fail(f"IAM result changed deterministic instant: {result.get('evaluated_at')}")
-    summary = result.get("summary", {})
-    if summary.get("pass") != 3 or summary.get("fail") != 1:
+    summary = Counter(item["status"] for item in result["results"])
+    if summary != {"pass": 3, "fail": 1}:
         fail(f"IAM technical pass/fail behavior changed: {summary}")
-    if any(summary.get(state, 0) for state in ("unknown", "error", "waived")):
-        fail(f"IAM result gained unexpected technical states: {summary}")
     failed = {
         item.get("instance_id")
         for item in result.get("results", [])
@@ -164,8 +163,6 @@ def assert_result(result: dict) -> None:
     baselines = result.get("requirement_baseline_assessments", [])
     if len(requirements) != 1 or requirements[0].get("status") != "fail":
         fail(f"IAM objective no longer fails from technical evidence: {requirements}")
-    if requirements[0].get("adoption", {}).get("status") != "implemented":
-        fail("IAM objective lost its authored adoption annotation")
     if len(baselines) != 1 or baselines[0].get("status") != "fail":
         fail(f"IAM top requirement baseline no longer fails: {baselines}")
 
@@ -190,7 +187,6 @@ def assert_provenance(plan: dict, result: dict, config: dict, assembly_root: Pat
         ],
     }
     for stage in (plan["provenance"]["planningComposition"],
-                  result["provenance"]["planningComposition"],
                   result["provenance"]["evaluationComposition"]):
         if stage["actual"] != expected_actual:
             fail("actual composition does not identify the executing tooling and materialized sources")
@@ -200,15 +196,15 @@ def assert_provenance(plan: dict, result: dict, config: dict, assembly_root: Pat
         fail("result does not identify the actual OPA version and executable bytes")
     if result["provenance"]["evidence"] != evidence_set_provenance(documents):
         fail("result lost complete subject evidence snapshot identity")
-    validate_selection_plan(result, plan)
+    if "planningComposition" in result["provenance"]:
+        fail("result copied planning-stage provenance from its bound plan")
+    validate_result_against_plan(result, plan)
     validate_selection_snapshot(result, documents)
     selections = result["provenance"]["selectedEvidence"]
     if {item["instance_id"] for item in selections} != CONTROL_INSTANCES or len(selections) != 4:
         fail("IAM result lost successful evidence selection for a technical check")
     for item in selections:
-        if item["collected_at"] != FIXED_INSTANT or item["requirement"] != {
-            "id": "observation", "type": "linux.access.configuration/v1", "max_age": "86400s"
-        }:
+        if item["collected_at"] != FIXED_INSTANT or item["dependency_id"] != "observation":
             fail("IAM result lost factual collection instant or assessed evidence requirement")
 
     roots = {source["name"]: Path(source["path"]) for source in config["policy_sources"]}
@@ -225,11 +221,8 @@ def assert_provenance(plan: dict, result: dict, config: dict, assembly_root: Pat
     if set(requirement["technical_instance_ids"]) != CONTROL_INSTANCES:
         fail("IAM requirement lost technical-control linkage")
     assessment = result["requirement_assessments"][0]
-    for key, expected in (("requirement_digest", requirement["digest"]),
-                          ("realization", realization),
-                          ("technical_instance_ids", requirement["technical_instance_ids"])):
-        if assessment[key] != expected:
-            fail(f"IAM result lost planned requirement/realization lineage: {key}")
+    if assessment["requirement"] != requirement["reference"] or assessment["status"] != "fail":
+        fail("IAM compact requirement result no longer corresponds to its exact plan")
     checks = {check["instance_id"]: check for check in realization_document["spec"]["checks"]}
     for control in plan["controls"]:
         check = checks[control["instance_id"]]

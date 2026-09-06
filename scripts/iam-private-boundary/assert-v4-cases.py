@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
-from tools.assessment_provenance import validate_selection_plan, validate_selection_snapshot
+from tools.assessment_provenance import validate_result_against_plan, validate_selection_snapshot
 from tools.cli import main as cli_main
 from tools.evaluate_plan import evaluate_plan_document
 from tools.evidence_provenance import evidence_set_provenance
@@ -87,6 +87,7 @@ def main() -> None:
         repeated_result = load(root / "results" / ARTIFACT)
         validate_assessment_plan(repeated_plan)
         validate_assessment_results(repeated_result)
+        validate_result_against_plan(repeated_result, repeated_plan)
         require(repeated_plan["id"] == plan["id"], "source order/location changed v4 plan identity")
         require(repeated_result["id"] == result["id"], "source order/location changed v4 result identity")
 
@@ -105,14 +106,12 @@ def main() -> None:
         report = evaluate_plan_document(plan, evidence_root, original_config.policy_sources,
                                         evaluated_at=datetime.fromisoformat(INSTANT))
         validate_assessment_results(report)
-        validate_selection_plan(report, plan)
-        require(report["summary"]["unknown"] == 4 and all(
+        validate_result_against_plan(report, plan)
+        require(report["outcome"] == "unknown" and all(
             child["status"] == "unknown" for child in report["results"]), f"{name}: technical checks did not stay unknown")
         require(report["requirement_assessments"][0]["status"] == "unknown"
                 and report["requirement_baseline_assessments"][0]["status"] == "unknown",
                 f"{name}: unknown did not propagate through retained objective roll-up")
-        require(report["requirement_assessments"][0]["adoption"]["status"] == "implemented",
-                f"{name}: authored adoption annotation changed")
         require(report["provenance"]["selectedEvidence"] == [], f"{name}: rejected evidence was marked selected")
         require(report["provenance"]["evidence"] == evidence_set_provenance(evidence),
                 f"{name}: complete snapshot identity changed")
@@ -129,9 +128,12 @@ def main() -> None:
     report = evaluate_plan_document(plan, evidence_root, original_config.policy_sources,
                                     evaluated_at=datetime.fromisoformat(INSTANT))
     validate_assessment_results(report)
-    validate_selection_plan(report, plan)
+    validate_result_against_plan(report, plan)
     validate_selection_snapshot(report, [stale, observation])
-    require(report["summary"] == result["summary"], "older candidate changed IAM outcome")
+    require(report["outcome"] == result["outcome"] and
+            [item["status"] for item in report["results"]] ==
+            [item["status"] for item in result["results"]],
+            "older candidate changed IAM outcome")
     require(report["provenance"]["selectedEvidence"] == result["provenance"]["selectedEvidence"],
             "older candidate was mislabeled as successful evidence use")
     require(report["provenance"]["evidence"] == evidence_set_provenance([stale, observation]),
