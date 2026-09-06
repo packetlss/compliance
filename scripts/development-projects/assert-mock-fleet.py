@@ -146,7 +146,7 @@ def assert_runtime(run_root: Path) -> None:
     for filename, (expected_pass, expected_fail) in expected.items():
         document = load(run_root / "results" / filename)
         summary = Counter(result["status"] for result in document["results"])
-        if summary != {"pass": expected_pass, "fail": expected_fail, "unknown": 0, "error": 0, "not_applicable": 0, "waived": 0}:
+        if summary != {"pass": expected_pass, "fail": expected_fail}:
             fail(f"unexpected assessment summary for {filename}: {summary}")
         if document.get("evaluated_at") != FIXED_INSTANT:
             fail(f"unexpected evaluation instant for {filename}")
