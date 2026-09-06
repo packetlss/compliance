@@ -1,6 +1,6 @@
 # System architecture
 
-This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0015 in `docs/adr/`.
+This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 and 0016 (ADRs 0013–0015 are superseded) in `docs/adr/`.
 
 Historical `packetlss-labs/compliance-workspace` architecture remains migration/design provenance. After this documentation-authority transfer, this repository owns current normative system architecture.
 
@@ -33,10 +33,10 @@ These jobs describe the intended product scope of the accepted core, not a claim
 - **Policy owner:** trace a decided policy objective or technical policy to the concrete technical criteria intended to realize it. This includes direct technical policy through `Baseline` / `BaselineOverlay` and optional higher-level objectives through requirement → realization → technical controls, with resolved parameters, lineage, deviations, exclusions, and source provenance. An authored realization describes design intent; it does not prove deployment or effectiveness.
 - **Security operator:** determine whether decided technical controls are actually satisfied and understand policy and assessment coverage. Keep a decided criterion's `pass` / `fail` / `unknown` / `error` assessment state distinct from unassigned scope, explicit exclusions or deviations, an absent realization for an assigned objective, missing or stale evidence, and broader security conditions with no identified active criterion. Passing assigned controls does not prove complete security-policy coverage. Discovery of observed-but-unaddressed security conditions is a separate future capability, not an implemented assessment claim.
 - **Infrastructure operator:** consume exact resolved, subject-scoped technical intent with provenance and integrate it into independently owned infrastructure tooling. External systems may translate the assessment plan into Ansible, Terraform, MDM, cloud-init, ticketing, configuration-management, or other delivery mechanisms, within the [external-adapter boundary](#external-adapter-boundary). Backend capability selection, configuration compilation, credentials, approvals, execution/apply, and provider state remain outside the core. Generated configuration does not establish that intended state was deployed or remains effective.
-- **Auditor / reviewer:** obtain attributable evidence and explanations of whether decided controls were satisfied, failed, unknown, waived, or otherwise qualified, with the provenance needed to understand the conclusion. Provenance identifies the inputs and execution used; it does not itself authenticate observation truth or approval authority. A point-in-time assessment is not automatically proof of continuous effectiveness. Framework mappings are bounded assurance claims, not automatic certification or legal-compliance claims.
+- **Auditor / reviewer:** obtain attributable evidence and explanations of whether decided controls were satisfied, failed, unknown, waived, or otherwise qualified, with the provenance needed to understand the conclusion. Provenance identifies the inputs and execution used; it does not itself authenticate observation truth or approval authority. A point-in-time assessment is not automatically proof of continuous effectiveness. Framework mappings are attributable reporting content, not engine-established certification or legal-compliance conclusions.
 - **Evidence operator:** understand evidence demand and health: required evidence types, the subjects and controls requiring them, freshness requirements, missing/stale/invalid/otherwise unusable evidence, and the assessment outcomes blocked by those problems. This is an intended product job even though the current CLI does not provide a complete evidence-operator workflow. It does not introduce a new evidence resource or collection-failure taxonomy.
 
-These jobs do not themselves settle evidence or temporal interpretation. [ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns assessment-time evidence validity/status/refusal, and [ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) owns immutable history, exact plan alignment and derived operational evidence timeliness. ADRs 0013–0015 below own accepted scoped-claim, applicability/N/A authority and recognition semantics; manual/procedural methodology and sampling inference remain with #37; policy-gap discovery, evidence-operator CLI design, collector failure taxonomy and durable evidence retention remain separate work. Point-in-time assessments cannot establish continuous effectiveness.
+These jobs do not themselves settle evidence or temporal interpretation. [ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns assessment-time evidence validity/status/refusal, and [ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) owns immutable history, exact plan alignment and derived operational evidence timeliness. ADR 0016 below owns the closed-world responsibility boundary; manual/procedural methodology and sampling inference remain with #37; policy-gap discovery, evidence-operator CLI design, collector failure taxonomy and durable evidence retention remain separate work. Point-in-time assessments cannot establish continuous effectiveness.
 
 ### Assessment-plan meaning
 
@@ -66,7 +66,7 @@ subject / group assignment
 
 A project may use technical baselines without any requirement/realization wrapper.
 
-Objective/regulatory assurance:
+Optional company objective assurance:
 
 ```text
 subject / group assignment
@@ -76,12 +76,12 @@ subject / group assignment
               -> technical controls
               -> required manual/procedural assurance evidence, if any
           -> objective result
-      -> explicit framework/regulatory mapping and coverage claim
+      -> attributable framework/regulatory mapping and bounded company reporting
 ```
 
-Requirements are desired assurance objectives. Realizations are design-time mappings, not proof of implementation. Authored adoption/implementation labels cannot create pass. Missing, stale, invalid, or inconclusive required evidence is `unknown`. Realization selection is deterministic and fail-closed; source order is never precedence. Technical results remain independently attributable. Framework mappings are bounded claims and do not imply certification/legal compliance beyond evaluated evidence.
+Requirements are desired assurance objectives. Realizations are design-time mappings, not proof of implementation. Authored adoption/implementation labels cannot create pass. Missing, stale, invalid, or inconclusive required evidence is `unknown`. Realization selection is deterministic and fail-closed; source order is never precedence. Technical results remain independently attributable. Framework mappings are attributable policy/reporting content and do not establish external conformity or certification/legal compliance.
 
-Destination [#37](https://github.com/packetlss/compliance/issues/37) remains the open parent assurance architecture effort. ADR 0012 and bounded successor #73 own parameter/freshness resolution; ADRs 0013–0015 below own accepted scoped assurance, applicability authority and external claims. Residual methodology and repository-grounded migration planning remain with #37; promotion does not complete that issue.
+Destination [#37](https://github.com/packetlss/compliance/issues/37) remains the open parent assurance architecture effort. ADR 0012 and bounded successor #73 own parameter/freshness resolution; ADR 0016 below supersedes ADRs 0013–0015 with closed-world assessment. Residual methodology and narrow repository-grounded exploration remain with #37; promotion does not complete that issue.
 
 [ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns the common required-evidence `unknown`, attributable execution `error`, and assessment-wide refusal boundary. It clarifies ADRs 0006/0007; #32 implements its schema-invalid-evidence and evidence selection ambiguity corrections as the only semantic preservation exceptions after #31. These corrections are implemented in the sole supported v4 path. #31 is complete; broader assurance design remains with #37.
 
@@ -93,106 +93,99 @@ Requirement slots have stable technology-neutral identity with exact declaration
 
 Effective evidence `max_age` belongs to policy/baseline/requirement intent. Controls retain evidence dependency contracts and optional capability restrictions; realizations link semantic freshness slots where applicable. Maintained baselines bind effective ages explicitly; objective realizations consume pinned semantic freshness slots. Controls no longer provide effective-age defaults. ADR 0010 still owns assessment-time evidence semantics and ADR 0011 immutable historical selection attribution; the future-timestamp question is unchanged.
 
-Policy resolution determines company intent; external conformity compares it with explicit external conditions; assessment tests evidence against that company intent. Passing company policy does not establish an external framework claim. Fixed/open external binding restrictions do not authenticate issuer authority; ADR 0014 owns the accepted narrow authority-consumption contract, outside #73. Missing realization/coverage gaps remain distinct from unresolved parameters and missing evidence. Ordinary named private policy sources need no new resource family or precedence. ADR 0012 extends the existing provenance-bearing plan, not the adapter or authorization artifact surface.
+Policy resolution determines company intent; assessment tests evidence against that
+intent. Passing company policy does not establish external conformity. ADR 0016
+places external comparison outside the generic core unless a future explicit company
+policy dependency models a concrete condition. Fixed/open external binding restrictions
+do not authenticate issuer authority. Missing realization/coverage gaps remain distinct
+from unresolved parameters and missing evidence. Ordinary named private policy sources
+need no new resource family or precedence. ADR 0012 extends the existing provenance-bearing
+plan, not the adapter or authorization artifact surface.
 
-## Scoped assurance, applicability and bounded external claims
+## Closed-world policy assessment
 
-[ADR 0013](adr/0013-scoped-assurance-and-obligation-instances.md),
-[ADR 0014](adr/0014-attributable-applicability-and-authority-acceptance.md) and
-[ADR 0015](adr/0015-bounded-external-claims-and-assurance-recognition.md) are
-**accepted design, not yet implemented**, promoted under #37. Their conceptual
-vectors and migration tables are normative successor obligations, not current
-schema/runtime support.
-
-Operational scope, assessment/beneficiary coverage and claim population are
-distinct. Broad operations do not enlarge a claim. Population completeness needs
-an exact enumeration and an attributable basis establishing it as exhaustive for
-the claimed domain at one explicit assessment instant `t`. An explicitly named-set
-claim speaks only for that set. Existing Subject/InventoryGroup/PolicyAssignment
-remain the foundation: union overlap over stable identities, retain all paths,
-and fail closed on cycles, unresolved references or ambiguous correlations.
-Entity identity does not enumerate owned assets. Accepted basis semantics must
-establish state at `t`, without requiring physical snapshot capture exactly then.
-Direct local assessments share `t`; imported cross-time results need separately
-qualified semantics. Historical membership changes never rewrite claims.
+[ADR 0016](adr/0016-closed-world-policy-assessment.md) supersedes ADRs 0013–0015
+and is **accepted design, not yet implemented**. The core evaluates explicitly
+supplied company policy against attributable reality. Governance owns inventory
+exhaustiveness, external applicability and the legal/regulatory sufficiency of
+chosen policy and demonstration. Optional company objective assurance remains core
+under ADR 0006; engine-established external conformity/certification does not.
 
 ```text
-attributable fact/determination + accepted applicability basis
-    -> exact applicability decision
-external/company obligation + exact governed scope + resolved applicability
-    -> exact obligation instance
+supplied inventory -> deterministic groups -> applicable assignments
+    -> exact resolved policy/requirement instances
+    -> expected assessment set -> attributable results
 ```
 
-The completeness denominator is the exact resolved set of obligation instances,
-not all requirements multiplied by all members. Host, system and entity obligations
-retain their actual quantification. Common assurance contributes only through
-explicit scoped consumption and admissible integration evidence where needed.
+Preserve Subject identity, InventoryGroup DAG semantics, PolicyAssignment resolution,
+all membership/assignment paths, deterministic conflicts and exact governed subjects.
+Host/entity/system requirements retain their quantification; do not form a Cartesian
+product. The future core must account for the exact expected assessment set of the
+supplied operation and detect omitted results. A/B passing supports exact A/B target
+success; unsupplied real-world C is outside that guarantee. Supplied A/B/C with C's
+result absent cannot produce aggregate success. No ClaimScope, PopulationSnapshot,
+external completeness artifact, parallel inventory hierarchy or wire representation
+is selected.
 
-Applicability is distinct from satisfaction and from company policy adoption.
-Determinations preserve exact assertion/revision/content (including an assertion
-within a document), source-owned vocabulary/schema, issuer/provenance, scope and
-quantification, validity/conditions, pinned destination acceptance basis,
-consuming decision/obligations and rationale/conflicts/rejected or unresolved facts.
-The core consumes an exact governance/policy acceptance decision; names, digests,
-issuer labels, approval references and signatures alone do not establish authority.
-Compatible determinations may accumulate obligations; contradictory overlap stays
-unresolved without an exact accepted replacement relation. Missing, expired,
-narrower or unavailable authority never establishes N/A. There is no generic
-IAM/reviewer verifier or unified Determination abstraction for population,
-applicability and recognition.
+Policy determines requirements and accepted demonstration; governance owns why
+those choices are appropriate; evidence asserts facts about reality; the core tests
+admissible evidence against resolved policy. Authored adoption, implementation,
+issuer/approval/signature references, mappings or digests cannot manufacture pass.
+Content-addressed provenance identifies inputs without endorsing their truth,
+authority or legal sufficiency.
 
-An external claim requires both an established population and exhaustive accounting
-of every applicable instance. Pin scheme/revision, profile/target, authoritative
-external obligation denominator or exact accepted basis, population proposition,
-`t` and permitted qualifications/exclusions. Outside-claim follows only that explicit
-target. Retain every relevant obligation through applicability, company interpretation,
-exact requirements, mapping/conformity, realization/dependencies and residual gaps.
-Passing existing checks or accumulating partial mappings cannot establish completeness.
-A legitimate empty applicable set establishes no positive conformity/certification.
+A required dependency identifies its evidence contract; only attributable evidence
+satisfying it may determine the dependency. Certificate/assurance fields are required
+only by the selected evidence type/schema/dependency contract, not a universal
+certificate model. A's evidence cannot satisfy B without the exact legitimate
+consumer/beneficiary relationship. Common assurance needs an explicit named
+beneficiary dependency, attributable source assurance and required correlation/
+integration evidence. Typed evidence may suffice; direct assessment-result
+consumption is not required and would need separate architecture review for graph,
+cycle and temporal semantics.
 
-Alignment means correspondence; evidence support is independently judged by the
-consuming dependency; required external assurance requires qualifying possession;
-authoritative recognition grants an exact external result a defined effect under
-a pinned accepted destination rule. Recognition satisfies a named dependency before
-normal roll-up, never overwrites an objective/framework result. No automatic
-transitivity, equivalence, fallback/anyOf, ID matching or min/max recognition follows.
-Qualified external statements retain exact assertion/result, issuer/scheme/revision,
-holder/scope/exclusions, time/qualifications, local correlation, provenance and
-acceptance. Unknown scope and corporate relationships cannot broaden certification.
-Exact normalized assertion and relevant source-byte attribution suffice; no generic
-attachment family is required.
+Framework/reference mappings are attributable policy-authoring/reporting content.
+A supplied company target P revision R containing O1/O2/O3 cannot silently omit O2;
+its list is not an authoritative external obligation universe. Report only exact
+resolved company policy/scope, for example: “All required instances in company
+target P revision R passed for resolved subjects A and B.” Do not upgrade this to
+all-assets compliance, framework satisfaction or certification/legal conformity.
+External conformity comparison is outside the generic core unless a future explicit
+company-policy dependency models a concrete condition. ADR 0012 remains unchanged.
 
-### Claim inability, evidence outcomes and refusal
+### Preserved failure and N/A boundaries
 
-Safely attributable inability to establish a particular population, applicability
-decision, obligation denominator, mapping/coverage or recognition effect leaves
-the bounded claim unestablished. Independently valid technical/objective assessment
-remains publishable where its own plan is valid. This is not automatically ADR 0010
-refusal and must not silently become evidence `unknown`.
+Unresolved groups, cycles, ambiguous identities, conflicting assignments/policy,
+unresolved required parameters, invalid dependency targets and integrity/tampering
+fail closed. Required unresolved policy is non-assessable, not evidence `unknown`.
+After valid dependency resolution, missing/stale/invalid/inconclusive evidence is
+ADR 0010 `unknown`, attributable execution failures are `error`, and shared integrity
+preventing trustworthy publication requires refusal. Preserve design-time realizations,
+exactly-one selection, separate missing-realization coverage/failure behavior,
+conservative roll-up, fail-only waivers and immutable result attribution.
 
-Evidence insufficiency after valid dependency resolution follows ADR 0010. Shared
-plan/routing/composition/provenance/snapshot/evaluator/result-envelope integrity
-failures preventing trustworthy publication require ADR 0010 refusal. ADR 0012's
-unresolved required-policy boundary remains unchanged. Missing interpretation and
-missing realization remain distinct; preserve design-time realizations, exactly-one
-selection, conservative roll-up, fail-only waivers and standalone technical baselines.
+No assignment is unassigned/outside supplied assessment scope, not automatic N/A.
+Existing explicit N/A remains distinct pending separate architecture review. Never
+infer external N/A from absent assignments, evidence or realizations.
 
-### Sequencing and remaining architecture
+### Deliberate narrowing and next exploration
 
-Complete #73 independently, then plan ADRs 0013–0015 together against the actual
-post-#73 representation under #37. Default to one coordinated successor migration
-across shared plans/results, dependencies, evidence, mapping and claims. Split
-implementation issues only when investigation proves independently complete cutovers
-without transient schemas, duplicated migration or compatibility scaffolding.
+The core relinquishes external real-world inventory exhaustiveness, authoritative
+external obligation-universe completeness, external legal/applicability authority
+conflicts or supersession, generic destination recognition authority and independent
+external conformity conditions. Exact supplied-policy/scope provenance, bounded
+reporting and ordinary explicit assurance dependencies mitigate this narrowing.
+There is no separate runtime applicability/authority-acceptance/recognition engine
+or mandatory external completeness gate.
 
-#37 remains open for manual/procedural methodology and evidence qualification,
-sampling inference, remaining assurance terminology/adopter annotations and
-unresolved result/representation questions. Route blocking questions there before
-implementation relies on them. ADR 0015 records the migration table and escalation
-conditions; probabilistic completeness, dynamic scope, generic delegation, automatic
-supersession, cross-time equivalence, generic artifacts or changed technical evidence
-selection/roll-up require architecture. No wire/version/algorithm freeze, runtime
-change, monitoring or ADR 0011 operational-view redesign is implied.
+[#37](https://github.com/packetlss/compliance/issues/37) remains open. Next is narrow
+read-only repository-grounded exploration of expected assessment/run accounting,
+typed external/procedural assurance dependencies and qualification, exact beneficiary/
+scope attribution, and whether explicit common-assurance reuse is needed. #73 is
+complete; inspect the actual representation. Do not presume direct result consumption
+or the superseded three-ADR migration. ADR 0016 owns conformance and escalation;
+no runtime/schema/fixture change, N/A redesign or wire/algorithm freeze is authorized.
+
 
 ## Historical assessment and operational interpretation
 

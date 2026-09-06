@@ -5,9 +5,15 @@
 - **Destination authority transfer:** 2026-09-04
 - **Historical source:** `packetlss-labs/compliance-workspace@098ef18c1384b34c532f705b3f5b3d1a25bd638f`, `docs/adr/0006-regulatory-assurance-and-external-adapter-boundary.md`
 
-This is the destination-owned normative restatement of accepted workspace ADR 0006. It preserves the accepted product/trust boundary and updates only ownership/topology references.
+This is the destination-owned normative restatement of accepted workspace ADR 0006. Its original ownership/topology restatement is clarified by the successor decisions below.
 
 [ADR 0010](0010-required-evidence-status-and-assessment-refusal.md) clarifies the common required-evidence `unknown` / `error` / assessment-refusal boundary; detailed assurance design remains with #37.
+
+[ADR 0016](0016-closed-world-policy-assessment.md) clarifies this boundary: optional company objective
+assurance remains core; engine-established external legal/certification conformity
+is not a generic core responsibility. Framework mappings are attributable company
+policy/reporting content. Existing explicit N/A behavior remains unchanged and
+separately routed under #37.
 
 ## Context
 
@@ -29,7 +35,7 @@ subject / group assignment
 
 A project does not need a requirement/realization wrapper to use technical baselines.
 
-Optional objective assurance remains core:
+Optional company objective assurance remains core:
 
 ```text
 subject / group assignment
@@ -39,10 +45,10 @@ subject / group assignment
               -> required technical controls
               -> required manual/procedural assurance evidence, if any
           -> objective result
-      -> explicit regulatory/framework mapping and coverage claim
+      -> attributable regulatory/framework mapping and bounded company reporting
 ```
 
-Requirements express internal desired assurance objectives. Realizations describe how an applicable scope demonstrates those objectives. External frameworks are explicit mappings/claims rather than the source of technical desired state.
+Requirements express internal desired assurance objectives. Realizations describe how an applicable scope demonstrates those objectives. Framework/regulatory mappings are attributable company policy/reporting content rather than the source of technical desired state.
 
 ### Assurance results are evidence-derived
 
@@ -58,10 +64,10 @@ Preserve these constraints:
 - ownership, implementation references, and organizational labels are annotations unless an authority contract explicitly makes them assessment inputs;
 - information classification is a source/package/access-control concern or adopter annotation by default, not a universal closed semantic enum;
 - realization selection is deterministic and fail-closed; source order is not precedence;
-- mappings distinguish complete coverage from partial/supporting alignment; and
-- regulatory/objective results are scoped to exact objective/mapping revisions, subject/scope, selected realization, assessment time, evidence snapshot, evaluator, and policy composition.
+- authored mapping coverage labels such as complete, partial or supporting are policy/reporting metadata, not engine-established external coverage authority; and
+- company objective results are scoped to exact company policy/objective revisions, subject/scope, selected realization, assessment time, evidence snapshot, evaluator, and policy composition; reported mappings retain their exact revisions and attribution without establishing external conformity.
 
-The system does not claim organizational certification or legal compliance beyond the modeled mapping and evaluated evidence.
+The core does not establish organizational certification, legal compliance or external-framework conformity. It may report exact company-policy results and mappings as bounded company reporting with attributable provenance; modeled mappings and evaluated evidence do not upgrade those results into external conformity claims.
 
 Detailed successor terminology/evidence/mapping/result semantics remain open in destination issue #37.
 

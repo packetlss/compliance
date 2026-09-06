@@ -503,43 +503,41 @@ and [`waivers.md`](waivers.md).
 binding and parameter-only derivation, direct dependency consumption, policy-owned
 freshness and frozen artifact validation. Existing v4 plans/results carry the
 additional identity-bearing facts; historical artifacts require historical tooling.
-ADR 0010/0011 behavior and ADR 0013–0015 boundaries remain unchanged.
+ADR 0010/0011 behavior is unchanged. The then-current ADR 0013–0015 design was subsequently superseded by ADR 0016 below.
 
 
-### 2026-09-05 — Scoped assurance, applicability authority and external claims (#37)
+### 2026-09-06 — Closed-world assessment replaces ADRs 0013–0015 (#37)
 
-System [ADR 0013](../../docs/adr/0013-scoped-assurance-and-obligation-instances.md),
-[ADR 0014](../../docs/adr/0014-attributable-applicability-and-authority-acceptance.md)
-and [ADR 0015](../../docs/adr/0015-bounded-external-claims-and-assurance-recognition.md)
-are **accepted design, not yet implemented**. Tooling retains ownership of
-Subject/InventoryGroup/PolicyAssignment, planning, evaluation and exact attributable
-results; no second inventory hierarchy or generic ClaimScope registry is introduced.
-Population resolution must retain union membership and every path plus an exhaustive
-basis at one `t`. Exact obligation instances preserve host/entity/system quantification.
-Common assurance requires scoped consumption and necessary integration evidence.
+System [ADR 0016](../../docs/adr/0016-closed-world-policy-assessment.md) supersedes
+the 2026-09-05 scoped-assurance/applicability/recognition design and migration route.
+It is accepted design, not yet implemented. Tooling retains Subject/group DAG/
+assignment resolution, exact governed policy instances, every applicable path,
+deterministic conflicts, typed evidence qualification and immutable results.
+Future run accounting must detect omissions from the exact expected assessment set
+of the supplied operation, without a new inventory hierarchy or chosen wire family.
 
-Future plans/results must preserve exact applicability assertions, source-owned
-meaning, acceptance decisions, population/obligation denominators, mapping/conformity
-gaps and named recognition dependencies with immutable identity and time attribution.
-The core consumes narrow governance/policy acceptance inputs, not a generic authority
-verifier. Provenance proves consumed content, not semantic authority. Recognition
-participates in normal dependency roll-up and cannot overwrite objective results.
-The three ADRs' conceptual vectors and migration tables define successor obligations.
+The core assesses supplied company policy, not external inventory exhaustiveness,
+external obligation-universe completeness, legal applicability authority, recognition
+or independent external conformity. Governance owns those judgments. Mappings are
+attributable policy/reporting content; results must remain bounded to supplied and
+resolved company targets. Provenance identifies inputs, not their truth or authority.
 
-Claim-resolution inability safely attributable to a bounded claim leaves it
-unestablished while independently valid technical/objective assessment remains
-publishable. Evidence insufficiency after valid dependency resolution follows ADR
-0010; untrustworthy shared integrity requires refusal. Do not synthesize evidence
-`unknown` for pre-assessment claim/policy resolution, or weaken ADR 0012's unresolved
-policy boundary. Preserve exactly-one realization selection, missing-realization
-behavior, current technical evidence selection/roll-up and fail-only waivers.
+Required assurance dependencies identify evidence contracts. Certificate fields are
+contract-specific, never universal. Common assurance needs an explicit named beneficiary
+dependency and attributable source assurance plus required correlation/integration
+evidence; typed evidence may suffice. Direct assessment-result consumption is not
+required and needs separate review if later found necessary.
 
-Complete #73 independently; then #37 owns repository-grounded planning of these
-shared surfaces against post-#73 code, defaulting to one coordinated successor.
-No runtime/schema/fixture edits or new discriminator/version/algorithm freeze follow
-from this promotion. Manual/procedural methodology, sampling inference and other
-residual assurance decisions remain with #37, not implementation convenience.
+Preserve ADR 0010 unknown/error/refusal, ADR 0012 parameters/direct consumption and
+freshness, exactly-one design-time realization selection, missing-realization failure,
+conservative roll-up and fail-only waivers. Unassigned is not automatic N/A; existing
+explicit N/A remains distinct. Invalid required resolution cannot become a partial
+valid plan or synthetic evidence unknown.
 
+#73 is complete. #37 next permits narrow read-only exploration of expected run
+accounting, typed external/procedural assurance dependencies and qualification,
+beneficiary attribution and whether common reuse is needed. No runtime/schema/fixture
+change or wire/algorithm freeze is authorized; ADR 0016 owns escalation and examples.
 
 ### 2026-09-05 — Explicit policy parameters and policy-owned freshness (#37)
 

@@ -94,30 +94,32 @@ The destination materializes this producer at `policy-sources/control-library/`.
 Its outer path, GitHub repository, semantic source name, and release distribution
 identity remain separate concepts.
 
-## Accepted scoped-assurance ownership
+## Closed-world assurance ownership
 
-[ADR 0013](../../docs/adr/0013-scoped-assurance-and-obligation-instances.md),
-[ADR 0014](../../docs/adr/0014-attributable-applicability-and-authority-acceptance.md)
-and [ADR 0015](../../docs/adr/0015-bounded-external-claims-and-assurance-recognition.md)
-are accepted design, not yet implemented under #37. This library retains reusable
-policy/evidence schemas and technology-neutral contracts; tooling owns inventory,
-planning and results. Adopter sources own company interpretations, desired policy,
-applicable governance acceptance decisions and scoped consumption/claim inputs.
-Synthetic examples belong to verification policy; real private facts remain outside
-this repository. The library's name and content digests establish no issuer or
-applicability authority, source precedence or automatic company policy adoption.
+[ADR 0016](../../docs/adr/0016-closed-world-policy-assessment.md) supersedes ADRs
+0013–0015; it is accepted design, not yet implemented under #37. This library owns
+reusable policy/evidence schemas and technology-neutral requirement contracts;
+tooling owns inventory, planning, qualification, run accounting and results.
+Adopter policy/governance owns supplied scope, company requirements, demonstration
+choices and external applicability/sufficiency judgments. Synthetic content belongs
+to verification policy; real private inputs stay outside this repository.
 
-Population bases, applicability determinations and recognition rules retain distinct
-semantics. Exact claim/obligation accounting and explicit named recognition dependencies
-do not turn mappings, authored realizations or broad operational reach into proof.
-Missing interpretation/realization and unresolved claim authority remain visible,
-distinct from evidence insufficiency and shared assessment-integrity refusal.
+Selected dependencies identify typed evidence contracts, including explicit assurance
+requirements where policy chooses them. No universal certificate schema or generic
+recognition/authority subsystem is implied. Authored adoption, issuer/approval/signature
+references, mappings and digests cannot establish reality. Exact beneficiary dependencies
+and required correlation/integration evidence constrain shared assurance reuse; direct
+assessment-result consumption is not required.
 
-Finish #73 / ADR 0012 independently before repository-grounded coordinated migration
-planning under #37 across all three ADRs. Their migration tables govern successor
-ownership without selecting wire syntax, generic attachments or new resource kinds.
-Current policy/schema bytes remain unchanged until an authorized runtime cutover.
-Manual/procedural methodology and sampling inference still require architecture.
+Framework mappings remain attributable policy/reporting content, never an authoritative
+external obligation universe or engine-established conformity. Preserve ADR 0012 typed
+parameter consumption and freshness, existing missing-realization behavior and ADR 0010
+qualification/outcomes. Source names/content digests grant no truth, authority or precedence.
+
+#73 is complete. #37 next routes narrow exploration of supplied expected-set accounting,
+typed external/procedural evidence qualification, exact beneficiary attribution and
+whether common assurance reuse is needed. No runtime/schema/policy-resource edits or
+wire/version choices are authorized by this documentation promotion.
 
 ## Component validation
 

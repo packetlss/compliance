@@ -1,9 +1,15 @@
 # ADR 0015: Bounded external claims and explicit assurance recognition
 
-- **Status:** Accepted design, not yet implemented
+- **Status:** Superseded by [ADR 0016](0016-closed-world-policy-assessment.md)
+- **Superseded:** 2026-09-06
 - **Date:** 2026-09-05
 - **Parent and promotion contract:** [#37](https://github.com/packetlss/compliance/issues/37)
 - **Coordinated decisions:** [ADR 0013](0013-scoped-assurance-and-obligation-instances.md), [ADR 0014](0014-attributable-applicability-and-authority-acceptance.md)
+
+This decision is historical. [ADR 0016](0016-closed-world-policy-assessment.md) replaces its core
+responsibilities, conformance obligations and migration routing. Only semantics
+explicitly retained by that successor remain active; this text does not authorize
+implementation of external completeness, applicability authority or recognition.
 
 ## Context
 
