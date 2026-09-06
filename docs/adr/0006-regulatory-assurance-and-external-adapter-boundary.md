@@ -89,7 +89,7 @@ Those retired surfaces have no ADR 0007 successor.
 The resolved assessment plan remains the canonical handoff to an external IaC, PaC, MDM, ticketing, or configuration-management adapter. For each resolved control it preserves, at minimum:
 
 - subject identity/type and plan identity;
-- actual policy-source names/content digests and final policy revision;
+- actual planning composition with policy-source names/content digests;
 - stable control instance and implementation/control IDs;
 - resolved parameters;
 - definition fingerprint;

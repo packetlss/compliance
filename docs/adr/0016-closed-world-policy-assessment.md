@@ -206,8 +206,8 @@ failure is distinct from evidence insufficiency after a valid dependency resolve
 The absence of external completeness machinery weakens none of these internal
 resolution, qualification or integrity boundaries.
 
-Historical results remain immutable under their exact inventory/scope, assignments,
-policy/requirement revisions, selected realization/dependencies, parameters,
+Historical results remain immutable under their exact frozen operation scope,
+relevant assignments, resolved policy/requirement content, selected realization/dependencies, parameters,
 evidence snapshot, evaluator, composition, waiver attribution and recorded instant.
 Later membership, policy, mapping or evidence changes do not rewrite them.
 [ADR 0011](0011-historical-assessment-and-operational-evidence-timeliness.md) retains
@@ -215,12 +215,12 @@ its immutable-history and separately routed operational interpretation boundary.
 
 ## Deterministic conceptual conformance examples
 
-These use exact supplied revisions and recorded assessment instant `t`. They are
+These use exact supplied inputs and recorded assessment instant `t`. They are
 conceptual obligations, not executable future-behavior fixtures or new schemas.
 
 | Supplied case | Required conclusion |
 | --- | --- |
-| Target consists of A/B; every resolved required instance for A/B passes | Exact A/B target success; report the supplied policy revision and scope |
+| Target consists of A/B; every resolved required instance for A/B passes | Exact A/B target success; report the supplied planning composition and frozen scope |
 | Same inputs/results, but real-world C exists and was omitted upstream | A/B result unchanged; no statement about C or real-world inventory exhaustiveness |
 | Target consists of A/B/C; A/B pass but C's expected result is absent | Incomplete accounting; no aggregate success |
 | DAG has left={A,B}, right={B,C}, parent including both | Resolve A/B/C once each; retain both paths to B and every applicable assignment; identical definitions may coalesce, divergent ones conflict |
