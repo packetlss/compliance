@@ -763,9 +763,14 @@ def _run_historical_operation_view(args):
         if not selected:
             raise ValueError('subject is absent from frozen operation selection')
         account['assessment_results'] = [by_id[row['result_id']] for row in selected if row['result_id']]
+    visible_members = [
+        row for row in selected
+        if (not args.outcome or row['historical_outcome'] in args.outcome)
+        and (not args.plan_alignment or row['plan_alignment'] in args.plan_alignment)
+    ]
     if args.assessment_command == 'frameworks':
         mappings = []
-        for row in selected:
+        for row in visible_members:
             report = by_id.get(row['result_id'], {})
             for kind, key in (('objective', 'requirements'), ('technical', 'controls')):
                 assessments = report.get('requirement_assessments' if kind == 'objective' else 'results', [])
@@ -795,18 +800,14 @@ def _run_historical_operation_view(args):
         account['groups'] = [{
             'group_id': group_id,
             'qualification_summary': summarize_qualifications([
-                row for row in account['members']
+                row for row in visible_members
                 if group_id in {group['id'] for group in row['resolved_groups']}
             ]),
         } for group_id in group_ids]
     account['filtered'] = bool(args.group or args.outcome or args.plan_alignment or
                                args.assessment_command == 'explain' or
                                getattr(args, 'reference', []) or getattr(args, 'level', []))
-    account['visible_members'] = [
-        row for row in selected
-        if (not args.outcome or row['historical_outcome'] in args.outcome)
-        and (not args.plan_alignment or row['plan_alignment'] in args.plan_alignment)
-    ]
+    account['visible_members'] = visible_members
     if args.format == 'json':
         print(json.dumps(account, indent=2, sort_keys=True))
     else:
