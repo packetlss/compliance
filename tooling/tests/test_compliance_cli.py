@@ -63,6 +63,8 @@ class ComplianceCliTests(unittest.TestCase):
             "resolution": {"status": "valid", "errors": []},
         }
         document.update(planning_fields(document["policy_sources"]))
+        from assessment_fixture import refresh_operation
+        refresh_operation(document)
         document["id"] = artifact_digest(document)
         return document
 

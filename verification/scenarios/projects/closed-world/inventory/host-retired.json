@@ -1,0 +1,20 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "Subject",
+  "metadata": {
+    "name": "host-retired",
+    "labels": {
+      "operation-profile": "synthetic"
+    }
+  },
+  "spec": {
+    "id": "host/retired",
+    "type": "linux-host",
+    "lifecycle": "retired",
+    "source": {
+      "name": "synthetic-inventory",
+      "externalId": "host/retired",
+      "observedAt": "2026-09-01T00:00:00Z"
+    }
+  }
+}

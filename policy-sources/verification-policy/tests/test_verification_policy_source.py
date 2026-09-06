@@ -54,8 +54,8 @@ class VerificationPolicySourceTests(unittest.TestCase):
         self.assertEqual(errors, [])
         requirements, objectives, realizations, errors = load_requirement_catalogs(sources(self.root), controls)
         self.assertEqual(errors, [])
-        self.assertEqual((len(baselines), len(requirements), len(objectives), len(realizations)), (13, 1, 1, 1))
-        self.assertEqual(len(list(self.root.rglob("*.json"))), 16)
+        self.assertEqual((len(baselines), len(requirements), len(objectives), len(realizations)), (13, 6, 4, 4))
+        self.assertEqual(len(list(self.root.rglob("*.json"))), 27)
         for catalog in (baselines, requirements, objectives, realizations):
             self.assertTrue(all(item["_source"].startswith("verification-policy:") for item in catalog.values()))
         self.assertTrue(all(item["_source"].startswith("control-library:") for item in controls.values()))
@@ -257,7 +257,7 @@ class VerificationPolicySourceTests(unittest.TestCase):
         self.assertEqual(source_tree_digest(self.root), original)
         self.assertEqual(
             original,
-            "sha256:ebbfb022f6abf4f04e18aea0f4737ab3849dd99390b5d147d74f0ac291c1bc8f",
+            "sha256:bc75996a7f2454fc05bf25646be22b1bcc62e4005029c223a4b6404858b97467",
         )
         with (self.root / BASELINE).open("a") as stream:
             stream.write("\n")

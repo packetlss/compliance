@@ -215,6 +215,12 @@ def load_inventory_catalog(
         raise ValueError(f"assignments target unknown groups: {', '.join(unknown_targets)}")
 
     validate_group_dag({group["id"]: group for group in group_documents})
+    unknown_members = sorted({
+        member for group in group_documents for member in group.get("members", [])
+        if member not in subjects
+    })
+    if unknown_members:
+        raise ValueError("groups reference unknown subjects: " + ", ".join(unknown_members))
     return subjects, group_documents, assignment_documents
 
 
@@ -392,16 +398,10 @@ def resolve_groups(groups: dict[str, JsonObject], subject: JsonObject) -> list[J
 
     rendered: list[JsonObject] = []
     for group_id in sorted(resolved):
-        if group_id in direct:
-            rendered.append({"id": group_id, "sources": direct[group_id]})
-        else:
-            rendered.append({
-                "id": group_id,
-                "sources": [{
-                    "membership": "inherited",
-                    "via": sorted(inherited_via[group_id]),
-                }],
-            })
+        sources = list(direct.get(group_id, []))
+        if inherited_via[group_id]:
+            sources.append({"membership": "inherited", "via": sorted(inherited_via[group_id])})
+        rendered.append({"id": group_id, "sources": sources})
     return rendered
 
 
@@ -1613,6 +1613,8 @@ def render_plan(
         assignment["baselines"] = sorted(assignment.get("baselines", []))
         canonical_assignments.append(assignment)
 
+    assignments = canonical_assignments
+
     groups = {group["id"]: group for group in groups_document}
     if len(groups) != len(groups_document):
         raise ValueError("group ids must be unique")
@@ -2053,6 +2055,15 @@ def render_plan(
             "errors": resolution_errors,
         },
     }
-    plan["id"] = artifact_digest(plan)
+    from .operation import freeze_operation
+    # A direct subject plan is an explicit singleton operation. Only this
+    # subject's membership facts are needed; the catalog loader has already
+    # checked supplied references before any subset is selected.
+    projected_groups = copy.deepcopy(canonical_groups)
+    for group in projected_groups:
+        if 'members' in group:
+            group['members'] = [s for s in group['members'] if s == subject['id']]
+    freeze_operation([plan], {subject['id']: subject}, projected_groups,
+                     canonical_assignments, {'subjects': [subject['id']], 'groups': [], 'all': False})
     validate_assessment_plan(plan)
     return plan

@@ -1,0 +1,21 @@
+{
+  "subject": {
+    "id": "host/A",
+    "type": "linux-host"
+  },
+  "type": "iam.service.observation/v1",
+  "collector": {
+    "id": "synthetic/observation",
+    "version": "1"
+  },
+  "payload": {
+    "consumer": "host/A",
+    "source_assertion": {
+      "subject_id": "service/iam",
+      "asserted_by": "synthetic-service-reviewer",
+      "source_locator": "synthetic-report:iam#access",
+      "condition": "centrally-governed-access",
+      "outcome": "positive"
+    }
+  }
+}

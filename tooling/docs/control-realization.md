@@ -15,30 +15,24 @@ those controls alongside realized objectives in the same assessment plan. The
 realization model exists to support a genuine objective-level assurance claim,
 not to wrap every useful technical check in governance ceremony.
 
-## Closed-world assurance successor boundary
+## Closed-world assurance boundary
 
-[ADR 0016](../../docs/adr/0016-closed-world-policy-assessment.md) supersedes ADRs
-0013–0015 and clarifies ADR 0006; successor obligations are accepted design, not yet
-implemented. Current runtime details below remain unchanged. Optional company
-objectives and technical baselines remain complementary. Preserve design-time
-realizations, exactly-one selection, ADR 0012 parameters/direct typed consumption,
-policy-owned freshness, missing-realization coverage/failure and conservative roll-up.
+[ADR 0016](../../docs/adr/0016-closed-world-policy-assessment.md) is implemented under
+[#78](https://github.com/packetlss/compliance/issues/78). See
+[operation accounting](operation-accounting.md) for the frozen denominator and
+concrete assertion contracts. Realization selection chooses demonstration; Subject,
+group and baseline assignment determine requirement targeting.
 
-Policy chooses demonstration, governance owns its external sufficiency, and evidence
-asserts reality. Authored implemented/adopted state or external references cannot pass
-an assessment. A required dependency identifies its evidence contract; only attributable
-evidence satisfying it may determine it. Certificate fields are contract-specific.
-A's evidence cannot satisfy B without an exact legitimate beneficiary relationship.
-Common assurance requires a named beneficiary dependency, source assurance and required
-correlation/integration evidence; typed evidence may suffice. Direct result consumption
-requires separate architecture review if later needed, not automatic implementation.
+Organization assertions and shared IAM observations use the existing named typed
+evidence dependencies and normal criteria. Policy requires an assertion; evidence
+supplies the actual beneficiary, source and outcome. An observed relationship must
+correlate an IAM consumer to the original service assertion. Authored integration
+intent is insufficient. No certificate subsystem, authority engine or direct result
+graph exists. Mappings report supplied company policy only.
 
-Framework mappings are bounded company reporting content, not external conformity.
-Expected-set accounting cannot omit supplied required instances. Preserve ADR 0010
-unknown/error/refusal, fail-only waivers and immutable history. Unassigned, missing
-realization and existing explicit N/A remain distinct; this promotion does not redesign
-N/A. #37's next exploration is limited to run accounting, typed assurance qualification,
-exact beneficiary attribution and whether common-assurance reuse is needed.
+ADR 0010/0012, exactly-one realization selection, missing-realization failure,
+explicit N/A and fail-only waivers retain their existing semantics. #37 remains
+open for residual architecture and mandatory escalation.
 
 ## 1. Problem
 

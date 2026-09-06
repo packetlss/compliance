@@ -27,7 +27,7 @@ Accepted destination decisions:
 - [ADR 0014 — Attributable applicability determinations and authority acceptance](0014-attributable-applicability-and-authority-acceptance.md) — superseded by [ADR 0016](0016-closed-world-policy-assessment.md); historical design.
 - [ADR 0015 — Bounded external claims and explicit assurance recognition](0015-bounded-external-claims-and-assurance-recognition.md) — superseded by [ADR 0016](0016-closed-world-policy-assessment.md); historical design.
 
-- [ADR 0016 — Closed-world company policy assessment](0016-closed-world-policy-assessment.md) — accepted design, not yet implemented; supersedes ADRs 0013–0015 and clarifies ADR 0006; #37. ADR 0012 remains unchanged.
+- [ADR 0016 — Closed-world company policy assessment](0016-closed-world-policy-assessment.md) — experimental, implemented under #78; supersedes ADRs 0013–0015 and clarifies ADR 0006; #37. ADR 0012 remains unchanged.
 
 Current system-level documents:
 
@@ -38,11 +38,9 @@ Current system-level documents:
 
 ADR 0007 foundation/cutover issues #31–#36 and ADR 0012 implementation #73 are
 completed history. [#37](https://github.com/packetlss/compliance/issues/37) remains
-open. ADR 0016 replaces the three-ADR migration route with narrow read-only exploration
-of closed-world expected assessment/run accounting, typed external/procedural assurance
-dependencies and qualification, exact beneficiary/scope attribution and whether common
-assurance reuse is needed. Direct cross-assessment result consumption is not assumed;
-if needed it requires separate architecture review. Promotion authorizes no runtime work.
-See ADR 0016 for conformance, non-goals and escalation.
+open for residual architecture and escalation. ADR 0016 supersedes the three-ADR
+migration; #78 implements its bounded embedded operation accounting and ordinary
+typed assertion successor. Direct result consumption, new semantics or common
+abstractions require separate architecture review.
 
 Do not treat historical workspace topology or issue numbers as current component/repository boundaries. Historical references remain provenance links only.

@@ -497,6 +497,20 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-06 — Frozen operation accounting and typed assertions (#78)
+
+The [operation contract](operation-accounting.md) specifies the embedded frozen
+projection, exact-set historical reporting and concrete typed assertion examples.
+Every selected Subject has an accounting row; only assessable members require
+results. Operation context changes enclosing plan/result identity. One assessment
+instant applies to all evaluated members. This implements ADR 0016 without another
+artifact family, certificate subsystem, common-assurance engine or result graph.
+ADR 0010/0012 and existing explicit N/A, missing realization and waivers are unchanged.
+
+Earlier promotion entries below record their historical stage; #78 is the current
+bounded implementation and #37 remains the escalation route.
+
+
 ### 2026-09-05 — Explicit parameter and freshness implementation (#73)
 
 [Policy parameters](policy-parameters.md) specifies pinned declarations, explicit

@@ -48,7 +48,7 @@ def run(root):
         requirement = first['requirements'][0]
         slot = requirement['parameter_facts']['states']['privileged_evidence_max_age']
         assert slot['value'] == '86400s'
-        realization_path = next((sources['environment-private']/'realizations').rglob('*.json'))
+        realization_path = sources['environment-private']/'realizations/restricted/restricted-linux-role-based-access.json'
         realization_bytes = realization_path.read_bytes()
         baseline_record = first['resolved_requirement_baselines'][0]
         parent = baseline_record['parameter_derivation']['ancestry'][-1]['document']

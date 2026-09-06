@@ -210,6 +210,20 @@ an upstream-framework conformance claim. The command supports exact
 all repeatable with OR semantics. Its JSON output preserves claim type,
 alignment, current/outdated status, subject, and policy-object identity.
 
+## Frozen operation selection and reporting
+
+`plan render` and `assessment run` accept multiple subject IDs, repeated `--group`
+selectors, or `--all`. They freeze expected membership before evaluation. Empty
+selection fails; unassigned/inactive/no-active-policy rows are accounted without
+synthetic pass or N/A. `assessment run` captures one instant and reports
+`accounting_complete` separately from `all_passed`.
+
+For immutable history, `assessment status/groups/frameworks/explain` accept a stored
+`--plan` anchor and exact `--at` instant. Use `--no-config` when current project inputs
+are unavailable. Reporting uses only frozen operation facts and exact matching result
+envelopes. Filters remain visibly filtered. See [operation accounting](operation-accounting.md)
+for wire representation, identity, output paths and the concrete assertion contracts.
+
 ## Historical results and operational views
 
 The predecessor `assessment status` implementation re-renders the present plan,

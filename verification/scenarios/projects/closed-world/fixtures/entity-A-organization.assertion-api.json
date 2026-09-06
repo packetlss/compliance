@@ -1,0 +1,20 @@
+{
+  "subject": {
+    "id": "entity/A",
+    "type": "entity"
+  },
+  "type": "organization.assertion/v1",
+  "collector": {
+    "id": "synthetic/observation",
+    "version": "1"
+  },
+  "payload": {
+    "beneficiary": "entity/A",
+    "asserted_by": "synthetic-assessor",
+    "source_locator": "synthetic-report:organization#ce",
+    "scheme": "CE+",
+    "outcome": "positive",
+    "valid_from": "2026-08-01T00:00:00Z",
+    "valid_until": "2026-10-01T00:00:00Z"
+  }
+}

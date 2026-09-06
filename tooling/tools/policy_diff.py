@@ -421,6 +421,7 @@ def _counts(changes: list[JsonObject]) -> JsonObject:
 
 
 def _context(plan: JsonObject, source: Path | None) -> JsonObject:
+    from .assessment_provenance import digest
     return {
         "path": str(source) if source is not None else "<memory>",
         "plan_id": plan["id"],
@@ -428,6 +429,7 @@ def _context(plan: JsonObject, source: Path | None) -> JsonObject:
         "policy_sources": plan["policy_sources"],
         "inventory_revision": plan["inventory_revision"],
         "assignment_revision": plan["assignment_revision"],
+        "operation_digest": digest(plan['operation']),
     }
 
 
@@ -473,6 +475,7 @@ def build_policy_diff(
             "policy_sources",
             "inventory_revision",
             "assignment_revision",
+            "operation_digest",
         )
         if before_context[field] != after_context[field]
     ]

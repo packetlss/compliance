@@ -1,0 +1,50 @@
+{
+  "apiVersion": "compliance.example/v1",
+  "kind": "Control",
+  "metadata": {
+    "id": "iam.integration.required",
+    "version": 1
+  },
+  "spec": {
+    "entrypoint": "data.compliance.controls.iam_integration_required.evaluate",
+    "applies_to": [
+      "linux-host"
+    ],
+    "evidence": [
+      {
+        "id": "service",
+        "type": "iam.service.observation/v1",
+        "required": true,
+        "inputs_schema": {
+          "type": "object",
+          "required": [
+            "service",
+            "condition"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "service": {
+              "type": "string",
+              "minLength": 1
+            },
+            "condition": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "$id": "https://compliance.example/inputs/iam.integration.required/service"
+        }
+      },
+      {
+        "id": "relationship",
+        "type": "iam.integration.observation/v1",
+        "required": true
+      }
+    ],
+    "parameters_schema": "parameters.schema.json",
+    "defaults": {
+      "severity": "high",
+      "remediation": "Obtain a qualifying attributable observation for the exact policy dependency."
+    }
+  }
+}

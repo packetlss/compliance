@@ -21,7 +21,11 @@ The plan and results algorithms are respectively
 `compliance.example/assessment-results-digest/v1alpha1`. Both SHA-256 hash RFC
 8785/JCS bytes after this explicit projection:
 
-- Remove only the top-level `id`.
+- Results remove only the top-level `id`. Plans first hash the semantic body
+  without `id` or `operation`, bind that digest together with the exposed member
+  accounting facts as `plan_content_digest`, then hash the JCS object containing
+  `plan_content_digest` and `operation`, as specified in
+  [operation accounting](operation-accounting.md).
 - For each composition stage retain its normalized `actual`,
   `compositionDigestAlgorithm`, and `compositionDigest`; exclude stage descriptive
   metadata and expected enforcement.

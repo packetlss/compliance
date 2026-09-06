@@ -184,6 +184,8 @@ def _resolved_policy_sources(args: argparse.Namespace) -> tuple[PolicySource, ..
 
 
 def _load_catalog(args: argparse.Namespace):
+    if args.inventory is None or args.assignments is None:
+        raise ValueError('current inventory resolution requires --inventory and --assignments')
     return load_inventory_catalog(args.inventory, args.assignments, args.resource_schema)
 
 
@@ -437,16 +439,34 @@ def _run_waiver(args: argparse.Namespace) -> None:
 
 
 def _run_plan_render(args: argparse.Namespace) -> None:
-    subject, groups, assignments = load_inventory_inputs(
-        args.inventory,
-        args.assignments,
-        args.subject_id,
-        args.resource_schema,
-    )
-    plan = render_plan(subject, groups, assignments, _resolved_policy_sources(args), config=args.project_config)
-    output = subject_artifact_path(args.output, args.subject_id)
-    write_json(plan, output)
-    print(f'wrote {plan["id"]} to {output}')
+    plans = _render_selected_plans(args, diagnostic=True)
+    _check_operation_outputs(plans, args.output)
+    for plan in plans:
+        output = subject_artifact_path(args.output, plan['subject']['id'])
+        write_json(plan, output)
+        print(f'wrote {plan["id"]} to {output}')
+
+
+def _render_selected_plans(args, *, diagnostic=False):
+    from .operation import render_operation
+    subjects, groups, assignments = _load_catalog(args)
+    if diagnostic and len(args.subject_id) == 1 and not args.group and not args.all_subjects:
+        if args.subject_id[0] not in subjects:
+            raise ValueError('unknown subject id: ' + args.subject_id[0])
+        return [render_plan(subjects[args.subject_id[0]], groups, assignments,
+                            _resolved_policy_sources(args), config=args.project_config)]
+    return render_operation(subjects, groups, assignments, _resolved_policy_sources(args),
+        {'subjects': args.subject_id, 'groups': args.group, 'all': args.all_subjects},
+        config=args.project_config)
+
+
+def _check_operation_outputs(plans, *roots):
+    all_paths = []
+    for root in roots:
+        paths = [subject_artifact_path(root, p['subject']['id']) for p in plans]
+        all_paths.extend(path.resolve() for path in paths)
+    if len(all_paths) != len(set(all_paths)):
+        raise ValueError('operation output paths collide; use distinct per-subject plan/result directories')
 
 
 def _format_plan_summary(plan: dict) -> str:
@@ -616,6 +636,9 @@ def _assessment_context(args: argparse.Namespace):
 
 
 def _run_assessment_view(args: argparse.Namespace) -> None:
+    if args.plan:
+        _run_historical_operation_view(args)
+        return
     subjects, groups, assignments, reports, known_groups = _assessment_context(args)
     use_color = not args.no_color and "NO_COLOR" not in os.environ and sys.stdout.isatty()
 
@@ -680,37 +703,87 @@ def _run_assessment_view(args: argparse.Namespace) -> None:
 
 
 def _run_assessment(args: argparse.Namespace) -> None:
-    subject, groups, assignments = load_inventory_inputs(
-        args.inventory,
-        args.assignments,
-        args.subject_id,
-        args.resource_schema,
-    )
+    from .operation import InvalidOperationResolution
+    try:
+        plans = _render_selected_plans(args)
+    except InvalidOperationResolution as error:
+        raise SystemExit(str(error)) from error
+    _check_operation_outputs(plans, args.plan_output, args.output)
     policy_sources = _resolved_policy_sources(args)
-    plan = render_plan(subject, groups, assignments, policy_sources, config=args.project_config)
-    plan_output = subject_artifact_path(args.plan_output, args.subject_id)
-    result_output = subject_artifact_path(args.output, args.subject_id)
-    write_json(plan, plan_output)
-    report = evaluate_plan_document(
-        plan,
-        args.evidence,
-        policy_sources,
-        opa=args.opa,
-        evaluated_at=(parse_timestamp(args.at, field="--at") if args.at else None),
-        waiver_path=args.waivers,
-        composition_report=(
-            composition_validation(args.project_config, require=True)
-            if args.project_config.source else None
-        ),
-    )
-    write_json(report, result_output)
-    print(f'wrote plan {plan["id"]} to {plan_output}')
-    print(
-        f"wrote {len(report['results'])} control result(s), "
-        f"{len(report['requirement_assessments'])} objective result(s), and "
-        f"{len(report['requirement_baseline_assessments'])} objective-baseline "
-        f"result(s) to {result_output}"
-    )
+    instant = parse_timestamp(args.at, field='--at') if args.at else datetime.now(UTC)
+    instant = instant.replace(microsecond=0)
+    for plan in plans:
+        plan_output = subject_artifact_path(args.plan_output, plan['subject']['id'])
+        write_json(plan, plan_output)
+    reports = []
+    for plan in plans:
+        if not plan['coverage']['assessable']:
+            continue
+        report = evaluate_plan_document(plan, args.evidence, policy_sources,
+            opa=args.opa, evaluated_at=instant, waiver_path=args.waivers,
+            composition_report=(composition_validation(args.project_config, require=True)
+                                if args.project_config.source else None))
+        write_json(report, subject_artifact_path(args.output, plan['subject']['id']))
+        reports.append(report)
+    from .operation import account_operation
+    account = account_operation(plans[0], reports, instant.isoformat().replace('+00:00', 'Z'))
+    if args.format == 'json':
+        print(json.dumps(account, indent=2, sort_keys=True))
+    else:
+        print(f"wrote {len(plans)} subject plan(s) and {sum(len(r['results']) for r in reports)} control result(s)")
+        print(f"Accounting complete: {account['accounting_complete']}; all selected subjects passed: {account['all_passed']}")
+        for row in account['members']:
+            print(f"{row['subject_id']}: {row['state']}")
+
+
+def _run_historical_operation_view(args):
+    from .operation import account_operation
+    if not args.at:
+        raise ValueError('historical operation reporting requires --at and --plan')
+    anchor = load_json(args.plan)
+    instant = parse_timestamp(args.at, field='--at').isoformat().replace('+00:00', 'Z')
+    reports = load_result_reports(args.results) if args.results and args.results.exists() else []
+    account = account_operation(anchor, reports, instant)
+    by_id = {r['id']: r for r in reports}
+    selected = [r for r in account['members'] if not args.group or
+                set(args.group) & {g['id'] for g in r['resolved_groups']}]
+    if args.assessment_command == 'explain':
+        selected = [r for r in selected if r['subject_id'] == args.subject_id]
+        if not selected:
+            raise ValueError('subject is absent from frozen operation selection')
+        account['assessment_results'] = [by_id[row['result_id']] for row in selected if row['result_id']]
+    if args.assessment_command == 'frameworks':
+        mappings = []
+        for row in selected:
+            report = by_id.get(row['result_id'], {})
+            for kind, key in (('objective', 'requirements'), ('technical', 'controls')):
+                assessments = report.get('requirement_assessments' if kind == 'objective' else 'results', [])
+                statuses = {a['requirement' if kind == 'objective' else 'instance_id']:a['status'] for a in assessments}
+                for item in row['policy'][key]:
+                    for reference in item['external_refs']:
+                        if (not args.reference or reference in args.reference) and (not args.level or kind in args.level):
+                            mappings.append({'subject_id': row['subject_id'], 'external_ref': reference,
+                                'mapping_level': kind, 'policy_object': item.get('reference', item.get('instance_id')),
+                                'status': ('excluded' if item.get('disposition') == 'excluded' else
+                                           statuses.get(item.get('reference',item.get('instance_id')), row['state'])),
+                                'plan_id': row['plan_id'], 'result_id': row['result_id']})
+        account['mappings'] = mappings
+    account['filtered'] = bool(args.group or args.state or args.assessment_command == 'explain' or
+                               getattr(args, 'reference', []) or getattr(args, 'level', []))
+    account['visible_members'] = [r for r in selected if not args.state or r['state'] in args.state]
+    if args.format == 'json':
+        print(json.dumps(account, indent=2, sort_keys=True))
+    else:
+        print(account['claim'])
+        print(f"Accounting complete: {account['accounting_complete']}; all selected subjects passed: {account['all_passed']}")
+        if account['filtered']:
+            print('Filtered view; whole-operation accounting is shown separately.')
+        for row in account['visible_members']:
+            print(f"{row['subject_id']}: {row['state']} ({row['plan_id']})")
+        if args.assessment_command in ('explain', 'frameworks', 'groups'):
+            print(json.dumps(account.get('mappings', account['visible_members']), indent=2, sort_keys=True))
+        if args.assessment_command == 'explain':
+            print(json.dumps(account['assessment_results'], indent=2, sort_keys=True))
 
 
 def _set_handler(parser: argparse.ArgumentParser, handler: Handler) -> None:
@@ -724,6 +797,13 @@ def _add_assessment_view_options(
     allow_filters: bool,
 ) -> None:
     _add_policy_sources(parser, config)
+    # Historical views need only immutable artifacts. Current views validate
+    # their inventory paths in the loader instead of making them parser-wide.
+    for action in parser._actions:
+        if action.dest in ('inventory', 'assignments'):
+            action.required = False
+    parser.add_argument('--plan', type=Path, help='stored plan anchoring an exact historical operation')
+    parser.add_argument('--at', help='exact recorded operation assessment instant')
     _add_path(
         parser,
         "--results",
@@ -886,7 +966,9 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
     plan_parser = commands.add_parser("plan", help="render and inspect assessment plans")
     plan_commands = plan_parser.add_subparsers(dest="plan_command", required=True)
     plan_render = plan_commands.add_parser("render", help="render one subject's effective plan")
-    plan_render.add_argument("subject_id")
+    plan_render.add_argument("subject_id", nargs='*')
+    plan_render.add_argument('--group', action='append', default=[])
+    plan_render.add_argument('--all', dest='all_subjects', action='store_true')
     _add_policy_sources(plan_render, config)
     _add_path(
         plan_render,
@@ -915,7 +997,9 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
         "run",
         help="render and evaluate one subject's current assessment",
     )
-    assessment_run.add_argument("subject_id")
+    assessment_run.add_argument("subject_id", nargs='*')
+    assessment_run.add_argument('--group', action='append', default=[])
+    assessment_run.add_argument('--all', dest='all_subjects', action='store_true')
     _add_policy_sources(assessment_run, config)
     _add_path(
         assessment_run,
@@ -944,6 +1028,7 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
         help="evaluate at an RFC 3339 instant (for deterministic verification)",
     )
     assessment_run.add_argument("--opa", default="opa", help="OPA executable")
+    assessment_run.add_argument('--format', choices=('table','json'), default='table')
     _set_handler(assessment_run, _run_assessment)
 
     assessment_status = assessment_commands.add_parser("status", help="show fleet status")

@@ -1,0 +1,19 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "PolicyAssignment",
+  "metadata": {
+    "name": "hosts"
+  },
+  "spec": {
+    "targetRef": {
+      "kind": "InventoryGroup",
+      "name": "hosts"
+    },
+    "baselineRefs": [
+      {
+        "name": "verification.operation.host",
+        "revision": "1"
+      }
+    ]
+  }
+}

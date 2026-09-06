@@ -1,0 +1,18 @@
+{
+  "subject": {
+    "id": "host/A",
+    "type": "linux-host"
+  },
+  "type": "iam.integration.observation/v1",
+  "collector": {
+    "id": "synthetic/observation",
+    "version": "1"
+  },
+  "payload": {
+    "consumer": "host/A",
+    "service": "service/iam",
+    "asserted_by": "synthetic-integration-observer",
+    "source_assertion_locator": "synthetic-report:iam#access",
+    "integrated": true
+  }
+}
