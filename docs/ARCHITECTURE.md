@@ -213,6 +213,7 @@ The core ends at provenance-bearing assessment plans/results. It does not own ba
 The resolved assessment plan is the external-adapter handoff. It preserves subject/plan identity, actual named source digests, stable control instance and implementation IDs, resolved parameters, definition fingerprints, disposition, derivations, deviations, lineage, source provenance, and requirement/realization lineage where applicable.
 
 An external adapter may consume the complete plan or a documented lossless projection and may emit its own adapter/version/output provenance. Adapter output is not evidence that configuration was approved, applied, persistent, or compliant. Assessment remains valid without an adapter installed.
+
 Removed configuration artifact/compiler/renderer families have no ADR 0007 successor.
 
 ## Current development repository
