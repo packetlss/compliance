@@ -46,6 +46,13 @@ composition, and waiver revision/application. Advancing wall-clock time must nev
 change a stored `pass`, `fail`, `unknown`, `error`, or `waived`. Historical assessment
 meaning is immutable, including historical requirement/realization roll-ups.
 
+Here, **historical** describes the semantics of a retained assessment result, not a
+core storage obligation. Assessment semantics do not depend on previously produced
+results, and the core does not require or own long-term retention of assessment
+plans or results. Retention by the surrounding operating environment enables later
+historical interpretation; deleting prior artifacts removes that historical view
+but does not affect the ability to perform future assessments.
+
 ### Current-plan alignment
 
 Exact equality of the stored `plan_id` and currently resolved comparison plan ID
