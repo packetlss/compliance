@@ -21,11 +21,13 @@ Accepted destination decisions:
 - [ADR 0010 — Required evidence, attributable errors, and assessment refusal](0010-required-evidence-status-and-assessment-refusal.md) — accepted design; runtime implementation in #32, promotions #61 (invalid evidence) and #62 (evidence selection ambiguity).
 
 - [ADR 0011 — Separate historical assessment outcomes from operational evidence timeliness](0011-historical-assessment-and-operational-evidence-timeliness.md) — accepted design, not yet implemented; promotion #66, factual v4 representation in #32, operational view in a later separately authorized tranche.
-- [ADR 0012 — Explicit policy-parameter resolution and policy-owned evidence freshness](0012-explicit-policy-parameter-resolution.md) — accepted design, not yet implemented; promotion under #37, coordinated runtime/schema/consumer migration in [#73](https://github.com/packetlss/compliance/issues/73).
+- [ADR 0012 — Explicit policy-parameter resolution and policy-owned evidence freshness](0012-explicit-policy-parameter-resolution.md) — experimental, implemented under #73; promotion under #37, coordinated runtime/schema/consumer migration in [#73](https://github.com/packetlss/compliance/issues/73).
 
-- [ADR 0013 — Scoped assurance, population completeness, and obligation instances](0013-scoped-assurance-and-obligation-instances.md) — accepted design, not yet implemented; #37.
-- [ADR 0014 — Attributable applicability determinations and authority acceptance](0014-attributable-applicability-and-authority-acceptance.md) — accepted design, not yet implemented; #37.
-- [ADR 0015 — Bounded external claims and explicit assurance recognition](0015-bounded-external-claims-and-assurance-recognition.md) — accepted design, not yet implemented; #37; owns coordinated migration sequencing and residual architecture routing.
+- [ADR 0013 — Scoped assurance, population completeness, and obligation instances](0013-scoped-assurance-and-obligation-instances.md) — superseded by [ADR 0016](0016-closed-world-policy-assessment.md); historical design.
+- [ADR 0014 — Attributable applicability determinations and authority acceptance](0014-attributable-applicability-and-authority-acceptance.md) — superseded by [ADR 0016](0016-closed-world-policy-assessment.md); historical design.
+- [ADR 0015 — Bounded external claims and explicit assurance recognition](0015-bounded-external-claims-and-assurance-recognition.md) — superseded by [ADR 0016](0016-closed-world-policy-assessment.md); historical design.
+
+- [ADR 0016 — Closed-world company policy assessment](0016-closed-world-policy-assessment.md) — accepted design, not yet implemented; supersedes ADRs 0013–0015 and clarifies ADR 0006; #37. ADR 0012 remains unchanged.
 
 Current system-level documents:
 
@@ -34,6 +36,13 @@ Current system-level documents:
 - [`../DEVELOPMENT_WORKFLOW.md`](../DEVELOPMENT_WORKFLOW.md)
 - [`../CONTRACT_MATURITY.md`](../CONTRACT_MATURITY.md)
 
-ADR 0007 foundation/cutover issues #31–#36 (including #33 retirement) are completed history. [#37](https://github.com/packetlss/compliance/issues/37) remains the open parent assurance architecture effort; these promotions do not close it. Complete #73 / ADR 0012 independently, then plan ADRs 0013–0015 together against the post-#73 repository representation, defaulting to one coordinated successor migration. Split issues require proven independently complete cutovers. Manual/procedural methodology, sampling inference and other residual assurance questions remain under #37 before implementation relies on them. See ADR 0015 for migration and escalation boundaries.
+ADR 0007 foundation/cutover issues #31–#36 and ADR 0012 implementation #73 are
+completed history. [#37](https://github.com/packetlss/compliance/issues/37) remains
+open. ADR 0016 replaces the three-ADR migration route with narrow read-only exploration
+of closed-world expected assessment/run accounting, typed external/procedural assurance
+dependencies and qualification, exact beneficiary/scope attribution and whether common
+assurance reuse is needed. Direct cross-assessment result consumption is not assumed;
+if needed it requires separate architecture review. Promotion authorizes no runtime work.
+See ADR 0016 for conformance, non-goals and escalation.
 
 Do not treat historical workspace topology or issue numbers as current component/repository boundaries. Historical references remain provenance links only.

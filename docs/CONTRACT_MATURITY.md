@@ -82,32 +82,34 @@ The predecessor status view still calls an exact-plan result `current`, a differ
 
 [ADR 0012](adr/0012-explicit-policy-parameter-resolution.md) is **Experimental, implemented**, promoted under #37 with the single bounded migration contract [#73](https://github.com/packetlss/compliance/issues/73). It accepts explicit declarations, bindings, descendant tailoring, typed requirement-slot consumption, policy-owned effective freshness and immutable resolved-plan provenance. It does not freeze wire syntax, schema/artifact versions or identity algorithms.
 
-Current requirement/realization schemas support explicit pinned slots and direct typed consumption. Policy bindings own effective `max_age`; Control manifests provide dependency contracts. The experimental frozen records are specified in [policy parameters](../tooling/docs/policy-parameters.md). Successor schema, fingerprint, validation, explanation and policy-diff obligations are in ADR 0012's migration table. Development artifacts may need regeneration; historical artifacts retain their original identity and meaning. ADRs 0013–0015 below separately route accepted scoped assurance and external-authority/conformity semantics; none enters #73.
+Current requirement/realization schemas support explicit pinned slots and direct typed consumption. Policy bindings own effective `max_age`; Control manifests provide dependency contracts. The experimental frozen records are specified in [policy parameters](../tooling/docs/policy-parameters.md). Successor schema, fingerprint, validation, explanation and policy-diff obligations are in ADR 0012's migration table. Development artifacts may need regeneration; historical artifacts retain their original identity and meaning. ADR 0016 below supersedes ADRs 0013–0015 and narrows core responsibility; ADR 0012 semantics remain unchanged.
 
-## Scoped assurance and external claims
+## Closed-world assessment successor
 
-[ADR 0013](adr/0013-scoped-assurance-and-obligation-instances.md) (population and
-obligation instances), [ADR 0014](adr/0014-attributable-applicability-and-authority-acceptance.md)
-(applicability and narrow authority acceptance), and
-[ADR 0015](adr/0015-bounded-external-claims-and-assurance-recognition.md) (external
-claim completeness and explicit recognition) are **Accepted design, not yet
-implemented** under [#37](https://github.com/packetlss/compliance/issues/37).
-Current inventory and experimental assurance schemas remain executable foundations;
-this promotion adds no runtime/schema/fixture support or wire/version/algorithm freeze.
+[ADR 0016](adr/0016-closed-world-policy-assessment.md) is **Accepted design, not yet
+implemented** under [#37](https://github.com/packetlss/compliance/issues/37). ADRs
+0013–0015 are superseded historical design, including their migration obligations.
+Existing inventory and experimental assurance contracts remain executable foundations;
+this documentation promotion changes no runtime, schema, fixture or assessment behavior.
 
-Their migration tables require exact immutable population, assertion, acceptance,
-obligation, dependency, target and temporal attribution. Finish #73 independently,
-then inspect its actual representation and default to one coordinated successor
-migration across all three ADRs. Multiple issues require demonstrated independently
-complete cutovers, not one issue per ADR. Current runtime remains until cutover;
-development artifacts may then need regeneration, while historical results and
-artifacts remain immutable and retired readers are not restored.
+Retain exact supplied Subject/group/assignment/policy resolution, expected assessment
+set accounting, typed attributable dependencies/evidence, immutable results and bounded
+company reporting. Aggregate success must detect omitted expected results; it is not
+proof of external inventory or obligation-universe completeness. No new artifact family,
+wire representation, version, identity algorithm or compatibility freeze is selected.
 
-Safely attributable unresolved claim conditions leave a claim unestablished,
-without automatically refusing independently valid assessments or turning claim
-resolution into evidence `unknown`. ADR 0010 evidence/refusal and ADR 0012 unresolved
-policy retain their separate boundaries. Concrete representation unable to preserve
-those distinctions and exact attribution must return to architecture.
+Governance owns external sufficiency/applicability/authority judgments. Separate external
+applicability acceptance, recognition and conformity engines and mandatory external
+completeness gates are no longer successor obligations. Typed evidence may model
+selected assurance requirements and named beneficiaries; direct result consumption
+requires separate review if needed. Preserve ADR 0010 outcomes/refusal, ADR 0012 unresolved
+policy, missing-realization coverage/failure, existing explicit N/A and fail-only waivers.
+
+#73 is complete. Next exploration is limited to closed-world run accounting, typed
+external/procedural evidence dependencies/qualification, exact beneficiary attribution,
+and whether explicit common-assurance reuse is needed. #37 remains open; this does not
+authorize implementation or the superseded coordinated migration. Historical results
+remain immutable; future cutover needs its own repository-grounded contract.
 
 ## Accepted vocabulary convergence
 
@@ -134,7 +136,13 @@ None of these are frozen merely by this classification.
 
 ### Design pass required
 
-Destination #37 remains open for manual/procedural methodology and evidence qualification, sampling inference, remaining assurance terminology/adopter annotations and unresolved result/representation questions. ADRs 0013–0015 settle their stated population, applicability/N/A authority, mapping completeness and recognition invariants, not those residual methods or runtime syntax. Repository-grounded migration planning must route blocking residual questions back to architecture. Do not present unresolved fields as frozen regulatory vocabulary.
+Destination #37 retains residual assurance questions. ADR 0016 limits the next
+exploration to expected assessment/run accounting, typed external/procedural assurance
+qualification, exact beneficiary/scope attribution and need for common-assurance reuse.
+Manual/procedural methodology, explicit N/A changes and any direct result graph need
+architecture decisions before implementation depends on them. Sampling inference and
+broader residual questions do not broaden that exploration. Do not present unresolved
+fields as frozen regulatory vocabulary.
 
 ### Experimental generated/public views
 

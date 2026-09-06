@@ -9,6 +9,11 @@ This is the destination-owned normative restatement of accepted workspace ADR 00
 
 [ADR 0010](0010-required-evidence-status-and-assessment-refusal.md) clarifies the common required-evidence `unknown` / `error` / assessment-refusal boundary; detailed assurance design remains with #37.
 
+[ADR 0016](0016-closed-world-policy-assessment.md) clarifies this boundary: optional company objective
+assurance remains core; engine-established external legal/certification conformity
+is not a generic core responsibility. Framework mappings are attributable company
+policy/reporting content. Existing explicit N/A behavior is not redesigned.
+
 ## Context
 
 The compliance core supports evidence-backed technical assessment and an optional requirement/realization assurance layer. A separate prototype previously added configuration intent compilation and backend renderers. The resolved assessment plan already contains the stable, provenance-bearing information an external configuration/policy adapter needs.

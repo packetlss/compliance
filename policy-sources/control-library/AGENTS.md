@@ -11,6 +11,16 @@ This root owns reusable controls and helpers, control parameter schemas, policy/
 - Assessment plans are the external-adapter handoff. Do not add adapter code, backend templates, apply behavior, or source precedence.
 - Historical hosted releases are archived provenance. Do not publish a new control-library release without separately reviewed work.
 
+## Assurance routing
+
+[ADR 0016](../../docs/adr/0016-closed-world-policy-assessment.md) supersedes ADRs
+0013–0015. Reusable evidence/requirement contracts support explicitly supplied
+company policy; governance owns external applicability and sufficiency. Mappings
+are attributable policy/reporting content. Selected evidence contracts and exact
+beneficiary dependencies constrain assurance; no generic certificate, recognition
+or external completeness machinery is required. #37 remains open for the narrow
+exploration specified by ADR 0016; promotion authorizes no runtime/schema changes.
+
 ## Validation
 
 After committing the candidate revision and ensuring the checkout is clean, run from the repository root:
