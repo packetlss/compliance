@@ -79,7 +79,7 @@ Each successful required-evidence selection is an entry in `provenance.selectedE
 {
   "instance_id": "host.setting",
   "requirement_index": 0,
-  "requirement": {"id": "settings", "type": "host.settings/v1", "required": true, "max_age": "86400s"},
+  "requirement": {"id": "settings", "type": "host.settings/v1", "max_age": "86400s"},
   "id": "evidence:observation",
   "digest": "sha256:<complete-document digest>",
   "collected_at": "2026-09-05T10:00:00.123456Z"
@@ -103,9 +103,9 @@ Rejected, ambiguous, missing and stale requirements receive no selection record.
 Unused and nonselected current-subject documents remain in the complete snapshot;
 canonical duplicates coalesce only during selection, not in the snapshot descriptor.
 OPA-reported `evidence_ids` neither supply nor override orchestration's facts.
-Optional evidence keeps its predecessor selection and invalid-evidence error
-behavior; the new selection-fact table and ambiguity correction concern required
-evidence only. Optional evidence remains in the complete subject snapshot.
+Every declared dependency follows this required-evidence path. Evidence documents
+that are not selected for a declared dependency remain in the complete subject
+snapshot.
 
 A later view can use these historical records without mutable evidence,
 re-selection, ID-only joins or long-term original-byte retention. No `fresh`,
