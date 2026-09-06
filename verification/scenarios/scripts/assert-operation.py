@@ -102,10 +102,10 @@ def run(root, private_source):
         assert not history()['accounting_complete']  # wrong operation cannot fill B
         for name,report in reports.items(): (results/name).write_text(json.dumps(report))
         before = history()
-        mappings = history('frameworks','--reference','synthetic-framework:Q')
+        mappings = history('frameworks','--reference','synthetic-framework:Q','--outcome','pass')
         assert mappings['filtered'] and mappings['mappings']
         assert 'no external conformity' in mappings['claim']
-        assert {m['status'] for m in mappings['mappings']} == {'pass'}
+        assert {m['historical_outcome'] for m in mappings['mappings']} == {'pass'}
         explanation=history('explain','entity/A')
         assert explanation['assessment_results'][0]['results'][0]['observed']['assertions'][0]['beneficiary']=='entity/A'
         # Recomputing the outer digest does not repair an omitted required row.
