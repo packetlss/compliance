@@ -26,6 +26,13 @@ from tools.render_plan import (
 
 
 class AssessmentArtifactValidationTests(unittest.TestCase):
+    def test_result_outcome_uses_fail_first_logical_precedence(self):
+        self.assertEqual(result_outcome({
+            "results": [{"status": "error"}, {"status": "fail"}],
+            "requirement_assessments": [],
+            "requirement_baseline_assessments": [],
+        }), "fail")
+
     def test_unknown_results_require_complete_frozen_control_coverage(self):
         report = self.result_report()
         self.assertFalse(report['provenance']['selectedEvidence'])

@@ -77,6 +77,7 @@ class AssessmentStatusTests(unittest.TestCase):
 
     def result_report(self, plan=None, plan_id=None, **summary):
         plan = plan or self.plan
+        evaluated_at = "2026-08-23T13:03:45Z"
         statuses = [
             status
             for status in ("error", "fail", "unknown", "waived", "pass", "not_applicable")
@@ -91,12 +92,28 @@ class AssessmentStatusTests(unittest.TestCase):
             "observed": {},
         } for index, control in enumerate(plan["controls"])]
         requirements, baselines = compact_plan_outcomes(plan, results)
+        documents = []
+        selected_evidence = []
+        for control in plan["controls"]:
+            for dependency in control["evidence"]:
+                evidence_id = f"synthetic:{control['instance_id']}:{dependency['id']}"
+                evidence_digest = digest({"id": evidence_id, "collected_at": evaluated_at})
+                documents.append({"id": evidence_id, "digest": evidence_digest})
+                selected_evidence.append({
+                    "instance_id": control["instance_id"],
+                    "dependency_id": dependency["id"],
+                    "evidence_id": evidence_id,
+                    "evidence_digest": evidence_digest,
+                    "collected_at": evaluated_at,
+                })
+        documents.sort(key=lambda item: (item["id"], item["digest"]))
+        selected_evidence.sort(key=lambda item: (item["instance_id"], item["dependency_id"]))
         report = {
             "schema": "compliance.example/assessment-results/v4",
             "digestAlgorithm": "compliance.example/assessment-results-digest/v1alpha1",
             "subject_id": plan["subject"]["id"],
             "plan_id": plan_id or plan["id"],
-            "evaluated_at": "2026-08-23T13:03:45Z",
+            "evaluated_at": evaluated_at,
             "provenance": {
                 "schema": "compliance.example/assessment-provenance/v1alpha1",
                 "evaluationComposition": copy.deepcopy(plan["provenance"]["planningComposition"]),
@@ -104,10 +121,10 @@ class AssessmentStatusTests(unittest.TestCase):
                 "evidence": {
                     "documentDigestAlgorithm": "compliance.example/evidence-document-digest/v1alpha1",
                     "setDigestAlgorithm": "compliance.example/evidence-set-digest/v1alpha1",
-                    "setDigest": digest([]),
-                    "documents": [],
+                    "setDigest": digest(documents),
+                    "documents": documents,
                 },
-                "selectedEvidence": [],
+                "selectedEvidence": selected_evidence,
             },
             "results": results,
             "requirement_assessments": requirements,
@@ -335,6 +352,19 @@ class AssessmentStatusTests(unittest.TestCase):
         waiver = {**waivers[0], "underlying_status": "fail"}
         report = self.result_report(plan=plan)
         report["evaluated_at"] = "2026-08-28T12:00:00Z"
+        for selection in report["provenance"]["selectedEvidence"]:
+            selection["collected_at"] = report["evaluated_at"]
+            selection["evidence_digest"] = digest({
+                "id": selection["evidence_id"],
+                "collected_at": report["evaluated_at"],
+            })
+        documents = [
+            {"id": selection["evidence_id"], "digest": selection["evidence_digest"]}
+            for selection in report["provenance"]["selectedEvidence"]
+        ]
+        documents.sort(key=lambda item: (item["id"], item["digest"]))
+        report["provenance"]["evidence"]["documents"] = documents
+        report["provenance"]["evidence"]["setDigest"] = digest(documents)
         result = next(item for item in report["results"] if item["instance_id"] == "test.packages.extra")
         result.update({
             "status": "waived",

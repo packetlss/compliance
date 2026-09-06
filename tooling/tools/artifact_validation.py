@@ -227,7 +227,7 @@ def result_outcome(document: JsonObject) -> str:
         *document.get("requirement_assessments", []),
         *document.get("requirement_baseline_assessments", []),
     ]
-    for status in ("error", "fail", "unknown", "waived", "pass", "not_applicable"):
+    for status in ("fail", "error", "unknown", "waived", "pass", "not_applicable"):
         if any(item.get("status") == status for item in items):
             return status
     return "no_controls"

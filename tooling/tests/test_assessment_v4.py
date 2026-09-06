@@ -162,6 +162,22 @@ class AssessmentV4Tests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'assessed plan'):
             validate_result_against_plan(changed, self.plan)
 
+    def test_relational_validation_requires_complete_fresh_successful_selections(self):
+        report, _ = self.run_assessment([self.document()])
+        changed = copy.deepcopy(report)
+        changed['provenance']['selectedEvidence'] = []
+        changed['id'] = artifact_digest(changed)
+        validate_assessment_results(changed)
+        with self.assertRaisesRegex(ValueError, 'cover required plan dependencies'):
+            validate_result_against_plan(changed, self.plan)
+
+        changed = copy.deepcopy(report)
+        changed['provenance']['selectedEvidence'][0]['collected_at'] = '2020-01-01T00:00:00Z'
+        changed['id'] = artifact_digest(changed)
+        validate_assessment_results(changed)
+        with self.assertRaisesRegex(ValueError, 'stale at the assessment instant'):
+            validate_result_against_plan(changed, self.plan)
+
     def test_locked_unlocked_same_actual_identity(self):
         original, _ = self.run_assessment([self.document()])
         actual = self.plan['provenance']['planningComposition']['actual']

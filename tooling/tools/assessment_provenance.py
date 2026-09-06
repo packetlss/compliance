@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+from datetime import datetime, timedelta
 from importlib import metadata
 from pathlib import PurePosixPath
 from typing import Any
@@ -236,12 +237,28 @@ def validate_result_against_plan(report: dict, plan: dict) -> None:
                                 if item['id'] == diagnostic['dependency_id']]
                 if len(dependencies) != 1 or dependencies[0]['type'] != diagnostic['evidence_type']:
                     raise ValueError('evidence diagnostic dependency does not resolve into assessed plan')
+    uses_by_control: dict[str, set[str]] = {instance_id: set() for instance_id in controls}
+    evaluated_at = datetime.fromisoformat(report['evaluated_at'].replace('Z', '+00:00'))
     for use in report['provenance']['selectedEvidence']:
         control = controls.get(use['instance_id'])
         dependencies = [] if control is None else [item for item in control['evidence']
                                                    if item['id'] == use['dependency_id']]
         if len(dependencies) != 1:
             raise ValueError('selected evidence dependency does not resolve into assessed plan')
+        uses_by_control[use['instance_id']].add(use['dependency_id'])
+        dependency = dependencies[0]
+        collected_at = datetime.fromisoformat(use['collected_at'].replace('Z', '+00:00'))
+        amount, unit = int(dependency['max_age'][:-1]), dependency['max_age'][-1]
+        maximum_age = timedelta(seconds=amount * {
+            's': 1, 'm': 60, 'h': 3600, 'd': 86400,
+        }[unit])
+        if evaluated_at - collected_at > maximum_age:
+            raise ValueError('selected evidence was stale at the assessment instant')
+    for result in report['results']:
+        if result['status'] != 'unknown':
+            required = {item['id'] for item in controls[result['instance_id']]['evidence']}
+            if uses_by_control[result['instance_id']] != required:
+                raise ValueError('successful evidence selections do not cover required plan dependencies')
     from .control_realization import compact_plan_outcomes
     requirements, baselines = compact_plan_outcomes(plan, report['results'])
     if requirements != report['requirement_assessments']:
