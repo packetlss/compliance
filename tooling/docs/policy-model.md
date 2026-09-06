@@ -193,8 +193,9 @@ policy/baseline/requirement ownership of effective evidence `max_age`, with
 Controls retaining dependency contracts and optional capability restrictions.
 Explicit bindings and descendant tailoring choose values; constraints, defaults
 and min/max do not. [#73](https://github.com/packetlss/compliance/issues/73) owns
-the coordinated migration. Until then, Control-owned ages and the literal-input
-examples in this document remain migration inputs, not successor syntax.
+the coordinated migration. [Explicit policy parameters](policy-parameters.md)
+defines declaration, binding, consumption and frozen provenance fields. Effective
+ages are required policy inputs; Controls provide no fallback.
 
 Each control implementation has a machine-readable manifest beside its Rego
 module. Rego contains decision logic; the manifest provides discovery and
@@ -211,9 +212,9 @@ spec:
   entrypoint: data.compliance.controls.host.packages.required.evaluate
   applies_to: [linux-host]
   evidence:
-    - type: host.packages/v1
+    - id: packages
+      type: host.packages/v1
       required: true
-      max_age: 1h
   parameters_schema: parameters.schema.json
   defaults:
     severity: high
@@ -319,7 +320,7 @@ avoid building a universal configuration model.
 The runnable mock fleet implements the AWS and SaaS types. A shared evidence
 directory may contain observations for several subjects, but the assessment
 input builder filters by exact subject identity before applying the control
-manifest's evidence type and freshness requirements. Provider APIs remain a
+manifest's evidence type and the resolved policy freshness requirements. Provider APIs remain a
 collector concern; Rego receives only the bounded normalized documents.
 
 Evidence schemas define a **minimum compatibility contract**:

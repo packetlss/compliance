@@ -147,3 +147,10 @@ exactly one primary owner.
 All identities and observations are synthetic. Fixtures contain no credentials,
 customer data, or environment-private implementation details. The separate IAM
 project remains the verification boundary for multi-source restricted policy.
+
+The ADR 0012 canonical extension uses separately copied public and private policy
+roots. It preserves ordinary technical policy ages, then explicitly tailors the
+private objective freshness from 24h to 1h without changing realization bytes.
+Independent ancestor-plus-descendant selection is invalid; missing evidence is
+unknown after resolution; absent realization keeps its existing not-implemented
+coverage. These synthetic results establish no external framework claim.

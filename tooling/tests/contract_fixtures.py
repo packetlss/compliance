@@ -37,6 +37,7 @@ def instance(identifier, implementation, parameters, **extra):
         "instance_id": identifier,
         "implementation": implementation,
         "parameters": parameters,
+        "evidence": {"observation": {"max_age": "1d"}},
         **extra,
     }
 
@@ -192,7 +193,7 @@ def build_fixture(root):
             "entrypoint": "data.test.contract.evaluate",
             "applies_to": [kind],
             "evidence": [
-                {"type": f"test.{kind}/v1", "max_age": "1d", "required": True}
+                {"id": "observation", "type": f"test.{kind}/v1", "required": True}
             ],
             "parameters_schema": "parameters.schema.json",
             "severity": "medium",

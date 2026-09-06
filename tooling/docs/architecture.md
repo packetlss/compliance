@@ -497,6 +497,15 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-05 — Explicit parameter and freshness implementation (#73)
+
+[Policy parameters](policy-parameters.md) specifies pinned declarations, explicit
+binding and parameter-only derivation, direct dependency consumption, policy-owned
+freshness and frozen artifact validation. Existing v4 plans/results carry the
+additional identity-bearing facts; historical artifacts require historical tooling.
+ADR 0010/0011 behavior and ADR 0013–0015 boundaries remain unchanged.
+
+
 ### 2026-09-05 — Scoped assurance, applicability authority and external claims (#37)
 
 System [ADR 0013](../../docs/adr/0013-scoped-assurance-and-obligation-instances.md),

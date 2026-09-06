@@ -9,7 +9,7 @@
     "extends": [
       {
         "baseline": "company.macos-policy@1",
-        "digest": "sha256:82b1acd581fd03c985a3ebedc81653754a9112dd2e68a4a3383ea2f0047de96a"
+        "digest": "sha256:8fb1b8fee8b1e4bb5684e883a372a9d28416cbdfa8c33719a4a29a0d8cf201eb"
       }
     ],
     "operations": [
@@ -19,7 +19,14 @@
           "instance_id": "developer.macos.shellcheck-required",
           "implementation": "macos.homebrew.formulae_required",
           "parameters": {
-            "required": ["shellcheck"]
+            "required": [
+              "shellcheck"
+            ]
+          },
+          "evidence": {
+            "observation": {
+              "max_age": "24h"
+            }
           }
         }
       }

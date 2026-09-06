@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from . import policy_parameters as pp
+
 import copy
 import hashlib
 import json
@@ -262,6 +264,7 @@ def _semantic_resource_digest(document: JsonObject) -> str:
     public = {key: value for key, value in document.items() if not key.startswith("_")}
     if "_parameters_schema" in document:
         public["parameters_schema_document"] = document["_parameters_schema"]
+        public["implementation_modules"] = document.get("_implementation_modules", [])
     return content_digest(public)
 
 
@@ -523,6 +526,7 @@ def load_control_catalog(
             })
             continue
 
+        control["_implementation_modules"] = sorted(content_digest(module.read_text(encoding="utf-8")) for module in path.parent.rglob("*.rego") if not module.name.endswith("_test.rego"))
         control["_source"] = source
         control["_parameters_schema"] = parameters_schema
         control["_parameters_schema_source"] = parameters_path.relative_to(
@@ -961,6 +965,10 @@ def load_policy_catalogs(
                 })
                 continue
 
+            try:
+                pp.evidence_for(instance, definition)
+            except (ValueError, KeyError) as error:
+                errors.append({"type": "policy-freshness-invalid", "baseline": reference, "instance_id": instance_id, "message": str(error)})
             validation_errors = sorted(
                 Draft202012Validator(
                     definition["_parameters_schema"],
@@ -1105,6 +1113,11 @@ def load_requirement_catalogs(
     if errors:
         return requirements, requirement_baselines, realizations, errors
 
+    for reference, requirement in sorted(requirements.items()):
+        try:
+            pp.declarations(requirement)
+        except (ValueError, KeyError) as error:
+            errors.append({"type": "parameter-declaration-invalid", "requirement": reference, "message": str(error)})
     for baseline_reference, baseline in sorted(requirement_baselines.items()):
         seen = set()
         for pin in baseline["spec"]["requirements"]:
@@ -1223,9 +1236,15 @@ def load_requirement_catalogs(
                     "instance_id": instance["instance_id"],
                     "subject_types": unsupported_types,
                 })
+            linked_paths = {link["destination"]["path"] for link in spec.get("parameter_links", []) if link["destination"]["instance_id"] == instance["instance_id"] and link["destination"]["kind"] == "parameters"}
+            try:
+                parameter_schema = pp.partial_parameter_schema(definition["_parameters_schema"], linked_paths)
+            except ValueError as error:
+                errors.append({"type": "parameter-destination-invalid", "realization": realization_reference, "message": str(error)})
+                continue
             parameter_errors = sorted(
                 Draft202012Validator(
-                    definition["_parameters_schema"],
+                    parameter_schema,
                     format_checker=FormatChecker(),
                 ).iter_errors(instance.get("parameters", {})),
                 key=lambda error: tuple(str(part) for part in error.absolute_path),
@@ -1265,6 +1284,7 @@ def control_definition_fingerprint(control: JsonObject) -> str:
 def control_criteria_snapshot(control: JsonObject) -> JsonObject:
     """Freeze the normative state on either side of an overlay operation."""
     return {
+        "evidence": copy.deepcopy(control.get("evidence", {})),
         "implementation": control["implementation"],
         "parameters": copy.deepcopy(control.get("parameters", {})),
         "disposition": control.get("disposition", "evaluate"),
@@ -1470,6 +1490,8 @@ def resolve_baseline(
         if operation_name == "tailor":
             deviation = require_deviation(operation, reference)
             control["parameters"] = copy.deepcopy(operation["parameters"])
+            if "evidence" in operation:
+                control["evidence"] = copy.deepcopy(operation["evidence"])
             control["alignment"] = "tailored"
             control["deviations"].append(deviation)
             deviations.append(deviation)
@@ -1489,8 +1511,12 @@ def resolve_baseline(
                     target=target,
                 )
             control["implementation"] = operation["implementation"]
+            if "evidence" in operation:
+                control["evidence"] = copy.deepcopy(operation["evidence"])
             if "parameters" in operation:
                 control["parameters"] = copy.deepcopy(operation["parameters"])
+            if "evidence" in operation:
+                control["evidence"] = copy.deepcopy(operation["evidence"])
             control["alignment"] = "substituted"
             control["equivalence_ref"] = operation["equivalence_ref"]
         elif operation_name == "annotate":
@@ -1611,6 +1637,7 @@ def render_plan(
     resolved_requirement_baselines: list[JsonObject] = []
     resolution_errors: list[JsonObject] = copy.deepcopy(policy_errors)
     baseline_cache: dict[str, JsonObject] = {}
+    selected_parameter_slots = {}
 
     if subject["status"] == "unknown":
         resolution_errors.append({
@@ -1628,11 +1655,19 @@ def render_plan(
                     "assignment": assignment["id"],
                     "baseline": baseline_reference,
                 }
+                try:
+                    parameter_states, parameter_ancestry = pp.resolve(baseline_reference, requirement_baselines, requirements)
+                    pp.complete(parameter_states)
+                    pp.reconcile_selected_slots(parameter_states, selected_parameter_slots)
+                except (ValueError, KeyError) as error:
+                    resolution_errors.append({"type": "parameter-resolution-failed", "message": str(error), **baseline_provenance})
+                    continue
                 resolved_requirement_baselines.append({
                     **baseline_provenance,
                     "reference": baseline_reference,
                     "digest": requirement_baseline["_digest"],
                     "policy_sources": requirement_baseline.get("_sources", []),
+                    "parameter_derivation": {"ancestry": parameter_ancestry, "states": parameter_states},
                     "requirements": [
                         copy.deepcopy(pin)
                         for pin in requirement_baseline["spec"]["requirements"]
@@ -1695,6 +1730,7 @@ def render_plan(
                         "satisfaction": satisfaction,
                         "technical_instance_ids": satisfaction["allOf"],
                         "provenance": [baseline_provenance],
+                        "parameter_facts": {"document": pp.document(requirement), "states": parameter_states[requirement_reference]},
                     }
                     if realization is not None and realization_reference is not None:
                         requirement_candidate["realization"] = {
@@ -1709,6 +1745,15 @@ def render_plan(
                             ),
                         }
 
+                    resolved_checks = []
+                    if realization is not None:
+                        try:
+                            resolved_checks, consumed = pp.consume(realization, parameter_states[requirement_reference], controls)
+                        except (ValueError, KeyError) as error:
+                            resolution_errors.append({"type": "parameter-consumption-failed", "message": str(error), **baseline_provenance})
+                            continue
+                        requirement_candidate["parameter_facts"]["realization"] = pp.document(realization)
+                        requirement_candidate["parameter_facts"]["consumption"] = consumed
                     existing_requirement = rendered_requirements.get(requirement_reference)
                     if existing_requirement is None:
                         rendered_requirements[requirement_reference] = requirement_candidate
@@ -1720,6 +1765,7 @@ def render_plan(
                             "satisfaction",
                             "technical_instance_ids",
                             "realization",
+                            "parameter_facts",
                         )
                         if all(
                             existing_requirement.get(key) == requirement_candidate.get(key)
@@ -1736,7 +1782,7 @@ def render_plan(
 
                     if realization is None:
                         continue
-                    for source_instance in realization["spec"].get("checks", []):
+                    for source_instance in resolved_checks:
                         instance = copy.deepcopy(source_instance)
                         implementation = instance["implementation"]
                         definition = controls[implementation]
@@ -1761,7 +1807,8 @@ def render_plan(
                                 "remediation",
                                 defaults.get("remediation", ""),
                             ),
-                            "evidence": spec.get("evidence", []),
+                            "evidence": pp.evidence_for(instance, definition),
+                            "policy_inputs": {"instance": copy.deepcopy(instance), "definition": pp.document(definition), "parameters_schema": definition["_parameters_schema"], "implementation_modules": definition.get("_implementation_modules", [])},
                             "disposition": "evaluate",
                             "alignment": "realization",
                             "definition_fingerprint": instance_fingerprint,
@@ -1834,6 +1881,7 @@ def render_plan(
                         "implementation": instance["implementation"],
                         "parameters": instance.get("parameters", {}),
                         "disposition": "excluded",
+                        "policy_inputs": {"instance": copy.deepcopy(instance)},
                         "alignment": instance["alignment"],
                         "definition_fingerprint": instance["definition_fingerprint"],
                         "derivations": instance["derivations"],
@@ -1888,7 +1936,8 @@ def render_plan(
                     "parameters": instance.get("parameters", {}),
                     "severity": instance.get("severity", defaults.get("severity", "medium")),
                     "remediation": instance.get("remediation", defaults.get("remediation", "")),
-                    "evidence": spec.get("evidence", []),
+                    "evidence": pp.evidence_for(instance, definition),
+                            "policy_inputs": {"instance": copy.deepcopy(instance), "definition": pp.document(definition), "parameters_schema": definition["_parameters_schema"], "implementation_modules": definition.get("_implementation_modules", [])},
                     "disposition": "evaluate",
                     "alignment": instance["alignment"],
                     "definition_fingerprint": instance["definition_fingerprint"],

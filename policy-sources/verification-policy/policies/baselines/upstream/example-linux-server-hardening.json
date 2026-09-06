@@ -14,21 +14,41 @@
       {
         "instance_id": "benchmark.example.linux-server.aslr",
         "implementation": "linux.sysctl.required",
-        "external_refs": ["illustrative-linux-benchmark:1.1"],
+        "external_refs": [
+          "illustrative-linux-benchmark:1.1"
+        ],
         "parameters": {
           "settings": [
-            {"key": "kernel.randomize_va_space", "value": "2"}
+            {
+              "key": "kernel.randomize_va_space",
+              "value": "2"
+            }
           ]
+        },
+        "evidence": {
+          "observation": {
+            "max_age": "24h"
+          }
         }
       },
       {
         "instance_id": "benchmark.example.linux-server.ip-forwarding-disabled",
         "implementation": "linux.sysctl.required",
-        "external_refs": ["illustrative-linux-benchmark:1.2"],
+        "external_refs": [
+          "illustrative-linux-benchmark:1.2"
+        ],
         "parameters": {
           "settings": [
-            {"key": "net.ipv4.ip_forward", "value": "0"}
+            {
+              "key": "net.ipv4.ip_forward",
+              "value": "0"
+            }
           ]
+        },
+        "evidence": {
+          "observation": {
+            "max_age": "24h"
+          }
         }
       }
     ]

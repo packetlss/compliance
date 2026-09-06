@@ -9,11 +9,11 @@
   "spec": {
     "based_on": {
       "realization": "company.linux.central-role-access@1",
-      "digest": "sha256:d43c39fffaabf54b0f58d9799594b5ee3933875d20f4bd1e5742d38ce7d7f42f"
+      "digest": "sha256:b2859cf25794b7c290757ec3eaec04087c1d85b8141b75a4cf5d87faa9a65cf7"
     },
     "requirement": {
       "requirement": "company.iam.role-based-access@1",
-      "digest": "sha256:5c661573bc770c5eb2cb131a6a08b3b6bcc99a30d19ceabb1836ec5c68dd1a0e"
+      "digest": "sha256:f24f8515efe6172e659f75c912f986c61f09697d2f6c28a78fff77fad5d24ad5"
     },
     "applies_to": {
       "subject_types": [
@@ -60,7 +60,9 @@
         "parameters": {
           "section": "ssh",
           "setting": "allowed_groups",
-          "expected": ["linux-production-operators"]
+          "expected": [
+            "linux-production-operators"
+          ]
         }
       },
       {
@@ -82,6 +84,92 @@
         "restricted.linux.rbac.ssh-central-group-required",
         "restricted.linux.rbac.unmanaged-local-login-absent"
       ]
-    }
+    },
+    "parameter_links": [
+      {
+        "id": "restricted.linux.rbac.sssd-installed.freshness",
+        "source": {
+          "requirement": "company.iam.role-based-access@1",
+          "digest": "sha256:f24f8515efe6172e659f75c912f986c61f09697d2f6c28a78fff77fad5d24ad5",
+          "slot": "privileged_evidence_max_age",
+          "declaration_digest": "sha256:57fa48cd1e1049f9697338e6ed012af5002b6ca6d811c8e8738040ff88bfe85c",
+          "schema_digest": "sha256:d5007f641ce737cd2a3851392c60a2a4c7fdd9b62e5fd1b4f47521a6dd4b7b08"
+        },
+        "destination": {
+          "instance_id": "restricted.linux.rbac.sssd-installed",
+          "implementation": {
+            "id": "linux.access.setting_equals",
+            "version": 1,
+            "fingerprint": "sha256:9c680a911610cb855e1b7dc88f0594e181b93212949508326379c47b3a45ecbd"
+          },
+          "kind": "freshness",
+          "dependency": "observation",
+          "path": "/max_age"
+        }
+      },
+      {
+        "id": "restricted.linux.rbac.sssd-domain-configured.freshness",
+        "source": {
+          "requirement": "company.iam.role-based-access@1",
+          "digest": "sha256:f24f8515efe6172e659f75c912f986c61f09697d2f6c28a78fff77fad5d24ad5",
+          "slot": "privileged_evidence_max_age",
+          "declaration_digest": "sha256:57fa48cd1e1049f9697338e6ed012af5002b6ca6d811c8e8738040ff88bfe85c",
+          "schema_digest": "sha256:d5007f641ce737cd2a3851392c60a2a4c7fdd9b62e5fd1b4f47521a6dd4b7b08"
+        },
+        "destination": {
+          "instance_id": "restricted.linux.rbac.sssd-domain-configured",
+          "implementation": {
+            "id": "linux.access.setting_equals",
+            "version": 1,
+            "fingerprint": "sha256:9c680a911610cb855e1b7dc88f0594e181b93212949508326379c47b3a45ecbd"
+          },
+          "kind": "freshness",
+          "dependency": "observation",
+          "path": "/max_age"
+        }
+      },
+      {
+        "id": "restricted.linux.rbac.ssh-central-group-required.freshness",
+        "source": {
+          "requirement": "company.iam.role-based-access@1",
+          "digest": "sha256:f24f8515efe6172e659f75c912f986c61f09697d2f6c28a78fff77fad5d24ad5",
+          "slot": "privileged_evidence_max_age",
+          "declaration_digest": "sha256:57fa48cd1e1049f9697338e6ed012af5002b6ca6d811c8e8738040ff88bfe85c",
+          "schema_digest": "sha256:d5007f641ce737cd2a3851392c60a2a4c7fdd9b62e5fd1b4f47521a6dd4b7b08"
+        },
+        "destination": {
+          "instance_id": "restricted.linux.rbac.ssh-central-group-required",
+          "implementation": {
+            "id": "linux.access.setting_equals",
+            "version": 1,
+            "fingerprint": "sha256:9c680a911610cb855e1b7dc88f0594e181b93212949508326379c47b3a45ecbd"
+          },
+          "kind": "freshness",
+          "dependency": "observation",
+          "path": "/max_age"
+        }
+      },
+      {
+        "id": "restricted.linux.rbac.unmanaged-local-login-absent.freshness",
+        "source": {
+          "requirement": "company.iam.role-based-access@1",
+          "digest": "sha256:f24f8515efe6172e659f75c912f986c61f09697d2f6c28a78fff77fad5d24ad5",
+          "slot": "privileged_evidence_max_age",
+          "declaration_digest": "sha256:57fa48cd1e1049f9697338e6ed012af5002b6ca6d811c8e8738040ff88bfe85c",
+          "schema_digest": "sha256:d5007f641ce737cd2a3851392c60a2a4c7fdd9b62e5fd1b4f47521a6dd4b7b08"
+        },
+        "destination": {
+          "instance_id": "restricted.linux.rbac.unmanaged-local-login-absent",
+          "implementation": {
+            "id": "linux.access.setting_equals",
+            "version": 1,
+            "fingerprint": "sha256:9c680a911610cb855e1b7dc88f0594e181b93212949508326379c47b3a45ecbd"
+          },
+          "kind": "freshness",
+          "dependency": "observation",
+          "path": "/max_age"
+        }
+      }
+    ]
   }
 }

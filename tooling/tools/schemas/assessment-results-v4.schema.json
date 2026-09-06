@@ -19,7 +19,8 @@
     "requirement_baseline_assessments",
     "id",
     "digestAlgorithm",
-    "provenance"
+    "provenance",
+    "resolved_policy"
   ],
   "additionalProperties": false,
   "properties": {
@@ -786,7 +787,8 @@
                 "required": [
                   "type",
                   "required",
-                  "max_age"
+                  "max_age",
+                  "id"
                 ],
                 "additionalProperties": false,
                 "properties": {
@@ -800,6 +802,13 @@
                   "max_age": {
                     "type": "string",
                     "pattern": "^[1-9][0-9]*[smhd]$"
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "inputs": {
+                    "type": "object"
                   }
                 }
               },
@@ -835,6 +844,9 @@
         "evidence",
         "selectedEvidence"
       ]
+    },
+    "resolved_policy": {
+      "type": "object"
     }
   },
   "$defs": {
@@ -1201,7 +1213,8 @@
                     "required": [
                       "type",
                       "required",
-                      "max_age"
+                      "max_age",
+                      "id"
                     ],
                     "additionalProperties": false,
                     "properties": {
@@ -1215,6 +1228,13 @@
                       "max_age": {
                         "type": "string",
                         "pattern": "^[1-9][0-9]*[smhd]$"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "inputs": {
+                        "type": "object"
                       }
                     }
                   },

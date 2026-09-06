@@ -7,12 +7,14 @@
   },
   "spec": {
     "entrypoint": "data.compliance.controls.macos.system_minimum_version.evaluate",
-    "applies_to": ["macos-workstation"],
+    "applies_to": [
+      "macos-workstation"
+    ],
     "evidence": [
       {
         "type": "macos.system/v1",
         "required": true,
-        "max_age": "24h"
+        "id": "observation"
       }
     ],
     "parameters_schema": "parameters.schema.json",

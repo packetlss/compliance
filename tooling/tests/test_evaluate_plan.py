@@ -11,7 +11,7 @@ from tools.evaluate_plan import (
 )
 from tools.policy_sources import PolicySource, policy_source_revisions
 from tools.assessment_provenance import artifact_digest
-from assessment_fixture import planning_fields
+from assessment_fixture import planning_fields, freeze_policy_inputs
 
 
 def assessment_plan(policy_sources, *, with_requirement=False):
@@ -136,6 +136,7 @@ def assessment_plan(policy_sources, *, with_requirement=False):
         }]
         plan["coverage"]["requirement_count"] = 1
     plan.update(planning_fields(plan["policy_sources"]))
+    freeze_policy_inputs(plan)
     plan["id"] = artifact_digest(plan)
     return plan
 
@@ -228,6 +229,7 @@ class EvidenceFreshnessTests(unittest.TestCase):
             "max_age": "24h",
         }]
         plan.pop("id")
+        freeze_policy_inputs(plan)
         plan["id"] = artifact_digest(plan)
         return source, plan
 

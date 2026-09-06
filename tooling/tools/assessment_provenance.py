@@ -101,6 +101,23 @@ def validate_provenance(document: dict, *, plan: bool) -> None:
         if document['policy_sources'] != [{'name': item['name'], 'digest': item['content']['digest']} for item in planning]:
             raise ValueError('plan policy sources do not match planning composition')
         return
+    from .policy_parameters import validate_frozen
+    if document['resolved_policy']['resolution'] != {'status': 'valid', 'errors': []}:
+        raise ValueError('results require valid error-free frozen policy resolution')
+    validate_frozen(document['resolved_policy'])
+    frozen_controls = {item['instance_id']: item for item in document['resolved_policy']['controls']}
+    if len(frozen_controls) != len(document['resolved_policy']['controls']) or set(frozen_controls) != {item['instance_id'] for item in document['results']}:
+        raise ValueError('result control coverage differs from frozen policy')
+    if any(item['control_id'] != frozen_controls[item['instance_id']]['implementation'] for item in document['results']):
+        raise ValueError('result implementation differs from frozen policy')
+    for use in provenance['selectedEvidence']:
+        control = frozen_controls.get(use['instance_id'])
+        if control is None or use['requirement_index'] >= len(control['evidence']) or use['requirement'] != control['evidence'][use['requirement_index']]:
+            raise ValueError('selected evidence differs from frozen policy dependency')
+    from .control_realization import roll_up_plan_requirements
+    requirements, baselines = roll_up_plan_requirements(document['resolved_policy'], document['results'])
+    if requirements != document['requirement_assessments'] or baselines != document['requirement_baseline_assessments']:
+        raise ValueError('result rollup differs from frozen policy satisfaction')
     validate_stage(provenance['evaluationComposition'])
     if planning != provenance['evaluationComposition']['actual']['policySources']:
         raise ValueError('evaluation policy composition differs from planning composition')

@@ -13,8 +13,23 @@
     "requirements": [
       {
         "requirement": "company.iam.role-based-access@1",
-        "digest": "sha256:5c661573bc770c5eb2cb131a6a08b3b6bcc99a30d19ceabb1836ec5c68dd1a0e",
+        "digest": "sha256:f24f8515efe6172e659f75c912f986c61f09697d2f6c28a78fff77fad5d24ad5",
         "required": true
+      }
+    ],
+    "parameter_operations": [
+      {
+        "id": "bind-privileged-evidence-age",
+        "op": "bind",
+        "target": {
+          "requirement": "company.iam.role-based-access@1",
+          "digest": "sha256:f24f8515efe6172e659f75c912f986c61f09697d2f6c28a78fff77fad5d24ad5",
+          "slot": "privileged_evidence_max_age",
+          "declaration_digest": "sha256:57fa48cd1e1049f9697338e6ed012af5002b6ca6d811c8e8738040ff88bfe85c",
+          "schema_digest": "sha256:d5007f641ce737cd2a3851392c60a2a4c7fdd9b62e5fd1b4f47521a6dd4b7b08"
+        },
+        "expected_parent_fingerprint": "sha256:e55beab43c7e2e85702113b467276088fa37b9391d66966c705848b5430cd2d8",
+        "to": "24h"
       }
     ]
   }

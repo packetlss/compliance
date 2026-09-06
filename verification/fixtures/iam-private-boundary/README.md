@@ -30,7 +30,7 @@ the separate materialization. The historical, relocated, and materialized
 policy-tree digests must all equal:
 
 ```text
-sha256:f94aea8ac3259219c8a745a9bcd057f7ccdb80c97bed36a923f4f2522e3644aa
+sha256:c8c2915073803117de84c1d8a06d4adec4333c8f7c638c1fdfb1253b5fafbf74
 ```
 
 The inventory contains `host/restricted-linux-01`. Its trusted

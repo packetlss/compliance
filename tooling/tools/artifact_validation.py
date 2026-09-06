@@ -86,6 +86,7 @@ def _duplicates(values: list[str]) -> list[str]:
 
 def _criteria_state(control: JsonObject) -> JsonObject:
     return {
+        "evidence": control.get("policy_inputs", {}).get("instance", {}).get("evidence", {}),
         "implementation": control["implementation"],
         "parameters": control["parameters"],
         "disposition": control["disposition"],
@@ -101,6 +102,11 @@ def validate_assessment_plan(
     from .assessment_provenance import validate_provenance
     _validate_schema(document, assessment_plan_schema_path(), "assessment plan", source)
     errors: list[str] = []
+    from .policy_parameters import validate_frozen
+    try:
+        validate_frozen(document)
+    except (ValueError, KeyError) as error:
+        errors.append("invalid frozen policy parameters: " + str(error))
 
     resolution = document["resolution"]
     if (resolution["status"] == "valid") != (not resolution["errors"]):
