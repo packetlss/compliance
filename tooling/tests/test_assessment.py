@@ -381,3 +381,35 @@ class AssessmentStatusTests(unittest.TestCase):
         self.assertEqual({mapping["policy_alignment"] for mapping in log_mappings}, {"tailored"})
         self.assertIn("Technical results do not by themselves", rendered)
         self.assertIn("TEST:retention", rendered)
+
+    def test_framework_view_does_not_invent_outcome_for_new_plan_mapping(self):
+        previous = {
+            "schema": "compliance.example/assessment-results/v4",
+            "subject_id": self.subject["id"],
+            "plan_id": "sha256:previous",
+            "evaluated_at": "2026-08-22T13:03:45Z",
+            "results": [],
+            "requirement_assessments": [],
+        }
+
+        report = build_framework_report(
+            {self.subject["id"]: self.subject},
+            self.groups,
+            self.assignments,
+            self.policy_sources,
+            [previous],
+            outcomes=["no_assessment"],
+            plan_alignments=["different_plan"],
+        )
+
+        self.assertTrue(report["mappings"])
+        self.assertEqual(report["filters"]["outcomes"], ["no_assessment"])
+        self.assertEqual(report["filters"]["plan_alignment"], ["different_plan"])
+        self.assertEqual(
+            {mapping["historical_outcome"] for mapping in report["mappings"]},
+            {"no_assessment"},
+        )
+        self.assertEqual(
+            {mapping["plan_alignment"] for mapping in report["mappings"]},
+            {"different_plan"},
+        )

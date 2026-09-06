@@ -305,7 +305,7 @@ def _mapped_result_status(
             None,
         )
         return (
-            result.get("status", "unknown") if result else "unknown",
+            result.get("status", "unknown") if result else "no_assessment",
             "plan_aligned",
             current.get("evaluated_at"),
         )
@@ -319,7 +319,7 @@ def _mapped_result_status(
             None,
         )
         return (
-            previous_result.get("status", "unknown") if previous_result else "unknown",
+            previous_result.get("status", "unknown") if previous_result else "no_assessment",
             "different_plan",
             previous.get("evaluated_at"),
         )
@@ -334,6 +334,8 @@ def build_framework_report(
     reports: list[JsonObject],
     *,
     group_ids: list[str] | None = None,
+    outcomes: list[str] | None = None,
+    plan_alignments: list[str] | None = None,
     external_refs: list[str] | None = None,
     levels: list[str] | None = None,
     generated_at: datetime | None = None,
@@ -341,6 +343,8 @@ def build_framework_report(
 ) -> JsonObject:
     """Expose objective and technical mappings without claiming equivalence."""
     selected_groups = set(group_ids or [])
+    selected_outcomes = set(outcomes or [])
+    selected_plan_alignments = set(plan_alignments or [])
     selected_refs = set(external_refs or [])
     selected_levels = set(levels or [])
     mappings: list[JsonObject] = []
@@ -423,7 +427,9 @@ def build_framework_report(
     mappings = [
         mapping
         for mapping in mappings
-        if (not selected_refs or mapping["external_ref"] in selected_refs)
+        if (not selected_outcomes or mapping["historical_outcome"] in selected_outcomes)
+        and (not selected_plan_alignments or mapping["plan_alignment"] in selected_plan_alignments)
+        and (not selected_refs or mapping["external_ref"] in selected_refs)
         and (not selected_levels or mapping["mapping_level"] in selected_levels)
     ]
     mappings.sort(key=lambda item: (
@@ -444,6 +450,8 @@ def build_framework_report(
         ),
         "filters": {
             "groups": sorted(selected_groups),
+            "outcomes": sorted(selected_outcomes),
+            "plan_alignment": sorted(selected_plan_alignments),
             "external_refs": sorted(selected_refs),
             "levels": sorted(selected_levels),
         },

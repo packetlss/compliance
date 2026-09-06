@@ -92,7 +92,9 @@ DOMAIN_EXAMPLES = {
         "missing technical evidence keeps objectives unknown"
     ),
     "assessment.framework-alignment": "tailored mappings remain distinct",
-    "assessment.filters": "group, state, reference, and level filters are exact",
+    "assessment.filters": (
+        "group, outcome, plan-alignment, reference, and level filters are exact"
+    ),
     "output.json-contracts": "machine-readable operator views carry versioned schemas",
 }
 EXAMPLE_COLLECTORS = {

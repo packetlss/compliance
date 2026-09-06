@@ -670,6 +670,8 @@ def _run_assessment_view(args: argparse.Namespace) -> None:
             _resolved_policy_sources(args),
             reports,
             group_ids=args.group,
+            outcomes=args.outcome,
+            plan_alignments=args.plan_alignment,
             external_refs=args.reference,
             levels=args.level,
             config=args.project_config,
@@ -1105,13 +1107,7 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
         "frameworks",
         help="show external-framework objective and technical mappings",
     )
-    _add_assessment_view_options(assessment_frameworks, config, allow_filters=False)
-    assessment_frameworks.add_argument(
-        "--group",
-        action="append",
-        default=[],
-        help="filter by a resolved group; repeat for OR semantics",
-    )
+    _add_assessment_view_options(assessment_frameworks, config, allow_filters=True)
     assessment_frameworks.add_argument(
         "--reference",
         action="append",
