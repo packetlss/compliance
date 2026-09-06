@@ -196,6 +196,12 @@ graph, external conformity engine or certificate subsystem is introduced.
 
 [ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) has its factual v4 representation implemented under #32 and its derived historical operational view under #80. Historical outcomes remain immutable at `evaluated_at` under their exact plan, evidence snapshot, evaluator, planning/evaluation composition and waiver revision/application. Exact operation-bound `plan_id` equality means only **Plan-aligned**; a mismatch, including provenance-only differences, means **Different plan**.
 
+Historical interpretation is conditional on retention by the surrounding operating
+environment. The core does not require or own long-term retention of assessment
+plans or results, and a new assessment does not read or depend on prior outcomes.
+Retaining the required historical artifacts enables later historical views; deleting
+them removes that historical capability but does not affect future assessments.
+
 At query instant `q`, evidence timeliness is derived from the historical successful selections and the assessed plan's recorded requirements (`q - collected_at <= max_age`, equality included). No mutable evidence substitution, query-time re-selection or historical roll-up recomputation is allowed. Historical `waived` remains waived after expiry; recorded waiver validity is qualified separately. Outcome, alignment, timeliness, waiver validity and coverage/applicability aggregate independently under ADR 0011's state matrix. Neither plan alignment nor timely evidence establishes present-state certainty, absence of drift, or continuous effectiveness.
 
 #32 retains validated, identity-bound selection references (evidence ID plus complete-document digest), selected `collected_at`, and unambiguous assessed-plan requirement associations resolving `max_age`, with references into the complete snapshot and successful selections distinguished from nonselected candidates. Existing evidence identity and ADR 0010 assessment semantics are unchanged. #80 derives query-time judgments from those facts without a new artifact family.
@@ -207,7 +213,6 @@ The core ends at provenance-bearing assessment plans/results. It does not own ba
 The resolved assessment plan is the external-adapter handoff. It preserves subject/plan identity, actual named source digests, stable control instance and implementation IDs, resolved parameters, definition fingerprints, disposition, derivations, deviations, lineage, source provenance, and requirement/realization lineage where applicable.
 
 An external adapter may consume the complete plan or a documented lossless projection and may emit its own adapter/version/output provenance. Adapter output is not evidence that configuration was approved, applied, persistent, or compliant. Assessment remains valid without an adapter installed.
-
 Removed configuration artifact/compiler/renderer families have no ADR 0007 successor.
 
 ## Current development repository
