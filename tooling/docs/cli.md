@@ -135,7 +135,7 @@ does not load or re-resolve the current policy catalog, so its explanation is
 based only on the immutable policy and provenance captured in the two plans.
 
 The initial scope compares policy-relevant subject context, resolved groups,
-assignments, technical and requirement baselines, coverage, resolution,
+assignments, technical and requirement baselines, resolution,
 requirements, and active or excluded controls. Controls are matched by stable
 `instance_id`; a transition from active to excluded or back is reported as
 `excluded` or `activated`. Requirements and resolved baselines are matched by
@@ -146,10 +146,10 @@ retains effective parameters, implementation, disposition, inheritance
 lineage, derivation records, deviations, approval references, and provenance
 for review without reconstructing history from current sources.
 
-Plan IDs, policy-source digests, and inventory, assignment, and policy
-revisions are reported as comparison context. A change to those envelope
-revisions alone does not claim that this subject's effective policy changed;
-actual scope, requirement, control, coverage, or resolution changes do. The
+Plan IDs, member-plan digests, operation IDs, and planning-composition digests
+are reported as comparison context. A change to that identity context alone
+does not claim that this subject's effective policy changed; actual scope,
+requirement, control, or resolution changes do. The
 machine-readable output uses the schema
 `compliance.example/policy-diff/v1alpha1`.
 
@@ -174,7 +174,7 @@ pass one project-scoped plan snapshot on each side.
 
 Valid subjects present on only one side are `added` or `removed`; paired
 subjects are `modified` or `unchanged` according to the effective-policy diff.
-Revision-only context churn remains `unchanged`. Any subject with an invalid
+Identity-context-only churn remains `unchanged`. Any subject with an invalid
 resolution is `incomplete`, including a one-sided invalid plan. The aggregate
 report uses `compliance.example/policy-diff-set/v1alpha1`, embeds the complete
 single-subject diff for each pair, and summarizes added, removed, modified,

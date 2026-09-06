@@ -399,7 +399,7 @@ reviews and navigation but do not add namespace or precedence semantics. The
 complete convention is documented in
 [`project-layout.md`](project-layout.md).
 
-Assessment coverage and evaluation views are exposed separately:
+Derived accounting/applicability and evaluation views are exposed separately:
 
 ```sh
 # Fleet overview; filter historical outcome and exact-plan alignment independently.
@@ -408,7 +408,7 @@ uv run compliance assessment status --group aws-accounts --outcome fail --plan-a
 # Roll up each dimension by every resolved DAG group.
 uv run compliance assessment groups
 
-# Connect one subject's coverage, plan, assignments, results, and exclusions.
+# Connect one subject's accounting disposition, plan, assignments, results, and exclusions.
 uv run compliance assessment explain cloud-account/aws-111122223333
 ```
 
@@ -421,9 +421,10 @@ a DAG, one subject is intentionally counted in every group to which it
 resolves; group totals must not be added together as a fleet total. Every view
 has an equivalent `--format json` document.
 
-## 11. Failure and coverage states
+## 11. Failure and accounting states
 
-The planner distinguishes policy resolution, coverage, and evaluation outcome.
+The planner distinguishes policy resolution, derived accounting disposition,
+and evaluation outcome.
 These are related but different dimensions:
 
 - **Invalid plan** — a cycle, missing reference, conflict, stale overlay, or
@@ -432,22 +433,22 @@ These are related but different dimensions:
   assigned. This is a coverage gap, not compliance.
 - **Inactive subject** — a retired subject is retained for history but is not
   scheduled or evaluated normally.
-- **Assigned subject** — at least one assignment applies. It is assessable only
-  when resolution is valid, lifecycle is active, and at least one active
-  control remains after overlays.
+- **Assigned subject** — at least one assignment applies. An exact result is
+  required only when resolution is valid, lifecycle is active, and at least one
+  active control or rendered requirement remains after resolution.
 - **Unknown assessment** — policy resolves, but required evidence is absent or
   stale.
 - **Failing assessment** — fresh evidence proves that an active control is not
   satisfied.
 
-An authored lifecycle of `unknown` makes coverage invalid because the planner
-cannot safely determine whether assessment should occur. A retired lifecycle
-produces inactive coverage. An assigned policy containing zero active controls
-is reported as `no-active-controls`, not pass. The evaluator refuses every plan
-whose coverage is not both assigned and assessable.
+An authored lifecycle of `unknown` prevents publication of a valid operation
+because the planner cannot safely determine whether assessment should occur. A
+retired lifecycle derives `inactive`. An assigned policy containing no active
+controls or requirements derives `no_assessable_policy`, not pass. The evaluator
+refuses every plan whose derived disposition is not `result_required`.
 
-The operator overview keeps historical outcome, exact-plan alignment, and coverage
-as separate fields and separate aggregates. A previous PASS for another exact plan
+The operator overview keeps historical outcome, exact-plan alignment, and derived
+coverage/applicability as separate fields and separate aggregates. A previous PASS for another exact plan
 therefore remains `historical_outcome: pass` with `plan_alignment: different_plan`;
 absence is `historical_outcome: no_assessment` with alignment unavailable. Any
 attention ordering in the table is presentation-only. Machine-readable output also

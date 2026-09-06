@@ -593,9 +593,9 @@ after criteria, derivations, deviations, approval metadata, and selection
 paths.
 
 The initial command deliberately separates envelope context from effective
-policy. Plan IDs and inventory, assignment, policy, and policy-source revisions
-are visible, but revision-only churn does not make a claim that this subject's
-effective policy changed. Exit status is `0` for no effective change, `1` for
+policy. Plan IDs, member-plan digests, operation IDs, and planning-composition
+digests are visible, but identity-context-only churn does not make a claim that
+this subject's effective policy changed. Exit status is `0` for no effective change, `1` for
 effective change, and `2` for malformed, different-subject, or incomplete
 comparisons.
 
