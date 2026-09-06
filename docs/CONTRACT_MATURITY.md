@@ -76,7 +76,12 @@ Predecessor `project-config/v1alpha1`, `project-config/v1alpha2`, `release-lock/
 
 [ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) has its factual representation implemented by #32 and derived historical operation reporting implemented by #80. V4 retains validated, result-identity-bound successful selection ID/digest, selected collection instant and assessed-plan requirement association. The view does not freeze a JSON layout or change evidence identity algorithms.
 
-The non-anchored current-inventory view retains its predecessor comparison behavior. Anchored historical views instead require an explicit query instant and expose immutable outcome, exact operation-bound plan alignment, selected-evidence timeliness, recorded waiver qualification, coverage and frozen accounting independently. ADR 0010's assessment-time corrections remain its existing responsibility.
+The non-anchored current-inventory view retains its predecessor result discovery but
+separately exposes and aggregates immutable historical outcome, exact rendered-plan
+alignment, coverage, and assessment absence. Anchored historical views additionally
+require an explicit query instant and expose selected-evidence timeliness, recorded
+waiver qualification, and frozen accounting independently. ADR 0010's assessment-time
+corrections remain its existing responsibility.
 
 ## Explicit policy parameters and freshness
 

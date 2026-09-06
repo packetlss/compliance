@@ -160,11 +160,12 @@ def mock_fleet_filter_contract_holds(
     return (
         filtered_status.get("filters") == {
             "groups": ["aws-production-accounts"],
-            "states": ["fail"],
+            "outcomes": ["fail"],
+            "plan_alignment": [],
         }
         and status_subjects == {MOCK_FLEET_PRIMARY_AWS_SUBJECT}
         and all(
-            subject.get("state") == "fail"
+            subject.get("historical_outcome") == "fail"
             for subject in filtered_status.get("subjects", [])
         )
         and secondary_result.get("subject_id") == MOCK_FLEET_SECONDARY_AWS_SUBJECT
@@ -823,7 +824,7 @@ class ExampleRunner:
                 str(mock_results),
                 "--group",
                 "aws-production-accounts",
-                "--state",
+                "--outcome",
                 "fail",
                 "--format",
                 "json",

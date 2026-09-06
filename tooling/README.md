@@ -125,7 +125,7 @@ uv run compliance --project mock-fleet plan show
 uv run compliance --project mock-fleet \
   plan show cloud-account/aws-111122223333
 uv run compliance assessment run cloud-account/aws-111122223333
-uv run compliance assessment status --group aws-accounts --state fail
+uv run compliance assessment status --group aws-accounts --outcome fail --plan-alignment plan_aligned
 uv run compliance assessment groups
 uv run compliance assessment frameworks
 uv run compliance assessment explain cloud-account/aws-111122223333

@@ -86,7 +86,8 @@ class AssessmentStatusTests(unittest.TestCase):
     def test_failing_current_result_is_visible(self):
         row = status_row(self.plan, [self.result_report(**{"pass": 5, "fail": 1})])
 
-        self.assertEqual(row["state"], "fail")
+        self.assertEqual(row["historical_outcome"], "fail")
+        self.assertEqual(row["plan_alignment"], "plan_aligned")
         self.assertTrue(row["matching_plan_result"])
         self.assertEqual(row["result_summary"]["fail"], 1)
 
@@ -97,13 +98,15 @@ class AssessmentStatusTests(unittest.TestCase):
 
         row = status_row(self.plan, [report])
 
-        self.assertEqual(row["state"], "fail")
+        self.assertEqual(row["historical_outcome"], "fail")
+        self.assertEqual(row["plan_alignment"], "plan_aligned")
         self.assertEqual(row["requirement_summary"]["fail"], 1)
 
-    def test_result_for_old_plan_is_outdated(self):
+    def test_previous_pass_retains_outcome_and_different_plan(self):
         row = status_row(self.plan, [self.result_report(plan_id="sha256:old", **{"pass": 6})])
 
-        self.assertEqual(row["state"], "different_plan")
+        self.assertEqual(row["historical_outcome"], "pass")
+        self.assertEqual(row["plan_alignment"], "different_plan")
         self.assertFalse(row["matching_plan_result"])
 
     def test_unassigned_coverage_takes_precedence_over_old_results(self):
@@ -116,7 +119,16 @@ class AssessmentStatusTests(unittest.TestCase):
 
         row = status_row(unassigned, [self.result_report(**{"pass": 6})])
 
-        self.assertEqual(row["state"], "unassigned")
+        self.assertEqual(row["historical_outcome"], "pass")
+        self.assertEqual(row["plan_alignment"], "different_plan")
+        self.assertEqual(row["coverage"]["status"], "unassigned")
+
+    def test_no_assessment_is_independent_of_alignment_and_coverage(self):
+        row = status_row(self.plan, [])
+
+        self.assertEqual(row["historical_outcome"], "no_assessment")
+        self.assertEqual(row["plan_alignment"], "plan_alignment_unavailable")
+        self.assertEqual(row["coverage"]["status"], "assigned")
 
     def test_overview_sorts_attention_states_first_and_renders_table(self):
         retired = copy.deepcopy(self.subject)
@@ -134,7 +146,16 @@ class AssessmentStatusTests(unittest.TestCase):
         )
         table = render_table(report)
 
-        self.assertEqual([row["state"] for row in report["subjects"]], ["fail", "inactive"])
+        self.assertEqual(
+            [row["historical_outcome"] for row in report["subjects"]],
+            ["fail", "no_assessment"],
+        )
+        self.assertEqual(report["summary"]["historical_outcomes"], {
+            "fail": 1, "no_assessment": 1,
+        })
+        self.assertEqual(report["summary"]["plan_alignment"], {
+            "plan_aligned": 1, "plan_alignment_unavailable": 1,
+        })
         self.assertIn("Assessment overview (2 subjects)", table)
         self.assertIn("P/F/?/E/W", table)
         self.assertIn("workstation/tooling-macos-fixture", table)
@@ -156,14 +177,30 @@ class AssessmentStatusTests(unittest.TestCase):
             report,
             ["macos-developer-machines"],
             ["fail"],
+            ["plan_aligned"],
         )
 
         self.assertEqual(filtered["summary"]["total"], 1)
         self.assertEqual(filtered["subjects"][0]["subject_id"], self.subject["id"])
         self.assertEqual(
             filtered["filters"],
-            {"groups": ["macos-developer-machines"], "states": ["fail"]},
+            {"groups": ["macos-developer-machines"], "outcomes": ["fail"],
+             "plan_alignment": ["plan_aligned"]},
         )
+
+        previous = status_row(
+            self.plan, [self.result_report(plan_id="sha256:old", **{"pass": 6})]
+        )
+        previous_report = {
+            **report,
+            "subjects": [previous],
+        }
+        preserved = filter_status_report(
+            previous_report, [], ["pass"], ["different_plan"]
+        )
+        self.assertEqual(preserved["summary"]["historical_outcomes"], {"pass": 1})
+        self.assertEqual(preserved["summary"]["plan_alignment"], {"different_plan": 1})
+        self.assertEqual(preserved["subjects"][0]["historical_outcome"], "pass")
 
     def test_group_report_counts_subject_in_each_resolved_dag_group(self):
         report = build_status_report(
@@ -182,7 +219,8 @@ class AssessmentStatusTests(unittest.TestCase):
         table = render_group_table(group_report)
 
         self.assertEqual([group["total"] for group in group_report["groups"]], [1, 1])
-        self.assertEqual(group_report["groups"][0]["states"], {"fail": 1})
+        self.assertEqual(group_report["groups"][0]["historical_outcomes"], {"fail": 1})
+        self.assertEqual(group_report["groups"][0]["plan_alignment"], {"plan_aligned": 1})
         self.assertIn("Subjects are counted in every resolved DAG group", table)
 
     def test_explanation_connects_result_and_policy_provenance(self):
@@ -198,7 +236,8 @@ class AssessmentStatusTests(unittest.TestCase):
         explanation = build_explanation(self.plan, [report])
         rendered = render_explanation(explanation)
 
-        self.assertEqual(explanation["status"]["state"], "fail")
+        self.assertEqual(explanation["status"]["historical_outcome"], "fail")
+        self.assertEqual(explanation["status"]["plan_alignment"], "plan_aligned")
         self.assertIn("developer.macos.shellcheck-required", rendered)
         self.assertIn("Required Homebrew formulae are missing: shellcheck", rendered)
         self.assertIn("remediation: Install shellcheck from the approved source.", rendered)
@@ -296,7 +335,7 @@ class AssessmentStatusTests(unittest.TestCase):
             rendered,
         )
 
-        self.assertIn("State: ◇ WAIVED", rendered)
+        self.assertIn("Historical outcome: ◇ WAIVED", rendered)
         self.assertIn("waiver: test-package-waiver", rendered)
         self.assertIn("underlying status: fail", rendered)
         self.assertIn("approval: test/waiver-approval", rendered)
@@ -337,7 +376,8 @@ class AssessmentStatusTests(unittest.TestCase):
         ]
 
         self.assertEqual(len(log_mappings), 1)
-        self.assertEqual({mapping["status"] for mapping in log_mappings}, {"pass"})
-        self.assertEqual({mapping["alignment"] for mapping in log_mappings}, {"tailored"})
+        self.assertEqual({mapping["historical_outcome"] for mapping in log_mappings}, {"pass"})
+        self.assertEqual({mapping["plan_alignment"] for mapping in log_mappings}, {"plan_aligned"})
+        self.assertEqual({mapping["policy_alignment"] for mapping in log_mappings}, {"tailored"})
         self.assertIn("Technical results do not by themselves", rendered)
         self.assertIn("TEST:retention", rendered)

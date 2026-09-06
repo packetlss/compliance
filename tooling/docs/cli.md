@@ -207,8 +207,9 @@ alignment. `TAILORED` or otherwise deviated mappings remain visibly distinct
 from unaltered mappings, so a company-policy pass is not silently promoted into
 an upstream-framework conformance claim. The command supports exact
 `--reference`, `--level {objective,technical}`, and resolved `--group` filters,
-all repeatable with OR semantics. Its JSON output preserves claim type,
-alignment, matching-plan/different-plan status, subject, and policy-object identity.
+all repeatable with OR semantics. Its JSON output preserves claim type, immutable
+historical outcome, exact-plan alignment, separate policy alignment, subject, and
+policy-object identity.
 
 ## Frozen operation selection and reporting
 
@@ -226,11 +227,14 @@ for wire representation, identity, output paths and the concrete assertion contr
 
 ## Historical results and operational views
 
-The predecessor `assessment status` implementation re-renders the present plan,
-calls a matching `plan_id` result `current`, presents the stored result state,
-calls a different-plan result `outdated`, and calls absence `pending`. Its report
-timestamp is query time; it does not re-evaluate selected evidence or waiver age.
-The `current/outdated` wording above describes that predecessor behavior only.
+Non-anchored `assessment status`, `groups`, `frameworks`, and `explain` retain the
+existing current-inventory plan rendering and result discovery: the latest exact-plan
+result is preferred, otherwise the latest result for the Subject is shown. They no
+longer collapse that result into a mixed state. Historical outcome, exact plan
+alignment, coverage, and assessment absence are separate fields and aggregates.
+`--outcome` and `--plan-alignment` filter those dimensions independently; no filter
+changes or discards the other dimension. Their report timestamp remains query time;
+they do not re-evaluate selected evidence or waiver age.
 
 System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) has its factual v4 representation implemented under #32 and its derived historical operational view implemented under #80.
 Anchored status/explanation/group views separately expose historical outcomes

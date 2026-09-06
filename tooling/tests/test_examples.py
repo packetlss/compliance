@@ -90,11 +90,12 @@ class ExampleCoverageTests(unittest.TestCase):
         filtered_status = {
             "filters": {
                 "groups": ["aws-production-accounts"],
-                "states": ["fail"],
+                "outcomes": ["fail"],
+                "plan_alignment": [],
             },
             "subjects": [{
                 "subject_id": MOCK_FLEET_PRIMARY_AWS_SUBJECT,
-                "state": "fail",
+                "historical_outcome": "fail",
             }],
         }
         filtered_frameworks = {

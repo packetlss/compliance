@@ -115,7 +115,7 @@ evaluate := {
         assert not historical['accounting_complete'] and not historical['all_passed']
         no_assessment = json.loads(run(
             'assessment','status','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z',
-            '--as-of','2026-08-23T12:00:00Z','--state','no_assessment','--format','json'
+            '--as-of','2026-08-23T12:00:00Z','--outcome','no_assessment','--format','json'
         ))
         assert [row['historical_outcome'] for row in no_assessment['visible_members']] == ['no_assessment']
         return report['provenance']['evaluationComposition']['actual']['tooling']['execution']['kind']

@@ -406,18 +406,20 @@ complete convention is documented in
 Assessment coverage and evaluation views are exposed separately:
 
 ```sh
-# Fleet overview; repeat filters to select the union of groups or states.
-uv run compliance assessment status --group aws-accounts --state fail
+# Fleet overview; filter historical outcome and exact-plan alignment independently.
+uv run compliance assessment status --group aws-accounts --outcome fail --plan-alignment plan_aligned
 
-# Roll up the selected states by every resolved DAG group.
+# Roll up each dimension by every resolved DAG group.
 uv run compliance assessment groups
 
 # Connect one subject's coverage, plan, assignments, results, and exclusions.
 uv run compliance assessment explain cloud-account/aws-111122223333
 ```
 
-On `assessment status`, `--group` and `--state` are repeatable OR filters: a
-subject matching any selected group and any selected state is shown. Group
+On `assessment status`, `--group`, `--outcome`, and `--plan-alignment` are
+independent repeatable filters: values within one dimension use OR semantics and
+different dimensions combine with AND semantics. A subject matching any selected
+group, outcome, and plan-alignment filter is shown. Group
 rollups use resolved membership, including ancestors. Because the inventory is
 a DAG, one subject is intentionally counted in every group to which it
 resolves; group totals must not be added together as a fleet total. Every view
@@ -448,16 +450,15 @@ produces inactive coverage. An assigned policy containing zero active controls
 is reported as `no-active-controls`, not pass. The evaluator refuses every plan
 whose coverage is not both assigned and assessable.
 
-The operator overview derives a display state without discarding either
-dimension. Coverage failures take precedence, followed by current evaluation
-outcomes. A result for a different plan ID is `different_plan`; no result for the
-rendered assessable plan is `no_assessment`. Result precedence is error, fail, unknown,
-waived, pass, then not-applicable. Machine-readable output retains the coverage
-object, result counters, resolution errors, plan ID, and evaluation timestamp.
-The subject explanation additionally shows matching-plan versus different-plan result
-provenance, control reasons, remediation, assignment paths, and documented
-excluded controls. Group aggregation never reduces these distinct states to a
-single compliance percentage.
+The operator overview keeps historical outcome, exact-plan alignment, and coverage
+as separate fields and separate aggregates. A previous PASS for another exact plan
+therefore remains `historical_outcome: pass` with `plan_alignment: different_plan`;
+absence is `historical_outcome: no_assessment` with alignment unavailable. Any
+attention ordering in the table is presentation-only. Machine-readable output also
+retains result counters, resolution errors, plan ID, and evaluation timestamp. The
+subject explanation shows the same independent dimensions with control reasons,
+remediation, assignment paths, and documented excluded controls. Group aggregation
+never reduces them to a single compliance percentage.
 
 ## 12. Prototype limitations
 

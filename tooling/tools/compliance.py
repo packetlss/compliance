@@ -13,7 +13,8 @@ from typing import Callable, Sequence
 
 from .artifact_validation import validate_assessment_plan
 from .assessment import (
-    STATE_PRIORITY,
+    HISTORICAL_OUTCOMES,
+    PLAN_ALIGNMENTS,
     build_explanation,
     build_framework_report,
     build_group_report,
@@ -688,16 +689,18 @@ def _run_assessment_view(args: argparse.Namespace) -> None:
         config=args.project_config,
     )
     if args.assessment_command == "groups":
-        state_filtered = filter_status_report(report, [], args.state)
+        dimension_filtered = filter_status_report(
+            report, [], args.outcome, args.plan_alignment
+        )
         selected_groups = sorted(set(args.group)) if args.group else sorted(known_groups)
-        group_report = build_group_report(state_filtered, selected_groups, args.group)
+        group_report = build_group_report(dimension_filtered, selected_groups, args.group)
         if args.format == "json":
             print(json.dumps(group_report, indent=2, sort_keys=True))
         else:
             print(render_group_table(group_report))
         return
 
-    report = filter_status_report(report, args.group, args.state)
+    report = filter_status_report(report, args.group, args.outcome, args.plan_alignment)
     if args.format == "json":
         print(json.dumps(report, indent=2, sort_keys=True))
     else:
@@ -794,13 +797,13 @@ def _run_historical_operation_view(args):
                 if group_id in {group['id'] for group in row['resolved_groups']}
             ]),
         } for group_id in group_ids]
-    account['filtered'] = bool(args.group or args.state or args.assessment_command == 'explain' or
+    account['filtered'] = bool(args.group or args.outcome or args.plan_alignment or
+                               args.assessment_command == 'explain' or
                                getattr(args, 'reference', []) or getattr(args, 'level', []))
     account['visible_members'] = [
         row for row in selected
-        if not args.state or set(args.state) & {
-            row['state'], row['historical_outcome'], row['plan_alignment']
-        }
+        if (not args.outcome or row['historical_outcome'] in args.outcome)
+        and (not args.plan_alignment or row['plan_alignment'] in args.plan_alignment)
     ]
     if args.format == 'json':
         print(json.dumps(account, indent=2, sort_keys=True))
@@ -876,14 +879,21 @@ def _add_assessment_view_options(
             help="filter/select a resolved group; repeat for OR semantics",
         )
         parser.add_argument(
-            "--state",
+            "--outcome",
             action="append",
-            choices=tuple(STATE_PRIORITY),
+            choices=HISTORICAL_OUTCOMES,
             default=[],
-            help="filter an operator state; repeat for OR semantics",
+            help="filter an immutable historical outcome; repeat for OR semantics",
+        )
+        parser.add_argument(
+            "--plan-alignment",
+            action="append",
+            choices=PLAN_ALIGNMENTS,
+            default=[],
+            help="filter exact plan alignment; repeat for OR semantics",
         )
     else:
-        parser.set_defaults(group=[], state=[])
+        parser.set_defaults(group=[], outcome=[], plan_alignment=[])
 
 
 def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:

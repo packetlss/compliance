@@ -19,47 +19,37 @@ GROUP_STATUS_SCHEMA = "compliance.example/assessment-group-status/v1"
 EXPLANATION_SCHEMA = "compliance.example/assessment-explanation/v1"
 FRAMEWORK_STATUS_SCHEMA = "compliance.example/framework-mapping-status/v1alpha1"
 SUMMARY_STATUSES = ("pass", "fail", "unknown", "not_applicable", "error", "waived")
-STATE_PRIORITY = {
-    "invalid": 0,
+HISTORICAL_OUTCOMES = (*SUMMARY_STATUSES, "no_controls", "no_assessment")
+PLAN_ALIGNMENTS = ("plan_aligned", "different_plan", "plan_alignment_unavailable")
+OUTCOME_PRIORITY = {
     "error": 1,
     "fail": 2,
     "unknown": 3,
-    "different_plan": 4,
-    "unassigned": 5,
     "no_controls": 6,
     "no_assessment": 7,
     "waived": 8,
     "pass": 9,
     "not_applicable": 10,
-    "inactive": 11,
 }
-STATE_SYMBOLS = {
-    "invalid": "!",
+OUTCOME_SYMBOLS = {
     "error": "!",
     "fail": "×",
     "unknown": "?",
-    "different_plan": "↻",
-    "unassigned": "!",
     "no_controls": "!",
     "no_assessment": "…",
     "waived": "◇",
     "pass": "✓",
     "not_applicable": "○",
-    "inactive": "○",
 }
-STATE_COLORS = {
-    "invalid": "\033[31m",
+OUTCOME_COLORS = {
     "error": "\033[31m",
     "fail": "\033[31m",
     "unknown": "\033[33m",
-    "different_plan": "\033[33m",
-    "unassigned": "\033[33m",
     "no_controls": "\033[33m",
     "no_assessment": "\033[36m",
     "waived": "\033[35m",
     "pass": "\033[32m",
     "not_applicable": "\033[2m",
-    "inactive": "\033[2m",
 }
 ANSI_RESET = "\033[0m"
 
@@ -120,22 +110,11 @@ def status_row(plan: JsonObject, reports: list[JsonObject]) -> JsonObject:
     current, previous = reports_for_plan(plan, reports)
     coverage = plan["coverage"]
 
-    if coverage["status"] == "invalid":
-        state = "invalid"
-    elif coverage["status"] == "inactive":
-        state = "inactive"
-    elif coverage["status"] == "unassigned":
-        state = "unassigned"
-    elif not coverage["assessable"]:
-        state = "no_controls"
-    elif current is not None:
-        state = result_state(current)
-    elif previous is not None:
-        state = "different_plan"
-    else:
-        state = "no_assessment"
-
     visible_report = current or previous
+    historical_outcome = result_state(visible_report) if visible_report else "no_assessment"
+    plan_alignment = ("plan_aligned" if current is not None else
+                      "different_plan" if previous is not None else
+                      "plan_alignment_unavailable")
     summary = {
         status: int((visible_report or {}).get("summary", {}).get(status, 0))
         for status in SUMMARY_STATUSES
@@ -149,7 +128,8 @@ def status_row(plan: JsonObject, reports: list[JsonObject]) -> JsonObject:
         "subject_type": plan["subject"]["type"],
         "lifecycle": plan["subject"]["status"],
         "groups": [group["id"] for group in plan["resolved_groups"]],
-        "state": state,
+        "historical_outcome": historical_outcome,
+        "plan_alignment": plan_alignment,
         "coverage": coverage,
         "plan_id": plan["id"],
         "matching_plan_result": current is not None,
@@ -174,7 +154,8 @@ def invalid_status_row(
             group["id"]
             for group in resolve_groups({group["id"]: group for group in groups}, subject)
         ],
-        "state": "invalid",
+        "historical_outcome": "no_assessment",
+        "plan_alignment": "plan_alignment_unavailable",
         "coverage": {
             "status": "invalid",
             "assessable": False,
@@ -210,13 +191,24 @@ def build_status_report(
         except (KeyError, TypeError, ValueError) as error:
             rows.append(invalid_status_row(subject, groups, error))
 
-    rows.sort(key=lambda row: (STATE_PRIORITY[row["state"]], row["subject_id"]))
+    rows.sort(key=lambda row: (_attention_rank(row), row["subject_id"]))
     now = generated_at or datetime.now(UTC).replace(microsecond=0)
     return status_report(rows, now)
 
 
+def _attention_rank(row: JsonObject) -> int:
+    """Presentation order only; never a semantic status or aggregation source."""
+    coverage_rank = {"invalid": 0, "unassigned": 5, "inactive": 11}
+    if row["coverage"]["status"] in coverage_rank:
+        return coverage_rank[row["coverage"]["status"]]
+    if row["plan_alignment"] == "different_plan":
+        return 4
+    return OUTCOME_PRIORITY[row["historical_outcome"]]
+
+
 def summarize_rows(rows: list[JsonObject]) -> JsonObject:
-    counts = Counter(row["state"] for row in rows)
+    outcome_counts = Counter(row["historical_outcome"] for row in rows)
+    alignment_counts = Counter(row["plan_alignment"] for row in rows)
     coverage_counts = Counter(row["coverage"]["status"] for row in rows)
     return {
         "total": len(rows),
@@ -226,7 +218,14 @@ def summarize_rows(rows: list[JsonObject]) -> JsonObject:
             if coverage_counts[status]
         },
         "assessable": sum(1 for row in rows if row["coverage"]["assessable"]),
-        "states": {state: counts[state] for state in STATE_PRIORITY if counts[state]},
+        "historical_outcomes": {
+            outcome: outcome_counts[outcome] for outcome in HISTORICAL_OUTCOMES
+            if outcome_counts[outcome]
+        },
+        "plan_alignment": {
+            alignment: alignment_counts[alignment] for alignment in PLAN_ALIGNMENTS
+            if alignment_counts[alignment]
+        },
     }
 
 
@@ -238,7 +237,7 @@ def status_report(
     return {
         "schema": STATUS_SCHEMA,
         "generated_at": generated_at.isoformat().replace("+00:00", "Z"),
-        "filters": filters or {"groups": [], "states": []},
+        "filters": filters or {"groups": [], "outcomes": [], "plan_alignment": []},
         "summary": summarize_rows(rows),
         "subjects": rows,
     }
@@ -247,19 +246,23 @@ def status_report(
 def filter_status_report(
     report: JsonObject,
     group_ids: list[str],
-    states: list[str],
+    outcomes: list[str],
+    plan_alignments: list[str],
 ) -> JsonObject:
     selected = report["subjects"]
     if group_ids:
         requested_groups = set(group_ids)
         selected = [row for row in selected if requested_groups.intersection(row["groups"])]
-    if states:
-        selected = [row for row in selected if row["state"] in set(states)]
+    if outcomes:
+        selected = [row for row in selected if row["historical_outcome"] in set(outcomes)]
+    if plan_alignments:
+        selected = [row for row in selected if row["plan_alignment"] in set(plan_alignments)]
     generated_at = datetime.fromisoformat(report["generated_at"].replace("Z", "+00:00"))
     return status_report(
         selected,
         generated_at,
-        filters={"groups": sorted(set(group_ids)), "states": sorted(set(states))},
+        filters={"groups": sorted(set(group_ids)), "outcomes": sorted(set(outcomes)),
+                 "plan_alignment": sorted(set(plan_alignments))},
     )
 
 
@@ -277,7 +280,8 @@ def build_group_report(
         "generated_at": report["generated_at"],
         "filters": {
             "groups": sorted(set(group_filter or [])),
-            "states": report["filters"]["states"],
+            "outcomes": report["filters"]["outcomes"],
+            "plan_alignment": report["filters"]["plan_alignment"],
         },
         "groups": rows,
     }
@@ -289,8 +293,8 @@ def _mapped_result_status(
     results_key: str,
     identity_key: str,
     identity: str,
-) -> tuple[str, str | None, str | None]:
-    """Return current status, assessment time, and last known status."""
+) -> tuple[str, str, str | None]:
+    """Return immutable outcome, exact-plan alignment, and assessment time."""
     if current is not None:
         result = next(
             (
@@ -302,8 +306,8 @@ def _mapped_result_status(
         )
         return (
             result.get("status", "unknown") if result else "unknown",
+            "plan_aligned",
             current.get("evaluated_at"),
-            None,
         )
     if previous is not None:
         previous_result = next(
@@ -315,11 +319,11 @@ def _mapped_result_status(
             None,
         )
         return (
+            previous_result.get("status", "unknown") if previous_result else "unknown",
             "different_plan",
             previous.get("evaluated_at"),
-            previous_result.get("status") if previous_result else None,
         )
-    return "no_assessment", None, None
+    return "no_assessment", "plan_alignment_unavailable", None
 
 
 def build_framework_report(
@@ -349,7 +353,7 @@ def build_framework_report(
         current, previous = reports_for_plan(plan, reports)
 
         for requirement in plan.get("requirements", []):
-            status, evaluated_at, last_status = _mapped_result_status(
+            historical_outcome, plan_alignment, evaluated_at = _mapped_result_status(
                 current,
                 previous,
                 "requirement_assessments",
@@ -363,14 +367,14 @@ def build_framework_report(
                     "claim": "objective_assessment",
                     "subject_id": subject_id,
                     "policy_object": requirement["reference"],
-                    "status": status,
-                    "alignment": "realized" if requirement.get("realization") else "not_implemented",
+                    "historical_outcome": historical_outcome,
+                    "plan_alignment": plan_alignment,
+                    "policy_alignment": "realized" if requirement.get("realization") else "not_implemented",
                     "evaluated_at": evaluated_at,
-                    **({"last_status": last_status} if last_status else {}),
                 })
 
         for control in plan.get("controls", []):
-            status, evaluated_at, last_status = _mapped_result_status(
+            historical_outcome, plan_alignment, evaluated_at = _mapped_result_status(
                 current,
                 previous,
                 "results",
@@ -393,10 +397,10 @@ def build_framework_report(
                     "subject_id": subject_id,
                     "policy_object": control["instance_id"],
                     "implementation": control["implementation"],
-                    "status": status,
-                    "alignment": alignment,
+                    "historical_outcome": historical_outcome,
+                    "plan_alignment": plan_alignment,
+                    "policy_alignment": alignment,
                     "evaluated_at": evaluated_at,
-                    **({"last_status": last_status} if last_status else {}),
                 })
 
         for control in plan.get("excluded_controls", []):
@@ -408,8 +412,11 @@ def build_framework_report(
                     "subject_id": subject_id,
                     "policy_object": control["instance_id"],
                     "implementation": control["implementation"],
-                    "status": "excluded",
-                    "alignment": control.get("alignment", "deviated"),
+                    "historical_outcome": "no_assessment",
+                    "plan_alignment": ("plan_aligned" if current is not None else
+                                       "different_plan" if previous is not None else
+                                       "plan_alignment_unavailable"),
+                    "policy_alignment": control.get("alignment", "deviated"),
                     "evaluated_at": None,
                 })
 
@@ -444,8 +451,12 @@ def build_framework_report(
             "reference_count": len({item["external_ref"] for item in mappings}),
             "mapping_count": len(mappings),
             "levels": dict(sorted(Counter(item["mapping_level"] for item in mappings).items())),
-            "statuses": dict(sorted(Counter(item["status"] for item in mappings).items())),
-            "alignments": dict(sorted(Counter(item["alignment"] for item in mappings).items())),
+            "historical_outcomes": dict(sorted(Counter(
+                item["historical_outcome"] for item in mappings).items())),
+            "plan_alignment": dict(sorted(Counter(
+                item["plan_alignment"] for item in mappings).items())),
+            "policy_alignment": dict(sorted(Counter(
+                item["policy_alignment"] for item in mappings).items())),
         },
         "mappings": mappings,
     }
@@ -473,12 +484,14 @@ def render_framework_table(report: JsonObject) -> str:
         lines.append("Filters  " + "  ".join(rendered_filters))
     lines.append("")
 
-    headers = ("EXTERNAL REFERENCE", "LEVEL", "STATUS", "ALIGNMENT", "SUBJECT", "POLICY OBJECT")
+    headers = ("EXTERNAL REFERENCE", "LEVEL", "HISTORICAL OUTCOME", "PLAN ALIGNMENT",
+               "POLICY ALIGNMENT", "SUBJECT", "POLICY OBJECT")
     rows = [(
         mapping["external_ref"],
         mapping["mapping_level"].upper(),
-        mapping["status"].replace("_", " ").upper(),
-        mapping["alignment"].replace("_", " ").upper(),
+        mapping["historical_outcome"].replace("_", " ").upper(),
+        mapping["plan_alignment"].replace("_", " ").upper(),
+        mapping["policy_alignment"].replace("_", " ").upper(),
         mapping["subject_id"],
         mapping["policy_object"],
     ) for mapping in report["mappings"]]
@@ -529,19 +542,22 @@ def shorten_timestamp(value: str | None) -> str:
     return value.replace("T", " ").replace("Z", "")
 
 
-def state_label(state: str, color: bool) -> str:
-    label = f'{STATE_SYMBOLS[state]} {state.replace("_", " ").upper()}'
+def outcome_label(outcome: str, color: bool) -> str:
+    label = f'{OUTCOME_SYMBOLS[outcome]} {outcome.replace("_", " ").upper()}'
     if color:
-        return f"{STATE_COLORS[state]}{label}{ANSI_RESET}"
+        return f"{OUTCOME_COLORS[outcome]}{label}{ANSI_RESET}"
     return label
 
 
 def render_table(report: JsonObject, color: bool = False) -> str:
     rows = report["subjects"]
-    state_counts = report["summary"]["states"]
-    state_summary = "  ".join(
-        f'{state.replace("_", " ").upper()} {count}'
-        for state, count in state_counts.items()
+    outcome_summary = "  ".join(
+        f'{outcome.replace("_", " ").upper()} {count}'
+        for outcome, count in report["summary"]["historical_outcomes"].items()
+    ) or "NO SUBJECTS"
+    alignment_summary = "  ".join(
+        f'{alignment.replace("_", " ").upper()} {count}'
+        for alignment, count in report["summary"]["plan_alignment"].items()
     ) or "NO SUBJECTS"
     coverage_summary = "  ".join(
         f"{status.upper()} {count}"
@@ -557,21 +573,25 @@ def render_table(report: JsonObject, color: bool = False) -> str:
     rendered_filters = []
     if filters.get("groups"):
         rendered_filters.append("group=" + ",".join(filters["groups"]))
-    if filters.get("states"):
-        rendered_filters.append("state=" + ",".join(filters["states"]))
+    if filters.get("outcomes"):
+        rendered_filters.append("outcome=" + ",".join(filters["outcomes"]))
+    if filters.get("plan_alignment"):
+        rendered_filters.append("plan-alignment=" + ",".join(filters["plan_alignment"]))
     if rendered_filters:
         lines.append("Filters   " + "  ".join(rendered_filters))
-    lines.extend([f"Coverage  {coverage_summary}", f"Status    {state_summary}", ""])
+    lines.extend([f"Coverage   {coverage_summary}", f"Outcomes   {outcome_summary}",
+                  f"Plan align {alignment_summary}", ""])
 
     headers = (
-        "STATE", "SUBJECT", "TYPE", "COVERAGE", "CONTROLS A/X",
+        "HISTORICAL OUTCOME", "PLAN ALIGNMENT", "SUBJECT", "TYPE", "COVERAGE", "CONTROLS A/X",
         "OBJECTIVES P/F/?/E/W", "CHECKS P/F/?/E/W", "ASSESSED (UTC)",
     )
     rendered_rows = []
     for row in rows:
         coverage = row["coverage"]
         rendered_rows.append((
-            state_label(row["state"], False),
+            outcome_label(row["historical_outcome"], False),
+            row["plan_alignment"].replace("_", " ").upper(),
             row["subject_id"],
             row["subject_type"],
             coverage["status"].upper(),
@@ -593,9 +613,9 @@ def render_table(report: JsonObject, color: bool = False) -> str:
     lines.append(format_row(tuple("─" * width for width in widths)))
     for source, values in zip(rows, rendered_rows, strict=True):
         if color:
-            plain_state = values[0]
-            padding = " " * (widths[0] - len(plain_state))
-            values = (state_label(source["state"], True) + padding, *values[1:])
+            plain_outcome = values[0]
+            padding = " " * (widths[0] - len(plain_outcome))
+            values = (outcome_label(source["historical_outcome"], True) + padding, *values[1:])
         lines.append(format_row(values))
     return "\n".join(lines)
 
@@ -613,18 +633,25 @@ def render_group_table(report: JsonObject) -> str:
     rendered_filters = []
     if filters.get("groups"):
         rendered_filters.append("group=" + ",".join(filters["groups"]))
-    if filters.get("states"):
-        rendered_filters.append("state=" + ",".join(filters["states"]))
+    if filters.get("outcomes"):
+        rendered_filters.append("outcome=" + ",".join(filters["outcomes"]))
+    if filters.get("plan_alignment"):
+        rendered_filters.append("plan-alignment=" + ",".join(filters["plan_alignment"]))
     if rendered_filters:
         lines.append("Filters  " + "  ".join(rendered_filters))
     lines.append("")
 
-    headers = ("GROUP", "SUBJECTS", "ASSESSABLE", "COVERAGE A/U/I/X", "STATES")
+    headers = ("GROUP", "SUBJECTS", "ASSESSABLE", "COVERAGE A/U/I/X",
+               "HISTORICAL OUTCOMES", "PLAN ALIGNMENT")
     rendered_rows = []
     for group in report["groups"]:
-        states = ", ".join(
-            f'{state.replace("_", " ").upper()}={count}'
-            for state, count in group["states"].items()
+        outcomes = ", ".join(
+            f'{outcome.replace("_", " ").upper()}={count}'
+            for outcome, count in group["historical_outcomes"].items()
+        ) or "-"
+        alignments = ", ".join(
+            f'{alignment.replace("_", " ").upper()}={count}'
+            for alignment, count in group["plan_alignment"].items()
         ) or "-"
         rendered_rows.append((
             group["group_id"],
@@ -634,7 +661,8 @@ def render_group_table(report: JsonObject) -> str:
                 group["coverage"],
                 ("assigned", "unassigned", "inactive", "invalid"),
             ),
-            states,
+            outcomes,
+            alignments,
         ))
 
     widths = [len(header) for header in headers]
@@ -765,7 +793,8 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
         f'Subject: {status["subject_id"]}',
         f'Type: {status["subject_type"]}',
         f'Lifecycle: {status["lifecycle"]}',
-        f'State: {state_label(status["state"], color)}',
+        f'Historical outcome: {outcome_label(status["historical_outcome"], color)}',
+        f'Plan alignment: {status["plan_alignment"].replace("_", " ")}',
         (
             f'Coverage: {status["coverage"]["status"]} '
             f'(assessable={str(status["coverage"]["assessable"]).lower()}, '
@@ -824,7 +853,7 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
         seen_requirement_baselines.add(reference)
         result = baseline_result_by_reference.get(reference)
         baseline_state = result.get("status", "no_assessment") if result else "no_assessment"
-        lines.append(f'  {state_label(baseline_state, color)}  {reference}')
+        lines.append(f'  {outcome_label(baseline_state, color)}  {reference}')
         if result and result.get("reason"):
             lines.append(f'    {result["reason"]}')
         if result:
@@ -839,7 +868,7 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
         result = requirement_result_by_reference.get(requirement["reference"])
         requirement_state = result.get("status", "no_assessment") if result else "no_assessment"
         lines.append(
-            f'  {state_label(requirement_state, color)}  {requirement["reference"]}: '
+            f'  {outcome_label(requirement_state, color)}  {requirement["reference"]}: '
             f'{requirement["title"]}'
         )
         lines.append(f'    adoption: {requirement["adoption"]["status"]}')
@@ -869,7 +898,7 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
         control_state = result.get("status", "no_assessment") if result else "no_assessment"
         suffix = " (different plan)" if previous is not None and current is None and result else ""
         lines.append(
-            f'  {state_label(control_state, color)}  {control["instance_id"]}{suffix}'
+            f'  {outcome_label(control_state, color)}  {control["instance_id"]}{suffix}'
         )
         if result and result.get("reason"):
             lines.append(f'    {result["reason"]}')
