@@ -129,8 +129,9 @@ evidence and must reference its source assessment plan when it records
 provenance.
 
 `policy diff` compares two stored assessment plans (v4) for the same
-subject. Both inputs are validated against the strict schema, content digest,
-coverage counts, and cross-field invariants before comparison. The command
+subject. Both inputs are validated against the strict schema, recomputed
+member/operation/bound-plan identities, and cross-field invariants before
+comparison. The command
 does not load or re-resolve the current policy catalog, so its explanation is
 based only on the immutable policy and provenance captured in the two plans.
 
