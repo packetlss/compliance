@@ -523,12 +523,12 @@ class ExampleRunner:
         self.cli(
             ("policy", "validate"),
             [*rollout, "policy", "validate"],
-            contains=("1 realization(s)", "11 control manifest(s)"),
+            contains=("4 realization(s)", "13 control manifest(s)"),
         )
         self.cli(
             ("policy", "validate"),
             [*iam, "policy", "validate"],
-            contains=("2 realization(s)", "11 control manifest(s)"),
+            contains=("6 realization(s)", "13 control manifest(s)"),
         )
         self.domain("policy.multi-source-realization", True)
         self.verify_overlay_edges()

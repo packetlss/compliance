@@ -10,6 +10,10 @@ import copy
 from .assessment_provenance import digest
 
 
+class InvalidOperationResolution(ValueError):
+    """Supplied policy resolved to an invalid selected member, refusing assessment."""
+
+
 def policy_membership(plan):
     """Keep the denominator and mapping facts, without evaluator/parameter bodies."""
     controls = []
@@ -103,7 +107,7 @@ def render_operation(subjects, groups, assignments, policy_sources, selection, *
     plans = [render_plan(subjects[s], groups, assignments, policy_sources, config=config)
              for s in ids]
     if any(p['resolution']['status'] != 'valid' for p in plans):
-        raise ValueError('operation planning failed: ' + str([{'subject': p['subject']['id'], 'errors': p['resolution']['errors']} for p in plans if p['resolution']['status'] != 'valid']))
+        raise InvalidOperationResolution('operation planning failed: ' + str([{'subject': p['subject']['id'], 'errors': p['resolution']['errors']} for p in plans if p['resolution']['status'] != 'valid']))
     if not selection['groups'] and not selection['all']:
         subjects = {s: subjects[s] for s in ids}
         groups = copy.deepcopy(groups)

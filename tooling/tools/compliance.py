@@ -701,7 +701,11 @@ def _run_assessment_view(args: argparse.Namespace) -> None:
 
 
 def _run_assessment(args: argparse.Namespace) -> None:
-    plans = _render_selected_plans(args)
+    from .operation import InvalidOperationResolution
+    try:
+        plans = _render_selected_plans(args)
+    except InvalidOperationResolution as error:
+        raise SystemExit(str(error)) from error
     _check_operation_outputs(plans, args.plan_output, args.output)
     policy_sources = _resolved_policy_sources(args)
     instant = parse_timestamp(args.at, field='--at') if args.at else datetime.now(UTC)
