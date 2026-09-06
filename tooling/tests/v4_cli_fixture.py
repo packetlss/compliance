@@ -111,6 +111,16 @@ evaluate := {
             '--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',
             '--as-of','2026-08-23T12:00:00Z','--format','json'))
         assert historical['all_passed']
+        orphan_frameworks = json.loads(run(
+            'assessment','frameworks','--plan',str(plan_path),
+            '--at','2026-08-23T12:00:00Z','--as-of','2026-08-23T12:00:00Z',
+            '--format','json'
+        ))
+        orphan = next(row for row in orphan_frameworks['members']
+                      if row['subject_id'] == second_subject)
+        assert orphan['result_id'] and orphan['historical_interpretation'] == 'unavailable'
+        assert all(mapping['subject_id'] != second_subject
+                   for mapping in orphan_frameworks['mappings'])
         (project/'generated/results/host__installed-second.json').unlink()
         historical = json.loads(run('assessment','status','--plan',str(plan_path),
             '--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',

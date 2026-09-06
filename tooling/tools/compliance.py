@@ -789,6 +789,9 @@ def _run_historical_operation_view(args):
             if not args.plan_alignment or row['plan_alignment'] in args.plan_alignment
         ]
         for row in framework_members:
+            if (row['result_id'] is not None
+                    and row['historical_interpretation'] != 'validated'):
+                continue
             report = by_id.get(row['result_id'], {})
             for kind, key in (('objective', 'requirements'), ('technical', 'controls')):
                 assessments = report.get('requirement_assessments' if kind == 'objective' else 'results', [])
