@@ -89,8 +89,9 @@ The CLI
 validates plans before persistence and whenever they
 are displayed or evaluated. Result files
 are validated before persistence and when assessment views load them. A file
-that declares one of these schemas but has malformed provenance, a stale plan
-digest, inconsistent counts, mismatched child revisions, or an invalid
+that declares one of these schemas but has malformed provenance, inconsistent
+member/operation/bound-plan identity, inconsistent counts, mismatched child
+attribution, or an invalid
 objective roll-up fails with its file and JSON Pointer instead of being treated
 as usable history.
 `policy validate` validates every reusable `Control` manifest and its local

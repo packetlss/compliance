@@ -12,7 +12,7 @@ placing policy on the governed object.
 The evaluation service has one job:
 
 > Given a subject, its typed evidence, its resolved baseline, active waivers,
-> and an immutable policy revision, produce deterministic control results.
+> and its operation-bound member plan, produce deterministic control results.
 
 Collectors do not know the desired state. Reporters do not reinterpret Rego.
 Governed objects do not receive policy bundles.
@@ -718,16 +718,17 @@ waiver-result resolver.
 
 When an active waiver covers the failure, the stored technical result retains
 the same reason, expected/observed data, severity, remediation, evidence, and
-policy revisions; its status becomes `waived` and a strict `waiver` object
+resolved policy facts; its status becomes `waived` and a strict `waiver` object
 records `underlying_status: fail` plus the complete approved snapshot. Assessment envelopes and their children share one `waiver_revision`.
 
 The persisted `assessment-results/v4` envelope also has a strict tooling-owned
-schema. Every technical result carries the plan, policy, inventory, and
-assignment revisions from its envelope together with the common status,
-severity, reason, expected/observed, evidence, remediation, mapping, and
-alignment fields. Requirement and requirement-baseline results have explicit
-contracts. Cross-field validation recalculates all three summary objects,
-rejects duplicate identities or child revision mismatches, and verifies the
+schema. Every technical result carries the exact operation-bound plan ID from
+its envelope together with the common status, severity, reason,
+expected/observed, evidence, remediation, mapping, and alignment fields. The
+envelope carries the frozen operation and resolved member policy. Requirement
+and requirement-baseline results have explicit contracts. Cross-field
+validation recalculates all three summary objects, rejects duplicate identities
+or child attribution mismatches, and verifies the
 declared conservative `allOf` and top-baseline roll-ups. A stored document that
 claims either artifact schema but violates its contract is an operator-visible
 error rather than being ignored or partially displayed.
@@ -923,7 +924,7 @@ local-development transport.
 
 ## 10. Policy build gates
 
-A policy revision is releasable only if it passes:
+A policy-source candidate is releasable only if it passes:
 
 1. formatting and static analysis;
 2. Rego unit tests, including missing and stale evidence cases;

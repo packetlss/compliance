@@ -305,7 +305,7 @@ Local compiler, planner, OPA evaluator, and result store
 
 Shared policy distribution is one-way. The central repository does not clone,
 compile, or inspect the private realization. The local environment records the
-shared release digest, private policy revision, rendered plan digest, technical
+actual planning composition, operation/member/bound-plan identities, technical
 results, and full realization provenance.
 
 If central governance needs framework-level status, the environment may export
@@ -350,8 +350,9 @@ The registered `iam-realization` project assembles the named `control-library`,
 source contains only the restricted realization; schemas and reusable controls
 come from `control-library`, while requirement intent, requirement baseline,
 and the ordinary company realization come from verification policy. The
-resulting plan records all three source digests and the final deterministic
-policy revision. The project provides the illustrative
+resulting plan records all three source digests in its actual planning
+composition and binds its resolved member commitment through the frozen
+operation. The project provides the illustrative
 inventory DAG, assignment, fixture collector input, and intentional failing
 result; reusable Rego and evidence schemas remain in `control-library`.
 The [IAM gate](../../verification/fixtures/iam-private-boundary/README.md)
