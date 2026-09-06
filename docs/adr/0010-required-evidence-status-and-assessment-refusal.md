@@ -270,29 +270,29 @@ applicability, or broader assurance semantics.
 
 ### CLI and operator semantics
 
-The eventual implementation must make invalid-evidence and selection-ambiguity `unknown`
+The implementation makes invalid-evidence and selection-ambiguity `unknown`
 operationally prominent and retain their structured diagnostics in human and JSON
 explanations. Status counts move schema-invalid evidence from `error` to
 `unknown`. Successful artifact creation must not be presented as a passing
 assessment: persisted `unknown` or attributable `error` can represent a
 completed run. Refusal or write failure is command failure and publishes no new
 assessment-results envelope. Existing historical output is not a new result of
-a refused run. This promotion introduces no status or filter grammar and
-implements none of these operator changes.
+a refused run. The implementation introduces no new status or filter grammar.
 
 ## Implementation ownership and non-goals
 
 [#32](https://github.com/packetlss/compliance/issues/32) explicitly accepts these
 schema-invalid-evidence and evidence-selection corrections as the **only
-exceptions** to “preserve current semantic payload” / “unchanged domain behavior.” Its implementation must satisfy this
+exceptions** to “preserve current semantic payload” / “unchanged domain behavior.” Its implementation satisfies this
 matrix, validation-before-selection, ambiguity detection before OPA, dependent-control
 `unknown` synthesis, OPA exclusion, existing evidence identity,
 deterministic provenance-bound diagnostics, logical roll-ups and fail-only
-waivers, without reinterpreting historical results. #32 remains blocked on #31.
+waivers, without reinterpreting historical results. #32 followed the composition
+and configuration foundation delivered by #31.
 
-[#31](https://github.com/packetlss/compliance/issues/31) is independent and remains
-unblocked by this decision. Its composition/configuration foundation and
-transitional refusal before v4 generation are unchanged.
+[#31](https://github.com/packetlss/compliance/issues/31) remained independent of
+this decision. Its composition/configuration foundation and transitional refusal
+before v4 generation are unchanged.
 
 [#37](https://github.com/packetlss/compliance/issues/37) may rely on this common
 evidence validity/refusal boundary. It retains assurance terminology,
@@ -302,8 +302,8 @@ assurance result design. This ADR resolves none of those matters. ADR 0009's
 vocabulary and generic independently named-source model remain unchanged.
 
 #62's accepted decision supersedes the earlier unresolved candidate-selection
-follow-up. #32 implements it alongside the schema-invalid-evidence correction;
-it must not stop on an unresolved #62. It must prove filename, traversal,
+follow-up. #32 implemented it alongside the schema-invalid-evidence correction
+and proved filename, traversal,
 materialization, and source-order independence, retaining semantic result
 identity invariance under those permutations. This adds no dependency to #31.
 
@@ -313,9 +313,10 @@ and #37 assurance semantics are outside this decision and #32's correction.
 
 ## Validation and escalation
 
-Promotion requires documentation/ADR checks, valid links and issue references,
-a documentation-only diff, fresh-context exact-head semantic consistency review,
-and green exact-head CI. Runtime conformance cases belong to #32, not this PR.
+Implementation validation requires documentation/ADR checks, valid links and issue
+references, runtime/schema conformance cases, fresh-context exact-head semantic
+consistency review, and green exact-head CI. #32 supplied the original runtime
+conformance cases; #84 adds the required-only evidence-core simplification cases.
 
 Return to architecture if rejected evidence cannot be bound under existing
 provenance algorithms; a new result state or evidence identity algorithm is
@@ -325,5 +326,6 @@ consumer/freeze exists; or implementation materially overlaps unresolved #37
 semantics. Also return to exploration if selection needs a new equivalence
 algorithm, collector precedence, explicit supersession, payload merging or
 multi-observation semantics, changed freshness eligibility, or a new artifact
-family. No runtime, test, release, historical-artifact, identity-algorithm,
-new artifact-family, adapter, or firewall change is authorized by this promotion.
+family. The original decision promotion authorized no runtime, test, release,
+historical-artifact, identity-algorithm, new artifact-family, adapter, or firewall
+change; the subsequent runtime work is bounded by #32 and #84.

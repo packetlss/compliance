@@ -970,7 +970,7 @@ Production promotion should reference the bundle digest, not a mutable tag.
 
 ## Historical evidence use and query-time timeliness
 
-System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is **accepted design, not yet implemented**.
+System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is accepted and implemented for v4 historical operation reporting.
 It owns interpretation across wall-clock time; ADR 0010 retains assessment-time
 validity/freshness eligibility, invalid evidence, ambiguity, error and refusal.
 At query instant `q`, derive support only from the exact historical successful
@@ -981,13 +981,13 @@ the required-only dependency model or freshness eligibility. A later fresh docum
 refresh an old result. Historical logical outcomes and assurance roll-ups remain
 immutable; timely evidence is not present-state certainty or continuous effectiveness.
 
-#32 must preserve each control's successful selection ID/digest, selected collection
+#32 preserves each control's successful selection ID/digest, selected collection
 instant and unambiguous assessed-plan requirement association as validated,
 result-identity-bound orchestration facts resolving into the complete snapshot.
 See [v4 temporal provenance](artifact-provenance.md#accepted-v4-temporal-provenance).
 Rejected/ambiguous/nonselected candidates and selection diagnostics cannot stand in
-for those facts. Query-time derivation and separate aggregation belong to a later
-operational-view tranche, not #32's representation clarification.
+for those facts. #80 implements query-time derivation and separate aggregation as
+the operational-view tranche, distinct from #32's representation clarification.
 
 ## 12. OPA references
 
