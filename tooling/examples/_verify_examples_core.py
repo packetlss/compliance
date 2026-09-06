@@ -1062,8 +1062,45 @@ class ExampleRunner:
 
         self.cli(
             ("plan", "render"),
-            ["--config", str(WORKSPACE_ROOT / "verification/scenarios/projects/closed-world/compliance.json"),
-             "plan", "render", "host/A", "entity/A", "--output", str(self.root / "closed-world-plans")],
+            ["--config", str(WORKSPACE_ROOT / "verification/scenarios/projects/technical-only-packages/compliance.yaml"),
+             "plan", "render", "host/technical-A", "--output", str(self.root / "technical-only-plans")],
+        )
+        self.cli(
+            ("plan", "render"),
+            ["--config", str(WORKSPACE_ROOT / "verification/scenarios/projects/company-iam-policy-assessment/compliance.yaml"),
+             "plan", "render", "host/A", "--output", str(self.root / "company-iam-plans")],
+        )
+        focused = self.root / "organization-assertion-plan-input"
+        for name in ("inventory", "assignments", "waivers"):
+            (focused / name).mkdir(parents=True)
+        (focused / "compliance.json").write_text(json.dumps({
+            "schema": "compliance.example/project-config/v1alpha3",
+            "policySources": [
+                {"name": "control-library", "path": str(WORKSPACE_ROOT / "policy-sources/control-library/policies")},
+                {"name": "verification-policy", "path": str(WORKSPACE_ROOT / "policy-sources/verification-policy/policies")},
+            ],
+            "paths": {"inventory":"inventory", "assignments":"assignments", "evidence":"evidence",
+                      "plan":"plans", "results":"results", "waivers":"waivers"},
+        }))
+        (focused / "inventory/entity.json").write_text(json.dumps({
+            "apiVersion":"compliance.example/v1alpha1", "kind":"Subject",
+            "metadata":{"name":"focused-entity", "labels":{"operation-profile":"synthetic"}},
+            "spec":{"id":"entity/focused", "type":"entity", "lifecycle":"active",
+                    "source":{"name":"synthetic-inventory", "externalId":"entity/focused", "observedAt":EXAMPLE_INSTANT}},
+        }))
+        (focused / "inventory/group.json").write_text(json.dumps({
+            "apiVersion":"compliance.example/v1alpha1", "kind":"InventoryGroup", "metadata":{"name":"focused-entities"},
+            "spec":{"subjectRefs":[{"id":"entity/focused"}]},
+        }))
+        (focused / "assignments/policy.json").write_text(json.dumps({
+            "apiVersion":"compliance.example/v1alpha1", "kind":"PolicyAssignment", "metadata":{"name":"focused-assertion"},
+            "spec":{"targetRef":{"kind":"InventoryGroup", "name":"focused-entities"},
+                    "baselineRefs":[{"name":"verification.operation.entity", "revision":"1"}]},
+        }))
+        self.cli(
+            ("plan", "render"),
+            ["--config", str(focused / "compliance.json"), "plan", "render", "entity/focused",
+             "--output", str(self.root / "organization-assertion-plans")],
         )
         declared_implementations = {
             self._read(path)["metadata"]["id"]

@@ -15,6 +15,10 @@ source inputs, temporary non-Git assembly, local validation, and CI ownership.
 
 Current scenarios:
 
+- [`company-iam-policy-assessment`](projects/company-iam-policy-assessment/README.md) —
+  exact two-host company IAM assessment through the experimental assurance path;
+- [`technical-only-packages`](projects/technical-only-packages/README.md) —
+  direct package assessment without Requirement/Realization wrappers; and
 - [`linux-hardening-rollout`](projects/linux-hardening-rollout/README.md) —
   company Linux operations and hardening, complete access realization,
   deterministic evidence, a temporary waiver, a provenance-bearing assessment

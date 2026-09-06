@@ -1,0 +1,10 @@
+apiVersion: compliance.example/v1alpha1
+kind: Subject
+metadata:
+  name: host-a
+  labels: {iam-profile: company-iam-assessment, fleet: company-iam}
+spec:
+  id: host/A
+  type: linux-host
+  lifecycle: active
+  source: {name: synthetic-inventory, externalId: host/A, observedAt: "2026-09-01T00:00:00Z"}

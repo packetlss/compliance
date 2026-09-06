@@ -133,6 +133,6 @@ unusable required observations are unknown; attributable execution failure is er
 untrustworthy shared prerequisites refuse publication. No assessment-result graph,
 certificate subsystem, beneficiary resource or common-assurance engine is added.
 
-The canonical [closed-world scenario](../../verification/scenarios/projects/closed-world/README.md)
-keeps reusable contracts in control-library, synthetic objectives in verification-policy
+The canonical [company IAM scenario](../../verification/scenarios/projects/company-iam-policy-assessment/README.md)
+keeps reusable contracts in control-library, company policy in verification-policy,
 and the host realization in separately materialized environment-private policy.

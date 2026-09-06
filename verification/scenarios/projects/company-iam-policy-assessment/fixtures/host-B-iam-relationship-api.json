@@ -1,0 +1,1 @@
+{"subject":{"id":"host/B","type":"linux-host"},"type":"iam.integration.observation/v1","collector":{"id":"synthetic/integration-observer","version":"1"},"payload":{"consumer":"host/B","service":"service/company-iam","asserted_by":"synthetic-integration-observer","source_assertion_locator":"synthetic-report:company-iam#privileged-access","integrated":true}}
