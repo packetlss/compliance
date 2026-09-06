@@ -154,6 +154,8 @@ def select_from_witness(request, witness):
                             for member in group.get('members', [])}
         if explicit_members - subject_rows.keys():
             raise ValueError('explicit group member is absent from selector candidate domain')
+        if set(request['subjects']) - subject_rows.keys():
+            raise ValueError('explicit request subject is absent from selector candidate domain')
         for row in candidates:
             if set(row['labels']) - selector_keys:
                 raise ValueError('selector candidate contains an unconsulted label')

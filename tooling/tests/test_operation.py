@@ -125,6 +125,13 @@ class OperationTests(unittest.TestCase):
                 incomplete,
             )
 
+        mixed_request = {'all':False,'subjects':['host/A'],'groups':['selected']}
+        incomplete_mixed = freeze_selection_witness(subjects, groups, mixed_request)
+        incomplete_mixed['candidates'] = [row for row in incomplete_mixed['candidates']
+                                          if row['subject_id'] != 'host/A']
+        with self.assertRaisesRegex(ValueError, 'explicit request subject'):
+            select_from_witness(mixed_request, incomplete_mixed)
+
         matching_subjects = copy.deepcopy(subjects)
         matching_subjects['host/C']['labels']['env'] = 'prod'
         matching = copy.deepcopy(all_plans)
