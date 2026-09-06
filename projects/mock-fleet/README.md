@@ -85,7 +85,8 @@ the external archive rather than treating the rationale as proof.
 
 The files in [`fixtures/`](fixtures/) represent normalized responses from
 read-only APIs. The policy-agnostic mock collector refreshes collection times,
-computes payload digests, and writes the common evidence envelope:
+uses payload-derived material only to construct its stable evidence ID, and
+writes the common evidence envelope without a separate payload-integrity field:
 
 ```sh
 uv run --project tooling python tooling/collectors/mock-api/collect.py \

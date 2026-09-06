@@ -13,7 +13,6 @@
     "evidence": [
       {
         "type": "aws.account.configuration/v1",
-        "required": true,
         "id": "observation"
       }
     ],

@@ -2073,7 +2073,6 @@
       "type": "object",
       "required": [
         "type",
-        "required",
         "max_age",
         "id"
       ],
@@ -2082,9 +2081,6 @@
         "type": {
           "type": "string",
           "minLength": 1
-        },
-        "required": {
-          "type": "boolean"
         },
         "max_age": {
           "type": "string",

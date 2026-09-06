@@ -209,9 +209,7 @@ def evaluate_plan_document(
             evaluated_at,
         )
         evidence_requirements = control.get("evidence", [])
-        ambiguities = []
-        optional_validation_errors = []
-        selected_evidence, uses, validation_errors, ambiguities, optional_validation_errors = select_evidence(
+        selected_evidence, uses, validation_errors, ambiguities = select_evidence(
             evidence, evidence_requirements, evaluated_at, plan['subject']['id'],
             validators, schema_references, evidence_sources,
         )
@@ -232,7 +230,7 @@ def evaluate_plan_document(
             # Waivers must not influence the technical decision produced by Rego.
             "waiver": None,
         }
-        if (validation_errors or ambiguities or any(requirement['required'] and not any(use['requirement_index'] == index for use in uses) for index, requirement in enumerate(evidence_requirements))):
+        if (validation_errors or ambiguities or any(not any(use['requirement_index'] == index for use in uses) for index, _ in enumerate(evidence_requirements))):
             observed = {}
             if validation_errors:
                 reason = 'Required evidence was rejected as invalid; criterion not determined.'
@@ -241,19 +239,10 @@ def evaluate_plan_document(
                 reason = 'Required evidence selection is ambiguous; criterion not determined.'
             else:
                 reason = 'Required evidence is missing or stale; criterion not determined.'
-            if optional_validation_errors:
-                observed.setdefault('evidence_validation_errors', []).extend(optional_validation_errors)
-                observed['evidence_validation_errors'].sort(key=lambda item: (item['evidence_type'],item['requirement_index'],item['evidence_id'],item['evidence_digest'],item['path'],item['schema_path']))
             if ambiguities:
                 observed['evidence_selection_ambiguities'] = ambiguities
             result = control_error_result(assessment_input, reason, observed=observed)
             result['status'] = 'unknown'
-        elif optional_validation_errors:
-            result = control_error_result(
-                assessment_input, 'Optional evidence schema validation failed.',
-                observed={'evidence_validation_errors': optional_validation_errors},
-                evidence_ids=sorted({error['evidence_id'] for error in optional_validation_errors}),
-            )
         else:
             try:
                 result = evaluate_control(opa, policies, assessment_input, control["entrypoint"])

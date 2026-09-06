@@ -73,7 +73,7 @@ class Scenario:
         for fixture in sorted((self.project / "fixtures").glob("*-api.json")):
             doc = json.loads(fixture.read_text())
             doc.update(schema="compliance.example/evidence/v1", id="synthetic:" + fixture.stem,
-                       collected_at=AT, integrity={"digest": "sha256:" + "0" * 64})
+                       collected_at=AT)
             (evidence / fixture.name).write_text(json.dumps(doc))
         return evidence
 

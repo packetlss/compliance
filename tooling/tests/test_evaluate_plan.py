@@ -155,7 +155,7 @@ class EvidenceFreshnessTests(unittest.TestCase):
             "type": "object",
             "required": [
                 "schema", "id", "subject", "type", "collected_at",
-                "collector", "payload", "integrity",
+                "collector", "payload",
             ],
             "additionalProperties": True,
             "properties": {
@@ -187,17 +187,6 @@ class EvidenceFreshnessTests(unittest.TestCase):
                     "additionalProperties": True,
                     "properties": {"value": {"type": "string"}},
                 },
-                "integrity": {
-                    "type": "object",
-                    "required": ["digest"],
-                    "additionalProperties": True,
-                    "properties": {
-                        "digest": {
-                            "type": "string",
-                            "pattern": "^sha256:[a-f0-9]{64}$",
-                        },
-                    },
-                },
             },
         }
 
@@ -211,7 +200,6 @@ class EvidenceFreshnessTests(unittest.TestCase):
             "collected_at": "2026-08-23T11:00:00Z",
             "collector": {"id": "test-collector", "version": "1"},
             "payload": {"value": value},
-            "integrity": {"digest": "sha256:" + "a" * 64},
         }
 
     def evidence_plan(self, root: Path):
@@ -225,7 +213,6 @@ class EvidenceFreshnessTests(unittest.TestCase):
         plan = assessment_plan(policy_source_revisions((source,)))
         plan["controls"][0]["evidence"] = [{
             "type": "test.evidence/v1",
-            "required": True,
             "max_age": "24h",
         }]
         plan.pop("id")

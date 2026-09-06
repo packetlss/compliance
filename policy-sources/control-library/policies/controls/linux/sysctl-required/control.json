@@ -13,7 +13,6 @@
     "evidence": [
       {
         "type": "linux.sysctl/v1",
-        "required": true,
         "id": "observation"
       }
     ],

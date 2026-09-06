@@ -189,7 +189,10 @@ For v3 assessment execution, tooling first copies the evidence JSON files into a
 
 The v3 assessment result records the evidence document digest algorithm, set digest algorithm, set digest, and each subject evidence ID + full-document digest. Local source paths are not canonical provenance.
 
-Existing evidence `integrity.digest` fields remain their policy/collector-level integrity contract; the vNext evidence document digest is independent and covers the entire evidence document used by runtime.
+Successor [issue #84](https://github.com/packetlss/compliance/issues/84) removes
+the unverified collector-supplied `integrity.digest` from the normative envelope.
+The evidence document digest remains unchanged and covers the entire evidence
+document used by runtime.
 
 ### Python runtime environment
 

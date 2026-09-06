@@ -190,7 +190,7 @@ subject plan, and the evaluator performs the conservative roll-up.
 The manifest below describes the current executable contract. System
 [ADR 0012](../../docs/adr/0012-explicit-policy-parameter-resolution.md) accepts
 policy/baseline/requirement ownership of effective evidence `max_age`, with
-Controls retaining dependency contracts and optional capability restrictions.
+Controls retaining required dependency contracts and optional capability restrictions.
 Explicit bindings and descendant tailoring choose values; constraints, defaults
 and min/max do not. [#73](https://github.com/packetlss/compliance/issues/73) owns
 the coordinated migration. [Explicit policy parameters](policy-parameters.md)
@@ -214,7 +214,6 @@ spec:
   evidence:
     - id: packages
       type: host.packages/v1
-      required: true
   parameters_schema: parameters.schema.json
   defaults:
     severity: high
@@ -293,9 +292,6 @@ payload:
       {"name": "b", "version": "2.1.0", "architecture": "amd64"},
       {"name": "c", "version": "3.4.0", "architecture": "amd64"}
     ]
-  },
-  "integrity": {
-    "digest": "sha256:..."
   }
 }
 ```
@@ -313,7 +309,7 @@ Initial evidence types could be:
 | `aws.s3.account-public-access-block/v1` | Account-level Amazon S3 Block Public Access settings |
 | `saas.tenant.configuration/v1` | Normalized authentication, audit, and extensible SaaS API observations |
 
-The common envelope enables storage, provenance, freshness, and routing. JSON
+The common envelope enables provenance, freshness, and routing. JSON
 Schema beside each evidence type validates the payload. Domain-specific schemas
 avoid building a universal configuration model.
 
@@ -326,7 +322,8 @@ collector concern; Rego receives only the bounded normalized documents.
 Evidence schemas define a **minimum compatibility contract**:
 
 - The common envelope requires identity, subject, type, collection time,
-  collector provenance, payload, and integrity attributes.
+  collector provenance, and payload. It has no normative collector-supplied
+  payload checksum or `integrity.digest` field.
 - Each evidence type requires only the payload fields on which its controls may
   rely.
 - Objects permit additional properties, including nested objects where
@@ -334,13 +331,16 @@ Evidence schemas define a **minimum compatibility contract**:
 - Collectors may emit richer documents than current controls consume.
 - The evidence store preserves unknown fields and the assessment input builder
   does not silently discard them.
-- Adding optional fields is backward compatible and does not require a new
-  evidence version. Removing, renaming, or changing the meaning or type of a
-  required field does.
+- Opaque extension fields remain part of the complete document. A field named
+  `integrity` gains no product semantics merely because an open schema permits it.
+
+Every declared control evidence dependency is required by definition. Source
+manifests and frozen/effective plan dependencies omit a `required` discriminator;
+there is no optional-evidence selection or outcome path.
 
 System [ADR 0010](../../docs/adr/0010-required-evidence-status-and-assessment-refusal.md) owns the normative
 evidence-condition matrix and `unknown` / `error` / refusal boundary. Its
-accepted corrections are not yet implemented; #32 owns the runtime cutover.
+accepted corrections are implemented in the v4 runtime by #32.
 Validate every explicitly matching subject/type document before freshness or
 candidate selection. Safely attributable schema-invalid required evidence,
 including mixed valid/invalid candidates, makes affected controls `unknown`;
@@ -360,10 +360,10 @@ payloads. Same payload with different IDs, collector metadata, or extensions is
 still distinct. ADR 0010 owns the full matrix and structured ambiguity diagnostics
 (code, subject/type/schema, freshness requirement, evaluation/selection instants,
 and candidate ID/digest pairs), exposed in JSON and human explanations by #32.
-Evidence identity, envelope, collector semantics, and freshness semantics are
+Evidence identity algorithms, collector semantics, and freshness semantics are
 unchanged; coalescing for selection preserves the complete subject snapshot,
 including ambiguous and nonselected evidence. The predecessor order-dependent
-selection behavior is superseded as normative authority pending #32.
+selection behavior is removed.
 
 The predecessor evaluator's matching-schema-failure → `error` rule is superseded
 as normative authority; the historical rationale remains in the
@@ -970,24 +970,24 @@ Production promotion should reference the bundle digest, not a mutable tag.
 
 ## Historical evidence use and query-time timeliness
 
-System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is **accepted design, not yet implemented**.
+System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is accepted and implemented for v4 historical operation reporting.
 It owns interpretation across wall-clock time; ADR 0010 retains assessment-time
 validity/freshness eligibility, invalid evidence, ambiguity, error and refusal.
 At query instant `q`, derive support only from the exact historical successful
 selections and assessed-plan requirements: `q - collected_at <= max_age`, with
 equality inside the recorded age limit. Do not reselect, substitute mutable
 current evidence, or change future timestamps, illustrative evidence `expires_at`,
-optional-evidence semantics or freshness eligibility. A later fresh document cannot
+the required-only dependency model or freshness eligibility. A later fresh document cannot
 refresh an old result. Historical logical outcomes and assurance roll-ups remain
 immutable; timely evidence is not present-state certainty or continuous effectiveness.
 
-#32 must preserve each control's successful selection ID/digest, selected collection
+#32 preserves each control's successful selection ID/digest, selected collection
 instant and unambiguous assessed-plan requirement association as validated,
 result-identity-bound orchestration facts resolving into the complete snapshot.
 See [v4 temporal provenance](artifact-provenance.md#accepted-v4-temporal-provenance).
 Rejected/ambiguous/nonselected candidates and selection diagnostics cannot stand in
-for those facts. Query-time derivation and separate aggregation belong to a later
-operational-view tranche, not #32's representation clarification.
+for those facts. #80 implements query-time derivation and separate aggregation as
+the operational-view tranche, distinct from #32's representation clarification.
 
 ## 12. OPA references
 

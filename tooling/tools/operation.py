@@ -277,11 +277,7 @@ def _evidence_timeliness(report, query_instant):
     dependencies = []
     controls = []
     for control in report['resolved_policy']['controls']:
-        required = [
-            (index, requirement)
-            for index, requirement in enumerate(control['evidence'])
-            if requirement['required']
-        ]
+        required = list(enumerate(control['evidence']))
         if not required:
             continue
         stale = False

@@ -79,7 +79,7 @@ Each successful required-evidence selection is an entry in `provenance.selectedE
 {
   "instance_id": "host.setting",
   "requirement_index": 0,
-  "requirement": {"id": "settings", "type": "host.settings/v1", "required": true, "max_age": "86400s"},
+  "requirement": {"id": "settings", "type": "host.settings/v1", "max_age": "86400s"},
   "id": "evidence:observation",
   "digest": "sha256:<complete-document digest>",
   "collected_at": "2026-09-05T10:00:00.123456Z"
@@ -103,9 +103,9 @@ Rejected, ambiguous, missing and stale requirements receive no selection record.
 Unused and nonselected current-subject documents remain in the complete snapshot;
 canonical duplicates coalesce only during selection, not in the snapshot descriptor.
 OPA-reported `evidence_ids` neither supply nor override orchestration's facts.
-Optional evidence keeps its predecessor selection and invalid-evidence error
-behavior; the new selection-fact table and ambiguity correction concern required
-evidence only. Optional evidence remains in the complete subject snapshot.
+Every declared dependency follows this required-evidence path. Evidence documents
+that are not selected for a declared dependency remain in the complete subject
+snapshot.
 
 A later view can use these historical records without mutable evidence,
 re-selection, ID-only joins or long-term original-byte retention. No `fresh`,
@@ -126,6 +126,8 @@ greatest eligible collection instant produce `evidence_selection_ambiguity`,
 for selection only. No older fallback, payload merge or ordering precedence exists.
 Independent controls remain assessable; any failed required selection blocks its
 control. Missing/stale required evidence is unknown, not a completed passing check.
+Every declared evidence dependency is required by definition; plan and result
+representations contain no optionality discriminator.
 
 Structured validation diagnostics bind evidence ID/digest, schema reference,
 instance/schema pointers, keyword, stable code and human message. Ambiguity
@@ -150,6 +152,9 @@ subject snapshot, including rejected, ambiguous, duplicate and nonselected candi
 The same in-memory snapshot is digested and consumed. Paths are not identity.
 The resolved OPA executable is hashed/versioned once and that executable evaluates
 the selected evidence. Release-tested OPA metadata is not execution identity.
+The normative evidence envelope has no collector-supplied `integrity.digest`.
+No replacement payload checksum or second evidence identity is introduced;
+opaque extensions remain ordinary complete-document content.
 
 ## Installed and locked validation
 

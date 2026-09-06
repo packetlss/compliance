@@ -24,8 +24,9 @@ fixtures, projects, verification and documentation. Maintained destination confi
 are v1alpha3; no positive fixture or reader accepts the retired artifact families.
 Unversioned internal domain helpers remain only where used by current contracts.
 The single-source `--no-config --policies` input still supplies a named semantic
-root and produces v4; it is not an old artifact reader. Optional evidence semantics
-remain the accepted successor behavior and are not redesigned by this tranche.
+root and produces v4; it is not an old artifact reader. This tranche preserved the
+then-current optional-evidence behavior; ADR 0010 and #84 subsequently removed
+that behavior from the accepted successor model.
 
 ## Remaining references
 

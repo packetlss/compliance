@@ -22,15 +22,16 @@ execution `error`, and assessment-wide refusal. None of those semantics moves he
 [ADR 0007](0007-unified-actual-and-expected-composition-provenance.md) continues to
 own the unified provenance-bearing assessment artifact line.
 
-Accepted option **B**: **#32 needs a small forward-compatible representation
-clarification after this decision is promoted.** A complete snapshot descriptor
+Accepted option **B**: **#32 includes the small forward-compatible representation
+clarification required by this decision.** A complete snapshot descriptor
 and criterion-reported evidence IDs alone do not expose all immutable factual
 selection and temporal provenance needed for a later view without evidence bytes.
 This clarification adds facts to v4, not stored operational judgments.
 
-The original promotion changed documentation and contracts only. Predecessor runtime,
-schemas and tests remain unchanged. #32 implements the representation obligation
-below alongside its existing ADR 0010 corrections. The derived operational view
+The original promotion changed documentation and contracts only; it did not change
+the then-current predecessor runtime, schemas or tests. #32 implemented the
+representation obligation below alongside its existing ADR 0010 corrections. The
+derived operational view
 was accepted future semantics and is implemented by #80 as a derived reporting tranche.
 No historical artifact is rewritten or reinterpreted; no compatibility freeze is
 created.
@@ -68,7 +69,7 @@ q - collected_at <= max_age
 Equality is within the recorded age limit. This is a derived property of historical
 assessment support, not re-evaluation of criterion truth. Do not change assessment-time
 freshness eligibility, future-timestamp semantics, illustrative evidence `expires_at`
-behavior, optional-evidence semantics, or evidence selection. This ADR adds no
+behavior, the required-only dependency model, or evidence selection. This ADR adds no
 alternative temporal eligibility rule.
 
 Never reselect evidence at query time or substitute current mutable evidence for
@@ -79,7 +80,7 @@ cannot establish timeliness, expose **Evidence timeliness unavailable**, retaini
 historical missing/invalid/ambiguous/otherwise inconclusive explanations. Do not
 manufacture successful selections for such results or claim timely support from an
 empty set of successful required selections when required evidence was not selected.
-This does not add obligations for optional evidence or change existing applicability.
+This does not change the required-only evidence model or existing applicability.
 
 One stale required selected-evidence dependency qualifies the affected control as
 needing reassessment. Do not average evidence ages. Concurrent stale and unavailable
@@ -220,27 +221,26 @@ snapshot candidates must not be relabeled as successful evidence use.
 
 ## Implementation ownership and consequences
 
-#32 implements **representation only for this ADR**, preserving all its existing
+#32 implemented **representation only for this ADR**, preserving all its existing
 responsibilities and ADR 0010 corrections. It does not derive query-time
 fresh/stale/current state, add a result status, change evidence identity algorithms,
-create an artifact family or retention system, or add monitoring/scheduling. Because
-these facts are required in v4, #32 is not complete/merge-ready until this promoted
-contract is incorporated. Its existing dependencies are unchanged; this promotion
-does not otherwise interfere with its implementation thread.
+create an artifact family or retention system, or add monitoring/scheduling. It
+incorporated these required v4 facts without changing its existing dependencies.
 
-The smallest later tranche is a derived operational assessment view over a validated
-v4 result, the exact assessed plan, the current comparison plan, and an explicit
+The separately authorized #80 tranche implements a derived operational assessment
+view over a validated v4 result, the exact assessed plan, the current comparison
+plan, and an explicit
 query instant. It depends on #32 and owns status/explanation/group presentation,
 removal of misleading equivalent “current” wording, temporal derivation and tests,
-and one canonical time-advance scenario. This promotion neither creates its issue
-nor authorizes its runtime implementation.
+and one canonical time-advance scenario. The original promotion neither created
+that issue nor authorized its runtime implementation; #80 supplied that authority.
 
 This decision preserves one v4 assessment artifact family, immutable history, exact
 plan comparison, complete evidence snapshots, fail-only waivers, refusal without
 result, current logical roll-ups, private-source boundaries, location/path/source-order
-nonsemantics, and content-addressed provenance. It requires a small v4 representation
-addition now so the later view does not depend on mutable evidence or a retention
-system. Deferring those facts until a status implementation would leave #32's v4
+nonsemantics, and content-addressed provenance. It required the small v4 representation
+addition supplied by #32 so #80's view does not depend on mutable evidence or a retention
+system. Deferring those facts until the status implementation would have left #32's v4
 representation insufficient; storing temporal judgments instead would make immutable
 results misleading as time advances.
 
@@ -249,15 +249,15 @@ results misleading as time advances.
 No evidence collection/scheduling, continuous monitoring, evidence retention/storage,
 findings lifecycle, collector precedence/authority, evidence supersession, payload
 merging/multi-observation semantics, new freshness eligibility, future timestamp or
-evidence `expires_at` behavior, optional-evidence redesign, #37 manual/procedural
+evidence `expires_at` behavior, the required-only dependency model, #37 manual/procedural
 assurance, new logical result states, persisted operational-status artifact, adapter
 execution, release/signing/acquisition, or firewall/network-policy work is authorized.
 
-Promotion requires coherent documentation and valid links/issues, a documentation-only
-diff, `git diff --check`, repository documentation validation, fresh-context exact-head
-independent review without unresolved findings, and all four stable exact-head CI
-contexts green. Runtime/schema/temporal test implementation is excluded. Human final
-squash-merge authority remains unchanged.
+The original promotion required coherent documentation and valid links/issues, a
+documentation-only diff, `git diff --check`, repository documentation validation,
+fresh-context exact-head independent review without unresolved findings, and all four
+stable exact-head CI contexts green. Runtime/schema/temporal implementation and tests
+were delivered under #32 and #80. Human final squash-merge authority remains unchanged.
 
 Return to architecture if implementation needs original evidence-byte retention as a
 prerequisite for timeliness; a new evidence identity/equivalence algorithm; evidence

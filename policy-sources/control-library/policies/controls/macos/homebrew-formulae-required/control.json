@@ -13,7 +13,6 @@
     "evidence": [
       {
         "type": "macos.homebrew/v1",
-        "required": true,
         "id": "observation"
       }
     ],

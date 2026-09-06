@@ -193,7 +193,7 @@ def build_fixture(root):
             "entrypoint": "data.test.contract.evaluate",
             "applies_to": [kind],
             "evidence": [
-                {"id": "observation", "type": f"test.{kind}/v1", "required": True}
+                {"id": "observation", "type": f"test.{kind}/v1"}
             ],
             "parameters_schema": "parameters.schema.json",
             "severity": "medium",

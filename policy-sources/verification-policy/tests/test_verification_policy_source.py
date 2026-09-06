@@ -257,7 +257,7 @@ class VerificationPolicySourceTests(unittest.TestCase):
         self.assertEqual(source_tree_digest(self.root), original)
         self.assertEqual(
             original,
-            "sha256:d78243147728af0551da17ccf66953ef2c1d86cc032de3d8fc580115112e3566",
+            "sha256:db183419df8f0368666f66e3a8b668de02875eb4174ea0563795b36eccbb3579",
         )
         with (self.root / BASELINE).open("a") as stream:
             stream.write("\n")

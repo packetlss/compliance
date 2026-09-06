@@ -34,7 +34,6 @@ def collect_fixture(path: Path, collected_at: datetime) -> dict[str, Any]:
         "collected_at": timestamp,
         "collector": fixture["collector"],
         "payload": payload,
-        "integrity": {"digest": digest},
     }
 
 

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://compliance.example/schemas/evidence/aws-account-configuration-v1.schema.json",
   "type": "object",
-  "required": ["schema", "id", "subject", "type", "collected_at", "collector", "payload", "integrity"],
+  "required": ["schema", "id", "subject", "type", "collected_at", "collector", "payload"],
   "additionalProperties": true,
   "properties": {
     "schema": {"const": "compliance.example/evidence/v1"},
@@ -54,12 +54,6 @@
           }
         }
       }
-    },
-    "integrity": {
-      "type": "object",
-      "required": ["digest"],
-      "additionalProperties": true,
-      "properties": {"digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}}
     }
   }
 }
