@@ -306,7 +306,7 @@ Local compiler, planner, OPA evaluator, and result store
 Shared policy distribution is one-way. The central repository does not clone,
 compile, or inspect the private realization. The local environment records the
 actual planning composition, operation/member/bound-plan identities, technical
-results, and full realization provenance.
+results, and full plan-owned realization provenance.
 
 If central governance needs framework-level status, the environment may export
 a signed minimal assurance claim containing requirement identity, result,
@@ -333,15 +333,15 @@ technical checks, and provenance into the content-addressed subject plan. The
 evaluator persists technical, requirement, and requirement-baseline results,
 and the status/explain views expose all three levels.
 
-The complete result envelope is validated against the strict
-`assessment-results/v4` tooling contract before persistence and when loaded for
-reporting. Validation recalculates technical, requirement, and top-baseline
-summaries and independently checks the conservative roll-up precedence, so an
-inconsistent parent tick cannot be accepted merely because its JSON shape is
+The complete result envelope is intrinsically validated against the strict
+`assessment-results/v4` tooling contract. Before persistence or full reporting,
+mandatory validation against the exact assessed plan recalculates compact
+requirement and top-baseline outcomes and checks conservative roll-up precedence,
+so an inconsistent parent tick cannot be accepted merely because its JSON shape is
 valid.
 
-Requirement `external_refs` are frozen into the plan and copied into the
-immutable requirement assessment. `assessment frameworks --level objective`
+Requirement `external_refs` are frozen into the exact plan and interpreted with the
+compact immutable requirement assessment. `assessment frameworks --level objective`
 therefore exposes the current result of the complete realized objective rather
 than inferring it from one mapped technical check.
 

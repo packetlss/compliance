@@ -6,11 +6,12 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
-from tools.assessment_provenance import validate_selection_plan, validate_selection_snapshot
+from tools.assessment_provenance import validate_result_against_plan, validate_selection_snapshot
 from tools.evaluator import opa_evaluator_identity
 from tools.evidence_provenance import evidence_document_digest, evidence_set_provenance
 from tools.policy_sources import source_tree_digest
@@ -193,11 +194,13 @@ def assert_assessment_result(
 ) -> None:
     require(report.get("schema") == "compliance.example/assessment-results/v4", f"unexpected result schema for {subject_id}")
     validate_assessment_results(report)
-    validate_selection_plan(report, plan)
+    validate_result_against_plan(report, plan)
     validate_selection_snapshot(report, evidence)
     require(report.get("subject_id") == subject_id, f"wrong result subject: {report.get('subject_id')}")
     assert_fixed_instant(report.get("evaluated_at", ""), f"{subject_id} evaluated_at")
-    require(report.get("summary") == summary, f"unexpected technical summary for {subject_id}: {report.get('summary')}")
+    counts = Counter(item["status"] for item in report.get("results", []))
+    require({status: counts[status] for status in summary} == summary,
+            f"unexpected technical outcomes for {subject_id}: {dict(counts)}")
 
     requirements = report.get("requirement_assessments", [])
     require(len(requirements) == 1, f"expected one requirement assessment for {subject_id}")
@@ -208,8 +211,8 @@ def assert_assessment_result(
     require(baselines[0].get("status") == baseline_status, f"unexpected objective-baseline status for {subject_id}")
 
     provenance = report.get("provenance", {})
-    require(provenance.get("planningComposition") == plan["provenance"]["planningComposition"],
-            f"planning provenance changed during evaluation for {subject_id}")
+    require("planningComposition" not in provenance,
+            f"result copied planning provenance for {subject_id}")
     evaluation = provenance.get("evaluationComposition", {})
     require(evaluation.get("actual") == actual,
             f"evaluation composition differs from assembled bytes for {subject_id}")
@@ -225,19 +228,18 @@ def assert_assessment_result(
 
     expected_selections = []
     for control in plan.get("controls", []):
-        for index, requirement in enumerate(control.get("evidence", [])):
+        for requirement in control.get("evidence", []):
             candidates = [item for item in evidence if item.get("type") == requirement.get("type")]
             require(len(candidates) <= 1, f"fixture has ambiguous successful evidence for {subject_id}")
             for document in candidates:
                 expected_selections.append({
                     "instance_id": control["instance_id"],
-                    "requirement_index": index,
-                    "requirement": requirement,
-                    "id": document["id"],
-                    "digest": evidence_document_digest(document),
+                    "dependency_id": requirement["id"],
+                    "evidence_id": document["id"],
+                    "evidence_digest": evidence_document_digest(document),
                     "collected_at": document["collected_at"],
                 })
-    expected_selections.sort(key=lambda item: (item["instance_id"], item["requirement_index"]))
+    expected_selections.sort(key=lambda item: (item["instance_id"], item["dependency_id"]))
     require(provenance.get("selectedEvidence") == expected_selections,
             f"successful selections lost exact document, time, or plan-requirement association for {subject_id}")
 
@@ -318,10 +320,11 @@ def main() -> None:
         actual=actual,
         evidence=standard_evidence,
     )
-    require(standard.get("requirement_summary") == expected_summary(unknown=1), "standard objective summary changed")
-    require(standard.get("requirement_baseline_summary") == expected_summary(unknown=1), "standard objective-baseline summary changed")
     standard_requirement = standard["requirement_assessments"][0]
-    require(standard_requirement.get("check_summary", {}).get("unknown") == 4, "standard missing-access checks are no longer four unknowns")
+    requirement_instances = set(standard_plan["requirements"][0]["technical_instance_ids"])
+    require(sum(item["status"] == "unknown" and item["instance_id"] in requirement_instances
+                for item in standard["results"]) == 4,
+            "standard missing-access checks are no longer four unknowns")
     waived = [item for item in standard.get("results", []) if item.get("instance_id") == "company.linux-server.audit-package"]
     require(len(waived) == 1 and waived[0].get("status") == "waived", "audit-package failure is not waived")
     require(waived[0].get("waiver", {}).get("underlying_status") == "fail", "waiver no longer preserves the underlying failure")
@@ -349,19 +352,16 @@ def main() -> None:
         actual=actual,
         evidence=container_evidence,
     )
-    require(container.get("requirement_summary") == expected_summary(passed=1), "container objective summary changed")
-    require(container.get("requirement_baseline_summary") == expected_summary(passed=1), "container objective-baseline summary changed")
-
     assert_assessment_plan_handoff(container_plan, actual)
 
     waived_result = next(item for item in standard["results"]
                          if item["instance_id"] == "company.linux-server.audit-package")
     require(waived_result.get("waiver", {}).get("id") == "standard-app-01-auditd-rollout",
             "waiver provenance lost the applied waiver identity")
-    require(is_digest(waived_result.get("waiver_revision")),
-            "waiver provenance lost its content-addressed revision")
-    require(waived_result["waiver_revision"] == standard.get("waiver_revision"),
-            "applied waiver revision differs from the assessment envelope")
+    require(is_digest(waived_result.get("waiver", {}).get("digest")),
+            "waiver provenance lost its exact snapshot digest")
+    require("waiver_revision" not in standard and "waiver_revision" not in waived_result,
+            "result retained whole-catalog waiver revision")
 
     conflict = load_json(run_root / "plans/host__persona-conflict-01.json")
     require(conflict.get("schema") == "compliance.example/assessment-plan/v4", "unexpected conflict plan schema")

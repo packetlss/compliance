@@ -74,8 +74,8 @@ with provisional composition/lock/plan/result digest algorithms.
 
 These are **experimental**, implemented by #31/#32 and used by all destination consumers after #34–#36. #33 retires predecessor support.
 
-The accepted pre-freeze result/plan ownership refinement is **Accepted design, not
-yet implemented** under [#90](https://github.com/packetlss/compliance/issues/90).
+The pre-freeze result/plan ownership refinement is **Experimental, implemented**
+under [#90](https://github.com/packetlss/compliance/issues/90).
 It removes duplicated plan/operation/planning facts from results, retains evaluation
 composition and enforcement, introduces an explicit result-domain projection, and
 requires intrinsic result plus exact plan/result relational validation. It freezes
@@ -87,7 +87,7 @@ Predecessor `project-config/v1alpha1`, `project-config/v1alpha2`, `release-lock/
 
 [ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md)
 has its original factual representation implemented by #32 and derived historical
-operation reporting implemented by #80. #90 will retain stable-dependency successful
+operation reporting implemented by #80. #90 retains stable-dependency successful
 selection ID/digest and collection facts in the result while the exact assessed plan
 owns dependency/`max_age` meaning. The exact plan/result pair, not a duplicated result,
 supports full historical interpretation. The refinement does not change evidence
@@ -112,8 +112,8 @@ Current requirement/realization schemas support explicit pinned slots and direct
 implemented under [#78](https://github.com/packetlss/compliance/issues/78) and
 simplified before freeze under [#87](https://github.com/packetlss/compliance/issues/87)**.
 ADRs 0013–0015 remain superseded historical design. The sole new shared runtime
-representation is currently the embedded frozen operation projection inside existing
-v4 plans/results. #90's accepted successor removes the result copy and resolves the
+representation is the embedded frozen operation projection inside v4 plans. #90
+removes the result copy and resolves the
 exact operation-bearing plan by `plan_id`. [The operation contract](../tooling/docs/operation-accounting.md)
 defines its normalization and identity. The current projection uses one
 `member_plan_digest`, one selector-sensitive `operation_id`, and operation-bound

@@ -17,6 +17,9 @@ from tools.assessment import (
     render_table,
     status_row,
 )
+from tools.artifact_validation import result_outcome
+from tools.assessment_provenance import artifact_digest, digest
+from tools.control_realization import compact_plan_outcomes
 from tools.policy_sources import PolicySource
 from tools.render_plan import load_inventory_inputs, render_plan
 from tools.waivers import load_waivers
@@ -72,17 +75,47 @@ class AssessmentStatusTests(unittest.TestCase):
         )
         self.assertEqual(old["resolution"], self.plan["resolution"])
 
-    def result_report(self, plan_id=None, **summary):
-        return {
+    def result_report(self, plan=None, plan_id=None, **summary):
+        plan = plan or self.plan
+        statuses = [
+            status
+            for status in ("error", "fail", "unknown", "waived", "pass", "not_applicable")
+            for _ in range(summary.get(status, 0))
+        ]
+        statuses.extend(["pass"] * (len(plan["controls"]) - len(statuses)))
+        results = [{
+            "instance_id": control["instance_id"],
+            "status": statuses[index],
+            "reason": f"Synthetic {statuses[index]} outcome.",
+            "expected": {},
+            "observed": {},
+        } for index, control in enumerate(plan["controls"])]
+        requirements, baselines = compact_plan_outcomes(plan, results)
+        report = {
             "schema": "compliance.example/assessment-results/v4",
-            "subject_id": self.subject["id"],
-            "plan_id": plan_id or self.plan["id"],
+            "digestAlgorithm": "compliance.example/assessment-results-digest/v1alpha1",
+            "subject_id": plan["subject"]["id"],
+            "plan_id": plan_id or plan["id"],
             "evaluated_at": "2026-08-23T13:03:45Z",
-            "summary": {
-                status: summary.get(status, 0)
-                for status in ("pass", "fail", "unknown", "not_applicable", "error", "waived")
+            "provenance": {
+                "schema": "compliance.example/assessment-provenance/v1alpha1",
+                "evaluationComposition": copy.deepcopy(plan["provenance"]["planningComposition"]),
+                "evaluator": {"name": "opa", "version": "1.18.2", "executableSha256": "sha256:" + "e" * 64},
+                "evidence": {
+                    "documentDigestAlgorithm": "compliance.example/evidence-document-digest/v1alpha1",
+                    "setDigestAlgorithm": "compliance.example/evidence-set-digest/v1alpha1",
+                    "setDigest": digest([]),
+                    "documents": [],
+                },
+                "selectedEvidence": [],
             },
+            "results": results,
+            "requirement_assessments": requirements,
+            "requirement_baseline_assessments": baselines,
         }
+        report["outcome"] = result_outcome(report)
+        report["id"] = artifact_digest(report)
+        return report
 
     def test_failing_current_result_is_visible(self):
         row = status_row(self.plan, [self.result_report(**{"pass": 5, "fail": 1})])
@@ -93,21 +126,19 @@ class AssessmentStatusTests(unittest.TestCase):
         self.assertEqual(row["result_summary"]["fail"], 1)
 
     def test_failed_requirement_baseline_controls_subject_state(self):
-        report = self.result_report(**{"pass": 4})
-        report["requirement_summary"] = {"fail": 1}
-        report["requirement_baseline_summary"] = {"fail": 1}
+        report = self.result_report(**{"fail": 1})
 
         row = status_row(self.plan, [report])
 
         self.assertEqual(row["historical_outcome"], "fail")
         self.assertEqual(row["plan_alignment"], "plan_aligned")
-        self.assertEqual(row["requirement_summary"]["fail"], 1)
+        self.assertEqual(row["result_summary"]["fail"], 1)
 
-    def test_previous_pass_retains_outcome_and_different_plan(self):
+    def test_orphaned_previous_result_is_not_interpreted_as_current_policy(self):
         row = status_row(self.plan, [self.result_report(plan_id="sha256:old", **{"pass": 6})])
 
-        self.assertEqual(row["historical_outcome"], "pass")
-        self.assertEqual(row["plan_alignment"], "different_plan")
+        self.assertEqual(row["historical_outcome"], "no_assessment")
+        self.assertEqual(row["plan_alignment"], "plan_alignment_unavailable")
         self.assertFalse(row["matching_plan_result"])
 
     def test_unassigned_coverage_takes_precedence_over_old_results(self):
@@ -120,8 +151,8 @@ class AssessmentStatusTests(unittest.TestCase):
 
         row = status_row(unassigned, [self.result_report(**{"pass": 6})])
 
-        self.assertEqual(row["historical_outcome"], "pass")
-        self.assertEqual(row["plan_alignment"], "different_plan")
+        self.assertEqual(row["historical_outcome"], "no_assessment")
+        self.assertEqual(row["plan_alignment"], "plan_alignment_unavailable")
         self.assertEqual(row["coverage"]["status"], "unassigned")
 
     def test_no_assessment_is_independent_of_alignment_and_coverage(self):
@@ -189,19 +220,17 @@ class AssessmentStatusTests(unittest.TestCase):
              "plan_alignment": ["plan_aligned"]},
         )
 
-        previous = status_row(
-            self.plan, [self.result_report(plan_id="sha256:old", **{"pass": 6})]
-        )
+        previous = status_row(self.plan, [self.result_report(plan_id="sha256:" + "0" * 64, **{"pass": 6})])
         previous_report = {
             **report,
             "subjects": [previous],
         }
         preserved = filter_status_report(
-            previous_report, [], ["pass"], ["different_plan"]
+            previous_report, [], ["no_assessment"], ["plan_alignment_unavailable"]
         )
-        self.assertEqual(preserved["summary"]["historical_outcomes"], {"pass": 1})
-        self.assertEqual(preserved["summary"]["plan_alignment"], {"different_plan": 1})
-        self.assertEqual(preserved["subjects"][0]["historical_outcome"], "pass")
+        self.assertEqual(preserved["summary"]["historical_outcomes"], {"no_assessment": 1})
+        self.assertEqual(preserved["summary"]["plan_alignment"], {"plan_alignment_unavailable": 1})
+        self.assertEqual(preserved["subjects"][0]["historical_outcome"], "no_assessment")
 
     def test_group_report_counts_subject_in_each_resolved_dag_group(self):
         report = build_status_report(
@@ -226,13 +255,12 @@ class AssessmentStatusTests(unittest.TestCase):
 
     def test_explanation_connects_result_and_policy_provenance(self):
         report = self.result_report(**{"pass": 5, "fail": 1})
-        report["results"] = [{
-            "instance_id": "developer.macos.shellcheck-required",
-            "status": "fail",
-            "reason": "Required Homebrew formulae are missing: shellcheck",
-            "severity": "medium",
-            "remediation": "Install shellcheck from the approved source.",
-        }]
+        result = next(item for item in report["results"]
+                      if item["instance_id"] == "developer.macos.shellcheck-required")
+        result["status"] = "fail"
+        result["reason"] = "Required Homebrew formulae are missing: shellcheck"
+        report["outcome"] = result_outcome(report)
+        report["id"] = artifact_digest(report)
 
         explanation = build_explanation(self.plan, [report])
         rendered = render_explanation(explanation)
@@ -241,7 +269,7 @@ class AssessmentStatusTests(unittest.TestCase):
         self.assertEqual(explanation["status"]["plan_alignment"], "plan_aligned")
         self.assertIn("developer.macos.shellcheck-required", rendered)
         self.assertIn("Required Homebrew formulae are missing: shellcheck", rendered)
-        self.assertIn("remediation: Install shellcheck from the approved source.", rendered)
+        self.assertNotIn("Install shellcheck from the approved source.", rendered)
         self.assertIn("developer-workstation-policy-assignment", rendered)
         self.assertIn("benchmark.example.macos.audit-formula-required", rendered)
 
@@ -303,31 +331,18 @@ class AssessmentStatusTests(unittest.TestCase):
                 ),
             ),
         )
-        waivers, revision = load_waivers(project / "waivers")
+        waivers, _ = load_waivers(project / "waivers")
         waiver = {**waivers[0], "underlying_status": "fail"}
-        report = {
-            "schema": "compliance.example/assessment-results/v4",
-            "subject_id": subject["id"],
-            "plan_id": plan["id"],
-            "evaluated_at": "2026-08-28T12:00:00Z",
-            "waiver_revision": revision,
-            "summary": {
-                "pass": 2,
-                "fail": 0,
-                "unknown": 0,
-                "not_applicable": 0,
-                "error": 0,
-                "waived": 1,
-            },
-            "results": [{
-                "instance_id": "test.packages.extra",
-                "status": "waived",
-                "reason": "Required Linux packages are missing: jq",
-                "severity": "medium",
-                "remediation": "Install jq.",
-                "waiver": waiver,
-            }],
-        }
+        report = self.result_report(plan=plan)
+        report["evaluated_at"] = "2026-08-28T12:00:00Z"
+        result = next(item for item in report["results"] if item["instance_id"] == "test.packages.extra")
+        result.update({
+            "status": "waived",
+            "reason": "Required Linux packages are missing: jq",
+            "waiver": waiver,
+        })
+        report["outcome"] = result_outcome(report)
+        report["id"] = artifact_digest(report)
 
         rendered = render_explanation(build_explanation(plan, [report]))
 
@@ -352,16 +367,7 @@ class AssessmentStatusTests(unittest.TestCase):
                 assignments,
                 self.policy_sources,
             )
-            reports.append({
-                "schema": "compliance.example/assessment-results/v4",
-                "subject_id": subject["id"],
-                "plan_id": plan["id"],
-                "evaluated_at": "2026-08-23T13:03:45Z",
-                "results": [
-                    {"instance_id": control["instance_id"], "status": "pass"}
-                    for control in plan["controls"]
-                ],
-            })
+            reports.append(self.result_report(plan=plan, **{"pass": len(plan["controls"])}))
 
         report = build_framework_report(
             subjects,
@@ -400,17 +406,17 @@ class AssessmentStatusTests(unittest.TestCase):
             self.policy_sources,
             [previous],
             outcomes=["no_assessment"],
-            plan_alignments=["different_plan"],
+            plan_alignments=["plan_alignment_unavailable"],
         )
 
         self.assertTrue(report["mappings"])
         self.assertEqual(report["filters"]["outcomes"], ["no_assessment"])
-        self.assertEqual(report["filters"]["plan_alignment"], ["different_plan"])
+        self.assertEqual(report["filters"]["plan_alignment"], ["plan_alignment_unavailable"])
         self.assertEqual(
             {mapping["historical_outcome"] for mapping in report["mappings"]},
             {"no_assessment"},
         )
         self.assertEqual(
             {mapping["plan_alignment"] for mapping in report["mappings"]},
-            {"different_plan"},
+            {"plan_alignment_unavailable"},
         )

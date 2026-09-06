@@ -10,6 +10,7 @@ from tools.cli import main
 from tools.composition import COMPOSITION_LOCK_SCHEMA
 from tools.project_config import composition_validation, load_config
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
+from tools.assessment_provenance import validate_result_against_plan
 
 
 def prove_v4_cli():
@@ -32,7 +33,7 @@ evaluate := {
   "plan_id": input.assessment.plan_id,
   "status": "pass", "reason": "Synthetic observation accepted",
   "severity": input.control.severity, "remediation": input.control.remediation,
-  "expected": {}, "observed": {}, "evidence_ids": [],
+  "expected": {}, "observed": {},
   "external_refs": [], "alignment": input.control.alignment,
 }
 ''')
@@ -51,10 +52,11 @@ evaluate := {
         result_path, = (project/'generated/results').rglob('*.json')
         plan = json.loads(plan_path.read_text()); report = json.loads(result_path.read_text())
         validate_assessment_plan(plan); validate_assessment_results(report)
+        validate_result_against_plan(report, plan)
         assert plan['schema'].endswith('/v4') and report['schema'].endswith('/v4')
-        assert report['summary']['pass'] == len(plan['controls']) > 0, report
+        assert report['outcome'] == 'pass' and len(plan['controls']) > 0, report
         assert len(report['provenance']['selectedEvidence']) == len(plan['controls'])
-        assert all(not item['evidence_ids'] for item in report['results'])  # orchestration, not OPA IDs
+        assert all('evidence_ids' not in item for item in report['results'])
         assert json.loads(run('plan','show','host/configuration-linux-01','--format','json'))['id'] == plan['id']
         run('assessment','explain','host/configuration-linux-01','--format','json')
         actual = composition_validation(load_config(path))['actual']
@@ -72,7 +74,7 @@ evaluate := {
         (evidence/'second.json').write_text(json.dumps({**doc,'extension':True}))
         run('assessment','run','host/configuration-linux-01','--at','2026-08-23T12:00:00Z')
         ambiguous = json.loads(result_path.read_text())
-        assert ambiguous['summary']['unknown'] == len(plan['controls'])
+        assert ambiguous['outcome'] == 'unknown'
         assert ambiguous['provenance']['selectedEvidence'] == []
         assert 'evidence_selection_ambiguity' in run('assessment','explain','host/configuration-linux-01')
         before = result_path.read_bytes()
@@ -105,18 +107,22 @@ evaluate := {
         assert account['accounting_complete'] and account['all_passed'], account
         multi_plan = json.loads(plan_path.read_text())
         assert multi_plan['id'] != plan['id']
-        historical = json.loads(run('assessment','status','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z','--as-of','2026-08-23T12:00:00Z','--format','json'))
+        historical = json.loads(run('assessment','status','--plan',str(plan_path),
+            '--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',
+            '--as-of','2026-08-23T12:00:00Z','--format','json'))
         assert historical['all_passed']
         (project/'generated/results/host__installed-second.json').unlink()
-        historical = json.loads(run('assessment','status','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z','--as-of','2026-08-23T12:00:00Z','--format','json'))
+        historical = json.loads(run('assessment','status','--plan',str(plan_path),
+            '--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',
+            '--as-of','2026-08-23T12:00:00Z','--format','json'))
         assert not historical['accounting_complete'] and not historical['all_passed']
         no_assessment = json.loads(run(
-            'assessment','status','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z',
+            'assessment','status','--plan',str(plan_path),'--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',
             '--as-of','2026-08-23T12:00:00Z','--outcome','no_assessment','--format','json'
         ))
         assert [row['historical_outcome'] for row in no_assessment['visible_members']] == ['no_assessment']
         filtered_groups = json.loads(run(
-            'assessment','groups','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z',
+            'assessment','groups','--plan',str(plan_path),'--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',
             '--as-of','2026-08-23T12:00:00Z','--outcome','no_assessment','--format','json'
         ))
         assert filtered_groups['groups']
@@ -126,7 +132,7 @@ evaluate := {
             for summary in filtered_groups['groups']
         )
         filtered_frameworks = json.loads(run(
-            'assessment','frameworks','--plan',str(plan_path),'--at','2026-08-23T12:00:00Z',
+            'assessment','frameworks','--plan',str(plan_path),'--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',
             '--as-of','2026-08-23T12:00:00Z','--outcome','no_assessment','--format','json'
         ))
         assert {row['subject_id'] for row in filtered_frameworks['visible_members']} == {second_subject}

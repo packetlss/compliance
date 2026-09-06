@@ -19,12 +19,12 @@ Canonical runtime/generated-artifact provenance is content-addressed. Preserve t
 ADR 0007 accepts the successor line `project-config/v1alpha3`, `composition-lock/v1alpha1`, `assessment-provenance/v1alpha1`, and assessment plan/results v4. Its destination implementation packets are #31–#36. Consumer cutover is complete; #33 retires the predecessor config, release-lock, and assessment readers. Historical artifacts require historical tooling.
 
 Before result identity freeze, [#90](https://github.com/packetlss/compliance/issues/90)
-will replace the current duplicated self-contained result representation with an
+replaces the duplicated self-contained result representation with an
 exact retained `{bound plan, result}` historical pair. The bound plan owns resolved
 intent, operation membership, planning composition/enforcement, parameters,
 dependencies, mappings, and plan semantics. The result owns the immutable conclusion
-and evaluation-stage provenance. This accepted refinement is not yet implemented and
-adds no core storage/history/run/discovery subsystem or compatibility reader.
+and evaluation-stage provenance. This experimental implementation adds no core
+storage/history/run/discovery subsystem or compatibility reader.
 
 Actual composition provenance and expected enforcement are separate: every successor run records what actually executed; direct expected-source identities or a complete composition lock may additionally refuse mismatches. Expected identity never substitutes for missing actual identity.
 
@@ -206,7 +206,7 @@ graph, external conformity engine or certificate subsystem is introduced.
 
 [ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md)
 has its original factual v4 representation implemented under #32 and its derived
-historical operational view under #80. The accepted #90 successor makes the exact
+historical operational view under #80. #90 makes the exact
 assessed bound plan plus its result the historical assertion: the plan owns planning
 composition/enforcement and resolved policy meaning; the result retains immutable
 outcomes, actual evaluation composition/enforcement, evaluator identity, complete
@@ -237,7 +237,7 @@ timeliness, waiver validity and coverage/applicability aggregate independently u
 ADR 0011's state matrix. Neither plan alignment nor timely evidence establishes
 present-state certainty, absence of drift, or continuous effectiveness.
 
-#90 replaces the current positional/copied dependency record with stable dependency
+#90 replaces the positional/copied dependency record with stable dependency
 identity while preserving validated evidence ID plus complete-document digest,
 selected `collected_at`, references into the independent complete snapshot, and the
 distinction between successful selections and nonselected candidates. Existing

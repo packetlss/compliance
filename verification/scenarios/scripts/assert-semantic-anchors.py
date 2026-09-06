@@ -237,7 +237,8 @@ def iam(root, private_source):
         require(len(selected_c["members"]) == 2 and
                 json.loads((c_plans / "host__A.json").read_text())["id"] == plan_a["id"], "nonselected C changed A/B identity")
 
-        history_args = ["assessment", "status", "--plan", str(plans / "host__A.json"), "--results", str(results), "--at", AT]
+        history_args = ["assessment", "status", "--plan", str(plans / "host__A.json"),
+                        "--assessed-plans", str(plans), "--results", str(results), "--at", AT]
         current = json.loads(s.cli(*history_args, "--as-of", AT, "--comparison-plan", str(plans / "host__A.json"), "--format", "json", historical=True))
         aged = json.loads(s.cli(*history_args, "--as-of", "2026-09-03T00:00:01Z", "--comparison-plan", str(plans / "host__A.json"), "--format", "json", historical=True))
         require({row["plan_alignment"] for row in current["members"]} == {"plan_aligned"},
@@ -270,8 +271,9 @@ def iam(root, private_source):
 
         realization = s.work / "environment-private/realizations/restricted/company-iam-policy-assessment.json"
         realization_bytes = realization.read_bytes(); realization.unlink()
-        absent, _, absent_results = s.assess("host/A", evidence=evidence, tag="missing-realization")
-        require(not absent["all_passed"] and json.loads((absent_results/"host__A.json").read_text())["resolved_policy"]["requirements"][0]["adoption"]["status"]=="not_implemented",
+        absent, absent_plans, _ = s.assess("host/A", evidence=evidence, tag="missing-realization")
+        absent_plan = json.loads((absent_plans / "host__A.json").read_text())
+        require(not absent["all_passed"] and absent_plan["requirements"][0]["adoption"]["status"]=="not_implemented",
                 "missing realization lost not_implemented semantics")
         realization.write_bytes(realization_bytes)
 

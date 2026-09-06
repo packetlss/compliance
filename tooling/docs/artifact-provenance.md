@@ -4,13 +4,12 @@
 `project-config/v1alpha3` produces assessment plan/results v4 in unlocked,
 direct-expected and composition-locked execution. All current consumers use this successor line. Historical artifacts require their historical tooling.
 
-Status: **Current experimental artifact provenance contract; accepted successor
-under [#90](https://github.com/packetlss/compliance/issues/90) is not yet implemented
-or frozen**
+Status: **Current experimental artifact provenance contract; exact plan/result pair
+implemented by [#90](https://github.com/packetlss/compliance/issues/90), not frozen**
 
-## Accepted exact-plan/result successor
+## Exact-plan/result contract
 
-The accepted pre-freeze successor replaces the duplicated self-contained result
+The current pre-freeze contract replaces the duplicated self-contained result
 with an explicit retained `{exact bound plan, assessment result}` historical pair.
 The plan owns the complete resolved member intent, frozen operation relationship,
 planning composition/enforcement, parameters, stable evidence dependencies,
@@ -79,117 +78,7 @@ substitution, and approximate equality are forbidden. This is ordinary artifact 
 resolution, not a history store, index, run object, retention service, latest-result
 database, or discovery subsystem.
 
-## Current executable v4 before #90
-
-## V4 provenance and semantic identity
-
-The closed v4 schemas retain the assessment payload and adapter handoff. Plans add
-`digestAlgorithm`, `id`, and `provenance` with schema
-`compliance.example/assessment-provenance/v1alpha1`. `planningComposition` records
-actual tooling/source composition, its algorithm/digest, optional descriptive
-metadata, and the direct/complete enforcement actually performed. Results copy
-that validated planning record and add separately observed `evaluationComposition`,
-exact `evaluator`, complete subject `evidence`, and `selectedEvidence`.
-
-The plan and results algorithms are respectively
-`compliance.example/assessment-plan-digest/v1alpha1` and
-`compliance.example/assessment-results-digest/v1alpha1`. Both SHA-256 hash RFC
-8785/JCS bytes after this explicit projection:
-
-- Results remove only the top-level `id`. `member_plan_digest` commits the complete
-  resolved member intent independently of operation/composition context.
-  `operation_id` commits the normalized exact request, mode-sensitive witness,
-  relevant assignments, composition commitment, expected membership and sorted
-  member commitments. A bound plan ID hashes only its operation ID and subject ID,
-  as specified in [operation accounting](operation-accounting.md).
-- For each composition stage retain its normalized `actual`,
-  `compositionDigestAlgorithm`, and `compositionDigest`; exclude stage descriptive
-  metadata and expected enforcement.
-- In result `observed.evidence_validation_errors` and
-  `observed.evidence_selection_ambiguities`, exclude optional `source` and
-  `schema_source` diagnostic locations. No arbitrary OPA observed/payload keys are
-  removed by name.
-- Retain all other payload, including `evaluated_at`, plan reference, evaluator,
-  full evidence snapshot, successful-selection facts, waiver revision/application,
-  requirement/realization roll-ups, and semantic diagnostics.
-
-Schema validation and cross-field checks precede identity acceptance. Composition
-source names/content and its digest must agree. Evaluation re-digests
-policy inputs and refuses any difference from planning, including unlocked runs;
-a selected complete lock must also match the planning composition. Evaluation may
-use a different provenance-complete tooling build in unlocked mode. Descriptive
-metadata and enforcement remain validated despite exclusion from identity.
-
-`id` is the complete result semantic digest; the retained `assessment_id` is the
-existing run label, not a replacement for the digest. No identity algorithm is
-frozen or renamed to `/v1`. Existing evidence document/set algorithms are unchanged.
-The standalone provenance schema permits planning-only or complete evaluation
-records; a partial evaluation record is invalid.
-Schema diagnostic references use type plus source-name/relative-schema-path
-locators resolved in the trusted composition, not a new schema identity algorithm.
-Materialization paths are never source identity.
-
-## Current v4 temporal provenance before #90
-
-System [ADR 0012](../../docs/adr/0012-explicit-policy-parameter-resolution.md#immutable-plan-and-provenance-obligations)
-accepts successor resolved parameter, declaration/schema pin, binding/tailoring,
-consumption-edge, exact destination and policy-owned freshness facts in the same
-assessment plan/results boundary. [#73](https://github.com/packetlss/compliance/issues/73)
-implements their schema, validation and identity/fingerprint migration. Plans
-retain `parameter_derivation`, `parameter_facts` and per-control `policy_inputs`;
-results currently retain the corresponding frozen records in `resolved_policy`;
-#90 removes that duplication in favor of the exact validated plan reference.
-[The parameter contract](policy-parameters.md) specifies the normalization and
-validation projection. This preserves the historical selected-document
-and exact assessed-dependency/`max_age` attribution below, without re-resolving
-parameters during evaluation or rewriting historical artifacts.
-
-The original representation requirement of system
-[ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md#factual-temporal-provenance-and-exact-plan-relation)
-is implemented by #32. #80 consumes those immutable facts in the historical
-reporting path to derive query-time qualification; it adds no artifact or
-provenance fields and does not alter any identity projection.
-
-Each successful required-evidence selection is an entry in `provenance.selectedEvidence`:
-
-```json
-{
-  "instance_id": "host.setting",
-  "requirement_index": 0,
-  "requirement": {"id": "settings", "type": "host.settings/v1", "max_age": "86400s"},
-  "id": "evidence:observation",
-  "digest": "sha256:<complete-document digest>",
-  "collected_at": "2026-09-05T10:00:00.123456Z"
-}
-```
-
-The control instance and zero-based index resolve the exact evidence requirement
-in the assessed `plan_id`; the copied requirement must equal that plan entry and
-retains its `max_age`. Entries sort by control instance and requirement index.
-The ID/digest pair resolves into `provenance.evidence.documents`; repeated IDs with
-different document digests are separate references. The exact selected document's
-original collection-time string is retained. Generation validates the selection
-facts against both the plan and the in-memory snapshot actually evaluated. Stored
-validation checks their structure, unique associations, snapshot references and
-identity binding without reopening evidence paths.
-
-These are successful required-evidence **selections**, including when a later criterion fails or
-returns unknown/error. A different required type failing selection prevents OPA
-for that control but does not erase successful selections of its other types.
-Rejected, ambiguous, missing and stale requirements receive no selection record.
-Unused and nonselected current-subject documents remain in the complete snapshot;
-canonical duplicates coalesce only during selection, not in the snapshot descriptor.
-OPA-reported `evidence_ids` neither supply nor override orchestration's facts.
-Every declared dependency follows this required-evidence path. Evidence documents
-that are not selected for a declared dependency remain in the complete subject
-snapshot.
-
-A later view can use these historical records without mutable evidence,
-re-selection, ID-only joins or long-term original-byte retention. No `fresh`,
-`stale`, `current`, `reassessment_due` or operational status is persisted. Neither
-historical outcome nor roll-ups change with later wall-clock time.
-
-## V4 required evidence and refusal
+## Required evidence and refusal
 
 [ADR 0010](../../docs/adr/0010-required-evidence-status-and-assessment-refusal.md)
 applies in the v4 path. Establish plan/composition/evaluator/catalog and snapshot

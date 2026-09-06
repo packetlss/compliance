@@ -4,7 +4,7 @@
 - **Date:** 2026-09-05
 - **Parent architecture contract:** [#37](https://github.com/packetlss/compliance/issues/37)
 - **Runtime/schema migration:** [#73](https://github.com/packetlss/compliance/issues/73); no runtime change in this promotion
-- **Accepted result ownership alignment:** [#90](https://github.com/packetlss/compliance/issues/90); parameter semantics unchanged
+- **Result ownership alignment:** Implemented under [#90](https://github.com/packetlss/compliance/issues/90); parameter semantics unchanged
 
 Current authority routing: [ADR 0014](0014-attributable-applicability-and-authority-acceptance.md)
 and [ADR 0015](0015-bounded-external-claims-and-assurance-recognition.md) now accept
@@ -338,10 +338,10 @@ adapter-input artifact or separate authorization artifact. Evaluation still
 verifies applicable composition and plan integrity; consuming resolved values
 does not bypass ADR 0007's actual-versus-expected checks.
 
-## Current-to-successor migration
+## Implemented migration summary
 
-These are successor changes, **not current schema behavior**. No wire spelling,
-new resource discriminator, artifact version or algorithm freeze is selected here.
+These changes are implemented under #73 and #90. No artifact version or algorithm
+is frozen by this summary.
 
 | Surface | Current executable contract | Bounded successor obligation |
 | --- | --- | --- |
@@ -350,8 +350,8 @@ new resource discriminator, artifact version or algorithm freeze is selected her
 | `ControlRealization` | Complete embedded literal technical instances, pinned requirement, `allOf`; `based_on` provenance only | Explicit requirement-slot-to-dependency-input links; preserve complete selection and current satisfaction model |
 | `Baseline` / `BaselineOverlay` | Literal technical parameters and pinned typed operations | Retain technical role; explicit policy-owned freshness targeting/binding/tailoring where needed |
 | `Control` | Parameter schema and evidence contracts requiring effective `max_age` | Retain dependency contracts/capability restrictions; remove effective freshness ownership only after coordinated consumer migration |
-| Evidence dependencies | Stable authored IDs, type and effective `max_age`; current v4 result association still uses exact plan instance/index and a copied requirement | Exact `(instance_id, dependency_id)` historical attribution with the dependency body and `max_age` owned by the assessed plan |
-| Assessment plan/results/provenance | V4 duplicates resolved parameter/linkage/freshness records in `resolved_policy` | Exact plan retains those records; result references `plan_id` and retains only evaluation-owned facts, with mandatory relational validation |
+| Evidence dependencies | Stable authored IDs, type and effective `max_age` | Exact `(instance_id, dependency_id)` historical attribution with the dependency body and `max_age` owned by the assessed plan |
+| Assessment plan/results/provenance | Exact plan retains resolved parameter/linkage/freshness records | Result references `plan_id` and retains only evaluation-owned facts, with mandatory relational validation |
 | Fingerprints, validation, explanation and policy diff | Current literal instance fingerprints and frozen derivations | Include applicable slot/schema/operation/linkage/destination/freshness facts; explain and compare frozen facts without mutable-policy resolution |
 | Maintained policy/projects/fixtures/scenarios | Current literals, pins and Control-owned ages | Explicit synthetic bindings/edges/freshness, coordinated schema and consumer cutover, deliberate changed expectations and regenerated development artifacts |
 

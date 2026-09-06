@@ -6,7 +6,7 @@
 - **V4 representation implementation:** [#32](https://github.com/packetlss/compliance/issues/32)
 - **Operational view implementation:** [#80](https://github.com/packetlss/compliance/issues/80)
 - **Retention-boundary clarification:** [#89](https://github.com/packetlss/compliance/issues/89)
-- **Accepted plan/result refinement:** [#90](https://github.com/packetlss/compliance/issues/90); implementation pending
+- **Plan/result refinement:** Implemented under [#90](https://github.com/packetlss/compliance/issues/90); experimental, not frozen
 
 ## Context and authority
 
@@ -287,7 +287,7 @@ system. Deferring those facts until the status implementation would have left #3
 representation insufficient; storing temporal judgments instead would make immutable
 results misleading as time advances.
 
-[#90](https://github.com/packetlss/compliance/issues/90) owns the accepted pre-freeze
+[#90](https://github.com/packetlss/compliance/issues/90) implements the pre-freeze
 cutover from that duplicated representation to the exact `{bound plan, result}`
 historical model. Historical tooling must resolve a result's assessed plan solely by
 exact `plan_id` from a supplied plan file or bounded plan set and validate the pair

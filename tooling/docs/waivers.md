@@ -1,7 +1,7 @@
 # Temporary Waivers
 
-Status: **Implemented initial contract (v0.1); accepted result-attribution
-refinement under [#90](https://github.com/packetlss/compliance/issues/90) pending**
+Status: **Implemented initial contract (v0.1), including exact applied-waiver
+attribution under [#90](https://github.com/packetlss/compliance/issues/90)**
 Last updated: **2026-09-06**
 
 This document defines the first project-owned waiver contract. A waiver is an
@@ -23,7 +23,7 @@ A broad or durable exception belongs in a reviewed derived baseline. Waivers
 must not become a second selector language, an informal group assignment, or a
 way to suppress control planning or assessment.
 
-For the accepted result successor, a whole-catalog `waiver_revision` is neither
+For assessment results, a whole-catalog `waiver_revision` is neither
 result identity nor a historical assertion fact. The normative retained fact is
 either no applied waiver, or an exact normalized applied-waiver snapshot with its
 identity/digest, exact subject/control target, evaluation-time applicability, and
@@ -84,33 +84,31 @@ typed evidence ---------------------> OPA technical decision
 active exact-match waiver + fail ---> waived result
 ```
 
-The current executable implementation, until #90 cuts over, does the following for
-every evaluation:
+The current executable implementation does the following for every evaluation:
 
 1. validate and normalize the complete project waiver catalog;
-2. calculate a deterministic `waiver_revision` over that catalog;
-3. select at most one active exact subject/control match without supplying it
+2. select at most one active exact subject/control match without supplying it
    to Rego;
-4. evaluate the unchanged control and evidence with OPA;
-5. change only an underlying `fail` result to `waived`; and
-6. persist the complete normalized waiver snapshot, its digest, and
+3. evaluate the unchanged control and evidence with OPA;
+4. change only an underlying `fail` result to `waived`; and
+5. persist the complete normalized waiver snapshot, its digest, and
    `underlying_status: fail` in the immutable result.
 
 An active waiver does not change `pass`, `unknown`, `not_applicable`, or
-`error`. The original failure reason, expected state, observed state, severity,
-remediation, evidence references, and policy provenance remain intact. A
+`error`. The original failure reason and expected/observed state remain intact.
+Plan-owned severity, remediation, evidence dependencies, mappings, and policy
+provenance are interpreted from the exact assessed plan. A
 waived result is therefore an accepted failure, never proof of compliance.
-Keeping the waiver out of Rego input makes the underlying decision independent
+Keeping the waiver out of Rego input makes the underlying decision independent.
 Rego controls must not originate `waived`; a claimed waived result without the
-evaluator's active waiver snapshot and revision fails artifact validation.
+evaluator's active waiver snapshot fails artifact validation.
 
 Requirement and requirement-baseline roll-ups remain conservative. A waived
 required technical check produces a waived parent only when no child is fail,
 error, missing, or unknown under the existing precedence rules.
 
-New result envelopes and their technical children record the same
-`waiver_revision`. Any result claiming `waived` must contain a
-valid, active, target-matching waiver snapshot and revision.
+Any result claiming `waived` must contain a valid, evaluation-time active,
+target-matching applied-waiver snapshot and its exact digest.
 
 ## 4. Desired policy remains independent
 
@@ -119,10 +117,9 @@ An external delivery or change-approval workflow may choose to defer action
 while a waiver is active, but it must make that decision explicitly; the
 compliance tool does not weaken desired state.
 
-Changing, adding, or expiring a waiver currently changes the catalog revision and
-future result representation. Under #90, only a change to the exact waiver actually
-applied to an underlying failure changes result identity; unrelated catalog changes
-do not. Neither form changes the assessment plan ID.
+Only a change to the exact waiver applied to an underlying failure changes result
+identity; unrelated catalog changes do not. Neither form changes the assessment plan
+ID.
 
 ## 5. Operator interface
 

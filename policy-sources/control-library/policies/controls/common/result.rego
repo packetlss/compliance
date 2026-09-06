@@ -12,7 +12,6 @@ make(assessment_input, outcome) := object.union(
 		"remediation": assessment_input.control.remediation,
 		"external_refs": object.get(assessment_input.control, "external_refs", []),
 		"alignment": object.get(assessment_input.control, "alignment", "unmapped"),
-		"evidence_ids": [doc.id | some doc in assessment_input.evidence],
 	},
 	outcome,
 )

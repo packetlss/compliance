@@ -20,6 +20,7 @@ from .assessment import (
     build_group_report,
     build_status_report,
     filter_status_report,
+    load_assessment_plans,
     load_result_reports,
     render_explanation,
     render_framework_table,
@@ -641,8 +642,8 @@ def _run_assessment_view(args: argparse.Namespace) -> None:
     if args.plan:
         _run_historical_operation_view(args)
         return
-    if args.as_of or args.comparison_plan:
-        raise ValueError('--as-of and --comparison-plan require --plan')
+    if args.as_of or args.comparison_plan or args.assessed_plans:
+        raise ValueError('--as-of, --comparison-plan, and --assessed-plans require --plan')
     subjects, groups, assignments, reports, known_groups = _assessment_context(args)
     use_color = not args.no_color and "NO_COLOR" not in os.environ and sys.stdout.isatty()
 
@@ -731,10 +732,16 @@ def _run_assessment(args: argparse.Namespace) -> None:
             opa=args.opa, evaluated_at=instant, waiver_path=args.waivers,
             composition_report=(composition_validation(args.project_config, require=True)
                                 if args.project_config.source else None))
-        write_json(report, subject_artifact_path(args.output, plan['subject']['id']))
+        write_json(
+            report,
+            subject_artifact_path(args.output, plan['subject']['id']),
+            plan=plan,
+        )
         reports.append(report)
     from .operation import account_operation
-    account = account_operation(plans[0], reports, instant.isoformat().replace('+00:00', 'Z'))
+    account = account_operation(
+        plans[0], reports, instant.isoformat().replace('+00:00', 'Z'), plans
+    )
     if args.format == 'json':
         print(json.dumps(account, indent=2, sort_keys=True))
     else:
@@ -749,12 +756,18 @@ def _run_historical_operation_view(args):
     if not args.at or not args.as_of:
         raise ValueError('historical operation reporting requires --at, --as-of, and --plan')
     anchor = load_json(args.plan)
+    validate_assessment_plan(anchor, source=args.plan)
     instant = parse_timestamp(args.at, field='--at').isoformat().replace('+00:00', 'Z')
     query_instant = parse_timestamp(args.as_of, field='--as-of')
     comparison_anchor = load_json(args.comparison_plan) if args.comparison_plan else None
+    assessed_plans = load_assessment_plans([args.plan, *args.assessed_plans])
     reports = load_result_reports(args.results) if args.results and args.results.exists() else []
     account = qualify_operation(
-        account_operation(anchor, reports, instant), reports, query_instant, comparison_anchor
+        account_operation(anchor, reports, instant, assessed_plans),
+        reports,
+        query_instant,
+        comparison_anchor,
+        assessed_plans,
     )
     by_id = {r['id']: r for r in reports}
     selected = [r for r in account['members'] if not args.group or
@@ -869,6 +882,13 @@ def _add_assessment_view_options(
         if action.dest in ('inventory', 'assignments'):
             action.required = False
     parser.add_argument('--plan', type=Path, help='stored plan anchoring an exact historical operation')
+    parser.add_argument(
+        '--assessed-plans',
+        action='append',
+        type=Path,
+        default=[],
+        help='exact assessed plan file or bounded plan directory; repeatable',
+    )
     parser.add_argument('--at', help='exact recorded operation assessment instant')
     parser.add_argument('--as-of', help='explicit query instant for historical qualifications')
     parser.add_argument('--comparison-plan', type=Path,

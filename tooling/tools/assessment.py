@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .artifact_validation import validate_assessment_results
+from .artifact_validation import validate_assessment_plan, validate_assessment_results
 from .render_plan import load_json, render_plan, resolve_groups
 
 
@@ -71,37 +71,57 @@ def load_result_reports(path: Path | None) -> list[JsonObject]:
     return reports
 
 
+def load_assessment_plans(paths: list[Path]) -> list[JsonObject]:
+    """Load a bounded plan file/directory set and index only by semantic plan ID."""
+    plans: dict[str, JsonObject] = {}
+    for path in paths:
+        if not path.exists():
+            raise ValueError(f"assessment plan input does not exist: {path}")
+        candidates = [path] if path.is_file() else sorted(path.rglob("*.json"))
+        found = False
+        for candidate in candidates:
+            document = load_json(candidate)
+            if not isinstance(document, dict) or document.get("schema") != "compliance.example/assessment-plan/v4":
+                if path.is_file():
+                    raise ValueError(f"assessment plan input is not a v4 plan: {path}")
+                continue
+            found = True
+            validate_assessment_plan(document, source=candidate)
+            existing = plans.get(document["id"])
+            if existing is not None and existing != document:
+                raise ValueError("multiple distinct plans have the same exact plan identity")
+            plans[document["id"]] = document
+        if path.is_dir() and not found:
+            raise ValueError(f"assessment plan directory contains no v4 plans: {path}")
+    return [plans[identity] for identity in sorted(plans)]
+
+
 def result_state(report: JsonObject) -> str:
-    summaries = (
-        report.get("requirement_baseline_summary", {}),
-        report.get("requirement_summary", {}),
-        report.get("summary", {}),
-    )
-    for status in ("error", "fail", "unknown", "waived", "pass", "not_applicable"):
-        if any(summary.get(status, 0) for summary in summaries):
-            return status
-    return "no_controls"
+    return report["outcome"]
 
 
 def latest_report(reports: list[JsonObject]) -> JsonObject | None:
     if not reports:
         return None
-    return max(reports, key=lambda report: report.get("evaluated_at", ""))
+    latest = max(report.get("evaluated_at", "") for report in reports)
+    candidates = [report for report in reports if report.get("evaluated_at", "") == latest]
+    if len({report["id"] for report in candidates}) != 1:
+        raise ValueError("multiple distinct results exist for the exact plan and instant")
+    return candidates[0]
 
 
 def reports_for_plan(
     plan: JsonObject,
     reports: list[JsonObject],
 ) -> tuple[JsonObject | None, JsonObject | None]:
-    subject_reports = [
-        report for report in reports
-        if report.get("subject_id") == plan["subject"]["id"]
-    ]
     current_reports = [
-        report for report in subject_reports
+        report for report in reports
         if report.get("plan_id") == plan["id"]
     ]
-    return latest_report(current_reports), latest_report(subject_reports)
+    from .assessment_provenance import validate_result_against_plan
+    for report in current_reports:
+        validate_result_against_plan(report, plan)
+    return latest_report(current_reports), None
 
 
 def status_row(plan: JsonObject, reports: list[JsonObject]) -> JsonObject:
@@ -116,13 +136,16 @@ def status_row(plan: JsonObject, reports: list[JsonObject]) -> JsonObject:
     plan_alignment = ("plan_aligned" if current is not None else
                       "different_plan" if previous is not None else
                       "plan_alignment_unavailable")
-    summary = {
-        status: int((visible_report or {}).get("summary", {}).get(status, 0))
-        for status in SUMMARY_STATUSES
-    }
+    summary_counts = Counter(
+        item["status"] for item in (visible_report or {}).get("results", [])
+    )
+    requirement_counts = Counter(
+        item["status"]
+        for item in (visible_report or {}).get("requirement_assessments", [])
+    )
+    summary = {status: summary_counts[status] for status in SUMMARY_STATUSES}
     requirement_summary = {
-        status: int((visible_report or {}).get("requirement_summary", {}).get(status, 0))
-        for status in SUMMARY_STATUSES
+        status: requirement_counts[status] for status in SUMMARY_STATUSES
     }
     return {
         "subject_id": subject_id,
@@ -819,11 +842,10 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
                 for source in plan["provenance"]["planningComposition"]["actual"]["policySources"]
             )
         ),
-        "Waiver revision: " + (
-            visible_result.get("waiver_revision", "not assessed")
-            if visible_result
-            else "not assessed"
-        ),
+        "Applied waivers: " + str(sum(
+            1 for result in (visible_result or {}).get("results", [])
+            if "waiver" in result
+        )),
         "",
         "Resolved groups:",
     ]
@@ -915,10 +937,10 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
             for field in ('evidence_validation_errors', 'evidence_selection_ambiguities'):
                 for diagnostic in result.get('observed', {}).get(field, []):
                     lines.append('    ' + json.dumps(diagnostic, sort_keys=True))
-        if result and result.get("status") != "pass" and result.get("severity"):
-            lines.append(f'    severity: {result["severity"]}')
-        if result and result.get("status") != "pass" and result.get("remediation"):
-            lines.append(f'    remediation: {result["remediation"]}')
+        if result and result.get("status") != "pass":
+            lines.append(f'    severity: {control["severity"]}')
+            if control.get("remediation"):
+                lines.append(f'    remediation: {control["remediation"]}')
         if result and (waiver := result.get("waiver")):
             lines.extend([
                 f'    waiver: {waiver["id"]}',

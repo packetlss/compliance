@@ -97,7 +97,8 @@ def run(root):
         assert len(results) == 1
         result = json.loads(results[0].read_text())
         validate_assessment_results(result)
-        assert result['summary']['unknown'] == 4
+        assert result['outcome'] == 'unknown'
+        assert sum(item['status'] == 'unknown' for item in result['results']) == 4
         historical = copy.deepcopy(result)
         selected['spec']['baselineRefs'] = [{'name': parent['metadata']['id'], 'revision': revision} for revision in ['1', '2']]
         assignment.write_text(yaml.safe_dump(selected))

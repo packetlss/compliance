@@ -470,6 +470,33 @@ def roll_up_plan_requirements(
     return requirement_assessments, baseline_assessments
 
 
+def compact_plan_outcomes(
+    plan: JsonObject,
+    technical_results: list[JsonObject],
+) -> tuple[list[JsonObject], list[JsonObject]]:
+    """Return result-owned requirement outcomes without copying plan semantics."""
+    requirements, baselines = roll_up_plan_requirements(plan, technical_results)
+    compact_requirements = [
+        {
+            "requirement": item["requirement"],
+            "status": item["status"],
+            "reason": item["reason"],
+        }
+        for item in requirements
+    ]
+    compact_baselines = [
+        {
+            "baseline": item["baseline"],
+            "status": item["status"],
+            "reason": item["reason"],
+        }
+        for item in baselines
+    ]
+    compact_requirements.sort(key=lambda item: item["requirement"])
+    compact_baselines.sort(key=lambda item: item["baseline"])
+    return compact_requirements, compact_baselines
+
+
 def copy_json(value: Any) -> Any:
     """Copy JSON-compatible values without sharing mutable plan structures."""
     return json.loads(json.dumps(value))

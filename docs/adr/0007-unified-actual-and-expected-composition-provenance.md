@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Original date:** 2026-09-04
 - **Destination authority transfer:** 2026-09-04
-- **Accepted result/plan ownership refinement:** [#90](https://github.com/packetlss/compliance/issues/90); implementation pending
+- **Result/plan ownership refinement:** Implemented under [#90](https://github.com/packetlss/compliance/issues/90); experimental, not frozen
 - **Historical source:** `packetlss-labs/compliance-workspace@098ef18c1384b34c532f705b3f5b3d1a25bd638f`, `docs/adr/0007-unified-actual-and-expected-composition-provenance.md`
 
 This is the destination-owned normative restatement of accepted workspace ADR 0007. It preserves the accepted contract and updates only ownership/topology references.
@@ -215,7 +215,7 @@ Destination implementation sequencing is owned by:
 - #36 — canonical scenario consumer migration; and
 - #33 — old-reader retirement after all consumers are migrated.
 
-[#90](https://github.com/packetlss/compliance/issues/90) owns the later pre-freeze
+[#90](https://github.com/packetlss/compliance/issues/90) implements the later pre-freeze
 result/plan ownership cutover, including intrinsic and relational validation and
 the result-domain identity projection. It introduces no compatibility reader.
 
