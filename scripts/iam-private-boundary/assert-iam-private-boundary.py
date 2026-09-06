@@ -71,14 +71,22 @@ def assert_plan(plan: dict) -> None:
     validate_assessment_plan(plan)
     if plan.get("schema") != "compliance.example/assessment-plan/v4":
         fail("IAM plan changed assessment schema")
-    if not is_digest(plan.get("id")) or not is_digest(plan.get("policy_revision")):
-        fail("IAM plan lost plan or final policy identity")
+    operation = plan.get("operation", {})
+    member = next((row for row in operation.get("members", [])
+                   if row.get("subject_id") == "host/restricted-linux-01"), {})
+    if not all(is_digest(value) for value in (
+        plan.get("id"), operation.get("operation_id"), member.get("member_plan_digest")
+    )):
+        fail("IAM plan lost bound, operation, or member identity")
     if plan.get("subject", {}).get("id") != "host/restricted-linux-01":
         fail("IAM plan lost the restricted synthetic subject")
-    sources = plan.get("policy_sources", [])
+    sources = plan.get("provenance", {}).get("planningComposition", {}).get(
+        "actual", {}).get("policySources", [])
     if [source.get("name") for source in sources] != SOURCE_NAMES:
         fail(f"IAM plan lost canonical named-source provenance: {sources}")
-    source_digests = {source.get("name"): source.get("digest") for source in sources}
+    source_digests = {
+        source.get("name"): source.get("content", {}).get("digest") for source in sources
+    }
     if source_digests.get("environment-private") != PRIVATE_POLICY_DIGEST:
         fail(f"IAM plan has the wrong private-source digest: {source_digests}")
     if any(not is_digest(digest) for digest in source_digests.values()):

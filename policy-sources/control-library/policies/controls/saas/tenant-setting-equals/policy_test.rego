@@ -4,7 +4,7 @@ import data.compliance.controls.saas.tenant_setting_equals
 import rego.v1
 
 assessment_input(observed) := {
-	"assessment": {"plan_id": "plan", "policy_revision": "policy"},
+	"assessment": {"plan_id": "plan"},
 	"subject": {"id": "saas/test"},
 	"control": {
 		"instance_id": "test.setting",

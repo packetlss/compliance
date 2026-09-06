@@ -21,11 +21,12 @@ The plan and results algorithms are respectively
 `compliance.example/assessment-results-digest/v1alpha1`. Both SHA-256 hash RFC
 8785/JCS bytes after this explicit projection:
 
-- Results remove only the top-level `id`. Plans first hash the semantic body
-  without `id` or `operation`, bind that digest together with the exposed member
-  accounting facts as `plan_content_digest`, then hash the JCS object containing
-  `plan_content_digest` and `operation`, as specified in
-  [operation accounting](operation-accounting.md).
+- Results remove only the top-level `id`. `member_plan_digest` commits the complete
+  resolved member intent independently of operation/composition context.
+  `operation_id` commits the normalized exact request, mode-sensitive witness,
+  relevant assignments, composition commitment, expected membership and sorted
+  member commitments. A bound plan ID hashes only its operation ID and subject ID,
+  as specified in [operation accounting](operation-accounting.md).
 - For each composition stage retain its normalized `actual`,
   `compositionDigestAlgorithm`, and `compositionDigest`; exclude stage descriptive
   metadata and expected enforcement.
@@ -38,7 +39,7 @@ The plan and results algorithms are respectively
   requirement/realization roll-ups, and semantic diagnostics.
 
 Schema validation and cross-field checks precede identity acceptance. Composition
-source names/content and the policy revision must agree. Evaluation re-digests
+source names/content and its digest must agree. Evaluation re-digests
 policy inputs and refuses any difference from planning, including unlocked runs;
 a selected complete lock must also match the planning composition. Evaluation may
 use a different provenance-complete tooling build in unlocked mode. Descriptive

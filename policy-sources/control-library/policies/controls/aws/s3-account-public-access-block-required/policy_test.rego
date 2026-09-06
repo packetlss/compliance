@@ -12,7 +12,7 @@ desired := {
 
 base_input := {
 	"subject": {"id": "cloud-account/aws-111122223333", "type": "aws-account"},
-	"assessment": {"plan_id": "sha256:plan", "policy_revision": "sha256:policy"},
+	"assessment": {"plan_id": "sha256:plan"},
 	"control": {
 		"instance_id": "company.aws.s3-account-public-access-block",
 		"implementation": "aws.s3.account_public_access_block_required",

@@ -5,7 +5,7 @@ import rego.v1
 
 base_input := {
 	"subject": {"id": "host/demo", "type": "linux-host"},
-	"assessment": {"plan_id": "sha256:plan", "policy_revision": "sha256:policy"},
+	"assessment": {"plan_id": "sha256:plan"},
 	"control": {
 		"instance_id": "linux.sysctl.demo",
 		"implementation": "linux.sysctl.required",

@@ -318,12 +318,13 @@ def _policy_subject(subject: JsonObject) -> JsonObject:
     """Select subject fields that can affect scope or desired-state targeting."""
     return {
         key: subject[key]
-        for key in ("id", "type", "status", "labels", "attributes")
+        for key in ("id", "type", "status")
         if key in subject
     }
 
 
 def _scope_changes(before: JsonObject, after: JsonObject) -> list[JsonObject]:
+    from .operation import _member_resolved_groups
     changes = _singleton_change(
         _policy_subject(before["subject"]),
         _policy_subject(after["subject"]),
@@ -331,8 +332,8 @@ def _scope_changes(before: JsonObject, after: JsonObject) -> list[JsonObject]:
         identity=before["subject"]["id"],
     )
     changes.extend(_collection_changes(
-        before["resolved_groups"],
-        after["resolved_groups"],
+        _member_resolved_groups(before),
+        _member_resolved_groups(after),
         kind="group",
         identity=lambda item: item["id"],
     ))
@@ -353,12 +354,6 @@ def _scope_changes(before: JsonObject, after: JsonObject) -> list[JsonObject]:
         after["resolved_requirement_baselines"],
         kind="requirement_baseline",
         identity=_baseline_identity,
-    ))
-    changes.extend(_singleton_change(
-        before["coverage"],
-        after["coverage"],
-        kind="coverage",
-        identity=before["subject"]["id"],
     ))
     changes.extend(_singleton_change(
         before["resolution"],
@@ -421,15 +416,13 @@ def _counts(changes: list[JsonObject]) -> JsonObject:
 
 
 def _context(plan: JsonObject, source: Path | None) -> JsonObject:
-    from .assessment_provenance import digest
+    from .assessment_provenance import member_plan_digest
     return {
         "path": str(source) if source is not None else "<memory>",
         "plan_id": plan["id"],
-        "policy_revision": plan["policy_revision"],
-        "policy_sources": plan["policy_sources"],
-        "inventory_revision": plan["inventory_revision"],
-        "assignment_revision": plan["assignment_revision"],
-        "operation_digest": digest(plan['operation']),
+        "member_plan_digest": member_plan_digest(plan),
+        "operation_id": plan["operation"]["operation_id"],
+        "composition_digest": plan['provenance']['planningComposition']['compositionDigest'],
     }
 
 
@@ -471,11 +464,9 @@ def build_policy_diff(
         field
         for field in (
             "plan_id",
-            "policy_revision",
-            "policy_sources",
-            "inventory_revision",
-            "assignment_revision",
-            "operation_digest",
+            "member_plan_digest",
+            "operation_id",
+            "composition_digest",
         )
         if before_context[field] != after_context[field]
     ]
@@ -548,15 +539,16 @@ def load_policy_plan_set(root: Path) -> dict[str, tuple[Path, JsonObject]]:
 
 
 def _plan_summary(path: Path, plan: JsonObject) -> JsonObject:
+    from .assessment_provenance import member_plan_digest
+    from .operation import plan_disposition
     return {
         "path": str(path),
         "plan_id": plan["id"],
         "subject_type": plan["subject"]["type"],
-        "policy_revision": plan["policy_revision"],
-        "inventory_revision": plan["inventory_revision"],
-        "assignment_revision": plan["assignment_revision"],
+        "member_plan_digest": member_plan_digest(plan),
+        "operation_id": plan['operation']['operation_id'],
         "resolution": plan["resolution"]["status"],
-        "coverage": plan["coverage"]["status"],
+        "accounting_disposition": plan_disposition(plan),
         "active_controls": len(plan["controls"]),
         "excluded_controls": len(plan["excluded_controls"]),
         "requirements": len(plan["requirements"]),

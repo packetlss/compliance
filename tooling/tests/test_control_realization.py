@@ -20,6 +20,7 @@ from tools.control_realization import (
 )
 from tools.render_plan import load_inventory_inputs, render_plan
 from tools.policy_sources import PolicySource
+from tools.operation import plan_coverage
 
 
 class ControlRealizationTests(unittest.TestCase):
@@ -52,13 +53,13 @@ class ControlRealizationTests(unittest.TestCase):
                 if reverse:
                     assignments[0]['baselines'].reverse()
                 plan = render_plan(subject, groups, assignments, sources)
-                self.assertFalse(plan['coverage']['assessable'])
+                self.assertFalse(plan_coverage(plan)['assessable'])
                 self.assertTrue(any('stable parameter identity conflict' in e.get('message', '')
                                     for e in plan['resolution']['errors']))
             # Model an artifact emitted before stable-identity reconciliation existed.
             with patch.object(pp, 'reconcile_selected_slots'):
                 legacy = render_plan(subject, groups, assignments, sources)
-            self.assertTrue(legacy['coverage']['assessable'])
+            self.assertTrue(plan_coverage(legacy)['assessable'])
             legacy['id'] = artifact_digest(legacy)
             with self.assertRaisesRegex(ArtifactValidationError, 'stable parameter identity conflict'):
                 validate_assessment_plan(legacy)
@@ -332,7 +333,7 @@ class ControlRealizationTests(unittest.TestCase):
         )
 
         self.assertEqual(plan["resolution"]["status"], "valid")
-        self.assertEqual(plan["coverage"]["requirement_count"], 1)
+        self.assertEqual(plan_coverage(plan)["requirement_count"], 1)
         self.assertEqual(len(plan["controls"]), 4)
         self.assertEqual(
             plan["requirements"][0]["realization"]["reference"],
@@ -408,7 +409,7 @@ class ControlRealizationTests(unittest.TestCase):
         requirements, baselines = roll_up_plan_requirements(plan, [])
 
         self.assertEqual(plan["resolution"]["status"], "valid")
-        self.assertTrue(plan["coverage"]["assessable"])
+        self.assertTrue(plan_coverage(plan)["assessable"])
         self.assertEqual(plan["controls"], [])
         self.assertEqual(plan["requirements"][0]["adoption"]["status"], "not_implemented")
         self.assertEqual(requirements[0]["status"], "fail")

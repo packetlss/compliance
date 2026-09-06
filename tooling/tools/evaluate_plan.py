@@ -20,7 +20,7 @@ from .artifact_validation import (
     validate_assessment_results,
 )
 from .control_realization import roll_up_plan_requirements
-from .policy_sources import PolicySources, policy_source_revisions, rego_module_paths
+from .policy_sources import PolicySources, rego_module_paths
 from .render_plan import load_evidence_schema_catalog
 from .waivers import active_waiver, load_waivers
 
@@ -83,9 +83,6 @@ def control_error_result(
         "instance_id": assessment_input["control"]["instance_id"],
         "subject_id": assessment_input["subject"]["id"],
         "plan_id": assessment_input["assessment"]["plan_id"],
-        "inventory_revision": assessment_input["assessment"]["inventory_revision"],
-        "assignment_revision": assessment_input["assessment"]["assignment_revision"],
-        "policy_revision": assessment_input["assessment"]["policy_revision"],
         "status": "error",
         "reason": reason,
         "severity": assessment_input["control"]["severity"],
@@ -155,18 +152,10 @@ def evaluate_plan_document(
     evaluator, opa = resolve_opa_evaluator(opa)
     if plan["resolution"]["status"] != "valid":
         raise SystemExit("refusing to evaluate an invalid assessment plan")
-    coverage = plan.get("coverage", {})
-    if coverage.get("status") != "assigned" or not coverage.get("assessable"):
-        reason = coverage.get("reason", "plan-is-not-assessable")
-        raise SystemExit(f"refusing to evaluate assessment plan: {reason}")
-
-    if "policy_sources" in plan:
-        actual_sources = policy_source_revisions(policies)
-        if actual_sources != plan["policy_sources"]:
-            raise SystemExit(
-                "refusing to evaluate assessment plan: configured policy source "
-                "revisions do not match the rendered plan"
-            )
+    from .operation import plan_disposition
+    disposition = plan_disposition(plan)
+    if disposition != 'result_required':
+        raise SystemExit(f"refusing to evaluate assessment plan: {disposition}")
 
     if not evidence_path.is_dir():
         raise SystemExit(f"evidence path is not a directory: {evidence_path}")
@@ -219,9 +208,6 @@ def evaluate_plan_document(
             "assessment": {
                 "id": technical_assessment_id,
                 "evaluated_at": evaluated_at.isoformat().replace("+00:00", "Z"),
-                "policy_revision": plan["policy_revision"],
-                "inventory_revision": plan["inventory_revision"],
-                "assignment_revision": plan["assignment_revision"],
                 "plan_id": plan["id"],
             },
             "subject": plan["subject"],
@@ -255,7 +241,7 @@ def evaluate_plan_document(
                 canonical_json_bytes(candidate)
                 errors = list(Draft202012Validator(item_schema, format_checker=FormatChecker()).iter_errors(candidate))
                 expected = control_error_result(assessment_input, '')
-                fields = ('control_id', 'instance_id', 'subject_id', 'plan_id', 'inventory_revision', 'assignment_revision', 'policy_revision')
+                fields = ('control_id', 'instance_id', 'subject_id', 'plan_id')
                 if errors or any(result.get(key) != expected[key] for key in fields) or result.get('status') == 'waived' or 'waiver' in result or any(key in result.get('observed', {}) for key in ('evidence_validation_errors', 'evidence_selection_ambiguities')):
                     result = control_error_result(assessment_input, 'OPA returned an unusable decision')
             except Exception:
@@ -281,16 +267,15 @@ def evaluate_plan_document(
         "assessment_id": assessment_id,
         "evaluated_at": evaluated_at.isoformat().replace("+00:00", "Z"),
         "plan_id": plan["id"],
-        "policy_revision": plan["policy_revision"],
-        "inventory_revision": plan["inventory_revision"],
-        "assignment_revision": plan["assignment_revision"],
         "waiver_revision": waiver_revision,
         "subject_id": plan["subject"]["id"],
         "operation": copy.deepcopy(plan['operation']),
         "summary": summarize(results),
         "requirement_summary": summarize(requirement_assessments),
         "requirement_baseline_summary": summarize(requirement_baseline_assessments),
-        "resolved_policy": {key: copy.deepcopy(plan[key]) for key in ("controls", "excluded_controls", "requirements", "resolved_requirement_baselines", "resolved_baselines", "assignments", "policy_sources", "resolution")},
+        "resolved_policy": {key: copy.deepcopy(plan[key]) for key in (
+            "subject", "resolved_groups", "controls", "excluded_controls", "requirements",
+            "resolved_requirement_baselines", "resolved_baselines", "assignments", "resolution")},
         "results": results,
         "requirement_assessments": requirement_assessments,
         "requirement_baseline_assessments": requirement_baseline_assessments,

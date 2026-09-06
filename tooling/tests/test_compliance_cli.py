@@ -24,14 +24,8 @@ class ComplianceCliTests(unittest.TestCase):
 
     @staticmethod
     def plan_document(subject_id):
+        sources = [{"name": "unit-test", "digest": "sha256:" + "2" * 64}]
         document = {
-                        "policy_revision": "sha256:" + "1" * 64,
-            "policy_sources": [{
-                "name": "unit-test",
-                "digest": "sha256:" + "2" * 64,
-            }],
-            "inventory_revision": "sha256:" + "3" * 64,
-            "assignment_revision": "sha256:" + "4" * 64,
             "subject": {
                 "schema": "compliance.example/inventory-subject/v1",
                 "id": subject_id,
@@ -51,18 +45,9 @@ class ComplianceCliTests(unittest.TestCase):
             "requirements": [],
             "controls": [],
             "excluded_controls": [],
-            "coverage": {
-                "status": "unassigned",
-                "assessable": False,
-                "reason": "no-policy-assignment",
-                "assignment_count": 0,
-                "active_control_count": 0,
-                "excluded_control_count": 0,
-                "requirement_count": 0,
-            },
             "resolution": {"status": "valid", "errors": []},
         }
-        document.update(planning_fields(document["policy_sources"]))
+        document.update(planning_fields(sources))
         from assessment_fixture import refresh_operation
         refresh_operation(document)
         document["id"] = artifact_digest(document)

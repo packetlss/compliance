@@ -122,11 +122,11 @@ calculates group membership for policy resolution. It is a read-only consumer:
 the upstream systems remain authoritative, and inventory ingestion does not
 write lifecycle, ownership, labels, or configuration back to them.
 
-The projection may persist immutable source snapshots and normalized revisions
-so an assessment can be reproduced. This persistence is a cache and audit
-record, not a claim that the compliance platform owns the imported facts. The
-platform is authoritative only for its own concerns, including group rules,
-policy assignments, policies, rendered plans, decisions, and findings.
+An eventual immutable source snapshot is a separate ingestion/provenance concern,
+not a current assessment identity or artifact. Historical assessment reproduction
+uses the operation's mode-sensitive frozen selection and resolution facts. The
+platform is authoritative only for its own concerns, including group rules, policy
+assignments, policies, rendered plans, decisions, and findings.
 
 ### Evaluation plane
 
@@ -151,16 +151,16 @@ rollback are independent of collector and reporting releases.
 
 A deployed environment may assemble several named releases or partial policy
 trees locally. Source order has no precedence: identical identities coalesce
-with provenance and divergent identities fail. The plan retains each source
-digest plus a deterministic final policy revision. This lets a restricted
+with provenance and divergent identities fail. The plan retains actual named
+source content once in its ADR 0007 planning composition. This lets a restricted
 environment combine verified shared policy with private overlays or complete
 realizations without exposing those details to central CI.
 
 ### External adapter boundary
 
 Core tooling ends at resolved desired technical controls plus evidence-backed
-assessment. The provenance-bearing assessment plan exposes subject and plan
-identity, named policy-source digests, final policy revision, stable
+assessment. The provenance-bearing assessment plan exposes subject, operation,
+member-plan and bound-plan identity, actual planning composition, stable
 `implementation` and `instance_id`, resolved `parameters`,
 `definition_fingerprint`, disposition, derivations, deviations, source and
 baseline lineage, and requirement/realization lineage where applicable.
@@ -244,8 +244,8 @@ remain distinguishable from a pass.
 1. Discover subjects and collect source-specific observations.
 2. Validate observations against versioned evidence schemas.
 3. Resolve the group DAG and baseline assignments into an assessment plan.
-4. Validate the rendered plan's strict schema, content digest, coverage counts,
-   and provenance invariants.
+4. Validate the rendered plan's strict schema, member/operation identity,
+   derived accounting disposition, and provenance invariants.
 5. Resolve active waivers and evaluate the plan's controls.
 6. Validate and persist the decision envelope and evidence references.
 7. Open, update, suppress, or close findings based on state transitions.
@@ -496,6 +496,17 @@ and [`waivers.md`](waivers.md).
   verification boundaries.
 
 ## 11. Decision log
+
+### 2026-09-06 — Frozen operation and bound-plan identity simplification (#87)
+
+The pre-freeze operation representation now uses one exact normalized request,
+a mode-sensitive selection witness, relevant assignments, a compact ADR 0007
+composition commitment, compact expected membership, and sorted member-plan
+commitments. Catalog-wide inventory/assignment revisions and the predecessor
+plan digest wrappers are removed. Each bound plan ID derives only from operation
+ID and subject ID. Accounting disposition is derived rather than frozen as
+coverage counters. No compatibility alias, inventory snapshot artifact, result
+redesign, evidence/composition identity change or freeze is introduced.
 
 ### 2026-09-06 — Frozen operation accounting and typed assertions (#78)
 

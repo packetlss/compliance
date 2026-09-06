@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tools.policy_sources import PolicySource, policy_revision, policy_source_revisions, source_pin_errors, source_tree_digest
+from tools.policy_sources import PolicySource, policy_source_revisions, source_pin_errors, source_tree_digest
 from tools.composition import POLICY_SOURCE_DIGEST_ALGORITHM
 
 
@@ -33,9 +33,6 @@ class PolicySourceIdentityTests(unittest.TestCase):
 
             self.assertEqual([items[0]["name"] for items in revisions], list(names))
             self.assertEqual(len({items[0]["digest"] for items in revisions}), 1)
-            self.assertEqual(len({policy_revision(items) for items in revisions}), 3)
-            combined = revisions[0] + revisions[1]
-            self.assertEqual(policy_revision(combined), policy_revision(combined[::-1]))
 
     def test_raw_path_and_byte_vector_is_unchanged(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

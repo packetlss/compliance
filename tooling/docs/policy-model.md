@@ -461,14 +461,11 @@ see [artifact provenance](artifact-provenance.md) for the complete envelope.
 {
   "schema": "compliance.example/assessment-plan/v4",
   "id": "sha256:...",
-  "policy_revision": "sha256:...",
-  "policy_sources": [
-    {"name": "control-library", "digest": "sha256:..."},
-    {"name": "verification-policy", "digest": "sha256:..."},
-    {"name": "environment-private", "digest": "sha256:..."}
-  ],
-  "inventory_revision": "sha256:...",
-  "assignment_revision": "sha256:...",
+  "operation": {
+    "operation_id": "sha256:...",
+    "request": {"all": false, "subjects": ["host/system-x"], "groups": []},
+    "selection_witness": {"mode": "explicit"}
+  },
   "subject": {
     "id": "host/system-x",
     "type": "linux-host"
@@ -644,9 +641,6 @@ network calls during evaluation.
   "assessment": {
     "id": "01J...",
     "evaluated_at": "2026-08-23T08:16:00Z",
-    "policy_revision": "sha256:...",
-    "inventory_revision": "sha256:...",
-    "assignment_revision": "sha256:...",
     "plan_id": "sha256:..."
   },
   "subject": {
@@ -702,8 +696,6 @@ Every control implementation returns the same result shape:
   "instance_id": "linux.packages.web-server",
   "subject_id": "host/system-x",
   "plan_id": "sha256:...",
-  "inventory_revision": "sha256:...",
-  "assignment_revision": "sha256:...",
   "waiver_revision": "sha256:...",
   "status": "fail",
   "severity": "high",
@@ -711,8 +703,7 @@ Every control implementation returns the same result shape:
   "expected": {"packages": ["a", "b", "c"]},
   "observed": {"missing": ["b"]},
   "evidence_ids": ["01H..."],
-  "remediation": "Install package b using the approved repository",
-  "policy_revision": "sha256:..."
+  "remediation": "Install package b using the approved repository"
 }
 ```
 
@@ -930,12 +921,12 @@ every unique non-test Rego module to OPA without creating a merged directory. A
 private tree containing only `realizations/` is therefore valid when the shared
 tree supplies its schemas and implementations.
 
-The assessment plan records the canonical sorted `{name, digest}` list as
-`policy_sources`. Its `policy_revision` is a content digest of that list and is
-independent of checkout paths. Evaluation verifies that the current source
-revisions still match the plan before invoking OPA. Production deployments
-should pin immutable source artifacts; unpinned sibling directories are the
-prototype's local-development transport.
+The assessment plan records normalized actual source content once under
+`provenance.planningComposition.actual.policySources`; the composition algorithm
+and digest validate that record. Evaluation verifies the actual evaluation source
+composition against planning before invoking OPA. Production deployments should
+pin immutable source artifacts; unpinned sibling directories are the prototype's
+local-development transport.
 
 ## 10. Policy build gates
 

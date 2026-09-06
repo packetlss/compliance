@@ -4,7 +4,7 @@ import data.compliance.controls.iam_integration_required as criterion
 import rego.v1
 
 case(consumer, integrated, locator) := {
-	"assessment": {"plan_id": "plan", "policy_revision": "policy"},
+	"assessment": {"plan_id": "plan"},
 	"subject": {"id": "application/A"},
 	"control": {
 		"instance_id": "required-service", "implementation": "iam.integration.required",

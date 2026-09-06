@@ -13,6 +13,7 @@ from tools import policy_parameters as p
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
 from tools.assessment_provenance import artifact_digest
 from tools.policy_diff import build_policy_diff
+from tools.operation import plan_coverage
 
 
 def run(root):
@@ -44,7 +45,7 @@ def run(root):
             return plan
 
         first = render('original')
-        assert first['coverage']['assessable']
+        assert plan_coverage(first)['assessable']
         requirement = first['requirements'][0]
         slot = requirement['parameter_facts']['states']['privileged_evidence_max_age']
         assert slot['value'] == '86400s'
@@ -71,7 +72,7 @@ def run(root):
         selected['spec']['baselineRefs'] = [{'name': parent['metadata']['id'], 'revision': '2'}]
         assignment.write_text(yaml.safe_dump(selected))
         second = render('tailored')
-        assert second['coverage']['assessable']
+        assert plan_coverage(second)['assessable']
         assert realization_path.read_bytes() == realization_bytes
         assert all(c['evidence'][0]['max_age'] == '3600s' for c in second['controls'])
         assert build_policy_diff(first, second)['summary']['changed']
@@ -100,12 +101,12 @@ def run(root):
         historical = copy.deepcopy(result)
         selected['spec']['baselineRefs'] = [{'name': parent['metadata']['id'], 'revision': revision} for revision in ['1', '2']]
         assignment.write_text(yaml.safe_dump(selected))
-        assert not render('conflict')['coverage']['assessable']
+        assert not plan_coverage(render('conflict'))['assessable']
         selected['spec']['baselineRefs'] = [{'name': parent['metadata']['id'], 'revision': '2'}]
         assignment.write_text(yaml.safe_dump(selected))
         realization_path.unlink()
         missing = render('missing-realization')
-        assert missing['coverage']['assessable'] and missing['requirements'][0]['adoption']['status'] == 'not_implemented'
+        assert plan_coverage(missing)['assessable'] and missing['requirements'][0]['adoption']['status'] == 'not_implemented'
         validate_assessment_results(historical)
         assert historical == result
         print('ADR 0012: private tailoring, immutable fan-out, conflict, unknown, missing realization and tampering passed.')

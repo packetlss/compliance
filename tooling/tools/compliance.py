@@ -32,7 +32,6 @@ from .policy_sources import (
     PolicySource,
     normalize_policy_sources,
     parse_policy_source,
-    policy_revision,
     policy_source_revisions,
 )
 from .policy_diff import (
@@ -289,7 +288,6 @@ def _run_policy_validate(args: argparse.Namespace) -> None:
             }
             for source, revision in zip(policy_sources, revisions, strict=True)
         ],
-        "policy_revision": policy_revision(revisions) if revisions else None,
         "valid": not errors,
         "baseline_count": len(catalog),
         "control_count": len(controls),
@@ -471,7 +469,8 @@ def _check_operation_outputs(plans, *roots):
 
 
 def _format_plan_summary(plan: dict) -> str:
-    coverage = plan.get("coverage", {})
+    from .operation import plan_coverage
+    coverage = plan_coverage(plan)
     resolution = plan.get("resolution", {})
     external_refs = {
         external_ref
@@ -492,18 +491,20 @@ def _format_plan_summary(plan: dict) -> str:
         f"{len(plan.get('excluded_controls', []))} excluded",
         f"Objectives:      {len(plan.get('requirements', []))}",
         f"External refs:   {len(external_refs)}",
-        f"Policy revision: {plan.get('policy_revision', 'unknown')}",
-        f"Policy sources:  {len(plan.get('policy_sources', []))}",
+        f"Operation:       {plan['operation']['operation_id']}",
+        f"Composition:     {plan['provenance']['planningComposition']['compositionDigest']}",
+        f"Policy sources:  {len(plan['provenance']['planningComposition']['actual']['policySources'])}",
     ]
     lines.extend(
-        f"  {source['name']}: {source['digest']}"
-        for source in plan.get("policy_sources", [])
+        f"  {source['name']}: {source['content']['digest']}"
+        for source in plan['provenance']['planningComposition']['actual']['policySources']
     )
     return "\n".join(lines)
 
 
 def _plan_index_entry(plan: dict, path: Path) -> dict:
-    coverage = plan.get("coverage", {})
+    from .operation import plan_coverage
+    coverage = plan_coverage(plan)
     return {
         "subject_id": plan.get("subject", {}).get("id", "unknown"),
         "plan_id": plan.get("id", "unknown"),
@@ -710,7 +711,7 @@ def _run_assessment_view(args: argparse.Namespace) -> None:
 
 
 def _run_assessment(args: argparse.Namespace) -> None:
-    from .operation import InvalidOperationResolution
+    from .operation import InvalidOperationResolution, plan_disposition
     try:
         plans = _render_selected_plans(args)
     except InvalidOperationResolution as error:
@@ -724,7 +725,7 @@ def _run_assessment(args: argparse.Namespace) -> None:
         write_json(plan, plan_output)
     reports = []
     for plan in plans:
-        if not plan['coverage']['assessable']:
+        if plan_disposition(plan) != 'result_required':
             continue
         report = evaluate_plan_document(plan, args.evidence, policy_sources,
             opa=args.opa, evaluated_at=instant, waiver_path=args.waivers,

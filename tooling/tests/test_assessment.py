@@ -57,10 +57,12 @@ class AssessmentStatusTests(unittest.TestCase):
         )
         old = render_plan(self.subject, self.groups, self.assignments, old_sources)
         self.assertNotEqual(old["id"], self.plan["id"])
-        self.assertNotEqual(old["policy_revision"], self.plan["policy_revision"])
+        old_composition = old['provenance']['planningComposition']
+        new_composition = self.plan['provenance']['planningComposition']
+        self.assertNotEqual(old_composition['compositionDigest'], new_composition['compositionDigest'])
         self.assertEqual(
-            [source["digest"] for source in old["policy_sources"]],
-            [source["digest"] for source in self.plan["policy_sources"]],
+            [source["content"]["digest"] for source in old_composition['actual']['policySources']],
+            [source["content"]["digest"] for source in new_composition['actual']['policySources']],
         )
         # Compare domain fields directly; source locators legitimately change.
         fields = ("implementation", "instance_id", "parameters", "definition_fingerprint")
@@ -68,7 +70,6 @@ class AssessmentStatusTests(unittest.TestCase):
             [{field: control[field] for field in fields} for control in old["controls"]],
             [{field: control[field] for field in fields} for control in self.plan["controls"]],
         )
-        self.assertEqual(old["coverage"], self.plan["coverage"])
         self.assertEqual(old["resolution"], self.plan["resolution"])
 
     def result_report(self, plan_id=None, **summary):

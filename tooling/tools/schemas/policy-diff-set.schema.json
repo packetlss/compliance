@@ -71,8 +71,8 @@
     "planSummary": {
       "type": "object",
       "required": [
-        "path", "plan_id", "subject_type", "policy_revision",
-        "inventory_revision", "assignment_revision", "resolution", "coverage",
+        "path", "plan_id", "subject_type", "member_plan_digest",
+        "operation_id", "resolution", "accounting_disposition",
         "active_controls", "excluded_controls", "requirements"
       ],
       "additionalProperties": false,
@@ -80,11 +80,10 @@
         "path": {"$ref": "#/$defs/nonEmptyString"},
         "plan_id": {"$ref": "#/$defs/digest"},
         "subject_type": {"$ref": "#/$defs/nonEmptyString"},
-        "policy_revision": {"$ref": "#/$defs/digest"},
-        "inventory_revision": {"$ref": "#/$defs/digest"},
-        "assignment_revision": {"$ref": "#/$defs/digest"},
+        "member_plan_digest": {"$ref": "#/$defs/digest"},
+        "operation_id": {"$ref": "#/$defs/digest"},
         "resolution": {"enum": ["valid", "invalid"]},
-        "coverage": {"enum": ["assigned", "unassigned", "inactive", "invalid"]},
+        "accounting_disposition": {"enum": ["result_required", "unassigned", "inactive", "no_assessable_policy", "invalid"]},
         "active_controls": {"type": "integer", "minimum": 0},
         "excluded_controls": {"type": "integer", "minimum": 0},
         "requirements": {"type": "integer", "minimum": 0}

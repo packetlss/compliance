@@ -96,13 +96,16 @@ Current requirement/realization schemas support explicit pinned slots and direct
 ## Closed-world operation accounting
 
 [ADR 0016](adr/0016-closed-world-policy-assessment.md) is **Experimental,
-implemented under [#78](https://github.com/packetlss/compliance/issues/78)**.
+implemented under [#78](https://github.com/packetlss/compliance/issues/78) and
+simplified before freeze under [#87](https://github.com/packetlss/compliance/issues/87)**.
 ADRs 0013–0015 remain superseded historical design. The sole new shared runtime
 representation is the embedded frozen operation projection inside existing v4
 plans/results. [The operation contract](../tooling/docs/operation-accounting.md)
-defines its normalization and identity. This pre-freeze cutover changes the
-provisional plan digest projection without adding a compatibility reader or
-changing algorithm identifiers to `/v1`.
+defines its normalization and identity. The current projection uses one
+`member_plan_digest`, one selector-sensitive `operation_id`, and operation-bound
+plan IDs; it has no catalog-wide inventory/assignment revisions or predecessor
+plan wrapper digests. This pre-freeze cutover adds no compatibility reader and
+promotes no algorithm identifier to `/v1`.
 
 Complete accounting remains separate from assessment success. Typed assertions
 and observed consumer relationships use ordinary evidence dependencies. Governance

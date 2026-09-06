@@ -44,10 +44,12 @@ def _render(project_name: str, subject_id: str) -> JsonObject:
 
 
 def _resign(plan: JsonObject) -> JsonObject:
-    from tools.operation import freeze_operation
+    from tools.operation import member_facts
+    from tools.assessment_provenance import digest
     operation = plan["operation"]
-    freeze_operation([plan], {plan["subject"]["id"]: plan["subject"]},
-                     operation["groups"], operation["assignments"], operation["selection"])
+    operation['members'] = [member_facts(plan)]
+    operation['operation_id'] = digest({key: value for key, value in operation.items()
+                                        if key != 'operation_id'})
     plan.pop("id", None)
     plan["id"] = artifact_digest(plan)
     validate_assessment_plan(plan)

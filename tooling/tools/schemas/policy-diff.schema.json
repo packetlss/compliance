@@ -115,11 +115,9 @@
       "required": [
         "path",
         "plan_id",
-        "policy_revision",
-        "policy_sources",
-        "inventory_revision",
-        "assignment_revision",
-        "operation_digest"
+        "member_plan_digest",
+        "operation_id",
+        "composition_digest"
       ],
       "additionalProperties": false,
       "properties": {
@@ -129,36 +127,13 @@
         "plan_id": {
           "$ref": "#/$defs/digest"
         },
-        "policy_revision": {
+        "member_plan_digest": {
           "$ref": "#/$defs/digest"
         },
-        "policy_sources": {
-          "type": "array",
-          "uniqueItems": true,
-          "items": {
-            "type": "object",
-            "required": [
-              "name",
-              "digest"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "name": {
-                "$ref": "#/$defs/nonEmptyString"
-              },
-              "digest": {
-                "$ref": "#/$defs/digest"
-              }
-            }
-          }
-        },
-        "inventory_revision": {
+        "operation_id": {
           "$ref": "#/$defs/digest"
         },
-        "assignment_revision": {
-          "$ref": "#/$defs/digest"
-        },
-        "operation_digest": {
+        "composition_digest": {
           "$ref": "#/$defs/digest"
         }
       }
@@ -182,11 +157,9 @@
           "items": {
             "enum": [
               "plan_id",
-              "policy_revision",
-              "policy_sources",
-              "inventory_revision",
-              "assignment_revision",
-              "operation_digest"
+              "member_plan_digest",
+              "operation_id",
+              "composition_digest"
             ]
           }
         },

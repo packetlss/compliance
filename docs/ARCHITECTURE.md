@@ -186,7 +186,9 @@ There is no separate runtime applicability/authority-acceptance/recognition engi
 or mandatory external completeness gate.
 
 [#78](https://github.com/packetlss/compliance/issues/78) implements embedded frozen
-operation accounting and concrete external assertions through existing typed evidence.
+operation accounting and concrete external assertions through existing typed evidence;
+[#87](https://github.com/packetlss/compliance/issues/87) simplifies its pre-freeze
+selection, member commitment, operation identity and bound-plan representation.
 The [operation contract](../tooling/docs/operation-accounting.md) specifies exact
 selection, membership, plan identity, result matching and historical reporting.
 #37 remains open for residual architecture and mandatory escalation. No direct result

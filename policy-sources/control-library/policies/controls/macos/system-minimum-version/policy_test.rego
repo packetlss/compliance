@@ -5,7 +5,7 @@ import rego.v1
 
 test_supported_version if {
 	actual := system_minimum_version.evaluate with input as {
-		"assessment": {"plan_id": "plan", "policy_revision": "policy"},
+		"assessment": {"plan_id": "plan"},
 		"subject": {"id": "workstation/test"},
 		"control": {
 			"instance_id": "test.version",

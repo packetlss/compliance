@@ -4,7 +4,7 @@ import data.compliance.controls.organization_assertion_required as criterion
 import rego.v1
 
 case(beneficiary, outcome) := {
-	"assessment": {"plan_id": "plan", "policy_revision": "policy", "evaluated_at": "2026-09-01T00:00:00Z"},
+	"assessment": {"plan_id": "plan", "evaluated_at": "2026-09-01T00:00:00Z"},
 	"subject": {"id": "entity/A"},
 	"control": {
 		"instance_id": "required-assertion", "implementation": "organization.assertion.required",

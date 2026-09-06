@@ -318,24 +318,20 @@ For one subject and one point in time, the planner performs:
 No filesystem ordering, group traversal order, assignment order, or parent
 ordering may affect the result.
 
-## 8. Revision model
+## 8. Frozen assessment identity
 
-Reproducing an assessment requires three independently meaningful revisions:
+Catalog-wide inventory and assignment revisions are not assessment identities.
+Before evaluation, the embedded operation freezes only its exact request,
+mode-sensitive selection witness, relevant assignments, composition commitment,
+selected-member resolution facts and compact expected membership. Each member's
+complete resolved intent has an operation-independent `member_plan_digest`; the
+operation ID binds the selected set, and each exact plan ID binds that operation
+to one subject.
 
-| Revision | Covers |
-|---|---|
-| `inventory_revision` | Subject record and group definitions used for membership resolution |
-| `assignment_revision` | Exact group-to-baseline bindings |
-| `policy_revision` | Controls, schemas, baselines, overlays, and their tests |
-
-The assessment plan ID is the digest of the fully rendered plan containing all
-three revisions. Every control decision records the plan ID. The inventory
-snapshot, assignment document, and policy release must remain retrievable for
-the required evidence-retention period.
-
-An inventory change can therefore alter applicable policy even when no Rego or
-baseline changed. For example, changing `persona=developer` to
-`persona=standard` produces a new inventory revision and plan.
+An inventory fact changes assessment identity only when consumed by selection or
+member policy resolution. For example, changing `persona=developer` to
+`persona=standard` changes identity when that label affects a relevant selector or
+realization, while unrelated annotations and unsupplied catalog material do not.
 
 ## 9. Ownership and storage
 

@@ -108,7 +108,8 @@ def status_row(plan: JsonObject, reports: list[JsonObject]) -> JsonObject:
     """Combine one rendered plan with result history without conflating the two."""
     subject_id = plan["subject"]["id"]
     current, previous = reports_for_plan(plan, reports)
-    coverage = plan["coverage"]
+    from .operation import plan_coverage
+    coverage = plan_coverage(plan)
 
     visible_report = current or previous
     historical_outcome = result_state(visible_report) if visible_report else "no_assessment"
@@ -809,15 +810,15 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
             f'reason={status["coverage"]["reason"]})'
         ),
         f'Plan: {plan["id"]}',
-        f'Policy revision: {plan["policy_revision"]}',
+        f'Operation: {plan["operation"]["operation_id"]}',
+        f'Member plan: {next(member["member_plan_digest"] for member in plan["operation"]["members"] if member["subject_id"] == plan["subject"]["id"])}',
+        f'Planning composition: {plan["provenance"]["planningComposition"]["compositionDigest"]}',
         "Policy sources: " + (
             ", ".join(
-                f'{source["name"]}={source["digest"]}'
-                for source in plan["policy_sources"]
+                f'{source["name"]}={source["content"]["digest"]}'
+                for source in plan["provenance"]["planningComposition"]["actual"]["policySources"]
             )
         ),
-        f'Inventory revision: {plan["inventory_revision"]}',
-        f'Assignment revision: {plan["assignment_revision"]}',
         "Waiver revision: " + (
             visible_result.get("waiver_revision", "not assessed")
             if visible_result
