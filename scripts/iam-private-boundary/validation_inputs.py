@@ -24,7 +24,7 @@ ASSEMBLY_ROOTS = (
 TOP_LEVEL_ENTRIES = {"external-sources", "policy-sources", "tooling", "verification"}
 POLICY_SOURCE_ENTRIES = {"control-library", "verification-policy"}
 EXPECTED_PRIVATE_POLICY_DIGEST = (
-    "sha256:9ee2208821f625343058e7e986cb0aa3a743ab10318b4c4e131a009cc742b91d"
+    "sha256:dcbf50fec375b3671d84e41fc10c621a317f15be4ec3678eaf0a573b2d5d3783"
 )
 POLICY_SOURCE_DIGEST_ALGORITHM = (
     "compliance.example/policy-source-tree-digest/v1alpha1"

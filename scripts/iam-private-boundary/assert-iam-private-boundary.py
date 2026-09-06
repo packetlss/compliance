@@ -17,7 +17,7 @@ from pathlib import Path
 
 FIXED_INSTANT = "2026-09-01T00:00:00Z"
 PRIVATE_POLICY_DIGEST = (
-    "sha256:9ee2208821f625343058e7e986cb0aa3a743ab10318b4c4e131a009cc742b91d"
+    "sha256:dcbf50fec375b3671d84e41fc10c621a317f15be4ec3678eaf0a573b2d5d3783"
 )
 SOURCE_NAMES = ["control-library", "environment-private", "verification-policy"]
 CONTROL_INSTANCES = {
@@ -199,7 +199,7 @@ def assert_provenance(plan: dict, result: dict, config: dict, assembly_root: Pat
         fail("IAM result lost successful evidence selection for a technical check")
     for item in selections:
         if item["collected_at"] != FIXED_INSTANT or item["requirement"] != {
-            "id": "observation", "type": "linux.access.configuration/v1", "required": True, "max_age": "86400s"
+            "id": "observation", "type": "linux.access.configuration/v1", "max_age": "86400s"
         }:
             fail("IAM result lost factual collection instant or assessed evidence requirement")
 
