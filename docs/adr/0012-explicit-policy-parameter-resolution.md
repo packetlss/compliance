@@ -257,7 +257,8 @@ Preserve ADR 0010 assessment-time eligibility/status/selection and ADR 0011
 immutable successful evidence ID-plus-document-digest, `collected_at` and exact
 assessed-plan dependency/`max_age` attribution. Changed policy freshness cannot
 rewrite historical selection facts or outcomes. This promotion does **not** decide
-`collected_at > evaluated_at`, optional-evidence redesign or query-time views.
+`collected_at > evaluated_at`, the subsequently simplified required-only evidence
+model, or query-time views.
 
 ### Value contract
 

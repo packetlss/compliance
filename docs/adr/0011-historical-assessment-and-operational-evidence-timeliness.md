@@ -68,7 +68,7 @@ q - collected_at <= max_age
 Equality is within the recorded age limit. This is a derived property of historical
 assessment support, not re-evaluation of criterion truth. Do not change assessment-time
 freshness eligibility, future-timestamp semantics, illustrative evidence `expires_at`
-behavior, optional-evidence semantics, or evidence selection. This ADR adds no
+behavior, the required-only dependency model, or evidence selection. This ADR adds no
 alternative temporal eligibility rule.
 
 Never reselect evidence at query time or substitute current mutable evidence for
@@ -79,7 +79,7 @@ cannot establish timeliness, expose **Evidence timeliness unavailable**, retaini
 historical missing/invalid/ambiguous/otherwise inconclusive explanations. Do not
 manufacture successful selections for such results or claim timely support from an
 empty set of successful required selections when required evidence was not selected.
-This does not add obligations for optional evidence or change existing applicability.
+This does not change the required-only evidence model or existing applicability.
 
 One stale required selected-evidence dependency qualifies the affected control as
 needing reassessment. Do not average evidence ages. Concurrent stale and unavailable
@@ -249,7 +249,7 @@ results misleading as time advances.
 No evidence collection/scheduling, continuous monitoring, evidence retention/storage,
 findings lifecycle, collector precedence/authority, evidence supersession, payload
 merging/multi-observation semantics, new freshness eligibility, future timestamp or
-evidence `expires_at` behavior, optional-evidence redesign, #37 manual/procedural
+evidence `expires_at` behavior, the required-only dependency model, #37 manual/procedural
 assurance, new logical result states, persisted operational-status artifact, adapter
 execution, release/signing/acquisition, or firewall/network-policy work is authorized.
 

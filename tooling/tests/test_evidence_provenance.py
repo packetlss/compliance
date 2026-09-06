@@ -21,7 +21,6 @@ class EvidenceProvenanceTests(unittest.TestCase):
             "collected_at": "2026-08-30T00:00:00Z",
             "collector": {"id": "test", "version": "1.0.0"},
             "payload": {"value": value},
-            "integrity": {"digest": "sha256:" + "a" * 64},
         }
 
     def test_document_digest_covers_complete_semantic_document(self) -> None:
@@ -31,6 +30,8 @@ class EvidenceProvenanceTests(unittest.TestCase):
         changed_collector["collector"]["version"] = "1.0.1"
         changed_payload = copy.deepcopy(document)
         changed_payload["payload"]["value"] = 2
+        changed_extension = copy.deepcopy(document)
+        changed_extension["integrity"] = {"digest": "opaque-extension-value"}
         self.assertEqual(evidence_document_digest(document), evidence_document_digest(same))
         self.assertNotEqual(
             evidence_document_digest(document),
@@ -39,6 +40,10 @@ class EvidenceProvenanceTests(unittest.TestCase):
         self.assertNotEqual(
             evidence_document_digest(document),
             evidence_document_digest(changed_payload),
+        )
+        self.assertNotEqual(
+            evidence_document_digest(document),
+            evidence_document_digest(changed_extension),
         )
 
     def test_set_identity_is_order_independent_and_preserves_membership(self) -> None:

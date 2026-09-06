@@ -68,6 +68,24 @@ class PolicyResourceTests(unittest.TestCase):
         self.assertEqual(set(controls), expected)
         self.assertEqual(validate_rego_entrypoints(source, controls), [])
 
+    def test_evidence_contracts_are_required_only_without_payload_integrity(self):
+        control_schema = read_json(POLICIES / "schemas/policy/control.schema.json")
+        dependency = control_schema["$defs"]["evidenceRequirement"]
+        self.assertNotIn("required", dependency["properties"])
+        self.assertNotIn("required", dependency["required"])
+
+        for path in sorted(POLICIES.glob("controls/*/*/control.json")):
+            with self.subTest(control=path.relative_to(ROOT)):
+                for evidence in read_json(path)["spec"]["evidence"]:
+                    self.assertNotIn("required", evidence)
+
+        for path in sorted(POLICIES.glob("schemas/evidence/*.schema.json")):
+            with self.subTest(schema=path.relative_to(ROOT)):
+                schema = read_json(path)
+                self.assertNotIn("integrity", schema["required"])
+                self.assertNotIn("integrity", schema["properties"])
+                self.assertTrue(schema["additionalProperties"])
+
     def test_schema_identities_are_unique(self):
         schemas = sorted(POLICIES.rglob("*.schema.json"))
         identities = [

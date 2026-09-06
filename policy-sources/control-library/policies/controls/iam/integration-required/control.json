@@ -14,7 +14,6 @@
       {
         "id": "service",
         "type": "iam.service.observation/v1",
-        "required": true,
         "inputs_schema": {
           "type": "object",
           "required": [
@@ -37,8 +36,7 @@
       },
       {
         "id": "relationship",
-        "type": "iam.integration.observation/v1",
-        "required": true
+        "type": "iam.integration.observation/v1"
       }
     ],
     "parameters_schema": "parameters.schema.json",

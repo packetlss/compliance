@@ -13,7 +13,6 @@
     "evidence": [
       {
         "type": "saas.tenant.configuration/v1",
-        "required": true,
         "id": "observation"
       }
     ],

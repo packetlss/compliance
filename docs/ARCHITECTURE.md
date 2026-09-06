@@ -85,6 +85,13 @@ Destination [#37](https://github.com/packetlss/compliance/issues/37) remains the
 
 [ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns the common required-evidence `unknown`, attributable execution `error`, and assessment-wide refusal boundary. It clarifies ADRs 0006/0007; #32 implements its schema-invalid-evidence and evidence selection ambiguity corrections as the only semantic preservation exceptions after #31. These corrections are implemented in the sole supported v4 path. #31 is complete; broader assurance design remains with #37.
 
+The implemented evidence core supports required dependencies only: every
+declared dependency is required by definition and has no optionality
+discriminator. Typed envelopes have no normative collector-supplied
+`integrity.digest`; unchanged complete-document and evidence-set digests bind
+the exact snapshot used by assessment. Opaque extensions remain ordinary
+complete-document content and do not acquire integrity semantics.
+
 ## Explicit policy parameters and freshness
 
 [ADR 0012](adr/0012-explicit-policy-parameter-resolution.md) is implemented under [#73](https://github.com/packetlss/compliance/issues/73). The [experimental parameter contract](../tooling/docs/policy-parameters.md) defines the coordinated schema/runtime/consumer representation. Its common model is declaration → explicit binding → optional explicit descendant tailoring → concrete effective value → explicit dependency consumption → resolved assessment plan. Required unresolved parameters and independently applicable divergent bindings prevent an assessable plan. Source/file order, ancestry, assignment scope or specificity, strictness and min/max never choose values; constraints and JSON Schema defaults cannot manufacture them.

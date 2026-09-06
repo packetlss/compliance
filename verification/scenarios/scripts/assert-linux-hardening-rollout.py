@@ -224,8 +224,6 @@ def assert_assessment_result(
     expected_selections = []
     for control in plan.get("controls", []):
         for index, requirement in enumerate(control.get("evidence", [])):
-            if not requirement.get("required"):
-                continue
             candidates = [item for item in evidence if item.get("type") == requirement.get("type")]
             require(len(candidates) <= 1, f"fixture has ambiguous successful evidence for {subject_id}")
             for document in candidates:

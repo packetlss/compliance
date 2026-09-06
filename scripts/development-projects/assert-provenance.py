@@ -111,8 +111,6 @@ def main() -> None:
             expected_selections = []
             for control in plan["controls"]:
                 for index, requirement in enumerate(control["evidence"]):
-                    if not requirement["required"]:
-                        continue
                     candidates = [doc for doc in documents if doc["type"] == requirement["type"]]
                     require(len(candidates) <= 1, "fixture no longer has unique required evidence")
                     for doc in candidates:

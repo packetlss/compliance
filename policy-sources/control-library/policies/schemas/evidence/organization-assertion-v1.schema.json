@@ -9,8 +9,7 @@
     "type",
     "collected_at",
     "collector",
-    "payload",
-    "integrity"
+    "payload"
   ],
   "additionalProperties": true,
   "properties": {
@@ -106,19 +105,6 @@
         "valid_until": {
           "type": "string",
           "format": "date-time"
-        }
-      }
-    },
-    "integrity": {
-      "type": "object",
-      "required": [
-        "digest"
-      ],
-      "additionalProperties": true,
-      "properties": {
-        "digest": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
         }
       }
     }

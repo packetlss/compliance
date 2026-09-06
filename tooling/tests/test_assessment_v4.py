@@ -190,7 +190,7 @@ class AssessmentV4Tests(unittest.TestCase):
         independent['evidence'] = []
         self.plan['controls'].append(independent)
         self.plan['coverage']['active_control_count'] = 2
-        self.plan['controls'][0]['evidence'].append({'type':'second/v1','required':True,'max_age':'24h'})
+        self.plan['controls'][0]['evidence'].append({'type':'second/v1','max_age':'24h'})
         actual = require_composition(self.sources)
         self.plan['policy_sources'] = [{'name':x['name'],'digest':x['content']['digest']} for x in actual['actual']['policySources']]
         self.plan['provenance']['planningComposition'] = stage(actual)
@@ -204,12 +204,10 @@ class AssessmentV4Tests(unittest.TestCase):
             self.assertEqual(opa.call_count, 1)
             self.assertEqual(len(report['provenance']['selectedEvidence']), 1)
 
-    def test_optional_absence_does_not_block_the_criterion(self):
+    def test_evidence_required_discriminator_is_rejected(self):
         self.plan['controls'][0]['evidence'][0]['required'] = False
-        self.sign_plan()
-        report, opa = self.run_assessment([])
-        self.assertEqual(opa.call_count, 1)
-        self.assertEqual(report['summary']['pass'], 1)
+        with self.assertRaisesRegex(ValueError, 'required'):
+            self.sign_plan()
 
     def test_waivers_bind_identity_and_only_underlying_fail_is_waivable(self):
         waivers = self.root/'waivers'
@@ -354,21 +352,6 @@ class AssessmentV4Tests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'assessed plan'):
             validate_selection_plan(changed, self.plan)
 
-
-    def test_optional_candidates_keep_predecessor_selection_and_invalid_error(self):
-        self.plan['controls'][0]['evidence'][0]['required'] = False
-        self.sign_plan()
-        first = self.document()
-        second = self.document(id='other')
-        report, opa = self.run_assessment([first,second])
-        self.assertEqual(report['summary']['pass'], 1)
-        self.assertEqual(opa.call_count, 1)
-        self.assertEqual(opa.call_args.args[2]['evidence'], [first])
-        self.assertEqual(report['provenance']['selectedEvidence'], [])
-        report, opa = self.run_assessment([first,self.document(payload={'value':False})])
-        self.assertEqual(report['summary']['error'], 1)
-        self.assertEqual(opa.call_count, 0)
-        self.assertFalse(report['results'][0]['observed']['evidence_validation_errors'][0]['required'])
 
     def test_unrepresentable_criterion_decisions_are_attributable_errors(self):
         for value in (float('nan'),float('inf'),'\ud800'):

@@ -13,7 +13,6 @@
     "evidence": [
       {
         "type": "linux.access.configuration/v1",
-        "required": true,
         "id": "observation"
       }
     ],

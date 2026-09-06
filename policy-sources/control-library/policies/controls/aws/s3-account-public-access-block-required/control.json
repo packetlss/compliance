@@ -13,7 +13,6 @@
     "evidence": [
       {
         "type": "aws.s3.account-public-access-block/v1",
-        "required": true,
         "id": "observation"
       }
     ],

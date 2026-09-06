@@ -9,8 +9,7 @@
     "type",
     "collected_at",
     "collector",
-    "payload",
-    "integrity"
+    "payload"
   ],
   "additionalProperties": true,
   "properties": {
@@ -95,19 +94,6 @@
             "boolean",
             "null"
           ]
-        }
-      }
-    },
-    "integrity": {
-      "type": "object",
-      "required": [
-        "digest"
-      ],
-      "additionalProperties": true,
-      "properties": {
-        "digest": {
-          "type": "string",
-          "pattern": "^sha256:[a-f0-9]{64}$"
         }
       }
     }

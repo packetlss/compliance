@@ -126,6 +126,8 @@ greatest eligible collection instant produce `evidence_selection_ambiguity`,
 for selection only. No older fallback, payload merge or ordering precedence exists.
 Independent controls remain assessable; any failed required selection blocks its
 control. Missing/stale required evidence is unknown, not a completed passing check.
+Every declared evidence dependency is required by definition; plan and result
+representations contain no optionality discriminator.
 
 Structured validation diagnostics bind evidence ID/digest, schema reference,
 instance/schema pointers, keyword, stable code and human message. Ambiguity
@@ -150,6 +152,9 @@ subject snapshot, including rejected, ambiguous, duplicate and nonselected candi
 The same in-memory snapshot is digested and consumed. Paths are not identity.
 The resolved OPA executable is hashed/versioned once and that executable evaluates
 the selected evidence. Release-tested OPA metadata is not execution identity.
+The normative evidence envelope has no collector-supplied `integrity.digest`.
+No replacement payload checksum or second evidence identity is introduced;
+opaque extensions remain ordinary complete-document content.
 
 ## Installed and locked validation
 

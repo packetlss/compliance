@@ -1,9 +1,10 @@
 # ADR 0010: Required evidence, attributable errors, and assessment refusal
 
-- **Status:** Accepted design, not yet implemented
+- **Status:** Accepted and implemented
 - **Date:** 2026-09-05
 - **Promotion contracts:** [#61](https://github.com/packetlss/compliance/issues/61) (invalid evidence), [#62](https://github.com/packetlss/compliance/issues/62) (evidence selection ambiguity)
 - **Runtime implementation:** [#32](https://github.com/packetlss/compliance/issues/32), after [#31](https://github.com/packetlss/compliance/issues/31)
+- **Required-only evidence-core simplification:** [#84](https://github.com/packetlss/compliance/issues/84)
 
 ## Context and authority
 
@@ -30,9 +31,8 @@ documents. The predecessor traversal-order selection behavior is superseded as
 normative authority. Complete-document differences do not by themselves imply
 that observations contradict each other.
 
-This promotion changes architecture and implementation contracts only. Current
-runtime behavior and tests are unchanged until #32 implements the correction.
-The project remains pre-freeze without external compatibility consumers; no
+The #32 runtime implements these corrections. The project remains pre-freeze
+without external compatibility consumers; no
 historical result, release, or artifact is reinterpreted or rewritten.
 
 [ADR 0011](0011-historical-assessment-and-operational-evidence-timeliness.md) owns interpretation of historical results across wall-clock time and the v4 factual temporal-provenance clarification in #32. This ADR retains assessment-time validity/freshness eligibility, schema-invalid evidence, selection ambiguity, attributable `error`, and assessment-wide refusal unchanged.
@@ -46,6 +46,28 @@ evidence selection and roll-up, and ADR 0012's unresolved-policy boundary, are
 unchanged. No separate external claim/applicability-authority subsystem is required.
 
 ## Decision
+
+### Required-only dependency and evidence-envelope core
+
+Every declared control evidence dependency is required by definition. The
+dependency contract and its frozen/effective representation therefore have no
+`required` discriminator, and optional evidence is not a supported policy or
+runtime concept. This removes only that evidence-dependency axis; unrelated
+requirement-baseline, parameter, applicability, and JSON Schema uses of
+`required` retain their existing meanings.
+
+The normative typed evidence envelope requires document identity, subject and
+type routing, collection time, collector metadata, and payload. It has no
+collector-supplied `integrity.digest`: assessment did not independently verify
+that payload checksum, so it is not an integrity or trust guarantee. Do not
+replace it with another checksum, signature abstraction, or second evidence
+identity. An opaque extension named `integrity` remains ordinary complete-
+document content where a type schema permits extensions and gains no product
+semantics.
+
+The existing complete-document `evidence-document-digest/v1alpha1` and sorted
+ID/digest-set `evidence-set-digest/v1alpha1` algorithms remain the sole evidence
+identity/provenance mechanisms and are unchanged by this simplification.
 
 ### Definitions and shared prerequisites
 
@@ -167,7 +189,8 @@ Preserve the existing `evidence-document-digest/v1alpha1` and
 JSON digests and the existing sorted ID/digest set projection described in the
 [tooling provenance contract](../../tooling/docs/artifact-provenance.md).
 Do not add or change an evidence identity algorithm or infer identity from paths.
-The evidence envelope and collector identity semantics are unchanged.
+Collector identity semantics are unchanged. The envelope simplification above
+removes only the non-verifying collector-supplied `integrity.digest` field.
 
 When a rejected document remains validly identified and routed, retain it in the
 subject evidence snapshot. Bind its validation diagnostics to its evidence ID
@@ -182,7 +205,7 @@ never silently omit unrepresentable evidence to manufacture provenance.
 
 ### Structured, deterministic diagnostics
 
-Retain `observed.evidence_validation_errors`. #32 must provide machine-actionable
+Retain `observed.evidence_validation_errors`. The runtime provides machine-actionable
 attribution equivalent to:
 
 - stable diagnostic type/code;

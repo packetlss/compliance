@@ -45,12 +45,16 @@ The retained first core consists of:
 - optional requirement/realization objective assurance;
 - arbitrary independently named/digested policy sources;
 - inventory/groups/assignments;
-- typed evidence and pass/fail/unknown evaluation;
+- required typed evidence and pass/fail/unknown evaluation;
 - waivers and policy diff;
 - provenance-bearing assessment plans/results; and
 - assessment plans as the external-adapter handoff.
 
 Missing/inconclusive required evidence is `unknown`; authored implementation state is not evidence; source/file order is not precedence; divergent same-identity definitions fail.
+Every declared evidence dependency is required and carries no optionality
+discriminator. The typed envelope has no normative collector-supplied
+`integrity.digest`; the unchanged complete-document and evidence-set digest
+algorithms provide assessment snapshot identity.
 
 In-core configuration intents/compiler/renderers/configuration artifact families/backend apply authority are removed and have no ADR 0007 successor.
 

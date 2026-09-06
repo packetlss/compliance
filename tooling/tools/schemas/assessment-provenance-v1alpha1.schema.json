@@ -694,7 +694,6 @@
             "type": "object",
             "required": [
               "type",
-              "required",
               "max_age",
               "id"
             ],
@@ -703,9 +702,6 @@
               "type": {
                 "type": "string",
                 "minLength": 1
-              },
-              "required": {
-                "const": true
               },
               "max_age": {
                 "type": "string",

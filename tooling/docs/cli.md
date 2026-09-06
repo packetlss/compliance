@@ -75,8 +75,8 @@ fallback or payload merging is introduced.
 JSON and human explanations retain structured validation and selection ambiguity
 diagnostics, including exact evidence ID/digest and schema references. Invalid
 required-evidence counts belong to unknown. V4 reserves error for attributable
-execution/decision failures, while preserving the predecessor invalid optional
-evidence error behavior. Optional evidence selection semantics are not redesigned.
+execution/decision failures. Every declared evidence dependency is required;
+there is no optional-evidence selection or invalid-optional-evidence error path.
 Only underlying fail may be waived; logical roll-ups remain unchanged.
 
 Creating an artifact is not a passing assessment: persisted unknown or attributable

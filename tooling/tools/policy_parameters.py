@@ -220,7 +220,7 @@ def evidence_for(instance, definition):
             require(not inputs, 'evidence dependency has no declared input interface')
         else:
             validate_schema(input_schema).validate(inputs)
-        result.append({'id': contract['id'], 'type': contract['type'], 'required': contract['required'],
+        result.append({'id': contract['id'], 'type': contract['type'],
                        'max_age': age, **({'inputs': copy.deepcopy(inputs)} if input_schema is not None else {})})
     return result
 
@@ -249,7 +249,7 @@ def consume(realization, slots, controls):
             assign_path(check.setdefault('parameters', {}), target['path'], state['value'])
         else:
             contracts = [d for d in definition['spec']['evidence'] if d['id'] == target['dependency']]
-            require(len(contracts) == 1 and contracts[0]['required'], 'consumption requires an unambiguous required evidence dependency')
+            require(len(contracts) == 1, 'consumption requires an unambiguous evidence dependency')
             binding = check.setdefault('evidence', {}).setdefault(target['dependency'], {})
             if target['kind'] == 'freshness':
                 require(target['path'] == '/max_age' and state['declaration'].get('representation') == 'duration',
