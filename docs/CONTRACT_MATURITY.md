@@ -106,6 +106,40 @@ corrections remain its existing responsibility.
 
 Current requirement/realization schemas support explicit pinned slots and direct typed consumption. Policy bindings own effective `max_age`; Control manifests provide dependency contracts. The experimental frozen records are specified in [policy parameters](../tooling/docs/policy-parameters.md). Successor schema, fingerprint, validation, explanation and policy-diff obligations are in ADR 0012's migration table. Development artifacts may need regeneration; historical artifacts retain their original identity and meaning. ADR 0016 below supersedes ADRs 0013–0015 and narrows core responsibility; ADR 0012 semantics remain unchanged.
 
+## Stage 5 explanation architecture
+
+### Source-authored policy and check meaning
+
+[ADR 0017](adr/0017-source-authored-policy-and-check-meaning.md) is an
+**accepted design, not yet implemented** under #97. It places required policy
+titles on assignable baseline roots and required intrinsic title/purpose on
+canonical Control definitions. Existing Objective, tailoring, exclusion, and
+remediation semantics remain separate. The fields are identity-bearing policy
+meaning but cannot drive execution.
+
+The implementation is one coordinated pre-freeze authoring-schema, maintained
+source, resolved-plan, validation, policy-diff, and explanation cutover. No
+compatibility reader or digest-algorithm change is planned. Existing runtime
+representations remain current until that separately authorized migration lands;
+historical artifacts retain their original identity and require historical tooling.
+
+### Durable assessment explanation facts
+
+[ADR 0018](adr/0018-durable-assessment-explanation-facts.md) is an **accepted
+design, not yet implemented** under [#98](https://github.com/packetlss/compliance/issues/98).
+The bounded successor changes the experimental assessment-results v4 contract to
+retain identity-bearing unsuccessful dependency dispositions and closed attributable
+criterion error codes. It preserves successful selection, outcome, waiver,
+operation-accounting, historical qualification and refusal semantics. Plan-owned
+policy/check meaning is referenced by stable keys and is not copied into results.
+
+The cutover is pre-freeze: current development v4 results become unsupported rather
+than gaining compatibility inference or dual readers. No evidence, plan,
+operation/member, composition, evaluator or waiver identity algorithm changes, and
+no identifier is promoted to `/v1`. ADR 0017 and ADR 0018 retain separate bounded
+implementation tranches; accepting their architecture does not implement either
+runtime contract.
+
 ## Closed-world operation accounting
 
 [ADR 0016](adr/0016-closed-world-policy-assessment.md) is **Experimental,
