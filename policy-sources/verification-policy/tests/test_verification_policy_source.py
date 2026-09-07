@@ -54,8 +54,41 @@ class VerificationPolicySourceTests(unittest.TestCase):
         self.assertEqual(errors, [])
         requirements, objectives, realizations, errors = load_requirement_catalogs(sources(self.root), controls)
         self.assertEqual(errors, [])
-        self.assertEqual((len(baselines), len(requirements), len(objectives), len(realizations)), (15, 5, 3, 4))
-        self.assertEqual(len(list(self.root.rglob("*.json"))), 27)
+        self.assertEqual(set(baselines), {
+            "benchmark.example.linux-server-hardening@2026.1",
+            "benchmark.example.macos-hardening@2026.1",
+            "company.aws-foundation@1",
+            "company.aws-s3-public-access@1",
+            "company.container-runtime-host@1",
+            "company.developer-workstation@1",
+            "company.linux-server-hardening@1",
+            "company.linux-server-operations@1",
+            "company.macos-policy@1",
+            "company.saas-foundation@1",
+            "managed-workstation@1",
+            "profile.csa-ccm.aws-foundations@4.1-profile1",
+            "profile.csa-ccm.saas-foundations@4.1-profile1",
+            "verification.technical-packages-with-aide@1",
+            "verification.technical-packages@1",
+        })
+        self.assertEqual(set(requirements), {
+            "company.iam.role-based-access@1",
+            "verification.operation.entity.o1@1",
+            "verification.operation.entity.o2@1",
+            "verification.operation.entity.o3@1",
+            "verification.operation.system.o1@1",
+        })
+        self.assertEqual(set(objectives), {
+            "company.identity-access-objectives@1",
+            "verification.operation.entity@1",
+            "verification.operation.system@1",
+        })
+        self.assertEqual(set(realizations), {
+            "company.linux.central-role-access@1",
+            "verification.operation.entity.o1.realization@1",
+            "verification.operation.entity.o2.realization@1",
+            "verification.operation.entity.o3.realization@1",
+        })
         for catalog in (baselines, requirements, objectives, realizations):
             self.assertTrue(all(item["_source"].startswith("verification-policy:") for item in catalog.values()))
         self.assertTrue(all(item["_source"].startswith("control-library:") for item in controls.values()))
@@ -256,10 +289,6 @@ class VerificationPolicySourceTests(unittest.TestCase):
     def test_content_identity_is_independent_of_location_and_sensitive_to_bytes(self) -> None:
         original = source_tree_digest(ROOT / "policies")
         self.assertEqual(source_tree_digest(self.root), original)
-        self.assertEqual(
-            original,
-            "sha256:db183419df8f0368666f66e3a8b668de02875eb4174ea0563795b36eccbb3579",
-        )
         with (self.root / BASELINE).open("a") as stream:
             stream.write("\n")
         self.assertNotEqual(source_tree_digest(self.root), original)

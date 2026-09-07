@@ -23,15 +23,13 @@ the ordinary realization.
 
 Although the source snapshot is co-located, its checked-in `policy/` subtree is
 not an execution input. The focused validation gate exports committed inputs
-into a temporary non-Git assembly, verifies the relocated policy digest, copies
+into a temporary non-Git assembly, verifies the relocated policy digest against
+the committed source input, copies
 the subtree into a separate `external-sources/environment-private/` root,
 removes the fixture-side copy from the execution assembly, and composes only
-the separate materialization. The historical, relocated, and materialized
-policy-tree digests must all equal:
-
-```text
-sha256:dcbf50fec375b3671d84e41fc10c621a317f15be4ec3678eaf0a573b2d5d3783
-```
+the separate materialization. The committed, relocated, and materialized policy
+trees must have equal content identity; the current tree's particular digest is
+not an independent normative vector.
 
 The inventory contains `host/restricted-linux-01`. Its trusted
 `iam-profile=restricted-linux` label selects the complete restricted
@@ -60,8 +58,9 @@ assignment schemas and generates assessment plan/results v4. Validation checks
 actual planning and evaluation tooling/source composition, exact evaluator bytes,
 the complete subject evidence snapshot, and successful evidence selections bound
 to the assessed plan's requirements and collection instant (ADR 0011 facts only).
-It also checks source-order/location independence, fail-closed realization
-selection, and evidence-derived unknown outcomes without changing authored policy.
+It also retains one physical relocation/source-reorder relation and refuses
+changed private content against the original plan. Focused tooling tests own
+realization-selection order and the detailed evidence failure taxonomy.
 
 Run from the destination root after committing the candidate revision:
 
@@ -69,7 +68,7 @@ Run from the destination root after committing the candidate revision:
 bash scripts/validate-iam-private-boundary.sh
 ```
 
-Generated evidence, plans, results, and direct roll-up output are temporary and
+Generated evidence, plans, and results are temporary and
 must not be committed. Real private inventories, realizations, evidence,
 parameters, credentials, provider state, and operational data remain in their
 separate authorized environments.

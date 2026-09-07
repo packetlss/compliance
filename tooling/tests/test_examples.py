@@ -59,16 +59,53 @@ class ExampleCoverageTests(unittest.TestCase):
     def test_every_public_cli_command_has_a_registered_example(self):
         config = select_config(["--no-config"])
         commands = leaf_commands(build_parser(config))
+        expected = {
+            ("assessment", "explain"),
+            ("assessment", "frameworks"),
+            ("assessment", "groups"),
+            ("assessment", "run"),
+            ("assessment", "status"),
+            ("config", "list"),
+            ("config", "show"),
+            ("config", "validate"),
+            ("inventory", "explain"),
+            ("inventory", "graph"),
+            ("inventory", "list"),
+            ("inventory", "validate"),
+            ("plan", "render"),
+            ("plan", "show"),
+            ("policy", "diff"),
+            ("policy", "diff-set"),
+            ("policy", "validate"),
+            ("waiver", "explain"),
+            ("waiver", "list"),
+            ("waiver", "validate"),
+        }
 
-        self.assertEqual(commands, set(CLI_EXAMPLES))
-        self.assertEqual(len(commands), 20)
+        self.assertEqual(commands, expected)
+        self.assertEqual(set(CLI_EXAMPLES), expected)
 
     def test_domain_examples_cover_retained_special_states(self):
-        self.assertIn("policy.invalid-resolution", DOMAIN_EXAMPLES)
-        self.assertIn("waiver.application", DOMAIN_EXAMPLES)
-        self.assertIn("requirements.all-of", DOMAIN_EXAMPLES)
-        self.assertIn("requirements.missing-evidence", DOMAIN_EXAMPLES)
-        self.assertEqual(len(DOMAIN_EXAMPLES), 18)
+        self.assertEqual(set(DOMAIN_EXAMPLES), {
+            "assessment.filters",
+            "assessment.framework-alignment",
+            "collector.mock-api",
+            "evidence.contracts",
+            "evidence.schema-enforcement",
+            "inventory.multi-parent-dag",
+            "output.json-contracts",
+            "policy.control-implementations",
+            "policy.invalid-resolution",
+            "policy.multi-source-realization",
+            "policy.overlay-provenance",
+            "policy.overlay-substitute",
+            "policy.seal-enforcement",
+            "requirements.all-of",
+            "requirements.missing-evidence",
+            "requirements.realization-roll-up",
+            "waiver.application",
+            "waiver.filters",
+        })
 
     def test_mock_fleet_inventory_oracle_uses_named_dag_not_group_count(self):
         validation = "valid inventory: 3 subject(s), 7 group(s), 2 assignment(s)"

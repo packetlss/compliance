@@ -13,7 +13,7 @@ from pathlib import Path
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
 from tools.assessment_provenance import validate_result_against_plan, validate_selection_snapshot
 from tools.evaluator import opa_evaluator_identity
-from tools.evidence_provenance import evidence_document_digest, evidence_set_provenance
+from tools.evidence_provenance import evidence_set_provenance
 from tools.policy_sources import source_tree_digest
 from tools.operation import plan_coverage
 from tools.project_config import load_config
@@ -226,22 +226,28 @@ def assert_assessment_result(
     require(provenance.get("evidence") == evidence_set_provenance(evidence),
             f"evidence snapshot incomplete for {subject_id}")
 
-    expected_selections = []
-    for control in plan.get("controls", []):
-        for requirement in control.get("evidence", []):
-            candidates = [item for item in evidence if item.get("type") == requirement.get("type")]
-            require(len(candidates) <= 1, f"fixture has ambiguous successful evidence for {subject_id}")
-            for document in candidates:
-                expected_selections.append({
-                    "instance_id": control["instance_id"],
-                    "dependency_id": requirement["id"],
-                    "evidence_id": document["id"],
-                    "evidence_digest": evidence_document_digest(document),
-                    "collected_at": document["collected_at"],
-                })
-    expected_selections.sort(key=lambda item: (item["instance_id"], item["dependency_id"]))
-    require(provenance.get("selectedEvidence") == expected_selections,
-            f"successful selections lost exact document, time, or plan-requirement association for {subject_id}")
+    available_types = {document["type"] for document in evidence}
+    expected_dependencies = {
+        (control["instance_id"], dependency["id"])
+        for control in plan.get("controls", [])
+        for dependency in control.get("evidence", [])
+        if dependency["type"] in available_types
+    }
+    selections = provenance.get("selectedEvidence", [])
+    require(
+        {(item["instance_id"], item["dependency_id"]) for item in selections}
+        == expected_dependencies,
+        f"successful selections differ from available assessed dependencies for {subject_id}",
+    )
+    snapshot_documents = {
+        (item["id"], item["digest"])
+        for item in provenance["evidence"]["documents"]
+    }
+    require(
+        {(item["evidence_id"], item["evidence_digest"]) for item in selections}
+        <= snapshot_documents,
+        f"successful selection is absent from the complete snapshot for {subject_id}",
+    )
 
 
 def assert_assurance_narrative(scenario_readme: Path) -> None:

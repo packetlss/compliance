@@ -45,13 +45,8 @@ class AssemblyTests(unittest.TestCase):
         git(self.source, "add", ".")
         git(self.source, "commit", "--quiet", "-m", "Synthetic destination")
         root_patch = patch.object(assembly, "REPOSITORY_ROOT", self.source)
-        digest_patch = patch.object(
-            assembly, "EXPECTED_PRIVATE_POLICY_DIGEST", self.expected_digest
-        )
         root_patch.start()
-        digest_patch.start()
         self.addCleanup(root_patch.stop)
-        self.addCleanup(digest_patch.stop)
         self.assembled = self.root / "assembled"
 
     def assemble(self) -> None:
