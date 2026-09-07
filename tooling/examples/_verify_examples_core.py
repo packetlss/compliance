@@ -7,6 +7,7 @@ import argparse
 import copy
 import io
 import json
+import os
 import shlex
 import subprocess
 import sys
@@ -17,7 +18,7 @@ from pathlib import Path
 from typing import Sequence
 
 from tools.compliance import main as compliance_main
-from tools.project_config import load_config
+from tools.project_config import ProjectConfigError, load_config
 from tools.render_plan import (
     BaselineResolutionError,
     content_digest,
@@ -33,7 +34,9 @@ except ImportError:  # Direct execution by path.
 
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
-PROJECT_REGISTRY = WORKSPACE_ROOT / "compliance.yaml"
+PROJECT_REGISTRY = Path(
+    os.environ.get("COMPLIANCE_EXAMPLE_PROJECT_REGISTRY", WORKSPACE_ROOT / "compliance.yaml")
+).resolve()
 MOCK_COLLECTOR = WORKSPACE_ROOT / "tooling/collectors/mock-api/collect.py"
 FEATURE_COVERAGE_PATH = Path(__file__).resolve().with_name("feature-coverage.json")
 LINUX_ROLLOUT_ROOT = (
@@ -129,6 +132,26 @@ SHOW_SELECTIONS = frozenset(
 
 class ExampleFailure(RuntimeError):
     pass
+
+
+def project_fixture_root(
+    project: str,
+    *,
+    project_registry: Path | None = None,
+) -> Path:
+    """Resolve a project's fixture directory from the project registry."""
+    source = (project_registry or PROJECT_REGISTRY).resolve()
+    try:
+        config = load_config(source, project)
+    except ProjectConfigError as error:
+        raise ExampleFailure(
+            f"cannot resolve project {project!r} from {source}: {error}"
+        ) from error
+    if config.source is None:
+        raise ExampleFailure(
+            f"project {project!r} has no resolved configuration source"
+        )
+    return config.source.parent / "fixtures"
 
 
 def mock_fleet_inventory_contract_holds(
@@ -301,9 +324,7 @@ class ExampleRunner:
 
     def collect(self, project: str, *, fixtures: Path | None = None) -> Path:
         evidence = self.root / project / "evidence"
-        fixture_root = fixtures or (
-            WORKSPACE_ROOT / f"compliance-project-{project}/fixtures"
-        )
+        fixture_root = fixtures or project_fixture_root(project)
         command = [
             sys.executable,
             str(MOCK_COLLECTOR),

@@ -1,14 +1,16 @@
 """Closed-world accounting is independent of result discovery and current inputs."""
 import copy
 import json
+import tempfile
 import unittest
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from unittest.mock import patch
 
-from assessment_fixture import refresh_operation
-import test_assessment_v4 as fixtures
+from assessment_fixture import evidence_document, evidence_plan, refresh_operation, waiver_resource
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
 from tools.assessment_provenance import artifact_digest, digest, validate_result_against_plan
+from tools.evaluator import EvaluatorIdentity
 from tools.evaluate_plan import evaluate_plan_document, control_error_result
 from tools.operation import (
     account_operation, freeze_operation, freeze_selection_witness, normalize_request,
@@ -21,15 +23,33 @@ from tools.render_plan import resolve_groups
 
 class OperationTests(unittest.TestCase):
     def setUp(self):
-        self.fixture = fixtures.AssessmentV4Tests()
-        self.fixture.setUp()
-        self.addCleanup(self.fixture.doCleanups)
-        self.instant = self.fixture.now.isoformat().replace('+00:00', 'Z')
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.source, self.plan = evidence_plan(self.root)
+        self.sources = (self.source,)
+        validate_assessment_plan(self.plan)
+        self.evidence = self.root / 'evidence'
+        self.evidence.mkdir()
+        self.now = datetime(2026, 8, 23, 12, tzinfo=UTC)
+        identity = patch(
+            'tools.evaluator.resolve_opa_evaluator',
+            return_value=(EvaluatorIdentity('opa', '1.18.2', 'sha256:'+'e'*64), '/resolved/opa'),
+        )
+        identity.start()
+        self.addCleanup(identity.stop)
+        self.instant = self.now.isoformat().replace('+00:00', 'Z')
+
+    def write(self, documents):
+        for path in self.evidence.iterdir():
+            path.unlink()
+        for index, document in enumerate(documents):
+            (self.evidence / f'{index}.json').write_text(json.dumps(document))
 
     def plans(self, ids=('host/A', 'host/B'), *, non_assessable=None):
         plans = []
         for sid in ids:
-            plan = copy.deepcopy(self.fixture.plan)
+            plan = copy.deepcopy(self.plan)
             plan['subject']['id'] = sid
             if non_assessable and sid == ids[-1]:
                 plan['controls'] = []
@@ -50,16 +70,16 @@ class OperationTests(unittest.TestCase):
         return plans
 
     def evaluate(self, plans, *, instant=None):
-        documents = [self.fixture.document(id='evidence:'+p['subject']['id'],
-                     subject={'id':p['subject']['id'], 'type':p['subject']['type']}) for p in plans]
-        self.fixture.write(documents)
+        documents = [{**evidence_document(), 'id':'evidence:'+p['subject']['id'],
+                     'subject':{'id':p['subject']['id'], 'type':p['subject']['type']}} for p in plans]
+        self.write(documents)
         def decide(opa, sources, data, entrypoint):
             result = control_error_result(data, 'Qualifying observation')
             result['status'] = 'pass'
             return result
         with patch('tools.evaluate_plan.evaluate_control', side_effect=decide):
-            return [evaluate_plan_document(p, self.fixture.evidence, self.fixture.sources,
-                    evaluated_at=instant or self.fixture.now) for p in plans
+            return [evaluate_plan_document(p, self.evidence, self.sources,
+                    evaluated_at=instant or self.now) for p in plans
                     if plan_disposition(p) == 'result_required']
 
     @staticmethod
@@ -251,7 +271,7 @@ class OperationTests(unittest.TestCase):
         reports = self.evaluate(plans)
         singleton = self.plans(('host/B',))
         wrong_operation = self.evaluate(singleton)[0]
-        wrong_time = self.evaluate(plans, instant=self.fixture.now+timedelta(seconds=1))[1]
+        wrong_time = self.evaluate(plans, instant=self.now+timedelta(seconds=1))[1]
         for substitute in (wrong_operation, wrong_time, reports[0]):
             account = account_operation(plans[0], [reports[0], substitute], self.instant, plans)
             self.assertFalse(account['accounting_complete'])
@@ -336,7 +356,7 @@ class OperationTests(unittest.TestCase):
         plans = self.plans()
         reports = self.evaluate(plans)
         expected = account_operation(plans[0], reports, self.instant, plans)
-        self.fixture.write([])
+        self.write([])
         with patch('tools.render_plan.load_policy_catalogs', side_effect=AssertionError('mutable policy')):
             self.assertEqual(account_operation(plans[0], reports, self.instant, plans), expected)
 
@@ -366,7 +386,7 @@ class OperationTests(unittest.TestCase):
     def test_future_selected_timestamp_retains_adr_0011_rule(self):
         plans = self.plans(('host/A',))
         report = self.evaluate(plans)[0]
-        query = self.fixture.now - timedelta(days=30)
+        query = self.now - timedelta(days=30)
         qualified = qualify_operation(
             account_operation(plans[0], [report], self.instant, plans),
             [report], query, assessed_plans=plans
@@ -382,7 +402,7 @@ class OperationTests(unittest.TestCase):
         missing = copy.deepcopy(changed_plan['controls'][0]['evidence'][0])
         missing.update(id='missing-observation', type='missing.observation/v1')
         changed_plan['controls'][0]['evidence'].append(missing)
-        timing = _evidence_timeliness(report, changed_plan, self.fixture.now + timedelta(days=2))
+        timing = _evidence_timeliness(report, changed_plan, self.now + timedelta(days=2))
         self.assertEqual(timing['stale_selected_dependencies'], 1)
         self.assertEqual(timing['unavailable_required_dependencies'], 1)
         self.assertTrue(timing['controls'][0]['reassessment_due'])
@@ -393,7 +413,7 @@ class OperationTests(unittest.TestCase):
         comparison = self.plans(('host/A', 'host/B'))
         account = qualify_operation(
             account_operation(historical[0], [], self.instant, historical),
-            [], self.fixture.now, comparison[0], historical
+            [], self.now, comparison[0], historical
         )
         row = account['members'][0]
         self.assertEqual(row['state'], 'missing')
@@ -417,12 +437,22 @@ class OperationTests(unittest.TestCase):
         validate_result_against_plan(future, plans[1])
 
     def test_recorded_waiver_window_qualifies_but_never_rewrites_waived(self):
-        waivers = self.fixture.root/'waivers'
+        waivers = self.root/'waivers'
         waivers.mkdir()
-        (waivers/'exception.yaml').write_text(fixtures.fixtures.EvidenceFreshnessTests.waiver_resource())
-        report, _ = self.fixture.run_assessment(
-            [self.fixture.document()], status='fail', waiver_path=waivers
-        )
+        (waivers/'exception.yaml').write_text(waiver_resource())
+        self.write([evidence_document()])
+        def fail(_opa, _sources, data, _entrypoint):
+            result = control_error_result(data, 'Qualifying observation')
+            result['status'] = 'fail'
+            return result
+        with patch('tools.evaluate_plan.evaluate_control', side_effect=fail):
+            report = evaluate_plan_document(
+                self.plan,
+                self.evidence,
+                self.sources,
+                evaluated_at=self.now,
+                waiver_path=waivers,
+            )
         for query, expected in (
             ('2026-07-31T23:59:59Z', 'not_yet_in_window'),
             ('2026-08-23T12:00:00Z', 'within_window'),
@@ -430,8 +460,8 @@ class OperationTests(unittest.TestCase):
         ):
             from tools.waivers import parse_timestamp
             qualified = qualify_operation(
-                account_operation(self.fixture.plan, [report], self.instant, [self.fixture.plan]),
-                [report], parse_timestamp(query), assessed_plans=[self.fixture.plan],
+                account_operation(self.plan, [report], self.instant, [self.plan]),
+                [report], parse_timestamp(query), assessed_plans=[self.plan],
             )
             row = qualified['members'][0]
             self.assertEqual(row['historical_outcome'], 'waived')
@@ -453,8 +483,8 @@ class OperationTests(unittest.TestCase):
     def test_dangling_explicit_subject_reference_fails_catalog_loading(self):
         from tools.render_plan import load_inventory_catalog
         from tools.compliance import default_schema_path
-        inventory = self.fixture.root/'inventory'
-        assignments = self.fixture.root/'assignments'
+        inventory = self.root/'inventory'
+        assignments = self.root/'assignments'
         inventory.mkdir(); assignments.mkdir()
         (inventory/'group.json').write_text(json.dumps({
             'apiVersion':'compliance.example/v1alpha1', 'kind':'InventoryGroup',

@@ -15,7 +15,7 @@ from tools.composition import load_composition_lock
 from tools.evaluate_plan import evaluate_plan_document, write_json
 from tools.policy_diff import load_policy_plan_set
 from tools.project_config import load_config, ProjectConfig
-from test_evaluate_plan import EvidenceFreshnessTests
+from assessment_fixture import evidence_plan
 from argparse import Namespace
 
 
@@ -36,7 +36,7 @@ class PredecessorRetirementTests(unittest.TestCase):
     def test_retired_assessments_are_never_loaded_evaluated_or_written(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            _, native = EvidenceFreshnessTests().evidence_plan(root)
+            _, native = evidence_plan(root)
             # A valid successor payload with an old discriminator must still refuse.
             for revision in ('v1', 'v3'):
                 for family, validator in (('assessment-plan', validate_assessment_plan),
