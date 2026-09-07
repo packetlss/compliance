@@ -1,7 +1,236 @@
-"""Native v4 provenance for synthetic in-memory domain test plans."""
+"""Native v4 fixtures for synthetic in-memory domain tests."""
+import json
+
 from tools.assessment_provenance import PLAN_SCHEMA, PLAN_DIGEST_ALGORITHM, PROVENANCE_SCHEMA, artifact_digest
 from tools.composition import COMPOSITION_DIGEST_ALGORITHM, composition_digest, POLICY_SOURCE_DIGEST_ALGORITHM
+from tools.policy_sources import PolicySource, policy_source_revisions
 from tools.tooling_identity import actual_tooling_identity
+
+
+def assessment_plan(policy_sources, *, with_requirement=False):
+    requirement_digest = "sha256:" + "5" * 64
+    baseline_digest = "sha256:" + "6" * 64
+    plan = {
+        "subject": {
+            "schema": "compliance.example/inventory-subject/v1",
+            "id": "host/test",
+            "type": "linux-host",
+            "status": "active",
+            "labels": {},
+            "inventory": {
+                "source": "unit-test",
+                "external_id": "host/test",
+                "observed_at": "2026-08-28T12:00:00Z",
+            },
+        },
+        "resolved_groups": [{
+            "id": "test-hosts",
+            "sources": [{"membership": "explicit", "source": "group.members"}],
+        }],
+        "assignments": [{
+            "id": "test-policy",
+            "group": "test-hosts",
+            "baselines": ["test.baseline@1"],
+        }],
+        "resolved_baselines": [],
+        "resolved_requirement_baselines": [],
+        "requirements": [],
+        "controls": [{
+            "instance_id": "test.check",
+            "implementation": "test.control",
+            "entrypoint": "data.test.evaluate",
+            "parameters": {},
+            "severity": "medium",
+            "remediation": "",
+            "evidence": [],
+            "disposition": "evaluate",
+            "alignment": "unaltered",
+            "definition_fingerprint": "sha256:" + "4" * 64,
+            "derivations": [],
+            "deviations": [],
+            "lineage": [{"baseline": "test.baseline@1", "operation": "defined"}],
+            "provenance": [{
+                "group": "test-hosts",
+                "assignment": "test-policy",
+                "baseline": "test.baseline@1",
+            }],
+            "implementation_sources": [{
+                "policy_source": policy_sources[0]["name"],
+                "path": "controls/test/control.json",
+            }],
+        }],
+        "excluded_controls": [],
+        "resolution": {"status": "valid", "errors": []},
+    }
+    if with_requirement:
+        locator = [{
+            "policy_source": policy_sources[0]["name"],
+            "path": "requirements/test.json",
+        }]
+        plan["requirements"] = [{
+            "reference": "test.requirement@1",
+            "digest": requirement_digest,
+            "title": "Test requirement",
+            "statement": "The test condition is satisfied.",
+            "external_refs": [],
+            "policy_sources": locator,
+            "required": True,
+            "adoption": {
+                "status": "implemented",
+                "method": "automated",
+                "owner": "test",
+                "implementation_ref": "test/implementation",
+            },
+            "satisfaction": {"allOf": ["test.check"]},
+            "technical_instance_ids": ["test.check"],
+            "realization": {
+                "reference": "test.realization@1",
+                "digest": "sha256:" + "8" * 64,
+                "classification": "internal",
+                "policy_sources": [{
+                    "policy_source": policy_sources[0]["name"],
+                    "path": "realizations/test.json",
+                }],
+            },
+            "provenance": [{
+                "group": "test-hosts",
+                "assignment": "test-policy",
+                "baseline": "test.baseline@1",
+            }],
+        }]
+        plan["resolved_requirement_baselines"] = [{
+            "assignment": "test-policy",
+            "group": "test-hosts",
+            "baseline": "test.baseline@1",
+            "reference": "test.baseline@1",
+            "digest": baseline_digest,
+            "policy_sources": [{
+                "policy_source": policy_sources[0]["name"],
+                "path": "requirement-baselines/test.json",
+            }],
+            "requirements": [{
+                "requirement": "test.requirement@1",
+                "digest": requirement_digest,
+                "required": True,
+            }],
+        }]
+    plan.update(planning_fields(policy_sources))
+    freeze_policy_inputs(plan)
+    plan["id"] = artifact_digest(plan)
+    return plan
+
+
+def evidence_schema() -> dict:
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "required": [
+            "schema", "id", "subject", "type", "collected_at",
+            "collector", "payload",
+        ],
+        "additionalProperties": True,
+        "properties": {
+            "schema": {"const": "compliance.example/evidence/v1"},
+            "id": {"type": "string", "minLength": 1},
+            "subject": {
+                "type": "object",
+                "required": ["id", "type"],
+                "additionalProperties": True,
+                "properties": {
+                    "id": {"type": "string", "minLength": 1},
+                    "type": {"const": "linux-host"},
+                },
+            },
+            "type": {"const": "test.evidence/v1"},
+            "collected_at": {"type": "string", "format": "date-time"},
+            "collector": {
+                "type": "object",
+                "required": ["id", "version"],
+                "additionalProperties": True,
+                "properties": {
+                    "id": {"type": "string", "minLength": 1},
+                    "version": {"type": "string", "minLength": 1},
+                },
+            },
+            "payload": {
+                "type": "object",
+                "required": ["value"],
+                "additionalProperties": True,
+                "properties": {"value": {"type": "string"}},
+            },
+        },
+    }
+
+
+def evidence_document(*, subject_id="host/test", value="observed") -> dict:
+    return {
+        "schema": "compliance.example/evidence/v1",
+        "id": "evidence:test",
+        "subject": {"id": subject_id, "type": "linux-host"},
+        "type": "test.evidence/v1",
+        "collected_at": "2026-08-23T11:00:00Z",
+        "collector": {"id": "test-collector", "version": "1"},
+        "payload": {"value": value},
+    }
+
+
+def evidence_plan(root):
+    source = PolicySource("shared", root / "policy")
+    schemas = source.path / "schemas/evidence"
+    schemas.mkdir(parents=True)
+    (schemas / "test-evidence-v1.schema.json").write_text(
+        json.dumps(evidence_schema()),
+        encoding="utf-8",
+    )
+    plan = assessment_plan(policy_source_revisions((source,)))
+    plan["controls"][0]["evidence"] = [{
+        "id": "observation",
+        "type": "test.evidence/v1",
+        "max_age": "24h",
+    }]
+    plan.pop("id")
+    freeze_policy_inputs(plan)
+    plan["id"] = artifact_digest(plan)
+    return source, plan
+
+
+def waiver_resource() -> str:
+    return """\
+apiVersion: compliance.example/v1alpha1
+kind: Waiver
+metadata:
+  name: test-control-rollout
+spec:
+  subjectRef:
+    id: host/test
+  controlRef:
+    instanceId: test.check
+  validFrom: "2026-08-01T00:00:00Z"
+  expiresAt: "2026-09-01T00:00:00Z"
+  rationale: Temporary rollout constraint.
+  owner: test-owner
+  approval:
+    reference: risk/TEST-1
+    approvedBy: risk-owner
+    approvedAt: "2026-07-31T00:00:00Z"
+"""
+
+
+def control_result(plan, status):
+    return {
+        "control_id": "test.control",
+        "instance_id": "test.check",
+        "subject_id": "host/test",
+        "plan_id": plan["id"],
+        "status": status,
+        "severity": "medium",
+        "reason": "Synthetic control result.",
+        "expected": {},
+        "observed": {},
+        "remediation": "",
+        "external_refs": [],
+        "alignment": "unaltered",
+    }
 
 
 def freeze_policy_inputs(plan):
@@ -10,8 +239,9 @@ def freeze_policy_inputs(plan):
     from tools import policy_parameters as pp
     policy_source_name = plan['provenance']['planningComposition']['actual']['policySources'][0]['name']
     for control in plan['controls']:
-        for index, dependency in enumerate(control['evidence']):
-            dependency.setdefault('id', f'observation-{index + 1}')
+        for dependency in control['evidence']:
+            if 'id' not in dependency:
+                raise ValueError('synthetic evidence dependencies require an explicit stable id')
             dependency['max_age'] = pp.duration(dependency['max_age'])
         instance = {'instance_id': control['instance_id'], 'implementation': control['implementation'],
                     'parameters': copy.deepcopy(control['parameters']),

@@ -7,8 +7,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
 
-import test_evaluate_plan as fixtures
-from assessment_fixture import freeze_policy_inputs, refresh_operation
+from assessment_fixture import (
+    assessment_plan,
+    evidence_document,
+    evidence_plan,
+    evidence_schema,
+    freeze_policy_inputs,
+    refresh_operation,
+    waiver_resource,
+)
 from tools.assessment_provenance import (
     PLAN_SCHEMA, PROVENANCE_SCHEMA, PLAN_DIGEST_ALGORITHM, artifact_digest, stage,
     result_identity_projection, validate_result_against_plan,
@@ -27,7 +34,7 @@ class AssessmentV4Tests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.source, self.plan = fixtures.EvidenceFreshnessTests().evidence_plan(self.root)
+        self.source, self.plan = evidence_plan(self.root)
         self.sources = (self.source,)
         self.sign_plan()
         self.evidence = self.root / 'evidence'
@@ -48,7 +55,7 @@ class AssessmentV4Tests(unittest.TestCase):
             (self.evidence / f'{index}.json').write_text(json.dumps(doc))
 
     def document(self, **changes):
-        return {**fixtures.EvidenceFreshnessTests.evidence_document(), **changes}
+        return {**evidence_document(), **changes}
 
     def run_assessment(self, docs, *, status='pass', effect=None, **kwargs):
         self.write(docs)
@@ -71,7 +78,7 @@ class AssessmentV4Tests(unittest.TestCase):
         self.assertEqual(opa.call_count, 1)
         use, = report['provenance']['selectedEvidence']
         self.assertEqual(use, {
-            'instance_id':'test.check', 'dependency_id':'observation-1',
+            'instance_id':'test.check', 'dependency_id':'observation',
             'evidence_id':doc['id'], 'evidence_digest':evidence_document_digest(doc),
             'collected_at':doc['collected_at'],
         })
@@ -204,7 +211,7 @@ class AssessmentV4Tests(unittest.TestCase):
 
     def test_independent_controls_and_multiple_required_types(self):
         schema_path = self.source.path/'schemas/evidence/second.json'
-        schema = fixtures.EvidenceFreshnessTests.evidence_schema()
+        schema = evidence_schema()
         schema['properties']['type']['const'] = 'second/v1'
         schema_path.write_text(json.dumps(schema))
         independent = copy.deepcopy(self.plan['controls'][0])
@@ -212,7 +219,11 @@ class AssessmentV4Tests(unittest.TestCase):
         independent['implementation'] = 'test.independent'
         independent['evidence'] = []
         self.plan['controls'].append(independent)
-        self.plan['controls'][0]['evidence'].append({'type':'second/v1','max_age':'24h'})
+        self.plan['controls'][0]['evidence'].append({
+            'id': 'second-observation',
+            'type': 'second/v1',
+            'max_age': '24h',
+        })
         actual = require_composition(self.sources)
         self.plan['provenance']['planningComposition'] = stage(actual)
         self.sign_plan()
@@ -233,7 +244,7 @@ class AssessmentV4Tests(unittest.TestCase):
     def test_waivers_bind_identity_and_only_underlying_fail_is_waivable(self):
         waivers = self.root/'waivers'
         waivers.mkdir()
-        (waivers/'exception.yaml').write_text(fixtures.EvidenceFreshnessTests.waiver_resource())
+        (waivers/'exception.yaml').write_text(waiver_resource())
         failed, _ = self.run_assessment([self.document()], status='fail')
         waived, _ = self.run_assessment([self.document()], status='fail', waiver_path=waivers)
         self.assertEqual(waived['outcome'], 'waived')
@@ -250,7 +261,7 @@ class AssessmentV4Tests(unittest.TestCase):
         without, _ = self.run_assessment([self.document()], status='fail')
         waivers = self.root/'waivers'
         waivers.mkdir()
-        unrelated = fixtures.EvidenceFreshnessTests.waiver_resource().replace(
+        unrelated = waiver_resource().replace(
             'name: test-control-rollout', 'name: unrelated').replace(
             'id: host/test', 'id: host/other')
         (waivers/'unrelated.yaml').write_text(unrelated)
@@ -260,10 +271,10 @@ class AssessmentV4Tests(unittest.TestCase):
         self.assertEqual(without, with_unrelated)
 
         (waivers/'unrelated.yaml').write_text(
-            fixtures.EvidenceFreshnessTests.waiver_resource())
+            waiver_resource())
         first, _ = self.run_assessment([self.document()], status='fail', waiver_path=waivers)
         (waivers/'unrelated.yaml').write_text(
-            fixtures.EvidenceFreshnessTests.waiver_resource().replace(
+            waiver_resource().replace(
                 'owner: test-owner', 'owner: successor-owner'))
         second, _ = self.run_assessment([self.document()], status='fail', waiver_path=waivers)
         self.assertNotEqual(first['results'][0]['waiver']['digest'],
@@ -464,7 +475,7 @@ class AssessmentV4Tests(unittest.TestCase):
     def test_requirement_rollups_keep_unknown_error_fail_and_waived_meaning(self):
         sources = [{'name': item['name'], 'digest': item['content']['digest']}
                    for item in self.plan['provenance']['planningComposition']['actual']['policySources']]
-        shell = fixtures.assessment_plan(sources, with_requirement=True)
+        shell = assessment_plan(sources, with_requirement=True)
         for key in ('requirements','resolved_requirement_baselines','resolved_baselines'):
             self.plan[key] = shell[key]
         self.sign_plan()
@@ -549,7 +560,7 @@ class AssessmentV4Tests(unittest.TestCase):
             self.assertNotIn('evidence_ids', report['results'][0])
             self.assertEqual(
                 [use['dependency_id'] for use in report['provenance']['selectedEvidence']],
-                ['observation-1', 'second-observation'],
+                ['observation', 'second-observation'],
             )
             self.assertEqual(opa.call_count,1)
 

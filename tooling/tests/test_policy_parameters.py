@@ -20,7 +20,7 @@ class PolicyParameterTests(unittest.TestCase):
         self.requirements = {'objective@1': self.requirement}
         self.catalog = {'company@1': self.baseline}
         self.definition = {'metadata': {'id': 'test.check', 'version': 1}, 'spec': {
-            'evidence': [{'id': 'observation', 'type': 'test/v1', 'required': True,
+            'evidence': [{'id': 'observation', 'type': 'test/v1',
                           'inputs_schema': {'$id': 'https://example.test/evidence-input', 'type': 'object',
                                             'properties': {'period': {'type': 'string'}}, 'required': ['period'], 'additionalProperties': False}}]},
             '_parameters_schema': {'type': 'object', 'properties': {'age': {'type': 'string'}}, 'required': ['age'], 'additionalProperties': False}}

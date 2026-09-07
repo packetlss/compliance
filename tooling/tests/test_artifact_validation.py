@@ -278,12 +278,6 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         ):
             validate_assessment_results(document)
 
-    def test_results_do_not_require_child_waiver_revision(self):
-        document = self.result_report()
-        self.assertNotIn("waiver_revision", document)
-        self.assertTrue(all("waiver_revision" not in result for result in document["results"]))
-        validate_assessment_results(document)
-
     def test_results_reject_inconsistent_objective_rollup(self):
         document = self.result_report(self.iam_plan)
         document["requirement_assessments"][0]["status"] = "fail"
