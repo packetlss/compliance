@@ -125,30 +125,33 @@ class ControlRealizationTests(unittest.TestCase):
         )
 
     def test_trusted_label_selects_exactly_one_complete_realization(self):
-        restricted = select_realization(
-            self.requirement,
-            self.results["subject"],
-            [self.company_realization, self.realization],
-        )
         company_subject = {
             "id": "host/company-linux-01",
             "type": "linux-host",
             "labels": {"iam-profile": "company-linux"},
         }
-        company = select_realization(
-            self.requirement,
-            company_subject,
-            [self.company_realization, self.realization],
-        )
+        candidates = (self.company_realization, self.realization)
+        for ordered in (candidates, tuple(reversed(candidates))):
+            with self.subTest(order=[item["metadata"]["id"] for item in ordered]):
+                restricted = select_realization(
+                    self.requirement,
+                    self.results["subject"],
+                    ordered,
+                )
+                company = select_realization(
+                    self.requirement,
+                    company_subject,
+                    ordered,
+                )
 
-        self.assertEqual(
-            restricted["metadata"]["id"],
-            "restricted.linux.central-role-access",
-        )
-        self.assertEqual(
-            company["metadata"]["id"],
-            "company.linux.central-role-access",
-        )
+                self.assertEqual(
+                    restricted["metadata"]["id"],
+                    "restricted.linux.central-role-access",
+                )
+                self.assertEqual(
+                    company["metadata"]["id"],
+                    "company.linux.central-role-access",
+                )
 
     def test_missing_or_ambiguous_realization_selection_is_an_error(self):
         missing = copy.deepcopy(self.results["subject"])
@@ -159,18 +162,32 @@ class ControlRealizationTests(unittest.TestCase):
             "iam-profile": "restricted-linux"
         }
 
-        with self.assertRaisesRegex(ControlRealizationError, "not implemented"):
-            select_realization(
-                self.requirement,
-                missing,
-                [self.company_realization, self.realization],
-            )
-        with self.assertRaisesRegex(ControlRealizationError, "multiple realizations"):
-            select_realization(
-                self.requirement,
-                self.results["subject"],
-                [self.company_realization, self.realization, duplicate],
-            )
+        candidates = (self.company_realization, self.realization)
+        ambiguous = (*candidates, duplicate)
+        for ordered in (candidates, tuple(reversed(candidates))):
+            with self.subTest(
+                case="missing",
+                order=[item["metadata"]["id"] for item in ordered],
+            ):
+                with self.assertRaisesRegex(
+                    ControlRealizationError,
+                    "no realization applies",
+                ):
+                    select_realization(self.requirement, missing, ordered)
+        for ordered in (ambiguous, tuple(reversed(ambiguous))):
+            with self.subTest(
+                case="ambiguous",
+                order=[item["metadata"]["id"] for item in ordered],
+            ):
+                with self.assertRaisesRegex(
+                    ControlRealizationError,
+                    "multiple realizations",
+                ):
+                    select_realization(
+                        self.requirement,
+                        self.results["subject"],
+                        ordered,
+                    )
 
     def test_failing_technical_check_fails_requirement_and_top_baseline(self):
         requirement_assessment = roll_up_realization(

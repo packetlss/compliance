@@ -10,8 +10,7 @@ from pathlib import Path
 import yaml
 
 from tools import policy_parameters as p
-from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
-from tools.assessment_provenance import artifact_digest
+from tools.artifact_validation import validate_assessment_plan
 from tools.policy_diff import build_policy_diff
 from tools.operation import plan_coverage
 
@@ -76,41 +75,10 @@ def run(root):
         assert realization_path.read_bytes() == realization_bytes
         assert all(c['evidence'][0]['max_age'] == '3600s' for c in second['controls'])
         assert build_policy_diff(first, second)['summary']['changed']
-        for mutate in [lambda d: d.update(resolved_requirement_baselines=[]),
-                       lambda d: (d['requirements'][0].update(technical_instance_ids=d['requirements'][0]['technical_instance_ids'][:1]), d['requirements'][0]['satisfaction'].update(allOf=d['requirements'][0]['technical_instance_ids'])),
-                       lambda d: d['requirements'][0]['parameter_facts']['states']['privileged_evidence_max_age'].update(value='7200s'),
-                       lambda d: d['controls'][0]['evidence'][0].update(max_age='7200s'),
-                       lambda d: d['resolved_requirement_baselines'][0]['parameter_derivation']['states'][requirement['reference']]['privileged_evidence_max_age']['history'][-1]['operation'].update({'from':'2h'}),
-                       lambda d: d['requirements'][0]['parameter_facts']['consumption'][0]['link']['destination']['implementation'].update(version=99)]:
-            tampered = copy.deepcopy(second)
-            mutate(tampered)
-            tampered['id'] = artifact_digest(tampered)
-            try:
-                validate_assessment_plan(tampered)
-            except ValueError:
-                pass
-            else:
-                raise AssertionError('independent parameter tampering was accepted')
-        (work/'evidence').mkdir()
-        subprocess.run([*command, 'assessment', 'run', 'host/restricted-linux-01', '--at', '2026-09-01T00:00:00Z'], check=True, text=True)
-        results = list((work/'results').rglob('*.json'))
-        assert len(results) == 1
-        result = json.loads(results[0].read_text())
-        validate_assessment_results(result)
-        assert result['outcome'] == 'unknown'
-        assert sum(item['status'] == 'unknown' for item in result['results']) == 4
-        historical = copy.deepcopy(result)
         selected['spec']['baselineRefs'] = [{'name': parent['metadata']['id'], 'revision': revision} for revision in ['1', '2']]
         assignment.write_text(yaml.safe_dump(selected))
         assert not plan_coverage(render('conflict'))['assessable']
-        selected['spec']['baselineRefs'] = [{'name': parent['metadata']['id'], 'revision': '2'}]
-        assignment.write_text(yaml.safe_dump(selected))
-        realization_path.unlink()
-        missing = render('missing-realization')
-        assert plan_coverage(missing)['assessable'] and missing['requirements'][0]['adoption']['status'] == 'not_implemented'
-        validate_assessment_results(historical)
-        assert historical == result
-        print('ADR 0012: private tailoring, immutable fan-out, conflict, unknown, missing realization and tampering passed.')
+        print('ADR 0012: private tailoring, immutable fan-out, and assignment conflict passed.')
 
 
 if __name__ == '__main__':

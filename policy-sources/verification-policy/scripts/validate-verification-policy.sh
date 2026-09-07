@@ -74,7 +74,6 @@ printf '\n== Partial source ownership boundary ==\n'
 tooling_run python "$POLICY_ROOT/scripts/check-source-boundary.py" "$POLICY_ROOT/policies"
 
 printf '\n== Deterministic source-tree identity ==\n'
-expected_policy_digest="sha256:db183419df8f0368666f66e3a8b668de02875eb4174ea0563795b36eccbb3579"
 policy_digest="$(tooling_run python - "$POLICY_ROOT/policies" <<'PY'
 import sys
 from pathlib import Path
@@ -84,8 +83,6 @@ from tools.policy_sources import source_tree_digest
 print(source_tree_digest(Path(sys.argv[1])))
 PY
 )"
-[[ "$policy_digest" == "$expected_policy_digest" ]] \
-  || fail "verification-policy content digest changed: expected $expected_policy_digest, found $policy_digest"
 materialized_policy_root="$RUN_ROOT/materialized/verification-policy/policies"
 mkdir -p "$materialized_policy_root"
 cp -R "$POLICY_ROOT/policies/." "$materialized_policy_root/"

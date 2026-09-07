@@ -23,9 +23,6 @@ ASSEMBLY_ROOTS = (
 )
 TOP_LEVEL_ENTRIES = {"external-sources", "policy-sources", "tooling", "verification"}
 POLICY_SOURCE_ENTRIES = {"control-library", "verification-policy"}
-EXPECTED_PRIVATE_POLICY_DIGEST = (
-    "sha256:dcbf50fec375b3671d84e41fc10c621a317f15be4ec3678eaf0a573b2d5d3783"
-)
 POLICY_SOURCE_DIGEST_ALGORITHM = (
     "compliance.example/policy-source-tree-digest/v1alpha1"
 )
@@ -107,11 +104,6 @@ def materialize_private_source(root: Path) -> str:
     fixture_policy = root / PRIVATE_POLICY_PATH
     private_root = root / MATERIALIZED_PRIVATE_PATH
     relocated_digest = source_tree_digest(fixture_policy)
-    require(
-        relocated_digest == EXPECTED_PRIVATE_POLICY_DIGEST,
-        "relocated fixture private-policy digest differs from current policy/: "
-        f"expected {EXPECTED_PRIVATE_POLICY_DIGEST}, found {relocated_digest}",
-    )
     require(not private_root.exists(), f"private source root already exists: {private_root}")
     private_root.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(fixture_policy, private_root)
@@ -141,6 +133,13 @@ def expected_file_map(revision: str) -> dict[Path, tuple[bytes, bool]]:
         export_roots(root, revision)
         materialize_private_source(root)
         return file_map(root)
+
+
+def committed_private_policy_digest(revision: str) -> str:
+    with tempfile.TemporaryDirectory(prefix="iam-boundary-private-source-") as temporary:
+        root = Path(temporary)
+        export_roots(root, revision)
+        return source_tree_digest(root / PRIVATE_POLICY_PATH)
 
 
 def verify(root: Path) -> None:
@@ -187,9 +186,11 @@ def verify(root: Path) -> None:
         and not private_root.is_relative_to(verification_root),
         "environment-private is nested beneath another semantic source root",
     )
+    revision = git("rev-parse", "HEAD")
+    expected_private_digest = committed_private_policy_digest(revision)
     require(
-        source_tree_digest(private_root) == EXPECTED_PRIVATE_POLICY_DIGEST,
-        "materialized environment-private digest differs from current policy/",
+        source_tree_digest(private_root) == expected_private_digest,
+        "materialized environment-private digest differs from the committed policy/ input",
     )
     require(
         not any(path.name == ".git" for path in root.rglob(".git")),
@@ -199,7 +200,6 @@ def verify(root: Path) -> None:
         not any(path.is_file() for path in root.glob("**/generated/**/*")),
         "assembly contains generated IAM output",
     )
-    revision = git("rev-parse", "HEAD")
     require(
         file_map(root) == expected_file_map(revision),
         "IAM boundary assembly differs from the transformed committed destination revision",
@@ -210,8 +210,8 @@ def verify(root: Path) -> None:
         flush=True,
     )
     print(f"Digest algorithm: {POLICY_SOURCE_DIGEST_ALGORITHM}", flush=True)
-    print(f"Current policy/: {EXPECTED_PRIVATE_POLICY_DIGEST}", flush=True)
-    print(f"Relocated fixture policy/: {EXPECTED_PRIVATE_POLICY_DIGEST}", flush=True)
+    print(f"Committed fixture policy/: {expected_private_digest}", flush=True)
+    print(f"Relocated fixture policy/: {expected_private_digest}", flush=True)
     print(f"Materialized environment-private/: {source_tree_digest(private_root)}", flush=True)
     print(f"Execution fixture root: {fixture_root}", flush=True)
     print(f"Independent private root: {private_root}", flush=True)

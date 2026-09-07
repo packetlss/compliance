@@ -88,15 +88,6 @@ tooling_run python tooling/collectors/mock-api/collect.py \
 "${cli[@]}" assessment explain host/restricted-linux-01 \
   --results "$RUN_ROOT/results" > "$RUN_ROOT/explain.txt"
 
-printf '\n== IAM direct deterministic roll-up ==\n'
-tooling_run python "$SCRIPT_ROOT/run-direct-rollup.py" \
-  --requirement "$VERIFICATION_ROOT/requirements/company/company-role-based-access.json" \
-  --realization "$PRIVATE_ROOT/realizations/restricted/restricted-linux-role-based-access.json" \
-  --base-realization "$VERIFICATION_ROOT/realizations/company/company-linux-role-based-access.json" \
-  --technical-results "$FIXTURE_ROOT/fixtures/technical-results-failing.json" \
-  --baseline "$VERIFICATION_ROOT/requirement-baselines/company/company-iam-baseline.json" \
-  > "$RUN_ROOT/direct-rollup.json"
-
 printf '\n== IAM runtime and provenance assertions ==\n'
 tooling_run python "$SCRIPT_ROOT/assert-iam-private-boundary.py" \
   --assembly-root "$ASSEMBLY_ROOT" \

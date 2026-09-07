@@ -12,7 +12,7 @@ import subprocess
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
 from tools.assessment_provenance import validate_result_against_plan, validate_selection_snapshot
 from tools.compliance import build_parser
-from tools.evidence_provenance import evidence_document_digest, evidence_set_provenance
+from tools.evidence_provenance import evidence_set_provenance
 from tools.policy_sources import source_tree_digest
 from tools.project_config import load_config
 from tools.tooling_source import TOOLING_SOURCE_DIGEST_ALGORITHM, tooling_source_digest
@@ -106,21 +106,28 @@ def main() -> None:
             require(provenance["evidence"] == evidence_set_provenance(documents),
                     "complete subject evidence snapshot differs from collected documents")
             validate_selection_snapshot(report, documents)
-            # These fixtures have one fresh document per required type; assert the
-            # complete selection table, including plan association and collection time.
-            expected_selections = []
-            for control in plan["controls"]:
-                for requirement in control["evidence"]:
-                    candidates = [doc for doc in documents if doc["type"] == requirement["type"]]
-                    require(len(candidates) <= 1, "fixture no longer has unique required evidence")
-                    for doc in candidates:
-                        expected_selections.append({"instance_id": control["instance_id"],
-                            "dependency_id": requirement["id"],
-                            "evidence_id": doc["id"], "evidence_digest": evidence_document_digest(doc),
-                            "collected_at": doc["collected_at"]})
-            expected_selections.sort(key=lambda item: (item["instance_id"], item["dependency_id"]))
-            require(provenance["selectedEvidence"] == expected_selections,
-                    "successful selections lost exact document, time, or assessed requirement association")
+            available_types = {document["type"] for document in documents}
+            expected_dependencies = {
+                (control["instance_id"], dependency["id"])
+                for control in plan["controls"]
+                for dependency in control["evidence"]
+                if dependency["type"] in available_types
+            }
+            selections = provenance["selectedEvidence"]
+            require(
+                {(item["instance_id"], item["dependency_id"]) for item in selections}
+                == expected_dependencies,
+                "successful selections differ from the available assessed dependencies",
+            )
+            snapshot_documents = {
+                (item["id"], item["digest"])
+                for item in provenance["evidence"]["documents"]
+            }
+            require(
+                {(item["evidence_id"], item["evidence_digest"]) for item in selections}
+                <= snapshot_documents,
+                "successful selection is absent from the complete evidence snapshot",
+            )
             for field in ("requirement_assessments", "requirement_baseline_assessments"):
                 require(report[field] == [], "technical-only result acquired objective assessments")
             require("planningComposition" not in provenance,

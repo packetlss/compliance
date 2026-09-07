@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
 
+from assessment_fixture import assessment_plan, refresh_operation
 from contract_fixtures import fixture_root
 
 from tools.artifact_validation import (
@@ -26,6 +27,177 @@ from tools.render_plan import (
 
 
 class AssessmentArtifactValidationTests(unittest.TestCase):
+    @staticmethod
+    def parameterized_plan():
+        """Build one self-contained valid plan with a frozen freshness binding."""
+        from tools import policy_parameters as parameters
+
+        policy_sources = [{"name": "test", "digest": "sha256:" + "1" * 64}]
+        plan = assessment_plan(policy_sources, with_requirement=True)
+        requirement = plan["requirements"][0]
+        control = plan["controls"][0]
+
+        requirement_document = copy.deepcopy(requirement["parameter_facts"]["document"])
+        value_schema = {
+            "$id": "https://example.test/frozen-age",
+            "type": "string",
+            "pattern": "^[1-9][0-9]*[smhd]$",
+        }
+        declaration = {
+            "required": True,
+            "binding_mode": "open",
+            "schema": value_schema,
+            "schema_digest": parameters.digest(value_schema),
+            "binding_scope": ["test.baseline"],
+            "representation": "duration",
+        }
+        requirement_document["spec"]["parameters"] = {"age": declaration}
+        requirement["digest"] = parameters.digest(requirement_document)
+        initial = parameters.declarations(requirement_document)["age"]
+        operation = {
+            "id": "bind-age",
+            "op": "bind",
+            "target": copy.deepcopy(initial["pin"]),
+            "expected_parent_fingerprint": parameters.fingerprint(initial),
+            "to": "1d",
+        }
+        baseline_document = {
+            "metadata": {"id": "test.baseline", "revision": 1},
+            "spec": {
+                "requirements": [{
+                    "requirement": requirement["reference"],
+                    "digest": requirement["digest"],
+                    "required": True,
+                }],
+                "parameter_operations": [operation],
+            },
+        }
+        source = [{"policy_source": "test", "path": "requirement-baselines/test.json"}]
+        states, ancestry = parameters.resolve(
+            "test.baseline@1",
+            {"test.baseline@1": {**baseline_document, "_sources": source}},
+            {requirement["reference"]: requirement_document},
+        )
+        parameters.complete(states)
+
+        control["alignment"] = "realization"
+        definition = copy.deepcopy(control["policy_inputs"]["definition"])
+        definition["spec"]["evidence"] = [{
+            "id": "observation",
+            "type": "test.evidence/v1",
+        }]
+        definition["_parameters_schema"] = copy.deepcopy(
+            control["policy_inputs"]["parameters_schema"]
+        )
+        definition["_implementation_modules"] = []
+        instance = {
+            "instance_id": control["instance_id"],
+            "implementation": control["implementation"],
+            "parameters": {},
+            "evidence": {},
+        }
+        realization = copy.deepcopy(requirement["parameter_facts"]["realization"])
+        realization["spec"]["requirement"] = {
+            "requirement": requirement["reference"],
+            "digest": requirement["digest"],
+        }
+        realization["spec"]["checks"] = [copy.deepcopy(instance)]
+        realization["spec"]["parameter_links"] = [{
+            "id": "freshness",
+            "source": copy.deepcopy(initial["pin"]),
+            "destination": {
+                "instance_id": control["instance_id"],
+                "implementation": parameters.implementation_pin(definition),
+                "kind": "freshness",
+                "dependency": "observation",
+                "path": "/max_age",
+            },
+        }]
+        checks, consumption = parameters.consume(
+            realization,
+            states[requirement["reference"]],
+            {control["implementation"]: definition},
+        )
+        instance = checks[0]
+        control["policy_inputs"] = {
+            "instance": copy.deepcopy(instance),
+            "definition": {
+                key: copy.deepcopy(value)
+                for key, value in definition.items()
+                if not key.startswith("_")
+            },
+            "parameters_schema": copy.deepcopy(definition["_parameters_schema"]),
+        }
+        control["parameters"] = copy.deepcopy(instance["parameters"])
+        control["evidence"] = parameters.evidence_for(instance, definition)
+        control["definition_fingerprint"] = parameters.digest(instance)
+
+        requirement["parameter_facts"] = {
+            "document": requirement_document,
+            "states": states[requirement["reference"]],
+            "realization": realization,
+            "consumption": consumption,
+        }
+        requirement["realization"]["digest"] = parameters.digest(realization)
+        baseline = plan["resolved_requirement_baselines"][0]
+        baseline["digest"] = parameters.digest(baseline_document)
+        baseline["requirements"] = copy.deepcopy(
+            baseline_document["spec"]["requirements"]
+        )
+        baseline["parameter_derivation"] = {
+            "states": states,
+            "ancestry": ancestry,
+        }
+        refresh_operation(plan)
+        plan["id"] = artifact_digest(plan)
+        validate_assessment_plan(plan)
+        return plan
+
+    def test_parameterized_plan_rejects_tampered_frozen_values_and_consumption(self):
+        plan = self.parameterized_plan()
+        requirement = plan["requirements"][0]
+        reference = requirement["reference"]
+        cases = {
+            "resolved state": (
+                lambda document: document["requirements"][0]["parameter_facts"][
+                    "states"
+                ]["age"].update(value="7200s"),
+                "frozen derivation inconsistent",
+            ),
+            "materialized freshness": (
+                lambda document: document["controls"][0]["evidence"][0].update(
+                    max_age="7200s"
+                ),
+                "frozen policy freshness mismatch",
+            ),
+            "derivation history": (
+                lambda document: document["resolved_requirement_baselines"][0][
+                    "parameter_derivation"
+                ]["states"][reference]["age"]["history"][-1]["operation"].update(
+                    {"from": "2h"}
+                ),
+                "frozen derivation inconsistent",
+            ),
+            "consumption destination": (
+                lambda document: document["requirements"][0]["parameter_facts"][
+                    "consumption"
+                ][0]["link"]["destination"]["implementation"].update(version=99),
+                "frozen consumption records mismatch",
+            ),
+        }
+        for case, (mutate, expected) in cases.items():
+            with self.subTest(case=case):
+                tampered = copy.deepcopy(plan)
+                mutate(tampered)
+                # Re-sign only the outer plan commitment, matching an independently
+                # authored but internally inconsistent frozen artifact.
+                tampered["id"] = artifact_digest(tampered)
+                with self.assertRaisesRegex(
+                    ArtifactValidationError,
+                    expected,
+                ):
+                    validate_assessment_plan(tampered)
+
     def test_result_outcome_uses_fail_first_logical_precedence(self):
         self.assertEqual(result_outcome({
             "results": [{"status": "error"}, {"status": "fail"}],
