@@ -18,6 +18,14 @@ Canonical runtime/generated-artifact provenance is content-addressed. Preserve t
 
 ADR 0007 accepts the successor line `project-config/v1alpha3`, `composition-lock/v1alpha1`, `assessment-provenance/v1alpha1`, and assessment plan/results v4. Its destination implementation packets are #31–#36. Consumer cutover is complete; #33 retires the predecessor config, release-lock, and assessment readers. Historical artifacts require historical tooling.
 
+Before result identity freeze, [#90](https://github.com/packetlss/compliance/issues/90)
+replaces the duplicated self-contained result representation with an
+exact retained `{bound plan, result}` historical pair. The bound plan owns resolved
+intent, operation membership, planning composition/enforcement, parameters,
+dependencies, mappings, and plan semantics. The result owns the immutable conclusion
+and evaluation-stage provenance. This experimental implementation adds no core
+storage/history/run/discovery subsystem or compatibility reader.
+
 Actual composition provenance and expected enforcement are separate: every successor run records what actually executed; direct expected-source identities or a complete composition lock may additionally refuse mismatches. Expected identity never substitutes for missing actual identity.
 
 [ADR 0009](adr/0009-active-compliance-vocabulary.md) intentionally renames the maintained reusable semantic source from `shared-library` to `control-library`. The component path `policy-sources/control-library/`, semantic root `policy-sources/control-library/policies/`, and distribution `compliance-control-library` remain distinct namespaces; tooling receives source names explicitly. The name grants no precedence, trust, mandatory dependency, or reserved role. Policy-tree content identity is unchanged, while name-bearing composition/provenance identities change without a compatibility alias.
@@ -196,17 +204,47 @@ graph, external conformity engine or certificate subsystem is introduced.
 
 ## Historical assessment and operational interpretation
 
-[ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) has its factual v4 representation implemented under #32 and its derived historical operational view under #80. Historical outcomes remain immutable at `evaluated_at` under their exact plan, evidence snapshot, evaluator, planning/evaluation composition and waiver revision/application. Exact operation-bound `plan_id` equality means only **Plan-aligned**; a mismatch, including provenance-only differences, means **Different plan**.
+[ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md)
+has its original factual v4 representation implemented under #32 and its derived
+historical operational view under #80. #90 makes the exact
+assessed bound plan plus its result the historical assertion: the plan owns planning
+composition/enforcement and resolved policy meaning; the result retains immutable
+outcomes, actual evaluation composition/enforcement, evaluator identity, complete
+evidence snapshot identity, exact successful selections, and exact applied-waiver
+facts. Exact operation-bound `plan_id` equality means only **Plan-aligned**; a
+mismatch, including provenance-only differences, means **Different plan**.
 
 Historical interpretation is conditional on retention by the surrounding operating
 environment. The core does not require or own long-term retention of assessment
 plans or results, and a new assessment does not read or depend on prior outcomes.
 Retaining the required historical artifacts enables later historical views; deleting
 them removes that historical capability but does not affect future assessments.
+An orphaned result can expose raw recorded facts but cannot support full policy,
+timeliness, requirement, or alignment interpretation without the exact relationally
+validated plan. Multi-subject interpretation retains one operation-bearing plan as
+the denominator anchor plus each exact result plan that must be interpreted; no
+missing-result plan artifact is invented merely to prove omission.
 
-At query instant `q`, evidence timeliness is derived from the historical successful selections and the assessed plan's recorded requirements (`q - collected_at <= max_age`, equality included). No mutable evidence substitution, query-time re-selection or historical roll-up recomputation is allowed. Historical `waived` remains waived after expiry; recorded waiver validity is qualified separately. Outcome, alignment, timeliness, waiver validity and coverage/applicability aggregate independently under ADR 0011's state matrix. Neither plan alignment nor timely evidence establishes present-state certainty, absence of drift, or continuous effectiveness.
+At query instant `q`, evidence timeliness is derived from historical successful
+`(instance_id, dependency_id, evidence_id, document_digest, collected_at)` records
+and the exact assessed plan's dependency `max_age` (`q - collected_at <= max_age`,
+equality included). No mutable evidence substitution, query-time re-selection or
+historical roll-up recomputation is allowed. Historical `waived` remains waived
+after expiry; validity is qualified from the retained exact applied-waiver snapshot.
+Whole-catalog waiver revision/content is not result identity or a historical
+assertion fact, and unrelated waivers do not perturb a result. Outcome, alignment,
+timeliness, waiver validity and coverage/applicability aggregate independently under
+ADR 0011's state matrix. Neither plan alignment nor timely evidence establishes
+present-state certainty, absence of drift, or continuous effectiveness.
 
-#32 retains validated, identity-bound selection references (evidence ID plus complete-document digest), selected `collected_at`, and unambiguous assessed-plan requirement associations resolving `max_age`, with references into the complete snapshot and successful selections distinguished from nonselected candidates. Existing evidence identity and ADR 0010 assessment semantics are unchanged. #80 derives query-time judgments from those facts without a new artifact family.
+#90 replaces the positional/copied dependency record with stable dependency
+identity while preserving validated evidence ID plus complete-document digest,
+selected `collected_at`, references into the independent complete snapshot, and the
+distinction between successful selections and nonselected candidates. Existing
+evidence identity and ADR 0010 assessment semantics are unchanged. Before publication
+and full interpretation, intrinsic result validation plus mandatory exact plan/result
+relational validation must succeed; otherwise publication fails closed. #80's
+query-time judgments remain derived without a new artifact family.
 
 ## External-adapter boundary
 

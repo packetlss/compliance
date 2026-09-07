@@ -1,7 +1,7 @@
 # Policy and Baseline Model
 
 Status: **Working draft (v0.1)**  
-Last updated: **2026-08-29**
+Last updated: **2026-09-06**
 
 This document describes how policy as code can represent host configuration,
 software baselines, SaaS settings, and other state expressible as JSON without
@@ -252,10 +252,11 @@ this order:
 3. the planner fallback (`medium` severity and an empty remediation string).
 
 The selected values are embedded in the content-addressed assessment plan. The
-common Rego result helper copies them from the assessment input into every
-immutable control result. `compliance assessment explain` reads the stored result and
-shows severity and remediation for non-passing controls; it does not generate
-new guidance or reinterpret the result.
+common Rego result helper returns them at the evaluator boundary so orchestration can
+verify that the decision matches the plan, then discards the copies from the compact
+persisted outcome. `compliance assessment explain` reads severity and remediation
+from the exact relationally validated plan for non-passing outcomes; it does not
+generate new guidance or reinterpret the result.
 
 This allows a generic implementation to provide safe default guidance while a
 company or use-case baseline can give a more specific approved procedure. A
@@ -535,12 +536,13 @@ unique identities, assignment attribution, active/excluded separation, and
 realization check references.
 
 Every requirement or technical instance retains its `external_refs` in the
-plan. Evaluation copies those mappings and technical alignment into immutable
-results. `assessment frameworks` presents objective and technical mappings
-separately: only a requirement assessment represents the declared complete
-objective, while a technical mapping is supporting traceability. A tailored
-technical check retains its company result and `TAILORED` alignment rather than
-being reported as unaltered parent-framework conformance.
+plan; compact immutable results do not copy those mappings or technical
+alignment. After validating the exact plan/result pair, `assessment frameworks`
+presents objective and technical mappings separately: only a requirement
+assessment represents the declared complete objective, while a technical
+mapping is supporting traceability. A tailored technical check retains its
+company result and plan-owned `TAILORED` alignment rather than being reported
+as unaltered parent-framework conformance.
 
 Accounting disposition is derived from frozen lifecycle, relevant assignment,
 active-control, and requirement membership. Retired, unassigned, and
@@ -632,7 +634,6 @@ network calls during evaluation.
 {
   "schema": "compliance.example/assessment-input/v1",
   "assessment": {
-    "id": "01J...",
     "evaluated_at": "2026-08-23T08:16:00Z",
     "plan_id": "sha256:..."
   },
@@ -671,15 +672,14 @@ transport/execution granularity remains deliberately open:
 Both use the same assessment plan and result contract. We should prototype and
 measure both before selecting the evaluator API.
 
-The waiver catalog is a separate project input resolved after plan rendering.
-Its deterministic revision belongs to the assessment event, not the plan: a
-waiver must not change the desired-policy digest. Rego deliberately receives
+The waiver catalog is a separate project input resolved after plan rendering and
+does not change the desired-policy digest or result identity as a whole. Rego deliberately receives
 `waiver: null`, so an exception cannot influence the underlying technical
 decision. The evaluator applies an exact active match only after OPA returns
 `fail`. Exact matching, approval/lifecycle validation, and the immutable result
 snapshot are defined in [`waivers.md`](waivers.md).
 
-## 7. Control result contract
+## 7. Evaluator decision and persisted result contracts
 
 Every control implementation returns the same result shape:
 
@@ -689,13 +689,11 @@ Every control implementation returns the same result shape:
   "instance_id": "linux.packages.web-server",
   "subject_id": "host/system-x",
   "plan_id": "sha256:...",
-  "waiver_revision": "sha256:...",
   "status": "fail",
   "severity": "high",
   "reason": "Required package b is not installed",
   "expected": {"packages": ["a", "b", "c"]},
   "observed": {"missing": ["b"]},
-  "evidence_ids": ["01H..."],
   "remediation": "Install package b using the approved repository"
 }
 ```
@@ -716,22 +714,24 @@ the difference. Rego implementations produce the underlying technical status
 and must not originate `waived`; that state belongs to the evaluator's separate
 waiver-result resolver.
 
-When an active waiver covers the failure, the stored technical result retains
-the same reason, expected/observed data, severity, remediation, evidence, and
-resolved policy facts; its status becomes `waived` and a strict `waiver` object
-records `underlying_status: fail` plus the complete approved snapshot. Assessment envelopes and their children share one `waiver_revision`.
+When an active waiver covers the failure, the persisted technical result retains
+the same reason and expected/observed data; its status becomes `waived` and a strict
+`waiver` object records `underlying_status: fail` plus the complete approved
+snapshot and digest.
 
-The persisted `assessment-results/v4` envelope also has a strict tooling-owned
-schema. Every technical result carries the exact operation-bound plan ID from
-its envelope together with the common status, severity, reason,
-expected/observed, evidence, remediation, mapping, and alignment fields. The
-envelope carries the frozen operation and resolved member policy. Requirement
-and requirement-baseline results have explicit contracts. Cross-field
-validation recalculates all three summary objects, rejects duplicate identities
-or child attribution mismatches, and verifies the
-declared conservative `allOf` and top-baseline roll-ups. A stored document that
-claims either artifact schema but violates its contract is an operator-visible
-error rather than being ignored or partially displayed.
+The persisted `assessment-results/v4` envelope has a strict tooling-owned schema.
+Each compact technical outcome contains only `instance_id`, status, reason,
+expected/observed evaluation facts, and an exact applied-waiver snapshot when
+applicable. Compact requirement and requirement-baseline outcomes contain their
+stable reference, status, and reason. The exact bound plan owns the frozen operation,
+resolved policy, planning composition, parameter/dependency/mapping facts, and
+policy-side severity/remediation/alignment. The result owns compact immutable
+outcomes and evaluation provenance and is relationally validated against that exact
+plan before publication or interpretation. It retains only an exact applied-waiver
+snapshot where an underlying fail was waived; whole-catalog revision and unrelated
+waivers are not result identity. Duplicate identities, invalid conservative roll-ups,
+or a failed exact plan/result relationship are operator-visible errors rather than
+partially usable history.
 
 ## 8. Baselines and hierarchy
 
@@ -966,13 +966,15 @@ the required-only dependency model or freshness eligibility. A later fresh docum
 refresh an old result. Historical logical outcomes and assurance roll-ups remain
 immutable; timely evidence is not present-state certainty or continuous effectiveness.
 
-#32 preserves each control's successful selection ID/digest, selected collection
+#90 preserves each control's successful selection ID/digest, selected collection
 instant and unambiguous assessed-plan requirement association as validated,
 result-identity-bound orchestration facts resolving into the complete snapshot.
-See [v4 temporal provenance](artifact-provenance.md#accepted-v4-temporal-provenance).
+See [artifact provenance](artifact-provenance.md#exact-planresult-contract).
 Rejected/ambiguous/nonselected candidates and selection diagnostics cannot stand in
 for those facts. #80 implements query-time derivation and separate aggregation as
 the operational-view tranche, distinct from #32's representation clarification.
+The association is stable `(instance_id, dependency_id)` and the exact assessed
+plan supplies the dependency body and `max_age`.
 
 ## 12. OPA references
 

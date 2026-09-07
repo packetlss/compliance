@@ -8,12 +8,14 @@ from pathlib import Path
 from unittest.mock import patch
 
 import test_evaluate_plan as fixtures
-from assessment_fixture import freeze_policy_inputs
+from assessment_fixture import freeze_policy_inputs, refresh_operation
 from tools.assessment_provenance import (
     PLAN_SCHEMA, PROVENANCE_SCHEMA, PLAN_DIGEST_ALGORITHM, artifact_digest, stage,
-    validate_selection_plan,
+    result_identity_projection, validate_result_against_plan,
 )
-from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
+from tools.artifact_validation import (
+    result_outcome, validate_assessment_plan, validate_assessment_results,
+)
 from tools.composition import require_composition, CompositionLock
 from tools.evaluator import EvaluatorIdentity
 from tools.evidence_provenance import evidence_document_digest
@@ -58,7 +60,7 @@ class AssessmentV4Tests(unittest.TestCase):
         with patch('tools.evaluate_plan.evaluate_control', side_effect=effect or decide) as opa:
             report = evaluate_plan_document(self.plan, self.evidence, self.sources, evaluated_at=self.now, **kwargs)
         validate_assessment_results(report)
-        validate_selection_plan(report, self.plan)
+        validate_result_against_plan(report, self.plan)
         return report, opa
 
     def test_selected_exact_document_and_temporal_facts_survive_mutable_sources(self):
@@ -68,9 +70,11 @@ class AssessmentV4Tests(unittest.TestCase):
         report, opa = self.run_assessment([older, doc, unused])
         self.assertEqual(opa.call_count, 1)
         use, = report['provenance']['selectedEvidence']
-        self.assertEqual(use, {'instance_id':'test.check', 'requirement_index':0,
-                              'requirement':self.plan['controls'][0]['evidence'][0],
-                              'id':doc['id'], 'digest':evidence_document_digest(doc), 'collected_at':doc['collected_at']})
+        self.assertEqual(use, {
+            'instance_id':'test.check', 'dependency_id':'observation-1',
+            'evidence_id':doc['id'], 'evidence_digest':evidence_document_digest(doc),
+            'collected_at':doc['collected_at'],
+        })
         self.assertEqual(len(report['provenance']['evidence']['documents']), 3)
         before = json.dumps(report, sort_keys=True)
         self.write([self.document(payload={'value':'replacement'})])
@@ -88,7 +92,7 @@ class AssessmentV4Tests(unittest.TestCase):
         for docs in ([old,old2,latest], [old,latest,copy.deepcopy(latest)]):
             with self.subTest(docs=docs):
                 report, opa = self.run_assessment(docs)
-                self.assertEqual(report['summary']['pass'], 1)
+                self.assertEqual(report['outcome'], 'pass')
                 self.assertEqual(opa.call_count, 1)
                 self.assertEqual(len(report['provenance']['selectedEvidence']), 1)
                 self.assertEqual(len(report['provenance']['evidence']['documents']), len(docs))
@@ -103,7 +107,7 @@ class AssessmentV4Tests(unittest.TestCase):
                 self.assertEqual(opa.call_count, 0)
                 self.assertEqual(reverse.call_count, 0)
                 self.assertEqual(a['id'], b['id'])
-                self.assertEqual(a['summary']['unknown'], 1)
+                self.assertEqual(a['outcome'], 'unknown')
                 self.assertEqual(a['provenance']['selectedEvidence'], [])
                 diagnostic, = a['results'][0]['observed']['evidence_selection_ambiguities']
                 self.assertEqual(diagnostic['code'], 'evidence_selection_ambiguity')
@@ -116,7 +120,7 @@ class AssessmentV4Tests(unittest.TestCase):
             a, opa = self.run_assessment([good,bad])
             b, _ = self.run_assessment([bad,good])
             self.assertEqual(a['id'], b['id'])
-            self.assertEqual(a['summary']['unknown'], 1)
+            self.assertEqual(a['outcome'], 'unknown')
             self.assertEqual(opa.call_count, 0)
             self.assertEqual(a['provenance']['selectedEvidence'], [])
             diagnostic, = a['results'][0]['observed']['evidence_validation_errors']
@@ -127,7 +131,7 @@ class AssessmentV4Tests(unittest.TestCase):
     def test_missing_and_all_stale_no_opa(self):
         for docs in ([], [self.document(collected_at='2020-01-01T00:00:00Z')]):
             report, opa = self.run_assessment(docs)
-            self.assertEqual(report['summary']['unknown'], 1)
+            self.assertEqual(report['outcome'], 'unknown')
             self.assertEqual(opa.call_count, 0)
 
     def test_invalid_routing_and_snapshot_refuse_before_opa(self):
@@ -141,7 +145,7 @@ class AssessmentV4Tests(unittest.TestCase):
     def test_unusable_decision_and_scoped_exception_are_errors(self):
         for effect in (lambda *a: [], lambda *a: {}, lambda *a: None, RuntimeError('scoped')):
             report, opa = self.run_assessment([self.document()], effect=effect)
-            self.assertEqual(report['summary']['error'], 1)
+            self.assertEqual(report['outcome'], 'error')
             self.assertEqual(len(report['provenance']['selectedEvidence']), 1)
 
     def test_mutated_provenance_identity_and_reference_validation(self):
@@ -151,13 +155,30 @@ class AssessmentV4Tests(unittest.TestCase):
         self.assertNotEqual(artifact_digest(changed), report['id'])
         with self.assertRaises(ValueError): validate_assessment_results(changed)
         changed = copy.deepcopy(report)
-        changed['provenance']['selectedEvidence'][0]['digest'] = 'sha256:'+'0'*64
+        changed['provenance']['selectedEvidence'][0]['evidence_digest'] = 'sha256:'+'0'*64
         changed['id'] = artifact_digest(changed)
         with self.assertRaisesRegex(ValueError, 'absent from snapshot'): validate_assessment_results(changed)
         changed = copy.deepcopy(report)
-        changed['provenance']['selectedEvidence'][0]['requirement_index'] = 8
+        changed['provenance']['selectedEvidence'][0]['dependency_id'] = 'missing'
         changed['id'] = artifact_digest(changed)
-        with self.assertRaisesRegex(ValueError, 'assessed plan'): validate_selection_plan(changed, self.plan)
+        with self.assertRaisesRegex(ValueError, 'assessed plan'):
+            validate_result_against_plan(changed, self.plan)
+
+    def test_relational_validation_requires_complete_fresh_successful_selections(self):
+        report, _ = self.run_assessment([self.document()])
+        changed = copy.deepcopy(report)
+        changed['provenance']['selectedEvidence'] = []
+        changed['id'] = artifact_digest(changed)
+        validate_assessment_results(changed)
+        with self.assertRaisesRegex(ValueError, 'cover required plan dependencies'):
+            validate_result_against_plan(changed, self.plan)
+
+        changed = copy.deepcopy(report)
+        changed['provenance']['selectedEvidence'][0]['collected_at'] = '2020-01-01T00:00:00Z'
+        changed['id'] = artifact_digest(changed)
+        validate_assessment_results(changed)
+        with self.assertRaisesRegex(ValueError, 'stale at the assessment instant'):
+            validate_result_against_plan(changed, self.plan)
 
     def test_locked_unlocked_same_actual_identity(self):
         original, _ = self.run_assessment([self.document()])
@@ -170,6 +191,10 @@ class AssessmentV4Tests(unittest.TestCase):
         self.assertEqual(prior_id, self.plan['id'])
         report, _ = self.run_assessment([self.document()], composition_report=locked)
         self.assertEqual(original['id'], report['id'])
+        self.assertNotEqual(
+            original['provenance']['evaluationComposition']['enforcement'],
+            report['provenance']['evaluationComposition']['enforcement'],
+        )
 
     def test_policy_drift_and_missing_schema_refuse(self):
         self.write([self.document()])
@@ -195,8 +220,8 @@ class AssessmentV4Tests(unittest.TestCase):
         second = self.document(type='second/v1')
         for docs in ([good], [good,{**second,'payload':{'value':False}}], [good,second,{**second,'id':'second'}]):
             report, opa = self.run_assessment(docs)
-            self.assertEqual(report['summary']['unknown'], 1)
-            self.assertEqual(report['summary']['pass'], 1)
+            self.assertEqual([item['status'] for item in report['results']], ['pass', 'unknown'])
+            self.assertEqual(report['outcome'], 'unknown')
             self.assertEqual(opa.call_count, 1)
             self.assertEqual(len(report['provenance']['selectedEvidence']), 1)
 
@@ -211,15 +236,39 @@ class AssessmentV4Tests(unittest.TestCase):
         (waivers/'exception.yaml').write_text(fixtures.EvidenceFreshnessTests.waiver_resource())
         failed, _ = self.run_assessment([self.document()], status='fail')
         waived, _ = self.run_assessment([self.document()], status='fail', waiver_path=waivers)
-        self.assertEqual(waived['summary']['waived'], 1)
+        self.assertEqual(waived['outcome'], 'waived')
         self.assertNotEqual(failed['id'], waived['id'])
         self.assertEqual(waived['results'][0]['waiver']['underlying_status'], 'fail')
         for docs in ([self.document(payload={'value':False})], [self.document(),self.document(id='other')], []):
             report, _ = self.run_assessment(docs, waiver_path=waivers)
-            self.assertEqual(report['summary']['unknown'], 1)
+            self.assertEqual(report['outcome'], 'unknown')
             self.assertNotIn('waiver', report['results'][0])
         error, _ = self.run_assessment([self.document()], effect=RuntimeError('criterion'), waiver_path=waivers)
         self.assertNotIn('waiver', error['results'][0])
+
+    def test_unrelated_waiver_catalog_is_nonsemantic_but_applied_snapshot_is_semantic(self):
+        without, _ = self.run_assessment([self.document()], status='fail')
+        waivers = self.root/'waivers'
+        waivers.mkdir()
+        unrelated = fixtures.EvidenceFreshnessTests.waiver_resource().replace(
+            'name: test-control-rollout', 'name: unrelated').replace(
+            'id: host/test', 'id: host/other')
+        (waivers/'unrelated.yaml').write_text(unrelated)
+        with_unrelated, _ = self.run_assessment(
+            [self.document()], status='fail', waiver_path=waivers)
+        self.assertEqual(without['id'], with_unrelated['id'])
+        self.assertEqual(without, with_unrelated)
+
+        (waivers/'unrelated.yaml').write_text(
+            fixtures.EvidenceFreshnessTests.waiver_resource())
+        first, _ = self.run_assessment([self.document()], status='fail', waiver_path=waivers)
+        (waivers/'unrelated.yaml').write_text(
+            fixtures.EvidenceFreshnessTests.waiver_resource().replace(
+                'owner: test-owner', 'owner: successor-owner'))
+        second, _ = self.run_assessment([self.document()], status='fail', waiver_path=waivers)
+        self.assertNotEqual(first['results'][0]['waiver']['digest'],
+                            second['results'][0]['waiver']['digest'])
+        self.assertNotEqual(first['id'], second['id'])
 
     def test_evaluator_identity_is_resolved_once_and_identity_bearing(self):
         first, _ = self.run_assessment([self.document()])
@@ -260,14 +309,52 @@ class AssessmentV4Tests(unittest.TestCase):
         first, _ = self.run_assessment([self.document()])
         second, _ = self.run_assessment([self.document(),self.document(id='unused',type='unused/v1',payload={'bad':True})])
         self.assertEqual(first['provenance']['selectedEvidence'],second['provenance']['selectedEvidence'])
+        self.assertEqual(first['outcome'], second['outcome'])
         self.assertNotEqual(first['id'],second['id'])
         rejected, _ = self.run_assessment([self.document(payload={'value':False})])
         changed, _ = self.run_assessment([self.document(payload={'value':False},extension=True)])
         self.assertNotEqual(rejected['id'],changed['id'])
 
+    def test_complete_selected_document_and_evaluation_composition_are_semantic(self):
+        first, _ = self.run_assessment([self.document()])
+        changed_document, _ = self.run_assessment([self.document(extension=True)])
+        self.assertEqual(
+            first['provenance']['selectedEvidence'][0]['evidence_id'],
+            changed_document['provenance']['selectedEvidence'][0]['evidence_id'],
+        )
+        self.assertNotEqual(first['id'], changed_document['id'])
+
+        from tools.composition import composition_digest
+        changed_composition = copy.deepcopy(first)
+        actual = changed_composition['provenance']['evaluationComposition']['actual']
+        actual['policySources'][0]['content']['digest'] = 'sha256:' + 'd' * 64
+        changed_composition['provenance']['evaluationComposition'][
+            'compositionDigest'
+        ] = composition_digest(actual)
+        changed_composition['id'] = artifact_digest(changed_composition)
+        validate_assessment_results(changed_composition)
+        self.assertNotEqual(first['id'], changed_composition['id'])
+        with self.assertRaisesRegex(ValueError, 'planning composition'):
+            validate_result_against_plan(changed_composition, self.plan)
+
+    def test_result_identity_projection_is_explicit_and_owns_no_plan_copy(self):
+        report, _ = self.run_assessment([self.document()])
+        projection = result_identity_projection(report)
+        self.assertEqual(set(projection), {
+            'schema', 'digestAlgorithm', 'plan_id', 'subject_id', 'evaluated_at',
+            'outcome', 'evaluationComposition', 'evaluator', 'evidence',
+            'selectedEvidence', 'results', 'requirement_assessments',
+            'requirement_baseline_assessments',
+        })
+        for retired in ('assessment_id', 'operation', 'resolved_policy',
+                        'planningComposition', 'summary', 'waiver_revision'):
+            self.assertNotIn(retired, report)
+
     def test_path_materialization_and_source_order_do_not_change_identity(self):
         import shutil
         from tools.policy_sources import PolicySource
+        base, _ = self.run_assessment([self.document()])
+        base_plan_id = self.plan['id']
         other = self.root/'additional'
         other.mkdir()
         (other/'unrelated.txt').write_text('source content')
@@ -276,23 +363,30 @@ class AssessmentV4Tests(unittest.TestCase):
         self.plan['provenance']['planningComposition'] = stage(actual)
         self.sign_plan()
         first, _ = self.run_assessment([self.document()])
+        self.assertNotEqual(base_plan_id, self.plan['id'])
+        self.assertNotEqual(base['id'], first['id'])
         relocated = self.root/'relocated'
         shutil.copytree(self.source.path,relocated)
         self.sources = (PolicySource('additional',other),PolicySource(self.source.name,relocated))
         second, _ = self.run_assessment([self.document()])
         self.assertEqual(first['id'],second['id'])
         (self.evidence/'0.json').rename(self.evidence/'different-name.json')
-        with patch('tools.evaluate_plan.evaluate_control', return_value=copy.deepcopy(first['results'][0])):
+        def same_decision(opa, sources, data, entrypoint):
+            decision = control_error_result(data, first['results'][0]['reason'])
+            decision.update({key: copy.deepcopy(first['results'][0][key])
+                             for key in ('status', 'expected', 'observed')})
+            return decision
+        with patch('tools.evaluate_plan.evaluate_control', side_effect=same_decision):
             third = evaluate_plan_document(self.plan,self.evidence,self.sources,evaluated_at=self.now)
         self.assertEqual(first['id'],third['id'])
 
     def test_enforcement_and_descriptive_metadata_are_validated_but_nonsemantic(self):
         report, _ = self.run_assessment([self.document()])
         changed = copy.deepcopy(report)
-        changed['provenance']['planningComposition']['metadata'] = {'distribution':'description', 'version':'arbitrary'}
+        changed['provenance']['evaluationComposition']['metadata'] = {'distribution':'description', 'version':'arbitrary'}
         self.assertEqual(artifact_digest(changed), report['id'])
         validate_assessment_results(changed)
-        changed['provenance']['planningComposition']['enforcement']['directExpectedContent'] = {'missing':{'digestAlgorithm':'compliance.example/policy-source-tree-digest/v1alpha1','digest':'sha256:'+'0'*64}}
+        changed['provenance']['evaluationComposition']['enforcement']['directExpectedContent'] = {'missing':{'digestAlgorithm':'compliance.example/policy-source-tree-digest/v1alpha1','digest':'sha256:'+'0'*64}}
         with self.assertRaisesRegex(ValueError,'enforcement'): validate_assessment_results(changed)
 
     def test_selected_snapshot_and_diagnostic_tampering_is_refused(self):
@@ -311,12 +405,61 @@ class AssessmentV4Tests(unittest.TestCase):
         report, _ = self.run_assessment([self.document()])
         for resolution in ({'status': 'invalid', 'errors': []},
                            {'status': 'valid', 'errors': [{'message': 'unresolved'}]}):
-            changed = copy.deepcopy(report)
-            changed['resolved_policy']['resolution'] = resolution
-            changed['resolved_policy']['controls'][0]['policy_inputs']['instance']['evidence']['observation-1']['max_age'] = '99d'
-            changed['id'] = artifact_digest(changed)
-            with self.assertRaisesRegex(ValueError, 'error-free frozen policy'):
+            changed_plan = copy.deepcopy(self.plan)
+            changed_plan['resolution'] = resolution
+            with self.assertRaises(ValueError):
+                validate_result_against_plan(report, changed_plan)
+
+    def test_relational_validation_rejects_non_result_required_plans(self):
+        report, _ = self.run_assessment([self.document()])
+        validate_result_against_plan(report, self.plan)
+
+        variants = {}
+        retired = copy.deepcopy(self.plan)
+        retired['subject']['status'] = 'retired'
+        variants['inactive'] = retired
+
+        unassigned = copy.deepcopy(self.plan)
+        unassigned['assignments'] = []
+        unassigned['resolved_groups'] = []
+        unassigned['resolved_baselines'] = []
+        unassigned['resolved_requirement_baselines'] = []
+        unassigned['requirements'] = []
+        unassigned['controls'] = []
+        unassigned['excluded_controls'] = []
+        variants['unassigned'] = unassigned
+
+        no_policy = copy.deepcopy(self.plan)
+        no_policy['controls'] = []
+        no_policy['requirements'] = []
+        no_policy['resolved_requirement_baselines'] = []
+        variants['no_assessable_policy'] = no_policy
+
+        invalid = copy.deepcopy(self.plan)
+        invalid['resolution'] = {
+            'status': 'invalid',
+            'errors': [{'type': 'synthetic-diagnostic-invalid'}],
+        }
+        variants['invalid'] = invalid
+
+        from tools.operation import plan_disposition
+        for expected, plan in variants.items():
+            with self.subTest(disposition=expected):
+                refresh_operation(plan)
+                validate_assessment_plan(plan)
+                self.assertEqual(plan_disposition(plan), expected)
+                changed = copy.deepcopy(report)
+                changed['plan_id'] = plan['id']
+                if not plan['controls']:
+                    changed['results'] = []
+                    changed['requirement_assessments'] = []
+                    changed['requirement_baseline_assessments'] = []
+                    changed['provenance']['selectedEvidence'] = []
+                changed['outcome'] = result_outcome(changed)
+                changed['id'] = artifact_digest(changed)
                 validate_assessment_results(changed)
+                with self.assertRaisesRegex(ValueError, 'non-assessable plan'):
+                    validate_result_against_plan(changed, plan)
 
     def test_requirement_rollups_keep_unknown_error_fail_and_waived_meaning(self):
         sources = [{'name': item['name'], 'digest': item['content']['digest']}
@@ -336,17 +479,17 @@ class AssessmentV4Tests(unittest.TestCase):
         from tools.assessment_provenance import validate_selection_snapshot
         doc = self.document()
         report, _ = self.run_assessment([doc])
-        for field, value in (('id','different'),('digest','sha256:'+'0'*64),('collected_at','2026-08-23T10:00:00Z')):
+        for field, value in (('evidence_id','different'),('evidence_digest','sha256:'+'0'*64),('collected_at','2026-08-23T10:00:00Z')):
             changed = copy.deepcopy(report)
             changed['provenance']['selectedEvidence'][0][field] = value
             self.assertNotEqual(artifact_digest(changed), report['id'])
             with self.assertRaisesRegex(ValueError, 'evaluated evidence snapshot'):
                 validate_selection_snapshot(changed, [doc])
         changed = copy.deepcopy(report)
-        changed['provenance']['selectedEvidence'][0]['requirement']['max_age'] = '12h'
-        self.assertNotEqual(artifact_digest(changed), report['id'])
+        changed['provenance']['selectedEvidence'][0]['dependency_id'] = 'different'
+        changed['id'] = artifact_digest(changed)
         with self.assertRaisesRegex(ValueError, 'assessed plan'):
-            validate_selection_plan(changed, self.plan)
+            validate_result_against_plan(changed, self.plan)
 
 
     def test_unrepresentable_criterion_decisions_are_attributable_errors(self):
@@ -357,7 +500,7 @@ class AssessmentV4Tests(unittest.TestCase):
                 result['observed'] = {'value':value}
                 return result
             report, opa = self.run_assessment([self.document()], effect=unusable)
-            self.assertEqual(report['summary']['error'],1)
+            self.assertEqual(report['outcome'],'error')
             self.assertEqual(opa.call_count,1)
             self.assertEqual(len(report['provenance']['selectedEvidence']),1)
 
@@ -402,9 +545,12 @@ class AssessmentV4Tests(unittest.TestCase):
         self.sign_plan()
         for effect in (RuntimeError('scoped'), lambda *args: None):
             report, opa = self.run_assessment([self.document()],effect=effect)
-            self.assertEqual(report['summary']['error'],1)
-            self.assertEqual(report['results'][0]['evidence_ids'],['evidence:test'])
-            self.assertEqual([use['requirement_index'] for use in report['provenance']['selectedEvidence']],[0,1])
+            self.assertEqual(report['outcome'],'error')
+            self.assertNotIn('evidence_ids', report['results'][0])
+            self.assertEqual(
+                [use['dependency_id'] for use in report['provenance']['selectedEvidence']],
+                ['observation-1', 'second-observation'],
+            )
             self.assertEqual(opa.call_count,1)
 
 

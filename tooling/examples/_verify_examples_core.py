@@ -11,6 +11,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+from collections import Counter
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from typing import Sequence
@@ -171,14 +172,9 @@ def mock_fleet_filter_contract_holds(
             for subject in filtered_status.get("subjects", [])
         )
         and secondary_result.get("subject_id") == MOCK_FLEET_SECONDARY_AWS_SUBJECT
-        and secondary_result.get("summary") == {
-            "pass": 5,
-            "fail": 0,
-            "unknown": 0,
-            "not_applicable": 0,
-            "error": 0,
-            "waived": 0,
-        }
+        and secondary_result.get("outcome") == "pass"
+        and Counter(result.get("status") for result in secondary_result.get("results", []))
+        == {"pass": 5}
         and filtered_frameworks.get("filters") == {
             "external_refs": ["CSA-CCM-v4.1:LOG-domain"],
             "groups": ["aws-production-accounts"],
@@ -782,7 +778,7 @@ class ExampleRunner:
             ["compliance", *schema_arguments],
             json.dumps(
                 {
-                    "summary": schema_document["summary"],
+                    "outcome": schema_document["outcome"],
                     "schema_errors": schema_errors,
                 },
                 indent=2,
@@ -929,12 +925,11 @@ class ExampleRunner:
         )
         self.domain(
             "requirements.realization-roll-up",
-            iam_requirement["adoption"]["status"] == "implemented"
-            and "realization" in iam_requirement
-            and iam_requirement["check_summary"]["pass"] == 3
-            and iam_requirement["check_summary"]["fail"] == 1
-            and iam_document["requirement_baseline_assessments"][0]["requirements"]
-            == [{"requirement": iam_requirement["requirement"], "status": "fail"}],
+            set(iam_requirement) == {"requirement", "status", "reason"}
+            and Counter(result["status"] for result in iam_document["results"])
+            == {"pass": 3, "fail": 1}
+            and set(iam_document["requirement_baseline_assessments"][0])
+            == {"baseline", "status", "reason"},
         )
 
         rollout_results = self.root / "linux-hardening-rollout/results"
@@ -960,16 +955,10 @@ class ExampleRunner:
         )
         self.domain(
             "waiver.application",
-            standard_document["summary"] == {
-                "pass": 2,
-                "fail": 0,
-                "unknown": 4,
-                "not_applicable": 0,
-                "error": 0,
-                "waived": 1,
-            }
+            Counter(result["status"] for result in standard_document["results"])
+            == {"pass": 2, "unknown": 4, "waived": 1}
             and standard_document["evaluated_at"] == EXAMPLE_INSTANT
-            and standard_document["requirement_summary"]["unknown"] == 1
+            and standard_document["requirement_assessments"][0]["status"] == "unknown"
             and any(
                 result["status"] == "waived"
                 and result["waiver"]["id"] == "standard-app-01-auditd-rollout"
@@ -979,8 +968,8 @@ class ExampleRunner:
         )
         self.domain(
             "requirements.missing-evidence",
-            standard_document["requirement_summary"]["unknown"] == 1
-            and standard_document["requirement_baseline_summary"]["unknown"] == 1
+            standard_document["requirement_assessments"][0]["status"] == "unknown"
+            and standard_document["requirement_baseline_assessments"][0]["status"] == "unknown"
             and sum(
                 result["status"] == "unknown"
                 for result in standard_document["results"]
@@ -1009,9 +998,10 @@ class ExampleRunner:
         )
         self.domain(
             "requirements.all-of",
-            container_document["summary"]["pass"] == 8
-            and container_document["requirement_summary"]["pass"] == 1
-            and container_document["requirement_baseline_summary"]["pass"] == 1
+            Counter(result["status"] for result in container_document["results"])
+            == {"pass": 8}
+            and container_document["requirement_assessments"][0]["status"] == "pass"
+            and container_document["requirement_baseline_assessments"][0]["status"] == "pass"
             and iam_document["requirement_assessments"][0]["status"] == "fail",
         )
         self.cli(

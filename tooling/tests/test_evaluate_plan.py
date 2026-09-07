@@ -240,7 +240,6 @@ spec:
             "reason": "Synthetic control result.",
             "expected": {},
             "observed": {},
-            "evidence_ids": [],
             "remediation": "",
             "external_refs": [],
             "alignment": "unaltered",
@@ -368,7 +367,7 @@ spec:
         evaluate.assert_not_called()
         result = report["results"][0]
         self.assertEqual(result["status"], "unknown")
-        self.assertEqual(result["evidence_ids"], [])
+        self.assertNotIn("evidence_ids", result)
         self.assertIn("rejected as invalid", result["reason"])
         errors = result["observed"]["evidence_validation_errors"]
         self.assertEqual(
@@ -378,7 +377,7 @@ spec:
         self.assertTrue(all(
             error["evidence_type"] == "test.evidence/v1" for error in errors
         ))
-        self.assertEqual(report["summary"]["unknown"], 1)
+        self.assertEqual(report["outcome"], "unknown")
 
     def test_invalid_evidence_for_another_subject_is_not_evaluated(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -446,7 +445,6 @@ spec:
                 "reason": "Test condition passed.",
                 "expected": {},
                 "observed": {},
-                "evidence_ids": [],
                 "remediation": "",
                 "external_refs": [],
                 "alignment": "unaltered",
@@ -462,9 +460,7 @@ spec:
                     evaluated_at=datetime(2026, 8, 23, 12, tzinfo=UTC),
                 )
 
-        self.assertEqual(report["summary"]["pass"], 1)
-        self.assertEqual(report["requirement_summary"]["pass"], 1)
-        self.assertEqual(report["requirement_baseline_summary"]["pass"], 1)
+        self.assertEqual(report["outcome"], "pass")
         self.assertEqual(report["requirement_assessments"][0]["status"], "pass")
         self.assertEqual(report["requirement_baseline_assessments"][0]["status"], "pass")
 
@@ -507,10 +503,9 @@ spec:
         self.assertEqual(result["status"], "waived")
         self.assertEqual(result["waiver"]["underlying_status"], "fail")
         self.assertEqual(result["reason"], "Synthetic control result.")
-        self.assertEqual(report["summary"]["waived"], 1)
-        self.assertEqual(report["requirement_summary"]["waived"], 1)
-        self.assertEqual(report["requirement_baseline_summary"]["waived"], 1)
-        self.assertEqual(result["waiver_revision"], report["waiver_revision"])
+        self.assertEqual(report["outcome"], "waived")
+        self.assertNotIn("waiver_revision", report)
+        self.assertNotIn("waiver_revision", result)
 
     def test_expired_waiver_does_not_change_failure(self):
         with tempfile.TemporaryDirectory() as directory:

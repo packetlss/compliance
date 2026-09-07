@@ -117,11 +117,16 @@ using the populated cache.
 
 `test_assessment_v4.py` exercises required-evidence routing/refusal, all-candidate
 validation, ambiguity/coalescing, independent controls, selected factual temporal
-provenance, exact evaluator identity, waiver binding, malformed provenance, and
-path/order independence. `test_assessment_v4_cli.py` uses real OPA and the public
+provenance, exact evaluator identity, exact applied-waiver binding, explicit result
+identity projection, intrinsic/relational validation, and path/order independence.
+Mutation vectors cover complete selected and unselected documents, stable dependency
+attribution, actual evaluation composition, nonidentity enforcement, operation-bound
+plans, catalog-independent waiver behavior, compact roll-ups, and foreign pair
+refusal. `test_assessment_v4_cli.py` uses real OPA and the public
 CLI for unlocked/direct/locked equivalence, explanations and refusal without
 replacement. The package gate repeats that CLI proof with the installed wheel,
 verified local receipt and Git/network unavailable via
 `scripts/check-installed-assessment.py`. Existing JCS, domain, roll-up, scenario
-and successor locked-artifact gates remain required by impact. No test derives
-query-time operational timeliness.
+and successor locked-artifact gates remain required by impact. Operation tests derive
+query-time timeliness and waiver qualification only from retained results paired with
+their exact assessed plans.

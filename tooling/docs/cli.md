@@ -6,7 +6,7 @@ in [Actual composition and expected enforcement](composition.md). All maintained
 consumers use successor contracts; historical artifacts require historical tooling.
 
 Status: **Implemented prototype (v0.2)**
-Last updated: **2026-09-05**
+Last updated: **2026-09-06**
 
 The control-plane workflows share one `compliance` command. Inventory
 inspection, plan rendering, evaluation, and reporting remain separate modules
@@ -88,12 +88,12 @@ No new status/filter grammar or historical reinterpretation is introduced.
 The CLI
 validates plans before persistence and whenever they
 are displayed or evaluated. Result files
-are validated before persistence and when assessment views load them. A file
-that declares one of these schemas but has malformed provenance, inconsistent
-member/operation/bound-plan identity, inconsistent counts, mismatched child
-attribution, or an invalid
-objective roll-up fails with its file and JSON Pointer instead of being treated
-as usable history.
+are intrinsically validated before persistence and when assessment views load them.
+Publication and historical interpretation additionally validate each result against
+the exact plan named by `plan_id`. Malformed provenance, inconsistent
+member/operation/bound-plan identity, mismatched plan/result attribution, or an
+invalid compact objective roll-up fails closed instead of being treated as usable
+history.
 `policy validate` validates every reusable `Control` manifest and its local
 parameter schema, checks every `Baseline` and `BaselineOverlay` document against
 the schema selected by its `apiVersion` and `kind`, then resolves the complete
@@ -222,17 +222,19 @@ synthetic pass or N/A. `assessment run` captures one instant and reports
 `accounting_complete` separately from `all_passed`.
 
 For immutable history, `assessment status/groups/frameworks/explain` accept a stored
-`--plan` anchor and exact `--at` instant. Use `--no-config` when current project inputs
-are unavailable. Reporting uses only frozen operation facts and exact matching result
-envelopes. Filters remain visibly filtered. See [operation accounting](operation-accounting.md)
+`--plan` anchor, repeatable `--assessed-plans` exact plan files or bounded plan
+directories, and an exact `--at` instant. Use `--no-config` when current project
+inputs are unavailable. Reporting indexes those ordinary inputs solely by validated
+`plan_id`, validates every interpreted pair, and uses only frozen operation facts and
+exact matching result envelopes. Filters remain visibly filtered. See [operation accounting](operation-accounting.md)
 for wire representation, identity, output paths and the concrete assertion contracts.
 
 ## Historical results and operational views
 
-Non-anchored `assessment status`, `groups`, `frameworks`, and `explain` retain the
-existing current-inventory plan rendering and result discovery: the latest exact-plan
-result is preferred, otherwise the latest result for the Subject is shown. They no
-longer collapse that result into a mixed state. Historical outcome, exact plan
+Non-anchored `assessment status`, `groups`, `frameworks`, and `explain` retain
+current-inventory plan rendering and use only results for the exact rendered plan.
+They do not substitute a result for the Subject under a different plan. Historical
+outcome, exact plan
 alignment, coverage, and assessment absence are separate fields and aggregates.
 `--outcome` and `--plan-alignment` filter those dimensions independently; no filter
 changes or discards the other dimension. Their report timestamp remains query time;
@@ -264,6 +266,15 @@ may carry the applicable qualifications. Filters do not alter frozen accounting.
 #32 retains factual v4 provenance only for ADR 0011. #80 derives the view from a
 validated v4 result, exact assessed plan, optional comparison plan and explicit query
 instant. ADR 0010 assessment-time behavior remains separately owned.
+
+[#90](https://github.com/packetlss/compliance/issues/90) requires every historical
+result that is fully interpreted to resolve its assessed
+plan solely by exact `plan_id` and pass plan/result relational validation. An exact
+plan file or bounded plan directory/set may be ordinary input. Filename, traversal
+order, subject-only matching, latest, current-plan substitution, and approximate
+semantic equality cannot resolve the assessed plan. This does not add a history
+store, result index, run object, retention service, latest-result database, or
+unbounded artifact discovery.
 
 ## Project registries and project configuration
 

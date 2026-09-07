@@ -8,7 +8,7 @@ from unittest.mock import patch
 from assessment_fixture import refresh_operation
 import test_assessment_v4 as fixtures
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
-from tools.assessment_provenance import artifact_digest, digest
+from tools.assessment_provenance import artifact_digest, digest, validate_result_against_plan
 from tools.evaluate_plan import evaluate_plan_document, control_error_result
 from tools.operation import (
     account_operation, freeze_operation, freeze_selection_witness, normalize_request,
@@ -194,6 +194,10 @@ class OperationTests(unittest.TestCase):
         self.assertNotEqual(explicit['operation']['operation_id'],
                             grouped['operation']['operation_id'])
         self.assertNotEqual(explicit['id'], grouped['id'])
+        explicit_result = self.evaluate([explicit])[0]
+        grouped_result = self.evaluate([grouped])[0]
+        self.assertEqual(explicit_result['results'], grouped_result['results'])
+        self.assertNotEqual(explicit_result['id'], grouped_result['id'])
 
     def test_unrelated_group_assignment_and_label_do_not_change_identity(self):
         baseline = self.plans(('host/A',))[0]
@@ -232,10 +236,10 @@ class OperationTests(unittest.TestCase):
     def test_exact_success_copies_and_missing_member(self):
         plans = self.plans(('host/A', 'host/B', 'host/C'))
         reports = self.evaluate(plans)
-        complete = account_operation(plans[0], reports+[copy.deepcopy(reports[0])], self.instant)
+        complete = account_operation(plans[0], reports+[copy.deepcopy(reports[0])], self.instant, plans)
         self.assertTrue(complete['accounting_complete'])
         self.assertTrue(complete['all_passed'])
-        missing = account_operation(plans[0], reports[:2], self.instant)
+        missing = account_operation(plans[0], reports[:2], self.instant, plans)
         self.assertFalse(missing['accounting_complete'])
         self.assertFalse(missing['all_passed'])
         self.assertEqual([r['state'] for r in missing['members']], ['pass','pass','missing'])
@@ -249,7 +253,7 @@ class OperationTests(unittest.TestCase):
         wrong_operation = self.evaluate(singleton)[0]
         wrong_time = self.evaluate(plans, instant=self.fixture.now+timedelta(seconds=1))[1]
         for substitute in (wrong_operation, wrong_time, reports[0]):
-            account = account_operation(plans[0], [reports[0], substitute], self.instant)
+            account = account_operation(plans[0], [reports[0], substitute], self.instant, plans)
             self.assertFalse(account['accounting_complete'])
 
     def test_operation_context_changes_identity_without_effective_policy_change(self):
@@ -266,10 +270,24 @@ class OperationTests(unittest.TestCase):
 
     def test_unassigned_accounted_without_pass_and_empty_selection_rejected(self):
         plans = self.plans(non_assessable=True)
-        result = account_operation(plans[0], self.evaluate(plans), self.instant)
+        reports = self.evaluate(plans)
+        result = account_operation(plans[0], reports, self.instant, plans)
         self.assertTrue(result['accounting_complete'])
         self.assertFalse(result['all_passed'])
         self.assertEqual(result['members'][1]['state'], 'unassigned')
+        forged = copy.deepcopy(reports[0])
+        forged['subject_id'] = plans[1]['subject']['id']
+        forged['plan_id'] = plans[1]['id']
+        forged['results'] = []
+        forged['requirement_assessments'] = []
+        forged['requirement_baseline_assessments'] = []
+        forged['provenance']['selectedEvidence'] = []
+        from tools.artifact_validation import result_outcome
+        forged['outcome'] = result_outcome(forged)
+        forged['id'] = artifact_digest(forged)
+        validate_assessment_results(forged)
+        with self.assertRaisesRegex(ValueError, 'non-assessable operation member'):
+            account_operation(plans[0], [*reports, forged], self.instant, [plans[0]])
         with self.assertRaisesRegex(ValueError, 'empty operation'):
             select_subjects({}, [], {'subjects':[], 'groups':[], 'all':True})
 
@@ -317,10 +335,10 @@ class OperationTests(unittest.TestCase):
     def test_historical_accounting_does_not_reopen_policy_or_evidence(self):
         plans = self.plans()
         reports = self.evaluate(plans)
-        expected = account_operation(plans[0], reports, self.instant)
+        expected = account_operation(plans[0], reports, self.instant, plans)
         self.fixture.write([])
         with patch('tools.render_plan.load_policy_catalogs', side_effect=AssertionError('mutable policy')):
-            self.assertEqual(account_operation(plans[0], reports, self.instant), expected)
+            self.assertEqual(account_operation(plans[0], reports, self.instant, plans), expected)
 
     def test_query_time_timeliness_is_independent_and_inclusive(self):
         plans = self.plans(('host/A',))
@@ -329,15 +347,16 @@ class OperationTests(unittest.TestCase):
         from tools.waivers import parse_timestamp
         boundary = parse_timestamp(collected) + timedelta(hours=24)
         at_boundary = qualify_operation(
-            account_operation(plans[0], [report], self.instant), [report], boundary
+            account_operation(plans[0], [report], self.instant, plans),
+            [report], boundary, assessed_plans=plans
         )
         row = at_boundary['members'][0]
         self.assertEqual(row['historical_outcome'], 'pass')
         self.assertEqual(row['plan_alignment'], 'plan_alignment_unavailable')
         self.assertEqual(row['evidence_timeliness']['timely_selected_dependencies'], 1)
         later = qualify_operation(
-            account_operation(plans[0], [report], self.instant), [report],
-            boundary + timedelta(seconds=1), plans[0]
+            account_operation(plans[0], [report], self.instant, plans), [report],
+            boundary + timedelta(seconds=1), plans[0], plans
         )
         row = later['members'][0]
         self.assertEqual(row['historical_outcome'], 'pass')
@@ -349,7 +368,8 @@ class OperationTests(unittest.TestCase):
         report = self.evaluate(plans)[0]
         query = self.fixture.now - timedelta(days=30)
         qualified = qualify_operation(
-            account_operation(plans[0], [report], self.instant), [report], query
+            account_operation(plans[0], [report], self.instant, plans),
+            [report], query, assessed_plans=plans
         )
         dependency = qualified['members'][0]['evidence_timeliness']['dependencies'][0]
         self.assertEqual(dependency['qualification'], 'timely')
@@ -358,10 +378,11 @@ class OperationTests(unittest.TestCase):
         from tools.operation import _evidence_timeliness
         plans = self.plans(('host/A',))
         report = self.evaluate(plans)[0]
-        missing = copy.deepcopy(report['resolved_policy']['controls'][0]['evidence'][0])
+        changed_plan = copy.deepcopy(plans[0])
+        missing = copy.deepcopy(changed_plan['controls'][0]['evidence'][0])
         missing.update(id='missing-observation', type='missing.observation/v1')
-        report['resolved_policy']['controls'][0]['evidence'].append(missing)
-        timing = _evidence_timeliness(report, self.fixture.now + timedelta(days=2))
+        changed_plan['controls'][0]['evidence'].append(missing)
+        timing = _evidence_timeliness(report, changed_plan, self.fixture.now + timedelta(days=2))
         self.assertEqual(timing['stale_selected_dependencies'], 1)
         self.assertEqual(timing['unavailable_required_dependencies'], 1)
         self.assertTrue(timing['controls'][0]['reassessment_due'])
@@ -371,14 +392,29 @@ class OperationTests(unittest.TestCase):
         historical = self.plans(('host/A',))
         comparison = self.plans(('host/A', 'host/B'))
         account = qualify_operation(
-            account_operation(historical[0], [], self.instant), [], self.fixture.now,
-            comparison[0]
+            account_operation(historical[0], [], self.instant, historical),
+            [], self.fixture.now, comparison[0], historical
         )
         row = account['members'][0]
         self.assertEqual(row['state'], 'missing')
         self.assertEqual(row['historical_outcome'], 'no_assessment')
         self.assertEqual(row['plan_alignment'], 'different_plan')
         self.assertEqual(row['evidence_timeliness'], {'qualification': 'unavailable'})
+
+    def test_deleted_member_plan_leaves_raw_facts_but_blocks_full_interpretation(self):
+        plans = self.plans()
+        reports = self.evaluate(plans)
+        account = account_operation(plans[0], reports, self.instant, [plans[0]])
+        orphan = next(row for row in account['members'] if row['subject_id'] == 'host/B')
+        self.assertEqual(orphan['state'], 'pass')
+        self.assertEqual(orphan['historical_interpretation'], 'unavailable')
+        self.assertTrue(account['accounting_complete'])
+        self.assertFalse(account['historical_interpretation_complete'])
+        self.assertFalse(account['all_passed'])
+
+        future, = self.evaluate([plans[1]])
+        self.assertEqual(future['id'], reports[1]['id'])
+        validate_result_against_plan(future, plans[1])
 
     def test_recorded_waiver_window_qualifies_but_never_rewrites_waived(self):
         waivers = self.fixture.root/'waivers'
@@ -394,8 +430,8 @@ class OperationTests(unittest.TestCase):
         ):
             from tools.waivers import parse_timestamp
             qualified = qualify_operation(
-                account_operation(self.fixture.plan, [report], self.instant),
-                [report], parse_timestamp(query),
+                account_operation(self.fixture.plan, [report], self.instant, [self.fixture.plan]),
+                [report], parse_timestamp(query), assessed_plans=[self.fixture.plan],
             )
             row = qualified['members'][0]
             self.assertEqual(row['historical_outcome'], 'waived')
@@ -482,4 +518,6 @@ class OperationTests(unittest.TestCase):
             changed=copy.deepcopy(reports[0])
             changed[field]=reports[1][field]
             changed['id']=artifact_digest(changed)
-            with self.assertRaises(ValueError): validate_assessment_results(changed)
+            validate_assessment_results(changed)
+            with self.assertRaises(ValueError):
+                validate_result_against_plan(changed, plans[0])

@@ -13,13 +13,13 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator, FormatChecker
+from jsonschema import FormatChecker
 
 from .artifact_validation import (
     validate_assessment_plan,
     validate_assessment_results,
 )
-from .control_realization import roll_up_plan_requirements
+from .control_realization import compact_plan_outcomes
 from .policy_sources import PolicySources, rego_module_paths
 from .render_plan import load_evidence_schema_catalog
 from .waivers import active_waiver, load_waivers
@@ -75,7 +75,6 @@ def control_error_result(
     reason: str,
     *,
     observed: JsonObject | None = None,
-    evidence_ids: list[str] | None = None,
 ) -> JsonObject:
     """Return the common immutable error shape without invoking Rego."""
     return {
@@ -91,11 +90,46 @@ def control_error_result(
         "observed": observed or {},
         "external_refs": assessment_input["control"].get("external_refs", []),
         "alignment": assessment_input["control"].get("alignment", "unmapped"),
-        "evidence_ids": evidence_ids if evidence_ids is not None else list(dict.fromkeys(
-            document["id"]
-            for document in assessment_input["evidence"]
-            if isinstance(document.get("id"), str)
-        )),
+    }
+
+
+def _compact_evaluator_decision(
+    decision: JsonObject,
+    assessment_input: JsonObject,
+) -> JsonObject:
+    """Validate the evaluator boundary and retain only evaluation-owned facts."""
+    expected = control_error_result(assessment_input, "placeholder")
+    required = set(expected)
+    if set(decision) != required:
+        raise ValueError("evaluator decision fields are invalid")
+    for field in (
+        "control_id", "instance_id", "subject_id", "plan_id", "severity",
+        "remediation", "external_refs", "alignment",
+    ):
+        if decision[field] != expected[field]:
+            raise ValueError(f"evaluator decision {field} differs from assessed plan")
+    if decision["status"] not in {"pass", "fail", "unknown", "not_applicable", "error"}:
+        raise ValueError("evaluator decision status is invalid")
+    if not isinstance(decision["reason"], str) or not decision["reason"]:
+        raise ValueError("evaluator decision reason is invalid")
+    if not isinstance(decision["expected"], dict) or not isinstance(decision["observed"], dict):
+        raise ValueError("evaluator decision expected/observed values must be objects")
+    if any(key in decision["observed"] for key in (
+        "evidence_validation_errors", "evidence_selection_ambiguities"
+    )):
+        raise ValueError("evaluator cannot originate orchestration diagnostics")
+    from ._canonical_json import canonical_json_bytes
+    canonical_json_bytes(decision)
+    return _compact_result_fields(decision)
+
+
+def _compact_result_fields(decision: JsonObject) -> JsonObject:
+    return {
+        "instance_id": decision["instance_id"],
+        "status": decision["status"],
+        "reason": decision["reason"],
+        "expected": copy.deepcopy(decision["expected"]),
+        "observed": copy.deepcopy(decision["observed"]),
     }
 
 
@@ -138,7 +172,10 @@ def evaluate_plan_document(
 ) -> JsonObject:
     """Evaluate an already rendered plan and return its immutable result envelope."""
     validate_assessment_plan(plan)
-    from .assessment_provenance import stage, artifact_digest, RESULTS_SCHEMA, RESULTS_DIGEST_ALGORITHM, validate_selection_plan, validate_selection_snapshot
+    from .assessment_provenance import (
+        RESULTS_DIGEST_ALGORITHM, RESULTS_SCHEMA, artifact_digest, stage,
+        validate_result_against_plan, validate_selection_snapshot,
+    )
     from .composition import require_composition
     from .evaluator import resolve_opa_evaluator
     from .evidence_selection import snapshot_evidence, prepare_schemas, select_evidence
@@ -159,7 +196,7 @@ def evaluate_plan_document(
 
     if not evidence_path.is_dir():
         raise SystemExit(f"evidence path is not a directory: {evidence_path}")
-    evidence, evidence_sources, evidence_descriptor = snapshot_evidence(evidence_path, plan['subject']['id'])
+    evidence, evidence_descriptor = snapshot_evidence(evidence_path, plan['subject']['id'])
 
     required_evidence_types = {
         requirement["type"]
@@ -180,15 +217,7 @@ def evaluate_plan_document(
     evaluated_at = (evaluated_at or datetime.now(UTC)).replace(microsecond=0)
     if evaluated_at.utcoffset() is None:
         raise ValueError('assessment time must have an explicit timezone')
-    waivers, waiver_revision = load_waivers(waiver_path)
-    technical_assessment_id = (
-        f'assessment:{plan["id"].removeprefix("sha256:")[:16]}:'
-        f'{evaluated_at.isoformat()}'
-    )
-    assessment_id = (
-        f'assessment:{plan["id"].removeprefix("sha256:")[:16]}:'
-        f'{waiver_revision.removeprefix("sha256:")[:16]}:{evaluated_at.isoformat()}'
-    )
+    waivers, _ = load_waivers(waiver_path)
     results = []
     for control in plan["controls"]:
         waiver = active_waiver(
@@ -200,13 +229,12 @@ def evaluate_plan_document(
         evidence_requirements = control.get("evidence", [])
         selected_evidence, uses, validation_errors, ambiguities = select_evidence(
             evidence, evidence_requirements, evaluated_at, plan['subject']['id'],
-            validators, schema_references, evidence_sources,
+            validators, schema_references,
         )
         selected_uses.extend({'instance_id': control['instance_id'], **use} for use in uses)
         assessment_input = {
             "schema": "compliance.example/assessment-input/v1",
             "assessment": {
-                "id": technical_assessment_id,
                 "evaluated_at": evaluated_at.isoformat().replace("+00:00", "Z"),
                 "plan_id": plan["id"],
             },
@@ -216,7 +244,10 @@ def evaluate_plan_document(
             # Waivers must not influence the technical decision produced by Rego.
             "waiver": None,
         }
-        if (validation_errors or ambiguities or any(not any(use['requirement_index'] == index for use in uses) for index, _ in enumerate(evidence_requirements))):
+        selected_dependencies = {use['dependency_id'] for use in uses}
+        if (validation_errors or ambiguities or any(
+                requirement['id'] not in selected_dependencies
+                for requirement in evidence_requirements)):
             observed = {}
             if validation_errors:
                 reason = 'Required evidence was rejected as invalid; criterion not determined.'
@@ -227,77 +258,62 @@ def evaluate_plan_document(
                 reason = 'Required evidence is missing or stale; criterion not determined.'
             if ambiguities:
                 observed['evidence_selection_ambiguities'] = ambiguities
-            result = control_error_result(assessment_input, reason, observed=observed)
+            result = _compact_result_fields(
+                control_error_result(assessment_input, reason, observed=observed)
+            )
             result['status'] = 'unknown'
         else:
             try:
                 result = evaluate_control(opa, policies, assessment_input, control["entrypoint"])
-                from .artifact_validation import assessment_results_schema_path
-                schema = load_json(assessment_results_schema_path())
-                item_schema = {'$defs': schema['$defs']}
-                item_schema['$ref'] = schema['properties']['results']['items']['$ref']
-                candidate = {**result, 'waiver_revision': waiver_revision} if isinstance(result, dict) else result
-                from ._canonical_json import canonical_json_bytes
-                canonical_json_bytes(candidate)
-                errors = list(Draft202012Validator(item_schema, format_checker=FormatChecker()).iter_errors(candidate))
-                expected = control_error_result(assessment_input, '')
-                fields = ('control_id', 'instance_id', 'subject_id', 'plan_id')
-                if errors or any(result.get(key) != expected[key] for key in fields) or result.get('status') == 'waived' or 'waiver' in result or any(key in result.get('observed', {}) for key in ('evidence_validation_errors', 'evidence_selection_ambiguities')):
-                    result = control_error_result(assessment_input, 'OPA returned an unusable decision')
+                result = _compact_evaluator_decision(result, assessment_input)
             except Exception:
                 result = control_error_result(assessment_input, 'Criterion execution failed')
-        result["waiver_revision"] = waiver_revision
+        if set(result) != {"instance_id", "status", "reason", "expected", "observed"}:
+            result = _compact_evaluator_decision(result, assessment_input)
         if waiver is not None and result.get("status") == "fail":
             result["status"] = "waived"
             result["waiver"] = {**waiver, "underlying_status": "fail"}
         results.append(result)
 
+    results.sort(key=lambda item: item["instance_id"])
     requirement_assessments, requirement_baseline_assessments = (
-        roll_up_plan_requirements(plan, results)
+        compact_plan_outcomes(plan, results)
     )
-
-    def summarize(items: list[JsonObject]) -> JsonObject:
-        return {
-            status: sum(1 for item in items if item.get("status") == status)
-            for status in ("pass", "fail", "unknown", "not_applicable", "error", "waived")
-        }
 
     report = {
         "schema": RESULTS_SCHEMA,
-        "assessment_id": assessment_id,
         "evaluated_at": evaluated_at.isoformat().replace("+00:00", "Z"),
         "plan_id": plan["id"],
-        "waiver_revision": waiver_revision,
         "subject_id": plan["subject"]["id"],
-        "operation": copy.deepcopy(plan['operation']),
-        "summary": summarize(results),
-        "requirement_summary": summarize(requirement_assessments),
-        "requirement_baseline_summary": summarize(requirement_baseline_assessments),
-        "resolved_policy": {key: copy.deepcopy(plan[key]) for key in (
-            "subject", "resolved_groups", "controls", "excluded_controls", "requirements",
-            "resolved_requirement_baselines", "resolved_baselines", "assignments", "resolution")},
         "results": results,
         "requirement_assessments": requirement_assessments,
         "requirement_baseline_assessments": requirement_baseline_assessments,
     }
     report['digestAlgorithm'] = RESULTS_DIGEST_ALGORITHM
     report['provenance'] = {
-        **plan['provenance'], 'evaluationComposition': stage(evaluation),
+        'schema': 'compliance.example/assessment-provenance/v1alpha1',
+        'evaluationComposition': stage(evaluation),
         'evaluator': evaluator.document(), 'evidence': evidence_descriptor,
-        'selectedEvidence': sorted(selected_uses, key=lambda item: (item['instance_id'], item['requirement_index'])),
+        'selectedEvidence': sorted(selected_uses, key=lambda item: (item['instance_id'], item['dependency_id'])),
     }
+    from .artifact_validation import result_outcome
+    report['outcome'] = result_outcome(report)
     report['id'] = artifact_digest(report)
-    validate_selection_plan(report, plan)
-    validate_selection_snapshot(report, evidence)
     validate_assessment_results(report)
+    validate_result_against_plan(report, plan)
+    validate_selection_snapshot(report, evidence)
     return report
 
 
-def write_json(document: JsonObject, output: Path) -> None:
+def write_json(document: JsonObject, output: Path, *, plan: JsonObject | None = None) -> None:
     if document.get("schema") in {"compliance.example/assessment-plan/v4"}:
         validate_assessment_plan(document, source=output)
     elif document.get("schema") in {"compliance.example/assessment-results/v4"}:
         validate_assessment_results(document, source=output)
+        if plan is None:
+            raise ValueError("publishing assessment results requires the exact assessed plan")
+        from .assessment_provenance import validate_result_against_plan
+        validate_result_against_plan(document, plan)
     elif str(document.get("schema", "")).startswith(("compliance.example/assessment-plan/", "compliance.example/assessment-results/")):
         raise ValueError("unsupported assessment artifact schema")
     output.parent.mkdir(parents=True, exist_ok=True)

@@ -26,7 +26,7 @@ def _unique_object(pairs):
 def snapshot_evidence(path: Path, subject_id: str):
     if not path.is_dir():
         raise ValueError('evidence source is not an accessible directory')
-    documents, locations = [], {}
+    documents = []
     # iterdir propagates access errors; an inaccessible source is never an empty set.
     for source in sorted(path.iterdir()):
         if source.suffix != '.json':
@@ -45,8 +45,7 @@ def snapshot_evidence(path: Path, subject_id: str):
         # messages can embed object repr; insertion order must not change identity.
         document = json.loads(canonical_json_bytes(document))
         documents.append(document)
-        locations[id(document)] = source.name
-    return documents, locations, evidence_set_provenance(documents)
+    return documents, evidence_set_provenance(documents)
 
 
 def prepare_schemas(schemas, required_types):
@@ -79,10 +78,11 @@ def prepare_schemas(schemas, required_types):
     return validators, references
 
 
-def select_evidence(documents, requirements, evaluated_at, subject_id, validators, schemas, locations):
+def select_evidence(documents, requirements, evaluated_at, subject_id, validators, schemas):
     selected, uses, invalid, ambiguous = [], [], [], []
-    for index, requirement in enumerate(requirements):
+    for requirement in requirements:
         evidence_type = requirement['type']
+        dependency_id = requirement['id']
         candidates = [doc for doc in documents if doc['type'] == evidence_type]
         errors = []
         for doc in candidates:
@@ -91,13 +91,12 @@ def select_evidence(documents, requirements, evaluated_at, subject_id, validator
                     'type': 'evidence-schema-validation-failed',
                     'code': 'evidence_schema_invalid',
                     'evidence_type': evidence_type,
-                    'requirement_index': index,
+                    'dependency_id': dependency_id,
                     'evidence_id': doc['id'], 'evidence_digest': evidence_document_digest(doc),
                     'schema_reference': schemas[evidence_type],
                     'path': _json_pointer(error.absolute_path),
                     'schema_path': _json_pointer(error.absolute_schema_path),
                     'keyword': error.validator, 'message': error.message,
-                    'source': locations[id(doc)],
                 })
         if errors:
             invalid.extend(errors)
@@ -118,7 +117,7 @@ def select_evidence(documents, requirements, evaluated_at, subject_id, validator
             ambiguous.append({
                 'code': 'evidence_selection_ambiguity', 'subject': subject_id,
                 'evidence_type': evidence_type, 'schema_reference': schemas[evidence_type],
-                'requirement_index': index, 'freshness_requirement': copy.deepcopy(requirement),
+                'dependency_id': dependency_id,
                 'evaluated_at': evaluated_at.isoformat().replace('+00:00', 'Z'),
                 'collected_at': latest.isoformat().replace('+00:00', 'Z'),
                 'candidates': sorted([{'id': doc['id'], 'digest': key} for key,doc in tied.items()], key=lambda x:(x['id'],x['digest'])),
@@ -126,9 +125,10 @@ def select_evidence(documents, requirements, evaluated_at, subject_id, validator
             continue
         document = next(iter(tied.values()))
         selected.append(document)
-        uses.append({'requirement_index': index, 'requirement': copy.deepcopy(requirement),
-                     'id': document['id'], 'digest': evidence_document_digest(document),
+        uses.append({'dependency_id': dependency_id,
+                     'evidence_id': document['id'],
+                     'evidence_digest': evidence_document_digest(document),
                      'collected_at': document['collected_at']})
-    invalid.sort(key=lambda x:(x['evidence_type'],x['requirement_index'],x['evidence_id'],x['evidence_digest'],x['path'],x['schema_path'],x['message']))
-    ambiguous.sort(key=lambda x:(x['evidence_type'],x['requirement_index']))
+    invalid.sort(key=lambda x:(x['dependency_id'],x['evidence_type'],x['evidence_id'],x['evidence_digest'],x['path'],x['schema_path'],x['message']))
+    ambiguous.sort(key=lambda x:(x['dependency_id'],x['evidence_type']))
     return selected, uses, invalid, ambiguous

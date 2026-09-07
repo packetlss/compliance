@@ -10,7 +10,7 @@ import shutil
 import subprocess
 
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
-from tools.assessment_provenance import validate_selection_plan, validate_selection_snapshot
+from tools.assessment_provenance import validate_result_against_plan, validate_selection_snapshot
 from tools.compliance import build_parser
 from tools.evidence_provenance import evidence_document_digest, evidence_set_provenance
 from tools.policy_sources import source_tree_digest
@@ -94,7 +94,7 @@ def main() -> None:
             report = load(result_path)
             require(report["schema"] == "compliance.example/assessment-results/v4", "predecessor result")
             validate_assessment_results(report)
-            validate_selection_plan(report, plan)
+            validate_result_against_plan(report, plan)
             provenance = report["provenance"]
             require(provenance["evaluationComposition"]["actual"] == actual,
                     "evaluation composition differs from materialized bytes")
@@ -110,21 +110,21 @@ def main() -> None:
             # complete selection table, including plan association and collection time.
             expected_selections = []
             for control in plan["controls"]:
-                for index, requirement in enumerate(control["evidence"]):
+                for requirement in control["evidence"]:
                     candidates = [doc for doc in documents if doc["type"] == requirement["type"]]
                     require(len(candidates) <= 1, "fixture no longer has unique required evidence")
                     for doc in candidates:
                         expected_selections.append({"instance_id": control["instance_id"],
-                            "requirement_index": index, "requirement": requirement,
-                            "id": doc["id"], "digest": evidence_document_digest(doc),
+                            "dependency_id": requirement["id"],
+                            "evidence_id": doc["id"], "evidence_digest": evidence_document_digest(doc),
                             "collected_at": doc["collected_at"]})
-            expected_selections.sort(key=lambda item: (item["instance_id"], item["requirement_index"]))
+            expected_selections.sort(key=lambda item: (item["instance_id"], item["dependency_id"]))
             require(provenance["selectedEvidence"] == expected_selections,
                     "successful selections lost exact document, time, or assessed requirement association")
             for field in ("requirement_assessments", "requirement_baseline_assessments"):
                 require(report[field] == [], "technical-only result acquired objective assessments")
-            for field in ("requirement_summary", "requirement_baseline_summary"):
-                require(not any(report[field].values()), "technical-only result acquired objective roll-up")
+            require("planningComposition" not in provenance,
+                    "result copied planning-stage provenance from its bound plan")
     print(f"{args.project}: actual v4 composition, evaluator, evidence, and selection provenance passed.")
 
 

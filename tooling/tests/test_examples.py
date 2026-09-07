@@ -120,14 +120,8 @@ class ExampleCoverageTests(unittest.TestCase):
         }
         secondary_result = {
             "subject_id": MOCK_FLEET_SECONDARY_AWS_SUBJECT,
-            "summary": {
-                "pass": 5,
-                "fail": 0,
-                "unknown": 0,
-                "not_applicable": 0,
-                "error": 0,
-                "waived": 0,
-            },
+            "outcome": "pass",
+            "results": [{"status": "pass"} for _ in range(5)],
         }
 
         self.assertTrue(
@@ -163,8 +157,8 @@ class ExampleCoverageTests(unittest.TestCase):
         )
 
         failing_secondary = copy.deepcopy(secondary_result)
-        failing_secondary["summary"]["pass"] = 4
-        failing_secondary["summary"]["fail"] = 1
+        failing_secondary["outcome"] = "fail"
+        failing_secondary["results"][-1]["status"] = "fail"
         self.assertFalse(
             mock_fleet_filter_contract_holds(
                 filtered_status,

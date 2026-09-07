@@ -10,9 +10,11 @@ from contract_fixtures import fixture_root
 
 from tools.artifact_validation import (
     ArtifactValidationError,
+    result_outcome,
     validate_assessment_plan,
     validate_assessment_results,
 )
+from tools.assessment_provenance import artifact_digest, validate_result_against_plan
 from tools.assessment import load_result_reports
 from tools.evaluate_plan import evaluate_plan_document
 from tools.policy_sources import PolicySource
@@ -24,19 +26,24 @@ from tools.render_plan import (
 
 
 class AssessmentArtifactValidationTests(unittest.TestCase):
+    def test_result_outcome_uses_fail_first_logical_precedence(self):
+        self.assertEqual(result_outcome({
+            "results": [{"status": "error"}, {"status": "fail"}],
+            "requirement_assessments": [],
+            "requirement_baseline_assessments": [],
+        }), "fail")
+
     def test_unknown_results_require_complete_frozen_control_coverage(self):
-        from tools.assessment_provenance import artifact_digest
         report = self.result_report()
         self.assertFalse(report['provenance']['selectedEvidence'])
         self.assertTrue(report['results'])
-        for mutate in (lambda r: r['resolved_policy'].update(controls=[]),
-                       lambda r: r['resolved_policy']['controls'].append(copy.deepcopy(r['resolved_policy']['controls'][0])),
-                       lambda r: r['results'][0].update(control_id='different.implementation')):
-            changed = copy.deepcopy(report)
-            mutate(changed)
-            changed['id'] = artifact_digest(changed)
-        with self.assertRaisesRegex(ArtifactValidationError, 'differs from frozen (?:operation|policy)'):
-                validate_assessment_results(changed)
+        changed = copy.deepcopy(report)
+        changed['results'] = changed['results'][1:]
+        changed['outcome'] = result_outcome(changed)
+        changed['id'] = artifact_digest(changed)
+        validate_assessment_results(changed)
+        with self.assertRaisesRegex(ValueError, 'controls do not match'):
+            validate_result_against_plan(changed, self.plan)
 
     def test_matching_freshness_copies_cannot_bypass_instance_fingerprint(self):
         from tools.assessment_provenance import artifact_digest
@@ -133,7 +140,6 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             "reason": "Synthetic unit-test pass.",
             "expected": {},
             "observed": {},
-            "evidence_ids": [],
             "remediation": control["remediation"],
             "external_refs": control.get("external_refs", []),
             "alignment": control["alignment"],
@@ -241,54 +247,51 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         ):
             validate_assessment_plan(document)
 
-    def test_results_reject_inconsistent_summary(self):
+    def test_results_reject_deleted_predecessor_fields(self):
         document = self.result_report()
-        document["summary"]["pass"] -= 1
+        for field, value in (
+            ("assessment_id", "old"), ("summary", {}), ("waiver_revision", "sha256:" + "0" * 64),
+            ("operation", copy.deepcopy(self.plan["operation"])), ("resolved_policy", {}),
+        ):
+            changed = copy.deepcopy(document)
+            changed[field] = value
+            with self.subTest(field=field), self.assertRaisesRegex(ArtifactValidationError, field):
+                validate_assessment_results(changed)
 
-        with self.assertRaisesRegex(ArtifactValidationError, "/summary"):
-            validate_assessment_results(document)
-
-    def test_results_reject_child_revision_mismatch(self):
+    def test_results_reject_plan_owned_child_attribution(self):
         document = self.result_report()
         document["results"][0]["plan_id"] = "sha256:" + "0" * 64
 
         with self.assertRaisesRegex(
             ArtifactValidationError,
-            r"/results/0/plan_id.*envelope",
+            r"/results/0.*plan_id",
         ):
             validate_assessment_results(document)
 
-    def test_results_reject_waiver_revision_mismatch(self):
+    def test_results_reject_child_waiver_revision(self):
         document = self.result_report()
         document["results"][0]["waiver_revision"] = "sha256:" + "0" * 64
 
         with self.assertRaisesRegex(
             ArtifactValidationError,
-            r"/results/0/waiver_revision.*envelope",
+            r"/results/0.*waiver_revision",
         ):
             validate_assessment_results(document)
 
-    def test_results_require_child_waiver_revision_for_new_envelope(self):
+    def test_results_do_not_require_child_waiver_revision(self):
         document = self.result_report()
-        del document["results"][0]["waiver_revision"]
-
-        with self.assertRaisesRegex(
-            ArtifactValidationError,
-            r"/results/0/waiver_revision.*required",
-        ):
-            validate_assessment_results(document)
+        self.assertNotIn("waiver_revision", document)
+        self.assertTrue(all("waiver_revision" not in result for result in document["results"]))
+        validate_assessment_results(document)
 
     def test_results_reject_inconsistent_objective_rollup(self):
         document = self.result_report(self.iam_plan)
         document["requirement_assessments"][0]["status"] = "fail"
-        document["requirement_summary"]["unknown"] = 0
-        document["requirement_summary"]["fail"] = 1
-
-        with self.assertRaisesRegex(
-            ArtifactValidationError,
-            r"/requirement_assessments/0/status.*expected unknown",
-        ):
-            validate_assessment_results(document)
+        document["outcome"] = result_outcome(document)
+        document["id"] = artifact_digest(document)
+        validate_assessment_results(document)
+        with self.assertRaisesRegex(ValueError, "requirement outcomes differ"):
+            validate_result_against_plan(document, self.iam_plan)
 
     def test_result_loader_rejects_malformed_matching_schema_with_path(self):
         document = self.result_report()

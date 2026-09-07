@@ -23,7 +23,6 @@ RESULT_STATUSES = (
     "error",
     "waived",
 )
-CHECK_STATUSES = (*RESULT_STATUSES, "missing")
 
 
 class ArtifactValidationError(ValueError):
@@ -99,7 +98,7 @@ def validate_assessment_plan(
     source: Path | None = None,
 ) -> None:
     """Validate the v4 envelope and domain invariants."""
-    from .assessment_provenance import validate_provenance
+    from .assessment_provenance import validate_plan_provenance
     _validate_schema(document, assessment_plan_schema_path(), "assessment plan", source)
     errors: list[str] = []
     from .policy_parameters import validate_frozen
@@ -216,33 +215,22 @@ def validate_assessment_plan(
         _raise("assessment plan", errors, source)
 
     try:
-        validate_provenance(document, plan=True)
+        validate_plan_provenance(document)
     except ValueError as error:
         _raise("assessment plan", [str(error)], source)
 
 
-def _summary(items: list[JsonObject], statuses: tuple[str, ...]) -> JsonObject:
-    return {
-        status: sum(1 for item in items if item.get("status") == status)
-        for status in statuses
-    }
-
-
-def _expected_rollup_status(counts: JsonObject, *, baseline: bool = False) -> str:
-    if counts.get("fail", 0):
-        return "fail"
-    if counts.get("error", 0):
-        return "error"
-    if counts.get("missing", 0) or counts.get("unknown", 0):
-        return "unknown"
-    if not baseline and counts.get("not_applicable", 0):
-        return "unknown"
-    if counts.get("waived", 0):
-        return "waived"
-    total = sum(counts.values())
-    if baseline and total and counts.get("not_applicable", 0) == total:
-        return "not_applicable"
-    return "pass"
+def result_outcome(document: JsonObject) -> str:
+    """Derive the immutable overall outcome from the recorded outcome sets."""
+    items = [
+        *document.get("results", []),
+        *document.get("requirement_assessments", []),
+        *document.get("requirement_baseline_assessments", []),
+    ]
+    for status in ("fail", "error", "unknown", "waived", "pass", "not_applicable"):
+        if any(item.get("status") == status for item in items):
+            return status
+    return "no_controls"
 
 
 def validate_assessment_results(
@@ -251,30 +239,13 @@ def validate_assessment_results(
     source: Path | None = None,
 ) -> None:
     """Validate the v4 envelope and domain invariants."""
-    from .assessment_provenance import validate_provenance
+    from .assessment_provenance import validate_result_provenance
     _validate_schema(document, assessment_results_schema_path(), "assessment results", source)
     errors: list[str] = []
 
-    collections = (
-        ("summary", "results", RESULT_STATUSES),
-        ("requirement_summary", "requirement_assessments", RESULT_STATUSES),
-        (
-            "requirement_baseline_summary",
-            "requirement_baseline_assessments",
-            RESULT_STATUSES,
-        ),
-    )
-    for summary_key, items_key, statuses in collections:
-        expected = _summary(document[items_key], statuses)
-        if document[summary_key] != expected:
-            errors.append(
-                f"/{summary_key}: expected counts {expected}, got {document[summary_key]}"
-            )
-
     result_ids = [item["instance_id"] for item in document["results"]]
-    duplicates = _duplicates(result_ids)
-    if duplicates:
-        errors.append("/results: duplicate instance IDs: " + ", ".join(duplicates))
+    if result_ids != sorted(set(result_ids)):
+        errors.append("/results: instance IDs must be unique and canonically ordered")
     waiver_ids = [
         item["waiver"]["id"]
         for item in document["results"]
@@ -284,32 +255,13 @@ def validate_assessment_results(
     if duplicates:
         errors.append("/results: duplicate waiver IDs: " + ", ".join(duplicates))
     for index, result in enumerate(document["results"]):
-        expected_fields = {
-            "subject_id": document["subject_id"],
-            "plan_id": document["plan_id"],
-        }
-        if "waiver_revision" in document:
-            expected_fields["waiver_revision"] = document["waiver_revision"]
-        elif "waiver_revision" in result:
-            errors.append(
-                f"/results/{index}/waiver_revision: envelope waiver revision is missing"
-            )
-        for field, expected in expected_fields.items():
-            if field not in result:
-                errors.append(
-                    f"/results/{index}/{field}: required when present on the envelope"
-                )
-            elif result[field] != expected:
-                errors.append(
-                    f"/results/{index}/{field}: must match envelope value {expected}"
-                )
         waiver = result.get("waiver")
+        if result["status"] == "waived" and waiver is None:
+            errors.append(f"/results/{index}/waiver: waived outcome requires an applied waiver")
+        if result["status"] != "waived" and waiver is not None:
+            errors.append(f"/results/{index}/waiver: only an underlying fail may be waived")
         if waiver is not None:
-            if "waiver_revision" not in document:
-                errors.append(
-                    f"/results/{index}/waiver: envelope waiver revision is required"
-                )
-            if waiver["subject_id"] != result["subject_id"]:
+            if waiver["subject_id"] != document["subject_id"]:
                 errors.append(
                     f"/results/{index}/waiver/subject_id: must match the result subject"
                 )
@@ -358,82 +310,25 @@ def validate_assessment_results(
     requirement_refs = [
         item["requirement"] for item in document["requirement_assessments"]
     ]
-    duplicates = _duplicates(requirement_refs)
-    if duplicates:
-        errors.append(
-            "/requirement_assessments: duplicate requirements: "
-            + ", ".join(duplicates)
-        )
-    for index, assessment in enumerate(document["requirement_assessments"]):
-        checks = assessment.get("checks", [])
-        expected_summary = _summary(checks, CHECK_STATUSES)
-        if assessment["check_summary"] != expected_summary:
-            errors.append(
-                f"/requirement_assessments/{index}/check_summary: expected "
-                f"{expected_summary}, got {assessment['check_summary']}"
-            )
-        adoption_status = assessment["adoption"]["status"]
-        if adoption_status == "not_applicable":
-            expected_status = "not_applicable"
-        elif adoption_status == "not_implemented":
-            expected_status = "fail"
-        else:
-            expected_status = _expected_rollup_status(expected_summary)
-        if assessment["status"] != expected_status:
-            errors.append(
-                f"/requirement_assessments/{index}/status: expected "
-                f"{expected_status}, got {assessment['status']}"
-            )
-        check_ids = [item["instance_id"] for item in checks]
-        if adoption_status == "implemented" and check_ids != assessment[
-            "technical_instance_ids"
-        ]:
-            errors.append(
-                f"/requirement_assessments/{index}/checks: order and identities "
-                "must match technical_instance_ids"
-            )
-        if adoption_status != "implemented" and checks:
-            errors.append(
-                f"/requirement_assessments/{index}/checks: non-implemented or "
-                "not-applicable adoption must not contain technical results"
-            )
+    if requirement_refs != sorted(set(requirement_refs)):
+        errors.append("/requirement_assessments: references must be unique and canonically ordered")
 
     baseline_refs = [
         item["baseline"]
         for item in document["requirement_baseline_assessments"]
     ]
-    duplicates = _duplicates(baseline_refs)
-    if duplicates:
+    if baseline_refs != sorted(set(baseline_refs)):
+        errors.append("/requirement_baseline_assessments: references must be unique and canonically ordered")
+    expected_outcome = result_outcome(document)
+    if document["outcome"] != expected_outcome:
         errors.append(
-            "/requirement_baseline_assessments: duplicate baselines: "
-            + ", ".join(duplicates)
+            f"/outcome: expected {expected_outcome!r} from recorded outcomes, "
+            f"got {document['outcome']!r}"
         )
-    for index, assessment in enumerate(
-        document["requirement_baseline_assessments"]
-    ):
-        counts = Counter(item["status"] for item in assessment["requirements"])
-        expected_status = _expected_rollup_status(dict(counts), baseline=True)
-        if assessment["status"] != expected_status:
-            errors.append(
-                f"/requirement_baseline_assessments/{index}/status: expected "
-                f"{expected_status}, got {assessment['status']}"
-            )
-        unknown_requirements = sorted(
-            item["requirement"]
-            for item in assessment["requirements"]
-            if item["status"] != "missing"
-            and item["requirement"] not in set(requirement_refs)
-        )
-        if unknown_requirements:
-            errors.append(
-                f"/requirement_baseline_assessments/{index}/requirements: "
-                "no matching requirement assessment for "
-                + ", ".join(unknown_requirements)
-            )
 
     if errors:
         _raise("assessment results", errors, source)
     try:
-        validate_provenance(document, plan=False)
+        validate_result_provenance(document)
     except ValueError as error:
         _raise("assessment results", [str(error)], source)

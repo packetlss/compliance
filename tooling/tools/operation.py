@@ -1,4 +1,4 @@
-"""Embedded frozen operation facts inside assessment plans and results.
+"""Frozen operation plans and exact plan/result historical accounting.
 
 This is a projection of supplied planning facts, not another inventory or run
 artifact. Sibling policy bodies are committed by digest, never embedded as plans.
@@ -21,17 +21,16 @@ class InvalidOperationResolution(ValueError):
 
 def policy_membership(plan):
     """Retain only exact historical result slots and reporting mappings."""
-    source = plan.get('resolved_policy', plan)
     controls = [{
         'instance_id': control['instance_id'],
         'disposition': control['disposition'],
         'external_refs': copy.deepcopy(control.get('external_refs', [])),
-    } for field in ('controls', 'excluded_controls') for control in source.get(field, [])]
+    } for field in ('controls', 'excluded_controls') for control in plan.get(field, [])]
     requirements = [{
         'reference': requirement['reference'],
         'required': requirement['required'],
         'external_refs': copy.deepcopy(requirement.get('external_refs', [])),
-    } for requirement in source['requirements']]
+    } for requirement in plan['requirements']]
     return {
         'requirements': sorted(requirements, key=lambda item: item['reference']),
         'controls': sorted(controls, key=lambda item: item['instance_id']),
@@ -181,9 +180,8 @@ def select_from_witness(request, witness):
 
 def _member_resolved_groups(plan):
     """Keep only membership attribution needed to derive applicable assignments."""
-    source = plan.get('resolved_policy', plan)
-    by_id = {group['id']: group for group in source['resolved_groups']}
-    needed = {assignment['group'] for assignment in source['assignments']}
+    by_id = {group['id']: group for group in plan['resolved_groups']}
+    needed = {assignment['group'] for assignment in plan['assignments']}
     pending = list(needed)
     while pending:
         group = by_id.get(pending.pop())
@@ -199,15 +197,14 @@ def _member_resolved_groups(plan):
 
 
 def _member_subject(plan):
-    source = plan.get('resolved_policy', plan)
-    subject = source.get('subject', plan.get('subject'))
+    subject = plan['subject']
     label_keys = set()
     for group in _member_resolved_groups(plan):
         for membership in group['sources']:
             selector = membership.get('source')
             if isinstance(selector, dict):
                 label_keys.update(selector.get('match_labels', {}))
-    for requirement in source['requirements']:
+    for requirement in plan['requirements']:
         realization = requirement.get('parameter_facts', {}).get('realization', {})
         label_keys.update(realization.get('spec', {}).get('applies_to', {}).get('match_labels', {}))
     return {
@@ -320,7 +317,7 @@ def render_operation(subjects, groups, assignments, policy_sources, selection, *
     return plans
 
 
-def validate_operation(document, *, plan):
+def validate_operation(document):
     from .assessment_provenance import member_plan_digest, operation_plan_id
     projection = document['operation']
     stage = document['provenance']['planningComposition']
@@ -361,46 +358,45 @@ def validate_operation(document, *, plan):
             if values != sorted(set(values)):
                 raise ValueError('duplicate or unordered frozen operation policy instances')
         if (row['subject']['status'] == 'unknown' and not
-                (plan and document['resolution']['status'] == 'invalid' and len(members) == 1)):
+                (document['resolution']['status'] == 'invalid' and len(members) == 1)):
             raise ValueError('unknown lifecycle prevents operation planning')
         if not any(assignment['target_group'] in {g['id'] for g in row['resolved_groups']}
                    for assignment in assignments) and policy['controls'] + policy['requirements']:
             raise ValueError('unassigned member has frozen expected policy')
-    sid = document['subject']['id'] if plan else document['subject_id']
+    sid = document['subject']['id']
     rows = {m['subject_id']: m for m in members}
     if sid not in rows:
         raise ValueError('artifact subject is absent from frozen operation')
     row = rows[sid]
-    source = document if plan else document['resolved_policy']
     artifact_assignments = sorted(({
         'id': assignment['id'],
         'target_group': assignment['group'],
         'baselines': sorted(assignment['baselines']),
-    } for assignment in source['assignments']), key=lambda item: item['id'])
+    } for assignment in document['assignments']), key=lambda item: item['id'])
     row_groups = {group['id'] for group in row['resolved_groups']}
     expected_assignments = [assignment for assignment in assignments
                             if assignment['target_group'] in row_groups]
     if artifact_assignments != expected_assignments:
         raise ValueError('artifact assignments differ from frozen operation attribution')
-    if plan:
-        if member_facts(document) != row or member_plan_digest(document) != row['member_plan_digest']:
-            raise ValueError('subject plan differs from frozen operation')
-    else:
-        if member_disposition(row, assignments) != 'result_required':
-            raise ValueError('result supplied for non-assessable operation member')
-        if (document['plan_id'] != operation_plan_id(projection['operation_id'], sid) or
-                member_plan_digest(document) != row['member_plan_digest']):
-            raise ValueError('result plan differs from frozen operation')
-    if policy_membership(document if plan else document['resolved_policy']) != row['policy']:
+    if member_facts(document) != row or member_plan_digest(document) != row['member_plan_digest']:
+        raise ValueError('subject plan differs from frozen operation')
+    if policy_membership(document) != row['policy']:
         raise ValueError('artifact policy differs from frozen policy membership in operation')
 
 
-def account_operation(anchor, reports, evaluated_at):
+def account_operation(anchor, reports, evaluated_at, assessed_plans=()):
     """Exact-set historical accounting; result discovery never supplies the scope."""
     from .artifact_validation import validate_assessment_plan, validate_assessment_results
     from .assessment_provenance import operation_plan_id
     from .assessment import result_state
     validate_assessment_plan(anchor)
+    plan_by_id = {anchor['id']: anchor}
+    for plan in assessed_plans:
+        validate_assessment_plan(plan)
+        existing = plan_by_id.get(plan['id'])
+        if existing is not None and digest(existing) != digest(plan):
+            raise ValueError('multiple distinct plans have the same exact plan identity')
+        plan_by_id[plan['id']] = plan
     projection = anchor['operation']
     for report in reports:
         validate_assessment_results(report)
@@ -409,7 +405,7 @@ def account_operation(anchor, reports, evaluated_at):
         sid = member['subject_id']
         plan_id = operation_plan_id(projection['operation_id'], sid)
         candidates = [r for r in reports if r['subject_id'] == sid and
-                      r['plan_id'] == plan_id and r['operation'] == projection and
+                      r['plan_id'] == plan_id and
                       r['evaluated_at'] == evaluated_at]
         # Complete-document copies only. Equal semantic IDs with different
         # descriptive/enforcement bytes do not invent result-selection precedence.
@@ -418,45 +414,61 @@ def account_operation(anchor, reports, evaluated_at):
             raise ValueError('multiple distinct results for exact operation member and instant')
         result = next(iter(unique.values()), None)
         disposition = member_disposition(member, projection['assignments'])
+        if result is not None and disposition != 'result_required':
+            raise ValueError('result supplied for non-assessable operation member')
+        assessed_plan = plan_by_id.get(plan_id)
+        interpretation = 'unavailable'
+        if result is not None and assessed_plan is not None:
+            from .assessment_provenance import validate_result_against_plan
+            validate_result_against_plan(result, assessed_plan)
+            interpretation = 'validated'
         state = ((result_state(result) if result else 'missing')
                  if disposition == 'result_required' else disposition)
         rows.append({**copy.deepcopy(member), 'plan_id': plan_id, 'state': state,
                      'accounting_disposition': disposition,
+                     'historical_interpretation': interpretation,
                      'result_id': result['id'] if result else None})
+    interpretation_complete = all(
+        row['accounting_disposition'] != 'result_required'
+        or (row['result_id'] is not None and row['historical_interpretation'] == 'validated')
+        for row in rows
+    )
     return {'operation': copy.deepcopy(projection), 'evaluated_at': evaluated_at,
             'members': rows,
             'accounting_complete': all(r['state'] != 'missing' for r in rows),
-            'all_passed': all(r['state'] == 'pass' for r in rows),
+            'historical_interpretation_complete': interpretation_complete,
+            'all_passed': interpretation_complete and all(r['state'] == 'pass' for r in rows),
             'claim': 'Exact supplied company policy only; no external conformity or inventory exhaustiveness.'}
 
 
-def _evidence_timeliness(report, query_instant):
+def _evidence_timeliness(report, plan, query_instant):
     """Derive age qualifications solely from frozen dependency/selection facts."""
     from .evaluate_plan import parse_duration
     from .waivers import parse_timestamp
 
     selected = {
-        (item['instance_id'], item['requirement_index']): item
+        (item['instance_id'], item['dependency_id']): item
         for item in report['provenance']['selectedEvidence']
     }
     results = {item['instance_id']: item for item in report['results']}
     dependencies = []
     controls = []
-    for control in report['resolved_policy']['controls']:
-        required = list(enumerate(control['evidence']))
+    for control in plan['controls']:
+        required = control['evidence']
         if not required:
             continue
         stale = False
         unavailable = False
-        for index, requirement in required:
-            use = selected.get((control['instance_id'], index))
+        for requirement in required:
+            dependency_id = requirement['id']
+            use = selected.get((control['instance_id'], dependency_id))
             if use is None:
                 unavailable = True
                 result = results[control['instance_id']]
                 dependencies.append({
                     'instance_id': control['instance_id'],
-                    'requirement_index': index,
-                    'requirement': copy.deepcopy(requirement),
+                    'dependency_id': dependency_id,
+                    'recorded_max_age': requirement['max_age'],
                     'qualification': 'unavailable',
                     'historical_result': {
                         'status': result['status'],
@@ -474,10 +486,9 @@ def _evidence_timeliness(report, query_instant):
             stale = stale or qualification == 'stale'
             dependencies.append({
                 'instance_id': control['instance_id'],
-                'requirement_index': index,
-                'requirement': copy.deepcopy(requirement),
-                'evidence_id': use['id'],
-                'evidence_digest': use['digest'],
+                'dependency_id': dependency_id,
+                'evidence_id': use['evidence_id'],
+                'evidence_digest': use['evidence_digest'],
                 'collected_at': use['collected_at'],
                 'recorded_max_age': requirement['max_age'],
                 'qualification': qualification,
@@ -525,7 +536,9 @@ def _recorded_waiver_qualification(report, query_instant):
             ('within_window', 'expired', 'not_yet_in_window')}}
 
 
-def qualify_operation(account, reports, query_instant: datetime, comparison_anchor=None):
+def qualify_operation(
+    account, reports, query_instant: datetime, comparison_anchor=None, assessed_plans=()
+):
     """Add independent query-time dimensions without changing frozen accounting."""
     from .artifact_validation import validate_assessment_plan
     from .assessment_provenance import operation_plan_id
@@ -540,19 +553,22 @@ def qualify_operation(account, reports, query_instant: datetime, comparison_anch
             for row in comparison_anchor['operation']['members']
         }
     reports_by_id = {report['id']: report for report in reports}
+    plan_by_id = {plan['id']: plan for plan in assessed_plans}
     for row in account['members']:
         comparison_plan_id = comparison_members.get(row['subject_id'])
-        alignment = ('plan_alignment_unavailable' if comparison_anchor is None or comparison_plan_id is None
+        assessed_plan = plan_by_id.get(row['plan_id'])
+        alignment = ('plan_alignment_unavailable'
+                     if assessed_plan is None or comparison_anchor is None or comparison_plan_id is None
                      else 'plan_aligned' if comparison_plan_id == row['plan_id'] else 'different_plan')
         row['plan_alignment'] = alignment
         row['historical_outcome'] = row['state'] if row['result_id'] else 'no_assessment'
         report = reports_by_id.get(row['result_id'])
-        if report is None:
+        if report is None or assessed_plan is None:
             row['evidence_timeliness'] = {'qualification': 'unavailable'}
             row['recorded_waiver_qualification'] = {'waivers': [], 'counts': {
                 'within_window': 0, 'expired': 0, 'not_yet_in_window': 0}}
             continue
-        timeliness = _evidence_timeliness(report, query_instant)
+        timeliness = _evidence_timeliness(report, assessed_plan, query_instant)
         row['evidence_timeliness'] = timeliness
         row['recorded_waiver_qualification'] = _recorded_waiver_qualification(report, query_instant)
     account['query_instant'] = query_instant.isoformat().replace('+00:00', 'Z')

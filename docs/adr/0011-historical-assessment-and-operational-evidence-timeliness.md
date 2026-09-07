@@ -5,6 +5,8 @@
 - **Promotion contract:** [#66](https://github.com/packetlss/compliance/issues/66)
 - **V4 representation implementation:** [#32](https://github.com/packetlss/compliance/issues/32)
 - **Operational view implementation:** [#80](https://github.com/packetlss/compliance/issues/80)
+- **Retention-boundary clarification:** [#89](https://github.com/packetlss/compliance/issues/89)
+- **Plan/result refinement:** Implemented under [#90](https://github.com/packetlss/compliance/issues/90); experimental, not frozen
 
 ## Context and authority
 
@@ -40,18 +42,29 @@ created.
 
 ### Immutable historical assessment outcome
 
-An immutable result asserts what was concluded at its recorded `evaluated_at`
-under its exact assessment plan, evidence snapshot, evaluator, planning/evaluation
-composition, and waiver revision/application. Advancing wall-clock time must never
-change a stored `pass`, `fail`, `unknown`, `error`, or `waived`. Historical assessment
-meaning is immutable, including historical requirement/realization roll-ups.
+An immutable historical assertion is the retained exact assessed plan paired with
+the result of what was concluded at its recorded `evaluated_at`. The plan owns
+resolved intent, operation membership, planning composition/enforcement, evidence
+dependencies and other plan semantics. The result owns the immutable outcome,
+actual evaluation composition/enforcement, evaluator, complete evidence snapshot,
+successful selections, and exact applied-waiver facts. Advancing wall-clock time
+must never change a stored `pass`, `fail`, `unknown`, `error`, or `waived`.
+Historical technical and requirement/realization roll-ups remain immutable.
 
 Here, **historical** describes the semantics of a retained assessment result, not a
 core storage obligation. Assessment semantics do not depend on previously produced
 results, and the core does not require or own long-term retention of assessment
 plans or results. Retention by the surrounding operating environment enables later
 historical interpretation; deleting prior artifacts removes that historical view
-but does not affect the ability to perform future assessments.
+but does not affect the ability to perform future assessments. A retained orphaned
+result may expose raw recorded facts, but tooling must not claim fully validated
+policy interpretation, historical timeliness, requirement meaning, or plan alignment
+without resolving and relationally validating the exact assessed plan by `plan_id`.
+
+A multi-subject historical operation needs one retained operation-bearing plan as
+the denominator anchor, the exact bound plan for every result requiring full
+interpretation, and each retained result. Missing-result plan artifacts are not
+invented merely to demonstrate an omission from the anchor's denominator.
 
 ### Current-plan alignment
 
@@ -110,6 +123,13 @@ claim that it was within the window; this does not introduce a new waiver lifecy
 or assessment state. Do not substitute a mutable waiver catalog, introduce
 revocation authority, or reinterpret historical `waived` as `fail` or `unknown`.
 Only underlying failure can receive a waiver; a waiver never establishes compliance.
+The retained exception fact is the exact normalized applied-waiver snapshot and its
+identity/digest, exact subject/control target, evaluation-time applicability, and
+underlying failure. Whole-catalog contents or `waiver_revision` are not part of
+assessment-result identity or historical assertion semantics. When no waiver was
+applied, no retained proof of an entire waiver catalog is required, and an unrelated waiver
+elsewhere cannot change result identity. This does not permit mutable substitution,
+revocation semantics, or query-time reinterpretation.
 
 ### Refused attempts and absence
 
@@ -192,7 +212,7 @@ The strongest supported present-time wording is that a historical assessment
 remains supported by selected evidence within the recorded age limits at query
 instant `q`. This says nothing stronger about the present governed subject.
 
-### V4 factual temporal provenance (option B)
+### Factual temporal provenance and exact plan relation
 
 V4 results/provenance must retain sufficient immutable factual provenance to derive
 operational evidence timeliness without the original mutable evidence directory,
@@ -203,22 +223,38 @@ Require:
    selected evidence document's **evidence ID and complete-document digest**.
 2. The selected document's `collected_at` instant used by existing freshness
    evaluation.
-3. An unambiguous association with the assessed plan's applicable evidence
-   requirement, sufficient to resolve its recorded `max_age`.
+3. The stable authored evidence `dependency_id` for the exact assessed control
+   instance, sufficient to resolve its assessed-plan requirement and recorded
+   `max_age` without copying the dependency body.
 4. A distinction between successfully selected evidence and rejected, ambiguous,
    or otherwise nonselected snapshot candidates.
 
 The selected-document reference must resolve into the complete subject evidence
 snapshot descriptor. Same-ID/different-digest evidence remains exactly attributable.
 A shared evidence-use table or per-control references are both acceptable; this ADR
-does not prescribe JSON layout. Need for a layout that cannot satisfy these
-invariants requires architecture escalation.
+does not prescribe JSON layout. List position, filename, source order, and traversal
+order cannot identify a dependency. Successful selections order canonically by
+`(instance_id, dependency_id)` and duplicate semantic identities fail. Need for a
+layout that cannot satisfy these invariants requires architecture escalation.
 
 Trusted assessment orchestration captures these facts from the **same snapshotted
 documents consumed by evaluation**, not solely from OPA/criterion self-reported
 IDs. The facts are validated and bound into assessment-result identity. They are
 factual historical provenance, not persisted judgments such as `fresh`, `stale`,
 `current`, or `reassessment_due`; those judgments remain derived view semantics.
+
+The complete evidence snapshot descriptor and successful-selection table are
+independent facts and must not be collapsed. The snapshot remains complete for
+selected, rejected, ambiguous, unused, duplicate, and otherwise nonselected
+documents; only exact canonical duplicates may coalesce for selection.
+
+An intrinsically valid result is not by itself a fully interpretable trusted
+historical assertion. Before publication and full interpretation, relational
+validation with the exact plan must establish exact plan/subject identity,
+evaluation-source authorization, exact active-control and dependency correspondence,
+selection references into the complete snapshot, valid compact requirement/baseline
+outcomes, exact waiver target/applicability, and fail-only waiver application.
+Publication fails closed when this relation cannot be established.
 
 Preserve `evidence-document-digest/v1alpha1` and `evidence-set-digest/v1alpha1`
 unchanged, including complete snapshot obligations. [PR #65](https://github.com/packetlss/compliance/pull/65)
@@ -228,7 +264,7 @@ snapshot candidates must not be relabeled as successful evidence use.
 
 ## Implementation ownership and consequences
 
-#32 implemented **representation only for this ADR**, preserving all its existing
+#32 implemented the original **representation only for this ADR**, preserving all its existing
 responsibilities and ADR 0010 corrections. It does not derive query-time
 fresh/stale/current state, add a result status, change evidence identity algorithms,
 create an artifact family or retention system, or add monitoring/scheduling. It
@@ -251,6 +287,14 @@ system. Deferring those facts until the status implementation would have left #3
 representation insufficient; storing temporal judgments instead would make immutable
 results misleading as time advances.
 
+[#90](https://github.com/packetlss/compliance/issues/90) implements the pre-freeze
+cutover from that duplicated representation to the exact `{bound plan, result}`
+historical model. Historical tooling must resolve a result's assessed plan solely by
+exact `plan_id` from a supplied plan file or bounded plan set and validate the pair
+before interpretation—never by filename, traversal order, subject alone, latest,
+current-plan substitution, or approximate semantic equality. This adds no storage,
+history, result index, run object, retention service, or artifact-discovery subsystem.
+
 ## Non-goals, validation and escalation
 
 No evidence collection/scheduling, continuous monitoring, evidence retention/storage,
@@ -271,4 +315,6 @@ prerequisite for timeliness; a new evidence identity/equivalence algorithm; evid
 authority, supersession or multi-observation semantics; changed assessment-time
 freshness eligibility; a new result state, persistent artifact family or trust
 boundary; changed logical roll-ups; broader assessment-history selection/supersession;
-an external compatibility freeze/consumer; or material overlap with #37 assurance.
+an external compatibility freeze/consumer; removal of evaluation enforcement;
+positional dependency identity; a result graph/cross-result dependency; core history,
+retention, latest-result, or discovery services; or material overlap with #37 assurance.
