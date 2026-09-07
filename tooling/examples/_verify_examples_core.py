@@ -34,9 +34,12 @@ except ImportError:  # Direct execution by path.
 
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
-PROJECT_REGISTRY = Path(
-    os.environ.get("COMPLIANCE_EXAMPLE_PROJECT_REGISTRY", WORKSPACE_ROOT / "compliance.yaml")
-).resolve()
+_PROJECT_REGISTRY_OVERRIDE = os.environ.get("COMPLIANCE_EXAMPLE_PROJECT_REGISTRY")
+PROJECT_REGISTRY = (
+    Path(_PROJECT_REGISTRY_OVERRIDE).resolve()
+    if _PROJECT_REGISTRY_OVERRIDE
+    else WORKSPACE_ROOT / "compliance.yaml"
+)
 MOCK_COLLECTOR = WORKSPACE_ROOT / "tooling/collectors/mock-api/collect.py"
 FEATURE_COVERAGE_PATH = Path(__file__).resolve().with_name("feature-coverage.json")
 LINUX_ROLLOUT_ROOT = (
