@@ -56,7 +56,8 @@ def run(root):
         child_ref = parent['metadata']['id']+'@2'
         child = {'apiVersion': parent['apiVersion'], 'kind': parent['kind'],
                  'metadata': {'id': parent['metadata']['id'], 'revision': 2},
-                 'spec': {'requirements': copy.deepcopy(parent['spec']['requirements']),
+                 'spec': {'title': 'Restricted Linux enclave access policy',
+                          'requirements': copy.deepcopy(parent['spec']['requirements']),
                           'extends': {'baseline': baseline_ref, 'digest': p.digest(parent)},
                           'parameter_operations': [{'id': 'enclave-freshness', 'op': 'tailor', 'target': slot['pin'],
                             'expected_parent_fingerprint': p.fingerprint(slot), 'from': '24h', 'to': '1h',
