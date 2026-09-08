@@ -340,9 +340,28 @@ def validate_selection_snapshot(
         document = by_reference.get((use['evidence_id'], use['evidence_digest']))
         if document is None or document['collected_at'] != use['collected_at']:
             raise ValueError('selected facts differ from the evaluated evidence snapshot')
-    if plan is None:
-        if report['dependency_dispositions']:
-            raise ValueError('dependency dispositions require same-snapshot plan validation')
+    for disposition in report['dependency_dispositions']:
+        facts = disposition.get(
+            'latest_candidates', disposition.get(
+                'candidates', disposition.get('diagnostics', [])
+            )
+        )
+        for fact in facts:
+            document = by_reference.get(
+                (fact['evidence_id'], fact['evidence_digest'])
+            )
+            if document is None:
+                raise ValueError(
+                    'dependency disposition differs from the evaluated evidence snapshot'
+                )
+            if (
+                'collected_at' in fact
+                and document['collected_at'] != fact['collected_at']
+            ):
+                raise ValueError(
+                    'dependency disposition differs from the evaluated evidence snapshot'
+                )
+    if plan is None or validators is None:
         return
     from .evidence_selection import select_evidence
     evaluated_at = datetime.fromisoformat(
@@ -353,7 +372,7 @@ def validate_selection_snapshot(
     for control in plan['controls']:
         _, uses, dispositions = select_evidence(
             documents, control['evidence'], evaluated_at, report['subject_id'],
-            validators or {}, schema_references or {},
+            validators, schema_references or {},
         )
         expected_uses.extend(
             {'instance_id': control['instance_id'], **item} for item in uses
