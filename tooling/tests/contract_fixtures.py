@@ -211,11 +211,9 @@ def build_fixture(root):
             "severity": "medium",
             "remediation": "Apply the synthetic test setting.",
         }
-        write(
-            shared,
-            f"controls/{path}/control.json",
-            resource("Control", identifier, spec),
-        )
+        control = resource("Control", identifier, spec)
+        control["metadata"] = {"id": identifier, "version": 1}
+        write(shared, f"controls/{path}/control.json", control)
         write(
             shared,
             f"controls/{path}/parameters.schema.json",

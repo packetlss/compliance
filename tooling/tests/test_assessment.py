@@ -16,6 +16,7 @@ from tools.assessment import (
     render_group_table,
     render_table,
     status_row,
+    control_implementation_pin,
 )
 from tools.artifact_validation import result_outcome
 from tools.assessment_provenance import artifact_digest, digest
@@ -297,6 +298,20 @@ class AssessmentStatusTests(unittest.TestCase):
         self.assertIn(f'{policy["title"]} ({policy["reference"]})', rendered)
         self.assertIn(f'Check: {check["title"]} ({check["instance_id"]})', rendered)
         self.assertIn(f'Purpose: {check["purpose"]}', rendered)
+        check_implementation = control_implementation_pin(check)
+        self.assertIn(
+            f'implementation: {check_implementation["id"]}@'
+            f'{check_implementation["version"]}',
+            rendered,
+        )
+        self.assertIn(
+            f'implementation fingerprint: {check_implementation["fingerprint"]}',
+            rendered,
+        )
+        self.assertIn(
+            f'instance definition fingerprint: {check["definition_fingerprint"]}',
+            rendered,
+        )
         self.assertIn("effective parameters:", rendered)
         self.assertIn("required evidence:", rendered)
         self.assertIn("freshness:", rendered)
@@ -306,6 +321,17 @@ class AssessmentStatusTests(unittest.TestCase):
             rendered,
         )
         self.assertIn(f'Purpose: {excluded["purpose"]}', rendered)
+        excluded_implementation = control_implementation_pin(excluded)
+        self.assertIn(
+            f'implementation: {excluded_implementation["id"]}@'
+            f'{excluded_implementation["version"]}',
+            rendered,
+        )
+        self.assertIn(
+            'implementation fingerprint: '
+            f'{excluded_implementation["fingerprint"]}',
+            rendered,
+        )
         self.assertIn("disposition: excluded", rendered)
         self.assertIn("assessment result: none (excluded policy disposition)", rendered)
 

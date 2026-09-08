@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .artifact_validation import validate_assessment_plan, validate_assessment_results
+from .assessment_provenance import digest
 from .render_plan import load_json, render_plan, resolve_groups
 
 
@@ -744,6 +745,22 @@ def effective_criteria(control: JsonObject) -> str:
     )
 
 
+def control_implementation_pin(control: JsonObject) -> JsonObject:
+    """Recompute the existing exact Control pin from frozen plan inputs."""
+    facts = control["policy_inputs"]
+    definition = facts["definition"]
+    metadata = definition["metadata"]
+    return {
+        "id": metadata["id"],
+        "version": metadata["version"],
+        "fingerprint": digest({
+            "manifest": definition,
+            "parameters_schema": facts["parameters_schema"],
+            "implementation_modules": facts.get("implementation_modules", []),
+        }),
+    }
+
+
 def evidence_description(dependency: JsonObject) -> str:
     rendered = f'{dependency["id"]} -> {dependency["type"]}'
     if inputs := dependency.get("inputs"):
@@ -1014,7 +1031,13 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
             lines.append(
                 f'      freshness: {freshness_description(dependency["max_age"])}'
             )
-        lines.append(f'    implementation: {control["implementation"]}')
+        implementation = control_implementation_pin(control)
+        lines.append(
+            f'    implementation: {implementation["id"]}@{implementation["version"]}'
+        )
+        lines.append(
+            f'    implementation fingerprint: {implementation["fingerprint"]}'
+        )
         lines.append(
             f'    instance definition fingerprint: {control["definition_fingerprint"]}'
         )
@@ -1044,7 +1067,13 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
         lines.append("    assessment result: none (excluded policy disposition)")
         lines.append(f"    effective parameters: {effective_criteria(control)}")
         lines.append(f"    effective criteria: {effective_criteria(control)}")
-        lines.append(f'    implementation: {control["implementation"]}')
+        implementation = control_implementation_pin(control)
+        lines.append(
+            f'    implementation: {implementation["id"]}@{implementation["version"]}'
+        )
+        lines.append(
+            f'    implementation fingerprint: {implementation["fingerprint"]}'
+        )
         lines.append(
             f'    instance definition fingerprint: {control["definition_fingerprint"]}'
         )

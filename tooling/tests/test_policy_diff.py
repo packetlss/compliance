@@ -13,6 +13,7 @@ from unittest.mock import patch
 from contract_fixtures import fixture_root
 
 from tools.artifact_validation import validate_assessment_plan
+from tools.assessment import build_explanation, render_explanation
 from tools.compliance import default_schema_path, main
 from tools.evaluate_plan import evaluate_plan_document
 from tools.policy_diff import (
@@ -214,9 +215,35 @@ class PolicyDiffTests(unittest.TestCase):
                     "implementation_modules": facts["implementation_modules"],
                 })
 
+            before_implementation_fingerprint = implementation_fingerprint(
+                before_control
+            )
+            after_implementation_fingerprint = implementation_fingerprint(after_control)
             self.assertNotEqual(
-                implementation_fingerprint(before_control),
-                implementation_fingerprint(after_control),
+                before_implementation_fingerprint,
+                after_implementation_fingerprint,
+            )
+            before_explanation = render_explanation(
+                build_explanation(self.macos_plan, [])
+            )
+            after_explanation = render_explanation(build_explanation(after, []))
+            self.assertIn(
+                f'implementation fingerprint: {before_implementation_fingerprint}',
+                before_explanation,
+            )
+            self.assertIn(
+                f'implementation fingerprint: {after_implementation_fingerprint}',
+                after_explanation,
+            )
+            self.assertIn(
+                f'instance definition fingerprint: '
+                f'{before_control["definition_fingerprint"]}',
+                before_explanation,
+            )
+            self.assertIn(
+                f'instance definition fingerprint: '
+                f'{after_control["definition_fingerprint"]}',
+                after_explanation,
             )
 
             document = build_policy_diff(self.macos_plan, after)
