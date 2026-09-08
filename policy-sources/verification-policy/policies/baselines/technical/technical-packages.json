@@ -3,6 +3,7 @@
   "kind": "Baseline",
   "metadata": {"id": "verification.technical-packages", "revision": 1},
   "spec": {
+    "title": "Linux package baseline",
     "controls": [{
       "instance_id": "verification.technical-packages.required",
       "implementation": "linux.packages.required",

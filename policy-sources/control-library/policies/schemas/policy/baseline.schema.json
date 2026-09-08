@@ -23,10 +23,15 @@
     "spec": {
       "type": "object",
       "required": [
+        "title",
         "controls"
       ],
       "additionalProperties": false,
       "properties": {
+        "title": {
+          "type": "string",
+          "pattern": ".*\\S.*"
+        },
         "controls": {
           "type": "array",
           "items": {

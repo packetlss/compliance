@@ -6,6 +6,7 @@
     "revision": 1
   },
   "spec": {
+    "title": "Company Amazon S3 public-access policy",
     "controls": [
       {
         "instance_id": "company.aws.s3-account-public-access-block",

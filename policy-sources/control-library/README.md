@@ -25,7 +25,10 @@ not through repository naming or a required source hierarchy.
 
 The library's package, sysctl, AWS S3, macOS, SaaS, and other controls remain
 technical assessment capabilities with stable IDs, parameter schemas, Rego
-entrypoints, and typed evidence requirements. They do not define an in-core
+entrypoints, typed evidence requirements, and required authored title/purpose.
+The title and purpose are intrinsic, identity-bearing Control meaning; instances,
+overlays, and realizations cannot override them, and tooling never interprets them
+as executable input. They do not define an in-core
 configuration-generation contract.
 
 The provenance-bearing resolved assessment plan is the handoff to separately

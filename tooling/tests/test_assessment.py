@@ -290,6 +290,57 @@ class AssessmentStatusTests(unittest.TestCase):
         self.assertIn("developer-workstation-policy-assignment", rendered)
         self.assertIn("benchmark.example.macos.audit-formula-required", rendered)
 
+        policy = self.plan["resolved_baselines"][0]
+        check = self.plan["controls"][0]
+        excluded = self.plan["excluded_controls"][0]
+        self.assertIn(f'Asset: {self.plan["subject"]["id"]}', rendered)
+        self.assertIn(f'{policy["title"]} ({policy["reference"]})', rendered)
+        self.assertIn(f'Check: {check["title"]} ({check["instance_id"]})', rendered)
+        self.assertIn(f'Purpose: {check["purpose"]}', rendered)
+        self.assertIn("effective parameters:", rendered)
+        self.assertIn("required evidence:", rendered)
+        self.assertIn("freshness:", rendered)
+        self.assertNotIn("Objectives:", rendered)
+        self.assertIn(
+            f'EXCLUDED  Check: {excluded["title"]} ({excluded["instance_id"]})',
+            rendered,
+        )
+        self.assertIn(f'Purpose: {excluded["purpose"]}', rendered)
+        self.assertIn("disposition: excluded", rendered)
+        self.assertIn("assessment result: none (excluded policy disposition)", rendered)
+
+    def test_assurance_explanation_keeps_objective_and_checks_distinct(self):
+        subject, groups, assignments = load_inventory_inputs(
+            self.root / "iam/inventory",
+            self.root / "iam/assignments",
+            "host/restricted-linux-01",
+            self.root / "schemas/inventory/resource.schema.json",
+        )
+        plan = render_plan(
+            subject,
+            groups,
+            assignments,
+            (
+                PolicySource("control-library", self.root / "shared"),
+                PolicySource("verification-policy", self.root / "selection"),
+                PolicySource("environment-private", self.root / "iam/policy"),
+            ),
+        )
+        rendered = render_explanation(build_explanation(plan, []))
+        requirement = plan["requirements"][0]
+        check = next(
+            item for item in plan["controls"]
+            if item["instance_id"] in requirement["technical_instance_ids"]
+        )
+
+        self.assertIn(
+            f'Objective: {requirement["title"]} ({requirement["reference"]})',
+            rendered,
+        )
+        self.assertIn(f'Meaning: {requirement["statement"]}', rendered)
+        self.assertIn(f'Check: {check["title"]} ({check["instance_id"]})', rendered)
+        self.assertIn(f'Purpose: {check["purpose"]}', rendered)
+
     def test_explanation_shows_complete_active_deviation(self):
         rendered = render_explanation(build_explanation(self.plan, []))
 

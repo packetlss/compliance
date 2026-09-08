@@ -6,10 +6,11 @@
     "revision": 1
   },
   "spec": {
+    "title": "Company SaaS foundation policy",
     "extends": [
       {
         "baseline": "profile.csa-ccm.saas-foundations@4.1-profile1",
-        "digest": "sha256:0a3d7ee901319832d5c9af34acf6ec8044adf6172563f90c46033e8dc89cdcf0"
+        "digest": "sha256:99184bfd4ca8f5989e2b5080c0f96baef55ee61c39460d9f331a050ab02c729c"
       }
     ],
     "operations": [

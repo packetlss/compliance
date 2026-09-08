@@ -1346,6 +1346,7 @@ def resolve_baseline(
 
         resolved = {
             "reference": reference,
+            "title": document["spec"]["title"],
             "digest": document["_digest"],
             "lineage": [{"reference": reference, "digest": document["_digest"]}],
             "controls": controls,
@@ -1571,6 +1572,7 @@ def resolve_baseline(
     baseline_lineage.append({"reference": reference, "digest": document["_digest"]})
     resolved = {
         "reference": reference,
+        "title": document["spec"]["title"],
         "digest": document["_digest"],
         "lineage": baseline_lineage,
         "controls": controls,
@@ -1661,6 +1663,7 @@ def render_plan(
                 resolved_requirement_baselines.append({
                     **baseline_provenance,
                     "reference": baseline_reference,
+                    "title": requirement_baseline["spec"]["title"],
                     "digest": requirement_baseline["_digest"],
                     "policy_sources": requirement_baseline.get("_sources", []),
                     "parameter_derivation": {"ancestry": parameter_ancestry, "states": parameter_states},
@@ -1793,6 +1796,8 @@ def render_plan(
                         candidate = {
                             "instance_id": instance["instance_id"],
                             "implementation": implementation,
+                            "title": spec["title"],
+                            "purpose": spec["purpose"],
                             "entrypoint": spec["entrypoint"],
                             "parameters": instance.get("parameters", {}),
                             "severity": instance.get(
@@ -1824,6 +1829,8 @@ def render_plan(
                         else:
                             comparable_keys = (
                                 "implementation",
+                                "title",
+                                "purpose",
                                 "parameters",
                                 "severity",
                                 "remediation",
@@ -1858,6 +1865,7 @@ def render_plan(
                 "assignment": assignment["id"],
                 "group": group_id,
                 "reference": baseline_reference,
+                "title": baseline["title"],
                 "digest": baseline["digest"],
                 "policy_sources": baselines[baseline_reference].get("_sources", []),
                 "lineage": baseline["lineage"],
@@ -1871,19 +1879,41 @@ def render_plan(
                     "baseline": baseline_reference,
                 }
 
+                implementation = instance["implementation"]
+                definition = controls.get(implementation)
+                if definition is None:
+                    resolution_errors.append({
+                        "type": "unknown-control",
+                        "baseline": baseline_reference,
+                        "instance_id": instance["instance_id"],
+                        "implementation": implementation,
+                    })
+                    continue
+                spec = definition["spec"]
+
                 if instance["disposition"] == "excluded":
                     excluded_candidate = {
                         "instance_id": instance["instance_id"],
-                        "implementation": instance["implementation"],
+                        "implementation": implementation,
+                        "title": spec["title"],
+                        "purpose": spec["purpose"],
                         "parameters": instance.get("parameters", {}),
                         "disposition": "excluded",
-                        "policy_inputs": {"instance": copy.deepcopy(instance)},
+                        "policy_inputs": {
+                            "instance": copy.deepcopy(instance),
+                            "definition": pp.document(definition),
+                            "parameters_schema": definition["_parameters_schema"],
+                            "implementation_modules": definition.get(
+                                "_implementation_modules", []
+                            ),
+                        },
                         "alignment": instance["alignment"],
                         "definition_fingerprint": instance["definition_fingerprint"],
                         "derivations": instance["derivations"],
                         "deviations": instance["deviations"],
                         "lineage": instance["lineage"],
                         "provenance": [baseline_provenance],
+                        "implementation_sources": definition.get("_sources", []),
                     }
                     if "overlay_policy" in instance:
                         excluded_candidate["overlay_policy"] = instance["overlay_policy"]
@@ -1891,7 +1921,15 @@ def render_plan(
                     existing_excluded = excluded_controls.get(instance["instance_id"])
                     if existing_excluded is None:
                         excluded_controls[instance["instance_id"]] = excluded_candidate
-                    elif existing_excluded["definition_fingerprint"] == excluded_candidate["definition_fingerprint"]:
+                    elif all(
+                        existing_excluded[field] == excluded_candidate[field]
+                        for field in (
+                            "implementation",
+                            "title",
+                            "purpose",
+                            "definition_fingerprint",
+                        )
+                    ):
                         existing_excluded["provenance"].extend(excluded_candidate["provenance"])
                         for field in ("lineage", "derivations", "deviations"):
                             for item in excluded_candidate[field]:
@@ -1904,18 +1942,6 @@ def render_plan(
                         })
                     continue
 
-                implementation = instance["implementation"]
-                definition = controls.get(implementation)
-                if definition is None:
-                    resolution_errors.append({
-                        "type": "unknown-control",
-                        "baseline": baseline_reference,
-                        "instance_id": instance["instance_id"],
-                        "implementation": implementation,
-                    })
-                    continue
-
-                spec = definition["spec"]
                 if subject["type"] not in spec.get("applies_to", []):
                     resolution_errors.append({
                         "type": "inapplicable-control",
@@ -1928,6 +1954,8 @@ def render_plan(
                 candidate = {
                     "instance_id": instance["instance_id"],
                     "implementation": implementation,
+                    "title": spec["title"],
+                    "purpose": spec["purpose"],
                     "entrypoint": spec["entrypoint"],
                     "parameters": instance.get("parameters", {}),
                     "severity": instance.get("severity", defaults.get("severity", "medium")),
@@ -1958,6 +1986,8 @@ def render_plan(
 
                 comparable_keys = (
                     "implementation",
+                    "title",
+                    "purpose",
                     "parameters",
                     "severity",
                     "remediation",

@@ -6,6 +6,8 @@
     "version": 1
   },
   "spec": {
+    "title": "AWS account settings match policy",
+    "purpose": "Verify that AWS account security settings have the effective values mandated by policy.",
     "entrypoint": "data.compliance.controls.aws.account_setting_equals.evaluate",
     "applies_to": [
       "aws-account"

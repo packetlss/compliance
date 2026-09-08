@@ -6,6 +6,8 @@
     "version": 1
   },
   "spec": {
+    "title": "Required organizational assertions are supported",
+    "purpose": "Verify that a required organizational condition is supported by qualifying attributable evidence.",
     "entrypoint": "data.compliance.controls.organization_assertion_required.evaluate",
     "applies_to": [
       "entity"

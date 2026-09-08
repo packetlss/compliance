@@ -6,6 +6,8 @@
     "version": 1
   },
   "spec": {
+    "title": "SaaS tenant settings meet approved minimums",
+    "purpose": "Verify that numeric SaaS tenant settings meet the minimum values mandated by policy.",
     "entrypoint": "data.compliance.controls.saas.tenant_number_at_least.evaluate",
     "applies_to": [
       "saas-tenant"

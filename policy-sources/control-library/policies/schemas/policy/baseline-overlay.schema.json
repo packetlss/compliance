@@ -23,11 +23,16 @@
     "spec": {
       "type": "object",
       "required": [
+        "title",
         "extends",
         "operations"
       ],
       "additionalProperties": false,
       "properties": {
+        "title": {
+          "type": "string",
+          "pattern": ".*\\S.*"
+        },
         "extends": {
           "type": "array",
           "minItems": 1,

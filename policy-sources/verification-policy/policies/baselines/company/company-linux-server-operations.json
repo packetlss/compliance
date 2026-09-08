@@ -6,6 +6,7 @@
     "version": 1
   },
   "spec": {
+    "title": "Company Linux server operations policy",
     "controls": [
       {
         "instance_id": "company.linux-server.audit-package",

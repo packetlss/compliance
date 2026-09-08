@@ -11,6 +11,7 @@ import tempfile
 import unittest
 
 from tools.control_realization import roll_up_plan_requirements
+from tools.assessment import build_explanation, render_explanation
 from tools.policy_sources import PolicySource, policy_source_revisions, source_tree_digest
 from tools.render_plan import (
     load_policy_catalogs,
@@ -146,6 +147,42 @@ class VerificationPolicySourceTests(unittest.TestCase):
                 "company.container-runtime-host@1",
             ],
         )
+
+    def test_macos_exclusion_retains_control_meaning_without_a_result(self) -> None:
+        subject = {
+            "schema": "compliance.example/inventory-subject/v1",
+            "id": "workstation/macos",
+            "type": "macos-workstation",
+            "status": "active",
+            "labels": {},
+            "inventory": {
+                "source": "verification-test",
+                "external_id": "macos",
+                "observed_at": "2026-09-04T00:00:00Z",
+            },
+        }
+        groups = [{"id": "macos", "parents": [], "members": [subject["id"]]}]
+        assignments = [{
+            "id": "macos-policy",
+            "target": {"group": "macos"},
+            "baselines": ["company.macos-policy@1"],
+        }]
+        plan = render_plan(subject, groups, assignments, sources(self.root))
+        excluded = next(
+            item for item in plan["excluded_controls"]
+            if item["instance_id"] == "benchmark.example.macos.audit-formula-required"
+        )
+        rendered = render_explanation(build_explanation(plan, []))
+
+        self.assertEqual(excluded["title"], "Required Homebrew formulae are installed")
+        self.assertEqual(
+            excluded["purpose"],
+            "Verify that the Homebrew formulae mandated by policy are present.",
+        )
+        self.assertEqual(excluded["disposition"], "excluded")
+        self.assertEqual(excluded["deviations"][0]["id"], "DEV-MAC-002")
+        self.assertIn(excluded["deviations"][0]["rationale"], rendered)
+        self.assertIn("assessment result: none (excluded policy disposition)", rendered)
 
     def test_retained_technical_assignment_conflict_fails_closed(self) -> None:
         subject = {

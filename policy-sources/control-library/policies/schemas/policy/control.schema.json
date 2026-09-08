@@ -47,6 +47,8 @@
     "spec": {
       "type": "object",
       "required": [
+        "title",
+        "purpose",
         "entrypoint",
         "applies_to",
         "evidence",
@@ -54,6 +56,14 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "title": {
+          "type": "string",
+          "pattern": ".*\\S.*"
+        },
+        "purpose": {
+          "type": "string",
+          "pattern": ".*\\S.*"
+        },
         "entrypoint": {
           "type": "string",
           "pattern": "^data(\\.[a-zA-Z_][a-zA-Z0-9_]*)+$"

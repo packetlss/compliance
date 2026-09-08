@@ -6,10 +6,11 @@
     "revision": 1
   },
   "spec": {
+    "title": "Company container-runtime host policy",
     "extends": [
       {
         "baseline": "company.linux-server-hardening@1",
-        "digest": "sha256:77b70987626fc95cdd0a71183fbd517f684017ea79cf5aee77eb6f3f0a1b044b"
+        "digest": "sha256:020eeef7e970c7d72644e7a09a08c36a9bf487c08359b6584af293eca239314f"
       }
     ],
     "operations": [

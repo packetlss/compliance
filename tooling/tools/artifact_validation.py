@@ -92,6 +92,68 @@ def _criteria_state(control: JsonObject) -> JsonObject:
     }
 
 
+def _frozen_meaning_errors(document: JsonObject) -> list[str]:
+    """Validate plan-owned policy/check meaning against frozen source facts."""
+    errors: list[str] = []
+    definitions: dict[str, JsonObject] = {}
+    for collection_name in ("controls", "excluded_controls"):
+        for index, control in enumerate(document[collection_name]):
+            path = f"/{collection_name}/{index}"
+            facts = control.get("policy_inputs")
+            instance = facts.get("instance") if isinstance(facts, dict) else None
+            if not isinstance(instance, dict):
+                errors.append(f"{path}/policy_inputs: frozen control instance is required")
+            else:
+                if (
+                    instance.get("instance_id") != control["instance_id"]
+                    or instance.get("implementation") != control["implementation"]
+                ):
+                    errors.append(
+                        f"{path}/policy_inputs/instance: frozen technical identity differs"
+                    )
+                if instance.get("parameters", {}) != control["parameters"]:
+                    errors.append(
+                        f"{path}/parameters: differs from frozen control instance"
+                    )
+            definition = facts.get("definition") if isinstance(facts, dict) else None
+            if not isinstance(definition, dict):
+                errors.append(f"{path}/policy_inputs: frozen Control definition is required")
+                continue
+            metadata = definition.get("metadata")
+            spec = definition.get("spec")
+            if not isinstance(metadata, dict) or not isinstance(spec, dict):
+                errors.append(f"{path}/policy_inputs/definition: invalid frozen Control definition")
+                continue
+            if metadata.get("id") != control["implementation"]:
+                errors.append(
+                    f"{path}/implementation: differs from frozen Control definition"
+                )
+            for field in ("title", "purpose"):
+                if spec.get(field) != control[field]:
+                    errors.append(
+                        f"{path}/{field}: differs from frozen Control {field}"
+                    )
+            previous = definitions.get(control["implementation"])
+            if previous is not None and canonical_json_bytes(previous) != canonical_json_bytes(definition):
+                errors.append(
+                    f"{path}/policy_inputs/definition: divergent frozen Control definitions"
+                )
+            definitions[control["implementation"]] = definition
+
+    for index, baseline in enumerate(document["resolved_requirement_baselines"]):
+        ancestry = baseline.get("parameter_derivation", {}).get("ancestry", [])
+        selected = ancestry[-1] if ancestry else None
+        selected_document = selected.get("document") if isinstance(selected, dict) else None
+        if isinstance(selected_document, dict):
+            frozen_title = selected_document.get("spec", {}).get("title")
+            if frozen_title != baseline["title"]:
+                errors.append(
+                    f"/resolved_requirement_baselines/{index}/title: differs from "
+                    "frozen RequirementBaseline title"
+                )
+    return errors
+
+
 def validate_assessment_plan(
     document: JsonObject,
     *,
@@ -106,13 +168,13 @@ def validate_assessment_plan(
         validate_frozen(document)
     except (ValueError, KeyError) as error:
         errors.append("invalid frozen policy parameters: " + str(error))
+    errors.extend(_frozen_meaning_errors(document))
 
     resolution = document["resolution"]
     if (resolution["status"] == "valid") != (not resolution["errors"]):
         errors.append(
             "/resolution: valid requires no errors and invalid requires at least one error"
         )
-
     identity_sets = {
         "/assignments": [item["id"] for item in document["assignments"]],
         "/resolved_groups": [item["id"] for item in document["resolved_groups"]],

@@ -6,6 +6,7 @@
     "version": 1
   },
   "spec": {
+    "title": "Managed workstation policy",
     "controls": [
       {
         "instance_id": "workstation.homebrew.required-formulae",

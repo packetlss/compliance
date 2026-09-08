@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
+from tools.assessment import build_explanation, render_explanation
 from tools.assessment_provenance import validate_result_against_plan, validate_selection_snapshot
 from tools.evaluator import opa_evaluator_identity
 from tools.evidence_provenance import evidence_set_provenance
@@ -119,6 +120,15 @@ def assert_assessment_plan_handoff(plan: dict, actual: dict) -> None:
     require(forwarding is not None, "tailored forwarding control is missing")
     require(forwarding.get("implementation") == "linux.sysctl.required", "stable forwarding implementation changed")
     require(
+        forwarding.get("title") == "Linux kernel settings match policy",
+        "tailoring changed the Control-owned check title",
+    )
+    require(
+        forwarding.get("purpose")
+        == "Verify that configured Linux kernel parameters have the values mandated by policy.",
+        "tailoring changed the Control-owned check purpose",
+    )
+    require(
         forwarding.get("parameters")
         == {"settings": [{"key": "net.ipv4.ip_forward", "value": "1"}]},
         "resolved forwarding parameters changed",
@@ -128,6 +138,20 @@ def assert_assessment_plan_handoff(plan: dict, actual: dict) -> None:
     require(
         any(item.get("operation") == "tailor" for item in forwarding.get("derivations", [])),
         "control derivation lineage is missing",
+    )
+    tailoring = next(
+        item for item in forwarding["derivations"]
+        if item.get("operation") == "tailor"
+    )
+    require(
+        tailoring["before"]["parameters"]
+        == {"settings": [{"key": "net.ipv4.ip_forward", "value": "0"}]},
+        "base forwarding value changed",
+    )
+    require(
+        tailoring["after"]["parameters"]
+        == {"settings": [{"key": "net.ipv4.ip_forward", "value": "1"}]},
+        "tailored forwarding value changed",
     )
     require(
         any(item.get("id") == "DEV-LINUX-CONTAINER-001" for item in forwarding.get("deviations", [])),
@@ -359,6 +383,15 @@ def main() -> None:
         evidence=container_evidence,
     )
     assert_assessment_plan_handoff(container_plan, actual)
+    explanation = render_explanation(build_explanation(container_plan, [container]))
+    for expected in (
+        "Check: Linux kernel settings match policy",
+        "Purpose: Verify that configured Linux kernel parameters have the values mandated by policy.",
+        'before: implementation=linux.sysctl.required, disposition=evaluate, criteria={"settings":[{"key":"net.ipv4.ip_forward","value":"0"}]}',
+        'after: implementation=linux.sysctl.required, disposition=evaluate, criteria={"settings":[{"key":"net.ipv4.ip_forward","value":"1"}]}',
+        "deviation DEV-LINUX-CONTAINER-001",
+    ):
+        require(expected in explanation, f"container explanation lost {expected!r}")
 
     waived_result = next(item for item in standard["results"]
                          if item["instance_id"] == "company.linux-server.audit-package")

@@ -2,15 +2,19 @@ from tools.assessment_provenance import artifact_digest, digest
 import copy
 import io
 import json
+import shutil
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
+from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import patch
 
 from contract_fixtures import fixture_root
 
 from tools.artifact_validation import validate_assessment_plan
 from tools.compliance import default_schema_path, main
+from tools.evaluate_plan import evaluate_plan_document
 from tools.policy_diff import (
     build_policy_diff,
     build_policy_diff_set,
@@ -20,6 +24,7 @@ from tools.policy_diff import (
     validate_policy_diff_set,
 )
 from tools.project_config import load_config
+from tools.policy_sources import PolicySource
 from tools.render_plan import (
     control_definition_fingerprint,
     load_inventory_inputs,
@@ -62,6 +67,10 @@ class PolicyDiffTests(unittest.TestCase):
             assignments,
             mock_config.policy_sources,
         )
+        cls.macos_subject = subject
+        cls.macos_groups = groups
+        cls.macos_assignments = assignments
+        cls.macos_policy_sources = mock_config.policy_sources
         cls.iam_plan = render_project_plan(
             "iam",
             "host/restricted-linux-01",
@@ -149,6 +158,124 @@ class PolicyDiffTests(unittest.TestCase):
         self.assertEqual(
             change["after"]["parameters"],
             {"required": ["shellcheck", "shfmt"]},
+        )
+
+    def test_prose_only_check_edit_is_semantic_but_not_executable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            changed_shared = Path(directory) / "shared"
+            shutil.copytree(self.root / "shared", changed_shared)
+            manifest_path = changed_shared / "controls/macos/minimum-version/control.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["spec"]["title"] = "Reworded minimum operating system check"
+            manifest["spec"]["purpose"] = (
+                "Reworded prose for the same structured technical evaluation."
+            )
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            changed_sources = tuple(
+                PolicySource(source.name, changed_shared)
+                if source.name == "control-library"
+                else source
+                for source in self.macos_policy_sources
+            )
+            after = render_plan(
+                self.macos_subject,
+                self.macos_groups,
+                self.macos_assignments,
+                changed_sources,
+            )
+
+            before_control = next(
+                item for item in self.macos_plan["controls"]
+                if item["implementation"] == "macos.system.minimum_version"
+            )
+            after_control = next(
+                item for item in after["controls"]
+                if item["instance_id"] == before_control["instance_id"]
+            )
+            self.assertEqual(
+                before_control["definition_fingerprint"],
+                after_control["definition_fingerprint"],
+            )
+            self.assertEqual(before_control["parameters"], after_control["parameters"])
+            self.assertEqual(before_control["evidence"], after_control["evidence"])
+            self.assertNotEqual(self.macos_plan["id"], after["id"])
+            self.assertNotEqual(
+                self.macos_plan["provenance"]["planningComposition"]["actual"][
+                    "policySources"
+                ],
+                after["provenance"]["planningComposition"]["actual"]["policySources"],
+            )
+
+            def implementation_fingerprint(control):
+                facts = control["policy_inputs"]
+                return digest({
+                    "manifest": facts["definition"],
+                    "parameters_schema": facts["parameters_schema"],
+                    "implementation_modules": facts["implementation_modules"],
+                })
+
+            self.assertNotEqual(
+                implementation_fingerprint(before_control),
+                implementation_fingerprint(after_control),
+            )
+
+            document = build_policy_diff(self.macos_plan, after)
+            change = next(
+                item for item in document["control_changes"]
+                if item["identity"] == before_control["instance_id"]
+            )
+            self.assertEqual(change["change"], "modified")
+            self.assertIn("title", change["changed_fields"])
+            self.assertIn("purpose", change["changed_fields"])
+
+            def technical_decision(_opa, _policies, assessment_input, _entrypoint):
+                control = assessment_input["control"]
+                assessment = assessment_input["assessment"]
+                self.assertNotIn("title", control)
+                self.assertNotIn("purpose", control)
+                frozen_spec = control["policy_inputs"]["definition"]["spec"]
+                self.assertNotIn("title", frozen_spec)
+                self.assertNotIn("purpose", frozen_spec)
+                return {
+                    "control_id": control["implementation"],
+                    "instance_id": control["instance_id"],
+                    "subject_id": assessment_input["subject"]["id"],
+                    "plan_id": assessment["plan_id"],
+                    "status": "pass",
+                    "severity": control["severity"],
+                    "reason": "Synthetic unchanged technical decision.",
+                    "expected": {},
+                    "observed": {},
+                    "remediation": control["remediation"],
+                    "external_refs": control.get("external_refs", []),
+                    "alignment": control["alignment"],
+                }
+
+            with patch(
+                "tools.evaluate_plan.evaluate_control",
+                side_effect=technical_decision,
+            ):
+                before_evidence = Path(directory) / "before-evidence"
+                after_evidence = Path(directory) / "after-evidence"
+                before_evidence.mkdir()
+                after_evidence.mkdir()
+                before_result = evaluate_plan_document(
+                    self.macos_plan,
+                    before_evidence,
+                    self.macos_policy_sources,
+                    evaluated_at=datetime(2026, 9, 8, 12, tzinfo=UTC),
+                )
+                after_result = evaluate_plan_document(
+                    after,
+                    after_evidence,
+                    changed_sources,
+                    evaluated_at=datetime(2026, 9, 8, 12, tzinfo=UTC),
+                )
+
+        self.assertEqual(before_result["outcome"], after_result["outcome"])
+        self.assertEqual(
+            [item["status"] for item in before_result["results"]],
+            [item["status"] for item in after_result["results"]],
         )
 
     def test_exclusion_shows_frozen_derivation_and_approval(self):

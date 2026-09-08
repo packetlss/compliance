@@ -6,6 +6,8 @@
     "version": 1
   },
   "spec": {
+    "title": "AWS account settings meet approved minimums",
+    "purpose": "Verify that numeric AWS account settings meet the minimum values mandated by policy.",
     "entrypoint": "data.compliance.controls.aws.account_number_at_least.evaluate",
     "applies_to": [
       "aws-account"

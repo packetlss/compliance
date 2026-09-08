@@ -6,10 +6,11 @@
     "revision": 1
   },
   "spec": {
+    "title": "Company developer workstation policy",
     "extends": [
       {
         "baseline": "company.macos-policy@1",
-        "digest": "sha256:8fb1b8fee8b1e4bb5684e883a372a9d28416cbdfa8c33719a4a29a0d8cf201eb"
+        "digest": "sha256:87caedb7beeb817ae27fd501d62eed4fe0f9984a2aac060764c8954ddc857214"
       }
     ],
     "operations": [

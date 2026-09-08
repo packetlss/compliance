@@ -101,6 +101,23 @@ def technical(root):
         require(not plan.get("requirements") and not report.get("requirement_assessments"),
                 "technical-only path synthesized requirement objects")
         require(statuses(report) == ["pass"], "package happy path did not pass")
+        explanation = s.cli(
+            "assessment", "explain", "host/technical-A",
+            "--plan", str(plans / "host__technical-A.json"),
+            "--results", str(results), "--at", AT,
+            historical=True,
+        )
+        for expected in (
+            "Applicable policies:",
+            "Linux package baseline (verification.technical-packages@1)",
+            "Check: Required system packages are installed (verification.technical-packages.required)",
+            "Purpose: Verify that the packages mandated by policy are present.",
+            'effective parameters: {"ecosystem":"linux-native","required":[{"id":"auditd"}]}',
+            "required evidence: observation -> linux.packages/v1",
+            "freshness: 86400s (1 day)",
+        ):
+            require(expected in explanation, f"technical explanation lost {expected!r}")
+        require("Objectives:" not in explanation, "technical explanation synthesized an Objective")
 
         package = next(evidence.glob("*.json")); original = package.read_text()
         doc = json.loads(original); doc["payload"]["packages"] = []; package.write_text(json.dumps(doc))
@@ -181,6 +198,25 @@ def iam(root, private_source):
                     "exact company requirement baseline did not pass")
         plan_a = json.loads((plans / "host__A.json").read_text()); validate_assessment_plan(plan_a)
         require(len(plan_a["operation"]["members"]) == 2, "supplied A/B scope not frozen")
+        explanation = s.cli(
+            "assessment", "explain", "host/A",
+            "--plan", str(plans / "host__A.json"),
+            "--assessed-plans", str(plans),
+            "--results", str(results), "--at", AT,
+            historical=True,
+        )
+        for expected in (
+            "Company identity and access objectives (company.identity-access-objectives@1)",
+            "Objective: Access is granted through centrally governed roles (company.iam.role-based-access@1)",
+            "Meaning: Interactive access to governed systems must be authorized through centrally governed role or group membership",
+            "Check: IAM service integrations satisfy policy (restricted.linux.rbac.company-iam-integration)",
+            "Purpose: Verify that required identity-service conditions and their governed relationships are supported by attributable evidence.",
+        ):
+            require(expected in explanation, f"IAM explanation lost {expected!r}")
+        require(
+            "Check: Access is granted through centrally governed roles" not in explanation,
+            "IAM explanation reused Objective title as Check meaning",
+        )
         iam_control = next(row for row in plan_a["controls"] if row["implementation"] == "iam.integration.required")
         iam_ages = {d["max_age"] for d in iam_control["evidence"]}
         all_ages = {d["max_age"] for row in plan_a["controls"] for d in row["evidence"]}

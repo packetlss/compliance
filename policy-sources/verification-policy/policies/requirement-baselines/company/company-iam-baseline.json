@@ -10,6 +10,7 @@
     }
   },
   "spec": {
+    "title": "Company identity and access objectives",
     "requirements": [
       {
         "requirement": "company.iam.role-based-access@1",

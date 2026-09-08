@@ -10,6 +10,7 @@
     }
   },
   "spec": {
+    "title": "Illustrative Linux server hardening benchmark",
     "controls": [
       {
         "instance_id": "benchmark.example.linux-server.aslr",

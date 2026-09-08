@@ -6,6 +6,8 @@
     "version": 1
   },
   "spec": {
+    "title": "macOS meets the minimum supported version",
+    "purpose": "Verify that macOS is at or above the minimum version mandated by policy.",
     "entrypoint": "data.compliance.controls.macos.system_minimum_version.evaluate",
     "applies_to": [
       "macos-workstation"

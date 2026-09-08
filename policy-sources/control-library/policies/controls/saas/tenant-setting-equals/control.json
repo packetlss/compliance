@@ -6,6 +6,8 @@
     "version": 1
   },
   "spec": {
+    "title": "SaaS tenant settings match policy",
+    "purpose": "Verify that SaaS tenant security settings have the effective values mandated by policy.",
     "entrypoint": "data.compliance.controls.saas.tenant_setting_equals.evaluate",
     "applies_to": [
       "saas-tenant"

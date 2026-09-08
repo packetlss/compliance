@@ -133,6 +133,7 @@ An imported benchmark baseline might contain:
     }
   },
   "spec": {
+    "title": "Example macOS hardening benchmark",
     "controls": [
       {
         "instance_id": "benchmark.macos.ssh.max-auth-tries",
@@ -167,6 +168,7 @@ The company baseline pins that exact parent and describes its deviations:
     "revision": 4
   },
   "spec": {
+    "title": "Company macOS workstation policy",
     "extends": [
       {
         "baseline": "benchmark.example.macos-hardening@2026.1",

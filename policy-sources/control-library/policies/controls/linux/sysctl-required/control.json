@@ -6,6 +6,8 @@
     "version": 1
   },
   "spec": {
+    "title": "Linux kernel settings match policy",
+    "purpose": "Verify that configured Linux kernel parameters have the values mandated by policy.",
     "entrypoint": "data.compliance.controls.linux.sysctl_required.evaluate",
     "applies_to": [
       "linux-host"
