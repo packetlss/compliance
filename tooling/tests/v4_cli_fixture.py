@@ -111,6 +111,17 @@ evaluate := {
             '--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',
             '--as-of','2026-08-23T12:00:00Z','--format','json'))
         assert historical['all_passed']
+        historical_explanation = json.loads(run(
+            'assessment','explain',first_subject,'--plan',str(plan_path),
+            '--assessed-plans',str(project/'generated/plans'),
+            '--results',str(project/'generated/results'),
+            '--at','2026-08-23T12:00:00Z','--as-of','2026-08-23T12:00:00Z',
+            '--format','json'
+        ))
+        assert historical_explanation['schema'] == 'compliance.example/assessment-explanation/v1'
+        assert historical_explanation['plan']['id'] == multi_plan['id']
+        assert historical_explanation['plan']['controls'][0]['title']
+        assert historical_explanation['plan']['controls'][0]['purpose']
         orphan_frameworks = json.loads(run(
             'assessment','frameworks','--plan',str(plan_path),
             '--at','2026-08-23T12:00:00Z','--as-of','2026-08-23T12:00:00Z',
