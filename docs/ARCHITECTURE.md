@@ -1,6 +1,6 @@
 # System architecture
 
-This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 and 0016 (ADRs 0013–0015 are superseded) in `docs/adr/`.
+This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 and 0016–0018 (ADRs 0013–0015 are superseded) in `docs/adr/`.
 
 Historical `packetlss-labs/compliance-workspace` architecture remains migration/design provenance. After this documentation-authority transfer, this repository owns current normative system architecture.
 
@@ -99,6 +99,30 @@ discriminator. Typed envelopes have no normative collector-supplied
 `integrity.digest`; unchanged complete-document and evidence-set digests bind
 the exact snapshot used by assessment. Opaque extensions remain ordinary
 complete-document content and do not acquire integrity semantics.
+
+## Source-authored policy and check meaning
+
+[ADR 0017](adr/0017-source-authored-policy-and-check-meaning.md) accepts the
+minimum human vocabulary needed to explain resolved policy without another policy
+hierarchy. Each assignable `Baseline`, `BaselineOverlay`, and
+`RequirementBaseline` owns a required title. Each reusable `Control` owns a
+required intrinsic check title and purpose. Existing `ControlRequirement` title
+and statement continue to own Objective meaning; effective parameters, overlay
+derivations, deviations, exclusions, and remediation keep their separate roles.
+
+The authored words are identity-bearing policy meaning but never executable input.
+They must be frozen into active and excluded plan records so normal explanation can
+lead with human meaning while advanced views retain stable IDs, fingerprints,
+digests, lineage, and named-source provenance. Overlays and realizations cannot
+override intrinsic Control title or purpose, and divergent same-identity text fails
+closed under the existing exact-definition rule. Technical-only policy does not
+synthesize an Objective.
+
+ADR 0017 requires the plan artifact, when retained, to contain enough authored
+meaning for offline interpretation. It does not make the core a plan or result
+retention service: external users and orchestration decide whether to retain these
+artifacts. The coordinated schema/source/plan/reporter migration is not implemented
+or authorized by ADR 0017; its bounded promotion contract is recorded in that ADR.
 
 ## Explicit policy parameters and freshness
 
@@ -245,6 +269,68 @@ evidence identity and ADR 0010 assessment semantics are unchanged. Before public
 and full interpretation, intrinsic result validation plus mandatory exact plan/result
 relational validation must succeed; otherwise publication fails closed. #80's
 query-time judgments remain derived without a new artifact family.
+
+## Durable assessment explanation facts
+
+[ADR 0018](adr/0018-durable-assessment-explanation-facts.md) is an **accepted
+design, not yet implemented**, under [#98](https://github.com/packetlss/compliance/issues/98).
+It retains a canonical result-level table only for unsuccessful required-dependency
+selection: `absent`, `stale`, `invalid` or `ambiguous`. Existing successful selection
+continues to be owned solely by `provenance.selectedEvidence`. The two structures
+must partition every active plan dependency under mandatory exact plan/result
+validation. These disposition names are assessment-time facts, not result statuses.
+
+Stale and ambiguous facts retain only necessary already-snapshotted document
+ID/digest attribution and collection instants. Invalid facts retain stable code,
+document attribution and safe schema constraint path/keyword, without evidence
+values, evidence-instance paths, raw schema-library messages or schema source
+locations. Attributable technical `error` additionally retains one closed
+criterion-execution or criterion-decision stage/code; raw evaluator output,
+exception text and stack traces never enter the result. All new structured facts
+are committed by the result-domain semantic projection.
+
+A criterion-returned `unknown` needs no second diagnostic object: complete
+successful dependency selection plus the technical decision establishes that the
+criterion, rather than selection, was inconclusive. Waiver, operation accounting,
+plan applicability and current historical qualification keep their existing owners.
+Refusal still publishes no result; any durable attempt/refusal claim belongs to
+separately trusted external orchestration or audit history. The core defines no
+attempt artifact or history service.
+
+### Explanation ownership and retention
+
+The two decisions compose through existing domain artifacts rather than a combined
+explanation wrapper or digest:
+
+```text
+authored policy meaning
+  -> effective plan semantics
+  -> exact bound plan
+  -> assessment against that exact plan
+  -> immutable result facts
+      + assessment-time unsuccessful dependency dispositions
+      + safe structured evaluation error facts
+      + successful evidence use in provenance.selectedEvidence
+  -> historical qualification over the exact retained plan/result pair
+
+refused-attempt history
+  -> external orchestration, never core result history
+```
+
+When retained, the exact plan owns applicable policy and Objective meaning, check
+title/purpose, effective parameters, evidence requirements, exclusions, derivations,
+and tailoring context. The exact result owns immutable outcomes, successful selected
+evidence, unsuccessful dependency dispositions, safe structured `error` explanation,
+and applied-waiver facts. Mandatory relational validation binds the pair. Result
+diagnostics use stable `instance_id` and `dependency_id` references where needed;
+they do not copy plan-owned policy, Objective, check title, or purpose strings.
+
+Each artifact's existing semantic projection remains responsible for its own
+identity-bearing facts. ADR 0017 changes policy and plan identities; ADR 0018 changes
+result identity. No second combined explanation identity is introduced. Retention
+remains an external operating choice: deleting an assessed plan reduces later
+historical interpretation but neither rewrites its result nor affects future
+assessments. Query-time views never reselect evidence or reconstruct refused attempts.
 
 ## External-adapter boundary
 
