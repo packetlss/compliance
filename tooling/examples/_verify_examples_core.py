@@ -789,17 +789,26 @@ class ExampleRunner:
         self.cli(("assessment", "run"), schema_arguments)
         schema_document = self._read(schema_result)
         schema_errors = [
-            result for result in schema_document["results"]
-            if result["observed"].get("evidence_validation_errors")
+            disposition
+            for disposition in schema_document["dependency_dispositions"]
+            if disposition["disposition"] == "invalid"
         ]
+        results_by_instance = {
+            result["instance_id"]: result
+            for result in schema_document["results"]
+        }
         self.domain(
             "evidence.schema-enforcement",
             bool(schema_errors)
             and all(
-                result["observed"].get("evidence_validation_errors")
-                for result in schema_errors
+                disposition["diagnostics"]
+                for disposition in schema_errors
             )
-            and all(result["status"] == "unknown" for result in schema_errors),
+            and all(
+                results_by_instance[disposition["instance_id"]]["status"]
+                == "unknown"
+                for disposition in schema_errors
+            ),
         )
         self._display(
             "evidence.schema-enforcement",

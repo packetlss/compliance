@@ -1,8 +1,9 @@
 # ADR 0018: Retain minimal durable assessment explanation facts
 
-- **Status:** Accepted design, not yet implemented
+- **Status:** Implemented under #102; experimental, not frozen
 - **Date:** 2026-09-07
 - **Architecture contract:** [#98](https://github.com/packetlss/compliance/issues/98)
+- **Implementation:** [#102](https://github.com/packetlss/compliance/issues/102)
 - **Predecessor:** #97 / ADR 0017 authored human-readable policy and check meaning; implementation remains independent
 - **Refines:** [ADR 0007](0007-unified-actual-and-expected-composition-provenance.md), [ADR 0010](0010-required-evidence-status-and-assessment-refusal.md), and [ADR 0011](0011-historical-assessment-and-operational-evidence-timeliness.md)
 

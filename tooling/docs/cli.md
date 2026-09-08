@@ -72,10 +72,13 @@ duplicates coalesce for selection only. Independent controls remain assessable;
 missing/stale required evidence stays unknown. No ordering precedence, older
 fallback or payload merging is introduced.
 
-JSON and human explanations retain structured validation and selection ambiguity
-diagnostics, including exact evidence ID/digest and schema references. Invalid
-required-evidence counts belong to unknown. V4 reserves error for attributable
-execution/decision failures. Every declared evidence dependency is required;
+JSON results and human explanations retain canonical result-level unsuccessful
+dependency dispositions: `absent`, `stale`, `invalid`, or `ambiguous`. Candidate
+facts use exact already-snapshotted evidence ID/digest/collection times. Invalid
+facts retain only the closed code plus safe schema path and keyword; evidence paths,
+raw validator messages, and schema locations are omitted. V4 error results retain
+one closed criterion execution/decision stage and code with fixed safe prose and no
+raw evaluator output. Every declared evidence dependency is required;
 there is no optional-evidence selection or invalid-optional-evidence error path.
 Only underlying fail may be waived; logical roll-ups remain unchanged.
 

@@ -3,7 +3,7 @@
   "$id": "https://compliance.example/schemas/assessment-results-v4.schema.json",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "digestAlgorithm", "id", "plan_id", "subject_id", "evaluated_at", "outcome", "provenance", "results", "requirement_assessments", "requirement_baseline_assessments"],
+  "required": ["schema", "digestAlgorithm", "id", "plan_id", "subject_id", "evaluated_at", "outcome", "provenance", "dependency_dispositions", "results", "requirement_assessments", "requirement_baseline_assessments"],
   "properties": {
     "schema": {"const": "compliance.example/assessment-results/v4"},
     "digestAlgorithm": {"const": "compliance.example/assessment-results-digest/v1alpha1"},
@@ -13,6 +13,7 @@
     "evaluated_at": {"type": "string", "format": "date-time"},
     "outcome": {"$ref": "#/$defs/overallStatus"},
     "provenance": {"$ref": "#/$defs/evaluationProvenance"},
+    "dependency_dispositions": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/dependencyDisposition"}},
     "results": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/technicalOutcome"}},
     "requirement_assessments": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/requirementOutcome"}},
     "requirement_baseline_assessments": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/baselineOutcome"}}
@@ -107,61 +108,89 @@
         "selectedEvidence": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/successfulSelection"}}
       }
     },
-    "schemaLocator": {
+    "evidenceCandidate": {
       "type": "object", "additionalProperties": false,
-      "required": ["policy_source", "path"],
-      "properties": {"policy_source": {"type": "string", "minLength": 1}, "path": {"type": "string", "minLength": 1}}
-    },
-    "schemaReference": {
-      "type": "object", "additionalProperties": false,
-      "required": ["type", "policy_sources"],
+      "required": ["evidence_id", "evidence_digest", "collected_at"],
       "properties": {
-        "type": {"type": "string", "minLength": 1},
-        "policy_sources": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/schemaLocator"}}
-      }
-    },
-    "validationDiagnostic": {
-      "type": "object", "additionalProperties": false,
-      "required": ["type", "code", "evidence_type", "dependency_id", "evidence_id", "evidence_digest", "schema_reference", "path", "schema_path", "keyword", "message"],
-      "properties": {
-        "type": {"const": "evidence-schema-validation-failed"},
-        "code": {"const": "evidence_schema_invalid"},
-        "evidence_type": {"type": "string", "minLength": 1},
-        "dependency_id": {"type": "string", "minLength": 1},
         "evidence_id": {"type": "string", "minLength": 1},
         "evidence_digest": {"$ref": "#/$defs/digest"},
-        "schema_reference": {"$ref": "#/$defs/schemaReference"},
-        "path": {"type": "string", "pattern": "^(?:/|$)"},
-        "schema_path": {"type": "string", "pattern": "^(?:/|$)"},
-        "keyword": {"type": "string", "minLength": 1},
-        "message": {"type": "string", "minLength": 1}
+        "collected_at": {"type": "string", "format": "date-time"}
       }
     },
-    "ambiguityCandidate": {
+    "evidenceValidationDiagnostic": {
       "type": "object", "additionalProperties": false,
-      "required": ["id", "digest"],
-      "properties": {"id": {"type": "string", "minLength": 1}, "digest": {"$ref": "#/$defs/digest"}}
-    },
-    "ambiguityDiagnostic": {
-      "type": "object", "additionalProperties": false,
-      "required": ["code", "subject", "evidence_type", "dependency_id", "schema_reference", "evaluated_at", "collected_at", "candidates"],
+      "required": ["code", "evidence_id", "evidence_digest", "schema_path", "keyword"],
       "properties": {
-        "code": {"const": "evidence_selection_ambiguity"},
-        "subject": {"$ref": "#/$defs/subjectId"},
-        "evidence_type": {"type": "string", "minLength": 1},
-        "dependency_id": {"type": "string", "minLength": 1},
-        "schema_reference": {"$ref": "#/$defs/schemaReference"},
-        "evaluated_at": {"type": "string", "format": "date-time"},
-        "collected_at": {"type": "string", "format": "date-time"},
-        "candidates": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"$ref": "#/$defs/ambiguityCandidate"}}
+        "code": {"const": "evidence_schema_invalid"},
+        "evidence_id": {"type": "string", "minLength": 1},
+        "evidence_digest": {"$ref": "#/$defs/digest"},
+        "schema_path": {"type": "string", "pattern": "^(?:/|$)"},
+        "keyword": {"type": "string", "minLength": 1}
       }
+    },
+    "dependencyDisposition": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["instance_id", "dependency_id", "disposition"],
+          "properties": {
+            "instance_id": {"type": "string", "minLength": 1},
+            "dependency_id": {"type": "string", "minLength": 1},
+            "disposition": {"const": "absent"}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["instance_id", "dependency_id", "disposition", "latest_candidates"],
+          "properties": {
+            "instance_id": {"type": "string", "minLength": 1},
+            "dependency_id": {"type": "string", "minLength": 1},
+            "disposition": {"const": "stale"},
+            "latest_candidates": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/evidenceCandidate"}}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["instance_id", "dependency_id", "disposition", "diagnostics"],
+          "properties": {
+            "instance_id": {"type": "string", "minLength": 1},
+            "dependency_id": {"type": "string", "minLength": 1},
+            "disposition": {"const": "invalid"},
+            "diagnostics": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/evidenceValidationDiagnostic"}}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["instance_id", "dependency_id", "disposition", "candidates"],
+          "properties": {
+            "instance_id": {"type": "string", "minLength": 1},
+            "dependency_id": {"type": "string", "minLength": 1},
+            "disposition": {"const": "ambiguous"},
+            "candidates": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"$ref": "#/$defs/evidenceCandidate"}}
+          }
+        }
+      ]
     },
     "observed": {
       "type": "object", "additionalProperties": true,
       "properties": {
-        "evidence_validation_errors": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/validationDiagnostic"}},
-        "evidence_selection_ambiguities": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/ambiguityDiagnostic"}}
+        "evidence_validation_errors": false,
+        "evidence_selection_ambiguities": false
       }
+    },
+    "evaluationError": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["stage", "code"],
+          "properties": {"stage": {"const": "criterion_execution"}, "code": {"const": "criterion_execution_failed"}}
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["stage", "code"],
+          "properties": {"stage": {"const": "criterion_decision"}, "code": {"enum": ["criterion_decision_invalid", "criterion_reported_error"]}}
+        }
+      ]
     },
     "appliedWaiver": {
       "type": "object", "additionalProperties": false,
@@ -190,9 +219,25 @@
         "reason": {"type": "string", "minLength": 1},
         "expected": {"type": "object"},
         "observed": {"$ref": "#/$defs/observed"},
+        "evaluation_error": {"$ref": "#/$defs/evaluationError"},
         "waiver": {"$ref": "#/$defs/appliedWaiver"}
       },
-      "allOf": [{"if": {"properties": {"status": {"const": "waived"}}, "required": ["status"]}, "then": {"required": ["waiver"]}, "else": {"not": {"required": ["waiver"]}}}]
+      "allOf": [
+        {"if": {"properties": {"status": {"const": "waived"}}, "required": ["status"]}, "then": {"required": ["waiver"]}, "else": {"not": {"required": ["waiver"]}}},
+        {
+          "if": {"properties": {"status": {"const": "error"}}, "required": ["status"]},
+          "then": {
+            "required": ["evaluation_error"],
+            "properties": {"expected": {"maxProperties": 0}, "observed": {"maxProperties": 0}},
+            "oneOf": [
+              {"properties": {"evaluation_error": {"properties": {"code": {"const": "criterion_execution_failed"}}}, "reason": {"const": "Criterion execution failed."}}},
+              {"properties": {"evaluation_error": {"properties": {"code": {"const": "criterion_decision_invalid"}}}, "reason": {"const": "Criterion decision was unusable."}}},
+              {"properties": {"evaluation_error": {"properties": {"code": {"const": "criterion_reported_error"}}}, "reason": {"const": "Criterion reported an evaluation error."}}}
+            ]
+          },
+          "else": {"not": {"required": ["evaluation_error"]}}
+        }
+      ]
     },
     "requirementOutcome": {
       "type": "object", "additionalProperties": false,

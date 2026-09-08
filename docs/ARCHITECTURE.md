@@ -273,8 +273,9 @@ query-time judgments remain derived without a new artifact family.
 
 ## Durable assessment explanation facts
 
-[ADR 0018](adr/0018-durable-assessment-explanation-facts.md) is an **accepted
-design, not yet implemented**, under [#98](https://github.com/packetlss/compliance/issues/98).
+[ADR 0018](adr/0018-durable-assessment-explanation-facts.md) is **Experimental,
+implemented** under [#102](https://github.com/packetlss/compliance/issues/102),
+from the design accepted under [#98](https://github.com/packetlss/compliance/issues/98).
 It retains a canonical result-level table only for unsuccessful required-dependency
 selection: `absent`, `stale`, `invalid` or `ambiguous`. Existing successful selection
 continues to be owned solely by `provenance.selectedEvidence`. The two structures

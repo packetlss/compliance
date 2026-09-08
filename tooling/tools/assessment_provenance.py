@@ -5,7 +5,6 @@ import copy
 import hashlib
 from datetime import datetime, timedelta
 from importlib import metadata
-from pathlib import PurePosixPath
 from typing import Any
 
 from ._canonical_json import canonical_json_bytes
@@ -60,6 +59,9 @@ def result_identity_projection(document: dict) -> dict:
             'setDigest': evidence['setDigest'],
         },
         'selectedEvidence': copy.deepcopy(provenance['selectedEvidence']),
+        'dependency_dispositions': copy.deepcopy(
+            semantic['dependency_dispositions']
+        ),
         'results': copy.deepcopy(semantic['results']),
         'requirement_assessments': copy.deepcopy(semantic['requirement_assessments']),
         'requirement_baseline_assessments': copy.deepcopy(
@@ -164,53 +166,75 @@ def validate_result_provenance(document: dict) -> None:
             raise ValueError('selected evidence reference is absent from snapshot')
         if use['instance_id'] not in results:
             raise ValueError('selected evidence control is absent from results')
-    policy_sources = {
-        item['name']
-        for item in provenance['evaluationComposition']['actual']['policySources']
+    dispositions = document['dependency_dispositions']
+    if dispositions != sorted(
+        dispositions, key=lambda item: (item['instance_id'], item['dependency_id'])
+    ):
+        raise ValueError('dependency dispositions must be canonically ordered')
+    disposition_keys = [
+        (item['instance_id'], item['dependency_id']) for item in dispositions
+    ]
+    if len(disposition_keys) != len(set(disposition_keys)):
+        raise ValueError('duplicate dependency disposition')
+    overlap = set(keys) & set(disposition_keys)
+    if overlap:
+        raise ValueError('dependency cannot be both selected and unsuccessful')
+    for disposition in dispositions:
+        result = results.get(disposition['instance_id'])
+        if result is None:
+            raise ValueError('dependency disposition control is absent from results')
+        if result['status'] != 'unknown':
+            raise ValueError('unsuccessful required evidence must be unknown')
+        nested_field = {
+            'stale': 'latest_candidates',
+            'invalid': 'diagnostics',
+            'ambiguous': 'candidates',
+        }.get(disposition['disposition'])
+        if nested_field is None:
+            continue
+        nested = disposition[nested_field]
+        if disposition['disposition'] == 'invalid':
+            key_function = lambda item: (
+                item['evidence_id'], item['evidence_digest'], item['schema_path'],
+                item['keyword'], item['code'],
+            )
+        else:
+            key_function = lambda item: (
+                item['evidence_id'], item['evidence_digest']
+            )
+        nested_keys = [key_function(item) for item in nested]
+        if nested_keys != sorted(nested_keys) or len(nested_keys) != len(set(nested_keys)):
+            raise ValueError('dependency disposition facts are not unique and canonically ordered')
+        for item in nested:
+            if (item['evidence_id'], item['evidence_digest']) not in references:
+                raise ValueError('dependency disposition reference is absent from snapshot')
+
+    expected_errors = {
+        'criterion_execution_failed': (
+            'criterion_execution', 'Criterion execution failed.'
+        ),
+        'criterion_decision_invalid': (
+            'criterion_decision', 'Criterion decision was unusable.'
+        ),
+        'criterion_reported_error': (
+            'criterion_decision', 'Criterion reported an evaluation error.'
+        ),
     }
     for result in results.values():
-        observed = result.get('observed', {})
-        for field in ('evidence_validation_errors', 'evidence_selection_ambiguities'):
-            diagnostics = observed.get(field, [])
-            if field == 'evidence_validation_errors':
-                ordered = sorted(diagnostics, key=lambda item: (
-                    item['dependency_id'], item['evidence_type'], item['evidence_id'],
-                    item['evidence_digest'], item['path'], item['schema_path'], item['message'],
-                ))
-            else:
-                ordered = sorted(diagnostics, key=lambda item: (
-                    item['dependency_id'], item['evidence_type'],
-                ))
-            if diagnostics != ordered:
-                raise ValueError('evidence diagnostics are not canonically ordered')
-            for diagnostic in diagnostics:
-                schema = diagnostic['schema_reference']
-                if schema['type'] != diagnostic['evidence_type'] or not {
-                        item['policy_source'] for item in schema['policy_sources']
-                } <= policy_sources:
-                    raise ValueError('diagnostic schema reference does not resolve into evaluation composition')
-                if schema['policy_sources'] != sorted(
-                        schema['policy_sources'], key=lambda item: (
-                            item['policy_source'], item['path'])):
-                    raise ValueError('diagnostic schema reference is not canonically ordered')
-                for locator in schema['policy_sources']:
-                    path = PurePosixPath(locator['path'])
-                    if path.is_absolute() or '..' in path.parts or path.as_posix() != locator['path'] or '\\' in locator['path']:
-                        raise ValueError('unsafe schema reference path')
-                if field.endswith('ambiguities'):
-                    if diagnostic['subject'] != document['subject_id'] or diagnostic['evaluated_at'] != document['evaluated_at']:
-                        raise ValueError('ambiguity attribution differs from assessed subject/time')
-                    if diagnostic['candidates'] != sorted(diagnostic['candidates'], key=lambda x:(x['id'],x['digest'])):
-                        raise ValueError('ambiguity candidate ordering is invalid')
-                pairs = diagnostic.get('candidates', []) if field.endswith('ambiguities') else [
-                    {'id': diagnostic['evidence_id'], 'digest': diagnostic['evidence_digest']}]
-                if any((item['id'], item['digest']) not in references for item in pairs):
-                    raise ValueError('evidence diagnostic reference is absent from snapshot')
-                if result['status'] != 'unknown':
-                    raise ValueError('rejected/ambiguous required evidence must be unknown')
-                if any(use['instance_id'] == result['instance_id'] and
-                       use['dependency_id'] == diagnostic['dependency_id'] for use in uses):
-                    raise ValueError('rejected/ambiguous dependency mislabeled as selected')
+        evaluation_error = result.get('evaluation_error')
+        if result['status'] == 'error':
+            if evaluation_error is None:
+                raise ValueError('technical error requires evaluation error attribution')
+            expected_stage, expected_reason = expected_errors[evaluation_error['code']]
+            if (
+                evaluation_error['stage'] != expected_stage
+                or result['reason'] != expected_reason
+                or result['expected'] != {}
+                or result['observed'] != {}
+            ):
+                raise ValueError('technical error facts are not canonical')
+        elif evaluation_error is not None:
+            raise ValueError('evaluation error attribution requires technical error status')
 
 
 def validate_result_against_plan(report: dict, plan: dict) -> None:
@@ -232,15 +256,10 @@ def validate_result_against_plan(report: dict, plan: dict) -> None:
     controls = {control['instance_id']: control for control in plan['controls']}
     if set(controls) != {item['instance_id'] for item in report['results']}:
         raise ValueError('result controls do not match assessed plan')
-    for result in report['results']:
-        requirements = controls[result['instance_id']]['evidence']
-        for field in ('evidence_validation_errors', 'evidence_selection_ambiguities'):
-            for diagnostic in result.get('observed', {}).get(field, []):
-                dependencies = [item for item in requirements
-                                if item['id'] == diagnostic['dependency_id']]
-                if len(dependencies) != 1 or dependencies[0]['type'] != diagnostic['evidence_type']:
-                    raise ValueError('evidence diagnostic dependency does not resolve into assessed plan')
     uses_by_control: dict[str, set[str]] = {instance_id: set() for instance_id in controls}
+    dispositions_by_control: dict[str, set[str]] = {
+        instance_id: set() for instance_id in controls
+    }
     evaluated_at = datetime.fromisoformat(report['evaluated_at'].replace('Z', '+00:00'))
     for use in report['provenance']['selectedEvidence']:
         control = controls.get(use['instance_id'])
@@ -257,11 +276,45 @@ def validate_result_against_plan(report: dict, plan: dict) -> None:
         }[unit])
         if evaluated_at - collected_at > maximum_age:
             raise ValueError('selected evidence was stale at the assessment instant')
+    for disposition in report['dependency_dispositions']:
+        control = controls.get(disposition['instance_id'])
+        dependencies = [] if control is None else [
+            item for item in control['evidence']
+            if item['id'] == disposition['dependency_id']
+        ]
+        if len(dependencies) != 1:
+            raise ValueError('dependency disposition does not resolve into assessed plan')
+        dependency = dependencies[0]
+        dispositions_by_control[disposition['instance_id']].add(
+            disposition['dependency_id']
+        )
+        amount, unit = int(dependency['max_age'][:-1]), dependency['max_age'][-1]
+        maximum_age = timedelta(seconds=amount * {
+            's': 1, 'm': 60, 'h': 3600, 'd': 86400,
+        }[unit])
+        candidates = disposition.get('latest_candidates', disposition.get('candidates', []))
+        if candidates:
+            instants = {
+                datetime.fromisoformat(item['collected_at'].replace('Z', '+00:00'))
+                for item in candidates
+            }
+            if len(instants) != 1:
+                raise ValueError('dependency disposition candidates differ in collection instant')
+            instant = next(iter(instants))
+            if disposition['disposition'] == 'stale' and evaluated_at - instant <= maximum_age:
+                raise ValueError('stale disposition candidate was eligible at the assessment instant')
+            if disposition['disposition'] == 'ambiguous' and evaluated_at - instant > maximum_age:
+                raise ValueError('ambiguous disposition candidate was stale at the assessment instant')
     for result in report['results']:
-        if result['status'] != 'unknown':
-            required = {item['id'] for item in controls[result['instance_id']]['evidence']}
-            if uses_by_control[result['instance_id']] != required:
-                raise ValueError('successful evidence selections do not cover required plan dependencies')
+        required = {item['id'] for item in controls[result['instance_id']]['evidence']}
+        actual = (
+            uses_by_control[result['instance_id']]
+            | dispositions_by_control[result['instance_id']]
+        )
+        if actual != required:
+            raise ValueError('selected evidence and dispositions do not partition required plan dependencies')
+        if result['status'] == 'error' and uses_by_control[result['instance_id']] != required:
+            raise ValueError('technical error requires every required dependency selection')
     from .control_realization import compact_plan_outcomes
     requirements, baselines = compact_plan_outcomes(plan, report['results'])
     if requirements != report['requirement_assessments']:
@@ -270,11 +323,69 @@ def validate_result_against_plan(report: dict, plan: dict) -> None:
         raise ValueError('requirement-baseline outcomes differ from assessed plan and technical outcomes')
 
 
-def validate_selection_snapshot(report: dict, documents: list[dict]) -> None:
+def validate_selection_snapshot(
+    report: dict,
+    documents: list[dict],
+    *,
+    plan: dict | None = None,
+    validators: dict | None = None,
+    schema_references: dict | None = None,
+) -> None:
     """Bind recorded factual selections to the exact in-memory evaluation inputs."""
-    from .evidence_provenance import evidence_document_digest
+    from .evidence_provenance import evidence_document_digest, evidence_set_provenance
+    if report['provenance']['evidence'] != evidence_set_provenance(documents):
+        raise ValueError('evidence descriptor differs from the evaluated snapshot')
     by_reference = {(doc['id'], evidence_document_digest(doc)): doc for doc in documents}
     for use in report['provenance']['selectedEvidence']:
         document = by_reference.get((use['evidence_id'], use['evidence_digest']))
         if document is None or document['collected_at'] != use['collected_at']:
             raise ValueError('selected facts differ from the evaluated evidence snapshot')
+    for disposition in report['dependency_dispositions']:
+        facts = disposition.get(
+            'latest_candidates', disposition.get(
+                'candidates', disposition.get('diagnostics', [])
+            )
+        )
+        for fact in facts:
+            document = by_reference.get(
+                (fact['evidence_id'], fact['evidence_digest'])
+            )
+            if document is None:
+                raise ValueError(
+                    'dependency disposition differs from the evaluated evidence snapshot'
+                )
+            if (
+                'collected_at' in fact
+                and document['collected_at'] != fact['collected_at']
+            ):
+                raise ValueError(
+                    'dependency disposition differs from the evaluated evidence snapshot'
+                )
+    if plan is None or validators is None:
+        return
+    from .evidence_selection import select_evidence
+    evaluated_at = datetime.fromisoformat(
+        report['evaluated_at'].replace('Z', '+00:00')
+    )
+    expected_uses = []
+    expected_dispositions = []
+    for control in plan['controls']:
+        _, uses, dispositions = select_evidence(
+            documents, control['evidence'], evaluated_at, report['subject_id'],
+            validators, schema_references or {},
+        )
+        expected_uses.extend(
+            {'instance_id': control['instance_id'], **item} for item in uses
+        )
+        expected_dispositions.extend(
+            {'instance_id': control['instance_id'], **item}
+            for item in dispositions
+        )
+    expected_uses.sort(key=lambda item: (item['instance_id'], item['dependency_id']))
+    expected_dispositions.sort(
+        key=lambda item: (item['instance_id'], item['dependency_id'])
+    )
+    if expected_uses != report['provenance']['selectedEvidence']:
+        raise ValueError('selected facts differ from same-snapshot evidence selection')
+    if expected_dispositions != report['dependency_dispositions']:
+        raise ValueError('dependency dispositions differ from same-snapshot evidence selection')

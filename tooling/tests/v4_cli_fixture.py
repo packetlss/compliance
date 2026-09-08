@@ -76,7 +76,7 @@ evaluate := {
         ambiguous = json.loads(result_path.read_text())
         assert ambiguous['outcome'] == 'unknown'
         assert ambiguous['provenance']['selectedEvidence'] == []
-        assert 'evidence_selection_ambiguity' in run('assessment','explain','host/configuration-linux-01')
+        assert '"disposition": "ambiguous"' in run('assessment','explain','host/configuration-linux-01')
         before = result_path.read_bytes()
         (evidence/'second.json').write_text('{not JSON')
         try:

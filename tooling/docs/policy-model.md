@@ -358,14 +358,15 @@ After validation, use existing eligibility/freshness requirements to find the
 greatest eligible collection instant for the subject and required evidence type.
 Coalesce only complete canonical-document duplicates tied at that instant, for
 selection only. Select a unique remaining document; distinct tied documents
-produce attributable, provenance-bound `unknown` for dependent controls without
+produce attributable, result-bound `unknown` for dependent controls without
 invoking their OPA criteria. Independent controls remain assessable. Do not use
 ID/digest, collector identity, filenames, traversal/materialization/source order,
 or other undeclared precedence; do not fall back to older evidence or merge
 payloads. Same payload with different IDs, collector metadata, or extensions is
-still distinct. ADR 0010 owns the full matrix and structured ambiguity diagnostics
-(code, subject/type/schema, freshness requirement, evaluation/selection instants,
-and candidate ID/digest pairs), exposed in JSON and human explanations by #32.
+still distinct. ADR 0018's implemented result-level `dependency_dispositions`
+table retains the closed `ambiguous` disposition with exact tied candidate
+ID/digest/collection-time facts. It does not copy plan-owned type, schema, or
+freshness meaning.
 Evidence identity algorithms, collector semantics, and freshness semantics are
 unchanged; coalescing for selection preserves the complete subject snapshot,
 including ambiguous and nonselected evidence. The predecessor order-dependent
@@ -375,9 +376,11 @@ The predecessor evaluator's matching-schema-failure → `error` rule is supersed
 as normative authority; the historical rationale remains in the
 [architecture decision log](architecture.md#11-decision-log). Preserve rejected
 identified/routed documents and current-subject unused-type provenance in the
-same snapshot considered by evaluation. ADR 0010 requires deterministic,
-provenance-bound `observed.evidence_validation_errors` without changing evidence
-identity algorithms. Other explicitly routed subjects remain outside matching
+same snapshot considered by evaluation. ADR 0018 replaces predecessor result-owned
+observations with an `invalid` dependency disposition containing only stable code,
+evidence ID/digest, safe policy-schema path, and keyword. Evidence-instance paths,
+raw validator messages, and schema source locations are not retained. Other
+explicitly routed subjects remain outside matching
 scope; unused types remain outside a control's validation scope, preserving
 evidence-directory sharing and open type extension.
 
@@ -728,9 +731,12 @@ the same reason and expected/observed data; its status becomes `waived` and a st
 snapshot and digest.
 
 The persisted `assessment-results/v4` envelope has a strict tooling-owned schema.
-Each compact technical outcome contains only `instance_id`, status, reason,
-expected/observed evaluation facts, and an exact applied-waiver snapshot when
-applicable. Compact requirement and requirement-baseline outcomes contain their
+Each compact technical outcome contains `instance_id`, status, reason,
+expected/observed evaluation facts, an exact applied-waiver snapshot when
+applicable, and one closed `evaluation_error` only for technical `error`. The root
+`dependency_dispositions` table owns canonical facts for unsuccessful required
+dependencies; `provenance.selectedEvidence` remains the sole successful-selection
+owner. Compact requirement and requirement-baseline outcomes contain their
 stable reference, status, and reason. The exact bound plan owns the frozen operation,
 resolved policy, planning composition, parameter/dependency/mapping facts, and
 policy-side severity/remediation/alignment. The result owns compact immutable
@@ -979,8 +985,8 @@ immutable; timely evidence is not present-state certainty or continuous effectiv
 instant and unambiguous assessed-plan requirement association as validated,
 result-identity-bound orchestration facts resolving into the complete snapshot.
 See [artifact provenance](artifact-provenance.md#exact-planresult-contract).
-Rejected/ambiguous/nonselected candidates and selection diagnostics cannot stand in
-for those facts. #80 implements query-time derivation and separate aggregation as
+Unsuccessful dependency dispositions cannot stand in for successful selection or
+be recomputed at query time. #80 implements query-time derivation and separate aggregation as
 the operational-view tranche, distinct from #32's representation clarification.
 The association is stable `(instance_id, dependency_id)` and the exact assessed
 plan supplies the dependency body and `max_age`.
