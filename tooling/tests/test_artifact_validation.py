@@ -214,9 +214,10 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         changed['results'] = changed['results'][1:]
         changed['outcome'] = result_outcome(changed)
         changed['id'] = artifact_digest(changed)
-        validate_assessment_results(changed)
-        with self.assertRaisesRegex(ValueError, 'controls do not match'):
-            validate_result_against_plan(changed, self.plan)
+        with self.assertRaisesRegex(
+            ValueError, 'dependency disposition control is absent from results'
+        ):
+            validate_assessment_results(changed)
 
     def test_matching_freshness_copies_cannot_bypass_instance_fingerprint(self):
         from tools.assessment_provenance import artifact_digest

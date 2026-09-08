@@ -9,9 +9,10 @@ Requirement, RequirementBaseline assessment, ControlRealization, external
 mapping, or synthesized `not_implemented` object.
 
 Canonical mutations distinguish valid negative evidence (`FAIL`), missing
-evidence (`UNKNOWN` before criterion execution), schema-invalid evidence
-(`UNKNOWN` with a diagnostic), ambiguous greatest-instant documents, and
-canonical-identical copies. A pinned overlay tailors `[auditd]` to
+evidence (`UNKNOWN` plus `absent`), stale evidence (`UNKNOWN` plus its exact latest
+candidate), schema-invalid evidence (`UNKNOWN` plus minimized attributable
+diagnostics), ambiguous greatest-instant documents, canonical-identical copies,
+and each closed criterion execution/decision `ERROR` class. A pinned overlay tailors `[auditd]` to
 `[auditd, aide]`; its plan differs relationally from the base plan. Assigning
 the divergent base and child together is non-assessable. No digest is golden.
 

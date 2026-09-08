@@ -78,28 +78,48 @@ def prepare_schemas(schemas, required_types):
     return validators, references
 
 
+def _candidate_reference(document):
+    return {
+        'evidence_id': document['id'],
+        'evidence_digest': evidence_document_digest(document),
+        'collected_at': document['collected_at'],
+    }
+
+
 def select_evidence(documents, requirements, evaluated_at, subject_id, validators, schemas):
-    selected, uses, invalid, ambiguous = [], [], [], []
+    """Select required evidence and retain canonical unsuccessful dispositions."""
+    del subject_id, schemas
+    selected, uses, dispositions = [], [], []
     for requirement in requirements:
         evidence_type = requirement['type']
         dependency_id = requirement['id']
         candidates = [doc for doc in documents if doc['type'] == evidence_type]
-        errors = []
+        diagnostics = []
         for doc in candidates:
             for error in validators[evidence_type].iter_errors(doc):
-                errors.append({
-                    'type': 'evidence-schema-validation-failed',
+                diagnostics.append({
                     'code': 'evidence_schema_invalid',
-                    'evidence_type': evidence_type,
-                    'dependency_id': dependency_id,
                     'evidence_id': doc['id'], 'evidence_digest': evidence_document_digest(doc),
-                    'schema_reference': schemas[evidence_type],
-                    'path': _json_pointer(error.absolute_path),
                     'schema_path': _json_pointer(error.absolute_schema_path),
-                    'keyword': error.validator, 'message': error.message,
+                    'keyword': error.validator,
                 })
-        if errors:
-            invalid.extend(errors)
+        if diagnostics:
+            unique = {
+                (item['evidence_id'], item['evidence_digest'], item['schema_path'],
+                 item['keyword'], item['code']): item
+                for item in diagnostics
+            }
+            dispositions.append({
+                'dependency_id': dependency_id,
+                'disposition': 'invalid',
+                'diagnostics': [unique[key] for key in sorted(unique)],
+            })
+            continue
+        if not candidates:
+            dispositions.append({
+                'dependency_id': dependency_id,
+                'disposition': 'absent',
+            })
             continue
         maximum_age = parse_duration(requirement['max_age'])
         eligible = []
@@ -110,17 +130,38 @@ def select_evidence(documents, requirements, evaluated_at, subject_id, validator
             if evaluated_at - instant <= maximum_age:
                 eligible.append((instant, doc))
         if not eligible:
+            latest = max(
+                datetime.fromisoformat(doc['collected_at'].replace('Z', '+00:00'))
+                for doc in candidates
+            )
+            latest_documents = {
+                evidence_document_digest(doc): doc
+                for doc in candidates
+                if datetime.fromisoformat(
+                    doc['collected_at'].replace('Z', '+00:00')
+                ) == latest
+            }
+            latest_candidates = sorted(
+                (_candidate_reference(doc) for doc in latest_documents.values()),
+                key=lambda item: (item['evidence_id'], item['evidence_digest']),
+            )
+            dispositions.append({
+                'dependency_id': dependency_id,
+                'disposition': 'stale',
+                'latest_candidates': latest_candidates,
+            })
             continue
         latest = max(instant for instant, _ in eligible)
         tied = {evidence_document_digest(doc): doc for instant, doc in eligible if instant == latest}
         if len(tied) > 1:
-            ambiguous.append({
-                'code': 'evidence_selection_ambiguity', 'subject': subject_id,
-                'evidence_type': evidence_type, 'schema_reference': schemas[evidence_type],
+            disposition_candidates = sorted(
+                (_candidate_reference(doc) for doc in tied.values()),
+                key=lambda item: (item['evidence_id'], item['evidence_digest']),
+            )
+            dispositions.append({
                 'dependency_id': dependency_id,
-                'evaluated_at': evaluated_at.isoformat().replace('+00:00', 'Z'),
-                'collected_at': latest.isoformat().replace('+00:00', 'Z'),
-                'candidates': sorted([{'id': doc['id'], 'digest': key} for key,doc in tied.items()], key=lambda x:(x['id'],x['digest'])),
+                'disposition': 'ambiguous',
+                'candidates': disposition_candidates,
             })
             continue
         document = next(iter(tied.values()))
@@ -129,6 +170,5 @@ def select_evidence(documents, requirements, evaluated_at, subject_id, validator
                      'evidence_id': document['id'],
                      'evidence_digest': evidence_document_digest(document),
                      'collected_at': document['collected_at']})
-    invalid.sort(key=lambda x:(x['dependency_id'],x['evidence_type'],x['evidence_id'],x['evidence_digest'],x['path'],x['schema_path'],x['message']))
-    ambiguous.sort(key=lambda x:(x['dependency_id'],x['evidence_type']))
-    return selected, uses, invalid, ambiguous
+    dispositions.sort(key=lambda item: item['dependency_id'])
+    return selected, uses, dispositions

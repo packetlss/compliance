@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from tools.evaluate_plan import (
@@ -80,6 +81,42 @@ class EvidenceFreshnessTests(unittest.TestCase):
         self.assertIn(str((root / "shared/controls/shared.rego").resolve()), command)
         self.assertIn(str((root / "private/controls/private.rego").resolve()), command)
 
+    def test_process_and_non_json_failures_have_closed_safe_classification(self):
+        cases = (
+            (
+                SimpleNamespace(
+                    returncode=1, stdout='private stdout', stderr='private stderr'
+                ),
+                'criterion_execution_failed',
+            ),
+            (
+                SimpleNamespace(
+                    returncode=0, stdout='private non-json', stderr=''
+                ),
+                'criterion_decision_invalid',
+            ),
+        )
+        for process, expected_code in cases:
+            with self.subTest(code=expected_code), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                source, plan = evidence_plan(root)
+                evidence_path = root / 'evidence'
+                evidence_path.mkdir()
+                (evidence_path / 'valid.json').write_text(
+                    json.dumps(evidence_document()), encoding='utf-8'
+                )
+                with patch('tools.evaluate_plan.subprocess.run', return_value=process):
+                    report = evaluate_plan_document(
+                        plan, evidence_path, (source,),
+                        evaluated_at=datetime(2026, 8, 23, 12, tzinfo=UTC),
+                    )
+            result, = report['results']
+            self.assertEqual(result['evaluation_error']['code'], expected_code)
+            serialized = json.dumps(report)
+            self.assertNotIn('private stdout', serialized)
+            self.assertNotIn('private stderr', serialized)
+            self.assertNotIn('private non-json', serialized)
+
 
     def test_valid_typed_evidence_reaches_opa_with_extensions_preserved(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -137,14 +174,17 @@ class EvidenceFreshnessTests(unittest.TestCase):
         self.assertEqual(result["status"], "unknown")
         self.assertNotIn("evidence_ids", result)
         self.assertIn("rejected as invalid", result["reason"])
-        errors = result["observed"]["evidence_validation_errors"]
+        disposition, = report["dependency_dispositions"]
+        self.assertEqual(disposition["disposition"], "invalid")
+        errors = disposition["diagnostics"]
         self.assertEqual(
-            {error["path"] for error in errors},
-            {"/collected_at", "/payload/value"},
+            {error["schema_path"] for error in errors},
+            {
+                "/properties/collected_at/format",
+                "/properties/payload/properties/value/type",
+            },
         )
-        self.assertTrue(all(
-            error["evidence_type"] == "test.evidence/v1" for error in errors
-        ))
+        self.assertTrue(all(error["code"] == "evidence_schema_invalid" for error in errors))
         self.assertEqual(report["outcome"], "unknown")
 
     def test_invalid_evidence_for_another_subject_is_not_evaluated(self):

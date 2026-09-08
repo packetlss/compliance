@@ -15,11 +15,14 @@ The plan owns the complete resolved member intent, frozen operation relationship
 planning composition/enforcement, parameters, stable evidence dependencies,
 mappings, and all other plan semantics. The result references only the exact
 `plan_id` and direct `subject_id` and owns what evaluation concluded under that plan.
+ADR 0018's atomic cutover is implemented by
+[#102](https://github.com/packetlss/compliance/issues/102).
 
 The minimum result retains its explicit schema/version and identity discriminator,
 `plan_id`, `subject_id`, `evaluated_at`, immutable outcome, actual evaluation
 composition plus evaluation enforcement, exact evaluator, complete subject evidence
-snapshot descriptor/evidence-set identity, exact successful selections, technical
+snapshot descriptor/evidence-set identity, exact successful selections, canonical
+unsuccessful dependency dispositions, technical
 outcomes, compact requirement/baseline outcomes, and exact applied-waiver snapshots.
 It does not copy the operation, resolved policy, planning composition, summary
 counts, or whole-catalog waiver revision. Evaluation enforcement remains validated
@@ -47,7 +50,8 @@ descriptor and successful-selection table remain separate facts.
 
 The explicit result-domain projection commits to exact plan and subject IDs,
 evaluation instant and stored outcome, evaluation-composition identity, evaluator
-identity, evidence-set identity, successful selections, compact outcomes, and exact
+identity, evidence-set identity, successful selections, unsuccessful dependency
+dispositions, compact outcomes, and exact
 applied-waiver facts. Contract-specific domain normalization/ordering precedes RFC
 8785/JCS. Embedded descriptors remain self-validating where necessary, while the
 projection references their owning domain identities and adds no meaningless
@@ -55,7 +59,8 @@ digest-of-digest wrapper.
 
 Intrinsic validation covers result schema/version/order/identity, evaluation
 composition and enforcement structure, evaluator shape, evidence snapshot identity,
-successful-selection uniqueness and snapshot references, waiver snapshot integrity,
+successful-selection and disposition uniqueness/snapshot references, their disjoint
+ownership, closed technical-error attribution, waiver snapshot integrity,
 and outcome uniqueness. Publication and full historical interpretation additionally
 require exact relational validation against the plan: plan/subject equality,
 evaluation policy sources authorized by planning composition, exact active-control
@@ -91,26 +96,30 @@ integrity, explicitly route subject/type, validate every matching candidate, the
 apply existing freshness eligibility. Snapshot documents are normalized using the existing JCS representation before
 validation, so embedded document values in human validation messages are
 canonical-order-independent. Schema-invalid matching evidence produces
-attributable `unknown`; no dependent OPA call occurs. Distinct documents at the
-greatest eligible collection instant produce `evidence_selection_ambiguity`,
-`unknown` and no dependent OPA call. Complete canonical duplicates may coalesce
+attributable `unknown` plus an `invalid` dependency disposition; no dependent OPA
+call occurs. Missing and stale evidence retain distinct `absent` and `stale` facts.
+Distinct documents at the greatest eligible collection instant produce an
+`ambiguous` disposition, `unknown` and no dependent OPA call. Complete canonical duplicates may coalesce
 for selection only. No older fallback, payload merge or ordering precedence exists.
 Independent controls remain assessable; any failed required selection blocks its
 control. Missing/stale required evidence is unknown, not a completed passing check.
 Every declared evidence dependency is required by definition; plan and result
 representations contain no optionality discriminator.
 
-Structured validation diagnostics bind evidence ID/digest, schema reference,
-instance/schema pointers, keyword, stable code and human message. Ambiguity
-records retain subject, schema/type, requirement, assessment/tied instants and
-ordered candidate ID/digest pairs. Human explanations retain these diagnostics.
+Invalid diagnostics bind only stable code, evidence ID/digest, safe policy-schema
+path and keyword. They omit evidence-instance paths, raw library messages and schema
+source locations. Stale and ambiguous records retain exact ordered candidate
+ID/digest/collection-time facts already present in the complete snapshot. Human
+explanations combine these result facts with meaning from the exact assessed plan.
 Invalid-evidence counts belong to unknown. Only underlying fail can be waived;
 logical roll-ups preserve fail → error → unknown/missing → waived → pass.
 
 Unverifiable prerequisites, ambiguous routing, inaccessible/unrepresentable
 snapshot, validator implementation failure or invalid shared result provenance
 refuse the assessment. An identified criterion execution failure or unusable
-OPA decision becomes attributable error. Output encoding/validation precedes
+OPA decision becomes an attributable error with a closed stage/code and fixed safe
+reason; valid criterion-reported `error` is separately classified. Raw evaluator
+output and exceptions are not result facts. Output encoding/validation precedes
 atomic publication; refusal/write failure leaves no new result envelope and does
 not present an older result as the refused attempt's output. Completing artifact
 creation is distinct from assessment pass.

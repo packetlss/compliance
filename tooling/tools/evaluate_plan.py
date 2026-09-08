@@ -32,6 +32,26 @@ RFC3339_PATTERN = re.compile(
 )
 EVIDENCE_FORMAT_CHECKER = FormatChecker()
 
+EVALUATION_ERRORS = {
+    'criterion_execution_failed': (
+        'criterion_execution', 'Criterion execution failed.'
+    ),
+    'criterion_decision_invalid': (
+        'criterion_decision', 'Criterion decision was unusable.'
+    ),
+    'criterion_reported_error': (
+        'criterion_decision', 'Criterion reported an evaluation error.'
+    ),
+}
+
+
+class CriterionExecutionFailure(RuntimeError):
+    """The resolved evaluator failed while invoking a criterion."""
+
+
+class CriterionDecisionFailure(ValueError):
+    """The evaluator returned a decision that cannot be accepted."""
+
 
 @EVIDENCE_FORMAT_CHECKER.checks("date-time")
 def _is_rfc3339_datetime(value: object) -> bool:
@@ -91,6 +111,16 @@ def control_error_result(
         "external_refs": assessment_input["control"].get("external_refs", []),
         "alignment": assessment_input["control"].get("alignment", "unmapped"),
     }
+
+
+def _classified_error_result(
+    assessment_input: JsonObject,
+    code: str,
+) -> JsonObject:
+    stage_name, reason = EVALUATION_ERRORS[code]
+    result = _compact_result_fields(control_error_result(assessment_input, reason))
+    result['evaluation_error'] = {'stage': stage_name, 'code': code}
+    return result
 
 
 def _compact_evaluator_decision(
@@ -163,17 +193,11 @@ def evaluate_control(
         check=False,
     )
     if process.returncode != 0:
-        return control_error_result(
-            assessment_input,
-            process.stderr.strip() or "OPA evaluation failed",
-        )
+        raise CriterionExecutionFailure('criterion process failed')
     try:
         return json.loads(process.stdout)
-    except json.JSONDecodeError:
-        return control_error_result(
-            assessment_input,
-            "OPA returned an undefined or non-JSON result",
-        )
+    except json.JSONDecodeError as error:
+        raise CriterionDecisionFailure('criterion returned non-JSON output') from error
 def evaluate_plan_document(
     plan: JsonObject,
     evidence_path: Path,
@@ -228,6 +252,7 @@ def evaluate_plan_document(
 
     validators, schema_references = prepare_schemas(evidence_schemas, required_evidence_types)
     selected_uses = []
+    dependency_dispositions = []
     evaluated_at = (evaluated_at or datetime.now(UTC)).replace(microsecond=0)
     if evaluated_at.utcoffset() is None:
         raise ValueError('assessment time must have an explicit timezone')
@@ -241,11 +266,15 @@ def evaluate_plan_document(
             evaluated_at,
         )
         evidence_requirements = control.get("evidence", [])
-        selected_evidence, uses, validation_errors, ambiguities = select_evidence(
+        selected_evidence, uses, dispositions = select_evidence(
             evidence, evidence_requirements, evaluated_at, plan['subject']['id'],
             validators, schema_references,
         )
         selected_uses.extend({'instance_id': control['instance_id'], **use} for use in uses)
+        dependency_dispositions.extend(
+            {'instance_id': control['instance_id'], **item}
+            for item in dispositions
+        )
         assessment_input = {
             "schema": "compliance.example/assessment-input/v1",
             "assessment": {
@@ -259,31 +288,45 @@ def evaluate_plan_document(
             "waiver": None,
         }
         selected_dependencies = {use['dependency_id'] for use in uses}
-        if (validation_errors or ambiguities or any(
+        if (dispositions or any(
                 requirement['id'] not in selected_dependencies
                 for requirement in evidence_requirements)):
-            observed = {}
-            if validation_errors:
+            disposition_names = {item['disposition'] for item in dispositions}
+            if 'invalid' in disposition_names:
                 reason = 'Required evidence was rejected as invalid; criterion not determined.'
-                observed['evidence_validation_errors'] = validation_errors
-            elif ambiguities:
+            elif 'ambiguous' in disposition_names:
                 reason = 'Required evidence selection is ambiguous; criterion not determined.'
             else:
                 reason = 'Required evidence is missing or stale; criterion not determined.'
-            if ambiguities:
-                observed['evidence_selection_ambiguities'] = ambiguities
             result = _compact_result_fields(
-                control_error_result(assessment_input, reason, observed=observed)
+                control_error_result(assessment_input, reason)
             )
             result['status'] = 'unknown'
         else:
             try:
-                result = evaluate_control(opa, policies, assessment_input, control["entrypoint"])
-                result = _compact_evaluator_decision(result, assessment_input)
+                decision = evaluate_control(
+                    opa, policies, assessment_input, control["entrypoint"]
+                )
+            except CriterionDecisionFailure:
+                result = _classified_error_result(
+                    assessment_input, 'criterion_decision_invalid'
+                )
             except Exception:
-                result = control_error_result(assessment_input, 'Criterion execution failed')
-        if set(result) != {"instance_id", "status", "reason", "expected", "observed"}:
-            result = _compact_evaluator_decision(result, assessment_input)
+                result = _classified_error_result(
+                    assessment_input, 'criterion_execution_failed'
+                )
+            else:
+                try:
+                    result = _compact_evaluator_decision(decision, assessment_input)
+                except Exception:
+                    result = _classified_error_result(
+                        assessment_input, 'criterion_decision_invalid'
+                    )
+                else:
+                    if result['status'] == 'error':
+                        result = _classified_error_result(
+                            assessment_input, 'criterion_reported_error'
+                        )
         if waiver is not None and result.get("status") == "fail":
             result["status"] = "waived"
             result["waiver"] = {**waiver, "underlying_status": "fail"}
@@ -299,6 +342,10 @@ def evaluate_plan_document(
         "evaluated_at": evaluated_at.isoformat().replace("+00:00", "Z"),
         "plan_id": plan["id"],
         "subject_id": plan["subject"]["id"],
+        "dependency_dispositions": sorted(
+            dependency_dispositions,
+            key=lambda item: (item['instance_id'], item['dependency_id']),
+        ),
         "results": results,
         "requirement_assessments": requirement_assessments,
         "requirement_baseline_assessments": requirement_baseline_assessments,
@@ -315,7 +362,10 @@ def evaluate_plan_document(
     report['id'] = artifact_digest(report)
     validate_assessment_results(report)
     validate_result_against_plan(report, plan)
-    validate_selection_snapshot(report, evidence)
+    validate_selection_snapshot(
+        report, evidence, plan=plan, validators=validators,
+        schema_references=schema_references,
+    )
     return report
 
 

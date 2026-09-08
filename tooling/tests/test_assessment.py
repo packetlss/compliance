@@ -88,9 +88,21 @@ class AssessmentStatusTests(unittest.TestCase):
         results = [{
             "instance_id": control["instance_id"],
             "status": statuses[index],
-            "reason": f"Synthetic {statuses[index]} outcome.",
+            "reason": (
+                "Criterion execution failed."
+                if statuses[index] == "error"
+                else f"Synthetic {statuses[index]} outcome."
+            ),
             "expected": {},
             "observed": {},
+            **(
+                {"evaluation_error": {
+                    "stage": "criterion_execution",
+                    "code": "criterion_execution_failed",
+                }}
+                if statuses[index] == "error"
+                else {}
+            ),
         } for index, control in enumerate(plan["controls"])]
         requirements, baselines = compact_plan_outcomes(plan, results)
         documents = []
@@ -115,6 +127,7 @@ class AssessmentStatusTests(unittest.TestCase):
             "subject_id": plan["subject"]["id"],
             "plan_id": plan_id or plan["id"],
             "evaluated_at": evaluated_at,
+            "dependency_dispositions": [],
             "provenance": {
                 "schema": "compliance.example/assessment-provenance/v1alpha1",
                 "evaluationComposition": copy.deepcopy(plan["provenance"]["planningComposition"]),

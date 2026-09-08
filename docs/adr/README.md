@@ -30,7 +30,7 @@ Accepted destination decisions:
 - [ADR 0016 — Closed-world company policy assessment](0016-closed-world-policy-assessment.md) — experimental, implemented under #78; supersedes ADRs 0013–0015 and clarifies ADR 0006; #37. ADR 0012 remains unchanged.
 
 - [ADR 0017 — Author policy and technical-check meaning on canonical source objects](0017-source-authored-policy-and-check-meaning.md) — accepted design, not yet implemented; #97. Its bounded coordinated implementation promotion is recorded in the ADR.
-- [ADR 0018 — Retain minimal durable assessment explanation facts](0018-durable-assessment-explanation-facts.md) — accepted design, not yet implemented; #98. Its separate bounded result-facts implementation promotion is recorded in the ADR.
+- [ADR 0018 — Retain minimal durable assessment explanation facts](0018-durable-assessment-explanation-facts.md) — implemented under #102; experimental, not frozen. Its architecture contract is #98.
 
 Current system-level documents:
 

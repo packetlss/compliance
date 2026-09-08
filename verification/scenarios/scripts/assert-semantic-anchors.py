@@ -128,16 +128,47 @@ def technical(root):
         package.unlink()
         _, _, missing_results = s.assess("host/technical-A", evidence=evidence, tag="missing")
         missing = json.loads((missing_results / "host__technical-A.json").read_text())
-        require(statuses(missing) == ["unknown"] and not missing["results"][0].get("observed", {}).get("criterion"),
+        require(statuses(missing) == ["unknown"]
+                and missing["dependency_dispositions"] == [{
+                    "instance_id": "verification.technical-packages.required",
+                    "dependency_id": "observation",
+                    "disposition": "absent",
+                }]
+                and not missing["results"][0].get("observed", {}).get("criterion"),
                 "missing evidence did not remain pre-criterion unknown")
+        missing_explanation = s.cli(
+            "assessment", "explain", "host/technical-A",
+            "--plan", str(missing_results.parent / "missing-plans" / "host__technical-A.json"),
+            "--results", str(missing_results), "--at", AT, "--as-of", AT,
+            historical=True,
+        )
+        require('"disposition": "absent"' in missing_explanation,
+                "missing evidence disposition was not explainable")
+
+        stale_doc = json.loads(original)
+        stale_doc["collected_at"] = "2026-08-30T00:00:00Z"
+        package.write_text(json.dumps(stale_doc))
+        _, _, stale_results = s.assess("host/technical-A", evidence=evidence, tag="stale")
+        stale = json.loads((stale_results / "host__technical-A.json").read_text())
+        stale_disposition, = stale["dependency_dispositions"]
+        require(statuses(stale) == ["unknown"]
+                and stale_disposition["disposition"] == "stale"
+                and stale_disposition["latest_candidates"][0]["collected_at"] == "2026-08-30T00:00:00Z",
+                "stale evidence did not retain the greatest stale candidate")
 
         package.write_text(original); doc = json.loads(original); doc["payload"]["packages"] = "invalid"
         package.write_text(json.dumps(doc))
         _, _, invalid_results = s.assess("host/technical-A", evidence=evidence, tag="invalid")
         invalid = json.loads((invalid_results / "host__technical-A.json").read_text())
-        observed = invalid["results"][0]["observed"]
-        require(statuses(invalid) == ["unknown"] and observed.get("evidence_validation_errors")
-                and not observed.get("criterion")
+        invalid_disposition, = invalid["dependency_dispositions"]
+        diagnostics = invalid_disposition.get("diagnostics", [])
+        require(statuses(invalid) == ["unknown"]
+                and invalid_disposition["disposition"] == "invalid"
+                and diagnostics
+                and set(diagnostics[0]) == {
+                    "code", "evidence_id", "evidence_digest", "schema_path", "keyword",
+                }
+                and invalid["results"][0]["observed"] == {}
                 and invalid["provenance"]["selectedEvidence"] == []
                 and "criterion not determined" in invalid["results"][0]["reason"],
                 "schema-invalid evidence was not attributable pre-criterion unknown")
@@ -147,7 +178,11 @@ def technical(root):
         (evidence / "distinct.json").write_text(json.dumps(second))
         _, _, ambiguous_results = s.assess("host/technical-A", evidence=evidence, tag="ambiguous")
         ambiguous = json.loads((ambiguous_results / "host__technical-A.json").read_text())
-        require(statuses(ambiguous) == ["unknown"] and ambiguous["results"][0]["observed"].get("evidence_selection_ambiguities"),
+        ambiguity, = ambiguous["dependency_dispositions"]
+        require(statuses(ambiguous) == ["unknown"]
+                and ambiguity["disposition"] == "ambiguous"
+                and len(ambiguity["candidates"]) == 2
+                and ambiguous["results"][0]["observed"] == {},
                 "greatest-instant ambiguity was not unknown")
 
         second["id"] = base["id"]; (evidence / "distinct.json").write_text(json.dumps(second))
@@ -155,6 +190,47 @@ def technical(root):
         copies = json.loads((copy_results / "host__technical-A.json").read_text())
         require(statuses(copies) == ["pass"] and len(copies["provenance"]["evidence"]["documents"]) == 2,
                 "canonical copies did not coalesce while preserving snapshot provenance")
+
+        policy = s.work / "control-library/controls/linux/packages-required/policy.rego"
+        original_policy = policy.read_text()
+        error_cases = (
+            (
+                original_policy + "\nthis is not valid rego\n",
+                "criterion_execution_failed",
+                "Criterion execution failed.",
+            ),
+            (
+                original_policy.replace(
+                    "evaluate := result.make(input, outcome)",
+                    'evaluate := {"invalid": "private evaluator output"}',
+                ),
+                "criterion_decision_invalid",
+                "Criterion decision was unusable.",
+            ),
+            (
+                original_policy.replace('"status": "pass"', '"status": "error"'),
+                "criterion_reported_error",
+                "Criterion reported an evaluation error.",
+            ),
+        )
+        for index, (source, code, reason) in enumerate(error_cases):
+            policy.write_text(source)
+            _, _, error_results = s.assess(
+                "host/technical-A", evidence=evidence, tag=f"error-{index}"
+            )
+            error_report = json.loads(
+                (error_results / "host__technical-A.json").read_text()
+            )
+            error_result, = error_report["results"]
+            require(error_result["status"] == "error"
+                    and error_result["evaluation_error"]["code"] == code
+                    and error_result["reason"] == reason
+                    and error_result["expected"] == {}
+                    and error_result["observed"] == {},
+                    f"criterion error classification {code} was not durable and safe")
+            require("private evaluator output" not in json.dumps(error_report),
+                    "raw evaluator output was retained")
+        policy.write_text(original_policy)
 
         assignment = s.project / "assignments/base.yaml"
         assignment.write_text(assignment.read_text().replace("verification.technical-packages\n", "verification.technical-packages-with-aide\n"))

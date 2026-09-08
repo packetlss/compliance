@@ -126,8 +126,9 @@ retain their original identity and require historical tooling.
 
 ### Durable assessment explanation facts
 
-[ADR 0018](adr/0018-durable-assessment-explanation-facts.md) is an **accepted
-design, not yet implemented** under [#98](https://github.com/packetlss/compliance/issues/98).
+[ADR 0018](adr/0018-durable-assessment-explanation-facts.md) is
+**Experimental, implemented** under [#102](https://github.com/packetlss/compliance/issues/102),
+from the design accepted under [#98](https://github.com/packetlss/compliance/issues/98).
 The bounded successor changes the experimental assessment-results v4 contract to
 retain identity-bearing unsuccessful dependency dispositions and closed attributable
 criterion error codes. It preserves successful selection, outcome, waiver,
@@ -137,9 +138,9 @@ policy/check meaning is referenced by stable keys and is not copied into results
 The cutover is pre-freeze: current development v4 results become unsupported rather
 than gaining compatibility inference or dual readers. No evidence, plan,
 operation/member, composition, evaluator or waiver identity algorithm changes, and
-no identifier is promoted to `/v1`. ADR 0017 and ADR 0018 retain separate bounded
-implementation tranches; accepting their architecture does not implement either
-runtime contract.
+no identifier is promoted to `/v1`. ADR 0017 and ADR 0018 were implemented as
+separate bounded tranches. Neither cutover freezes the v4 wire contract or
+provisional result identity algorithm.
 
 ## Closed-world operation accounting
 
