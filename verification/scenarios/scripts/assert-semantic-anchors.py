@@ -104,7 +104,7 @@ def technical(root):
         explanation = s.cli(
             "assessment", "explain", "host/technical-A",
             "--plan", str(plans / "host__technical-A.json"),
-            "--results", str(results), "--at", AT,
+            "--results", str(results), "--at", AT, "--as-of", AT,
             historical=True,
         )
         for expected in (
@@ -202,7 +202,7 @@ def iam(root, private_source):
             "assessment", "explain", "host/A",
             "--plan", str(plans / "host__A.json"),
             "--assessed-plans", str(plans),
-            "--results", str(results), "--at", AT,
+            "--results", str(results), "--at", AT, "--as-of", AT,
             historical=True,
         )
         for expected in (
