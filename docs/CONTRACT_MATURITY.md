@@ -110,18 +110,19 @@ Current requirement/realization schemas support explicit pinned slots and direct
 
 ### Source-authored policy and check meaning
 
-[ADR 0017](adr/0017-source-authored-policy-and-check-meaning.md) is an
-**accepted design, not yet implemented** under #97. It places required policy
+[ADR 0017](adr/0017-source-authored-policy-and-check-meaning.md) is
+**Experimental, implemented** under [#100](https://github.com/packetlss/compliance/issues/100).
+It places required policy
 titles on assignable baseline roots and required intrinsic title/purpose on
 canonical Control definitions. Existing Objective, tailoring, exclusion, and
 remediation semantics remain separate. The fields are identity-bearing policy
 meaning but cannot drive execution.
 
-The implementation is one coordinated pre-freeze authoring-schema, maintained
-source, resolved-plan, validation, policy-diff, and explanation cutover. No
+The implementation landed as one coordinated pre-freeze authoring-schema,
+maintained source, resolved-plan, validation, policy-diff, and explanation cutover. No
 compatibility reader or digest-algorithm change is planned. Existing runtime
-representations remain current until that separately authorized migration lands;
-historical artifacts retain their original identity and require historical tooling.
+representations now require authored meaning; historical pre-cutover artifacts
+retain their original identity and require historical tooling.
 
 ### Durable assessment explanation facts
 

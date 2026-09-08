@@ -1,9 +1,9 @@
 # ADR 0017: Author policy and technical-check meaning on canonical source objects
 
-- **Status:** Accepted design; implementation not authorized by this ADR
+- **Status:** Implemented under #100; experimental, not frozen
 - **Date:** 2026-09-07
 - **Architecture contract:** [#97](https://github.com/packetlss/compliance/issues/97)
-- **Implementation:** Requires the bounded promotion defined below
+- **Implementation:** [#100](https://github.com/packetlss/compliance/issues/100)
 
 ## Context
 

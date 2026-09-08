@@ -6,6 +6,8 @@
     "version": 1
   },
   "spec": {
+    "title": "Required system packages are installed",
+    "purpose": "Verify that the packages mandated by policy are present.",
     "entrypoint": "data.compliance.controls.linux.packages_required.evaluate",
     "applies_to": [
       "linux-host"

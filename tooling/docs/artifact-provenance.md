@@ -78,6 +78,11 @@ substitution, and approximate equality are forbidden. This is ordinary artifact 
 resolution, not a history store, index, run object, retention service, latest-result
 database, or discovery subsystem.
 
+The exact plan owns applicable-policy titles plus active and excluded Control-owned
+check title/purpose. Excluded records retain the selected Control definition needed
+to validate that meaning offline. Compact results deliberately retain only stable
+references and outcomes; they do not copy policy, Objective, check title, or purpose.
+
 ## Required evidence and refusal
 
 [ADR 0010](../../docs/adr/0010-required-evidence-status-and-assessment-refusal.md)

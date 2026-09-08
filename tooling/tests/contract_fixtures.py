@@ -69,16 +69,23 @@ def build_fixture(root):
     specs = {
         "control": {
             "type": "object",
-            "required": ["entrypoint", "parameters_schema", "applies_to", "evidence"],
+            "required": [
+                "title",
+                "purpose",
+                "entrypoint",
+                "parameters_schema",
+                "applies_to",
+                "evidence",
+            ],
         },
         "baseline": {
             "type": "object",
-            "required": ["controls"],
+            "required": ["title", "controls"],
             "properties": {"controls": {"type": "array", "items": control_instance}},
         },
         "baseline-overlay": {
             "type": "object",
-            "required": ["extends", "operations"],
+            "required": ["title", "extends", "operations"],
             "properties": {
                 "operations": {
                     "type": "array",
@@ -99,7 +106,10 @@ def build_fixture(root):
             },
         },
         "control-requirement": {"type": "object", "required": ["title"]},
-        "requirement-baseline": {"type": "object", "required": ["requirements"]},
+        "requirement-baseline": {
+            "type": "object",
+            "required": ["title", "requirements"],
+        },
         "control-realization": {
             "type": "object",
             "required": ["requirement", "applies_to", "adoption"],
@@ -190,6 +200,8 @@ def build_fixture(root):
             else "linux-host"
         )
         spec = {
+            "title": f"Synthetic {identifier} check",
+            "purpose": "Verify the structured condition supplied by the synthetic fixture.",
             "entrypoint": "data.test.contract.evaluate",
             "applies_to": [kind],
             "evidence": [
@@ -199,11 +211,9 @@ def build_fixture(root):
             "severity": "medium",
             "remediation": "Apply the synthetic test setting.",
         }
-        write(
-            shared,
-            f"controls/{path}/control.json",
-            resource("Control", identifier, spec),
-        )
+        control = resource("Control", identifier, spec)
+        control["metadata"] = {"id": identifier, "version": 1}
+        write(shared, f"controls/{path}/control.json", control)
         write(
             shared,
             f"controls/{path}/parameters.schema.json",
@@ -222,7 +232,12 @@ def build_fixture(root):
         return write(
             selection,
             path,
-            resource("Baseline", identifier, {"controls": controls}, revision),
+            resource(
+                "Baseline",
+                identifier,
+                {"title": f"Synthetic {identifier} policy", "controls": controls},
+                revision,
+            ),
         )
 
     def overlay(path, identifier, parent, operations):
@@ -233,6 +248,7 @@ def build_fixture(root):
                 "BaselineOverlay",
                 identifier,
                 {
+                    "title": f"Synthetic {identifier} policy",
                     "extends": [
                         {
                             "baseline": f"{parent['metadata']['id']}@{parent['metadata']['revision']}",

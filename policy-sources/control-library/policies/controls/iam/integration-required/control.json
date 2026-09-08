@@ -6,6 +6,8 @@
     "version": 1
   },
   "spec": {
+    "title": "IAM service integrations satisfy policy",
+    "purpose": "Verify that required identity-service conditions and their governed relationships are supported by attributable evidence.",
     "entrypoint": "data.compliance.controls.iam_integration_required.evaluate",
     "applies_to": [
       "linux-host"

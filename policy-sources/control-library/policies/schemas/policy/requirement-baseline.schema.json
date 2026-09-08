@@ -54,10 +54,15 @@
     "spec": {
       "type": "object",
       "required": [
+        "title",
         "requirements"
       ],
       "additionalProperties": false,
       "properties": {
+        "title": {
+          "type": "string",
+          "pattern": ".*\\S.*"
+        },
         "requirements": {
           "type": "array",
           "minItems": 1,

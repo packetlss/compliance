@@ -185,6 +185,7 @@ class BaselineOverlayTests(unittest.TestCase):
             "kind": "Baseline",
             "metadata": {"id": "benchmark.test", "revision": 1},
             "spec": {
+                "title": "Test benchmark policy",
                 "controls": [
                     {
                         "instance_id": "benchmark.setting",
@@ -210,6 +211,7 @@ class BaselineOverlayTests(unittest.TestCase):
             "kind": "BaselineOverlay",
             "metadata": {"id": "company.test", "revision": 1},
             "spec": {
+                "title": "Test company policy",
                 "extends": [{
                     "baseline": self.base_reference,
                     "digest": self.catalog[self.base_reference]["_digest"],
@@ -306,6 +308,7 @@ class BaselineOverlayTests(unittest.TestCase):
             "kind": "BaselineOverlay",
             "metadata": {"id": "company.combined", "revision": 1},
             "spec": {
+                "title": "Combined test company policy",
                 "extends": [
                     {
                         "baseline": reference,
@@ -367,6 +370,7 @@ class BaselineOverlayTests(unittest.TestCase):
             "kind": "BaselineOverlay",
             "metadata": {"id": "company.child", "revision": 1},
             "spec": {
+                "title": "Child test company policy",
                 "extends": [{
                     "baseline": "company.test@1",
                     "digest": self.catalog["company.test@1"]["_digest"],
@@ -472,6 +476,41 @@ class PolicySchemaTests(unittest.TestCase):
             ]["_sources"]],
             ["environment-private", "verification-policy"],
         )
+
+    def test_identical_control_meaning_coalesces_but_divergent_meaning_fails(self):
+        shared = self.root / "shared"
+        control_relative = Path("controls/linux/packages")
+        with tempfile.TemporaryDirectory() as directory:
+            private = Path(directory) / "private"
+            shutil.copytree(shared / control_relative, private / control_relative)
+            sources = (
+                PolicySource("control-library", shared),
+                PolicySource("environment-private", private),
+            )
+            controls, _, errors = load_policy_catalogs(sources)
+            self.assertEqual(errors, [])
+            self.assertEqual(
+                [source["policy_source"] for source in controls[
+                    "linux.packages.required"
+                ]["_sources"]],
+                ["control-library", "environment-private"],
+            )
+
+            manifest_path = private / control_relative / "control.json"
+            manifest = load_json(manifest_path)
+            manifest["spec"]["purpose"] = "Different authored meaning."
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            conflicts = []
+            for ordered in (sources, tuple(reversed(sources))):
+                _, _, divergent_errors = load_policy_catalogs(ordered)
+                conflicts.append(next(
+                    error for error in divergent_errors
+                    if error["type"] == "policy-resource-conflict"
+                ))
+
+        self.assertEqual(conflicts[0], conflicts[1])
+        self.assertEqual(conflicts[0]["kind"], "Control")
+        self.assertEqual(conflicts[0]["identity"], "linux.packages.required")
 
     def test_divergent_resource_identity_is_a_hard_error(self):
         shared = self.root / "shared"
@@ -642,6 +681,8 @@ class PolicySchemaTests(unittest.TestCase):
                     "kind": "Control",
                     "metadata": {"id": "test.control", "version": 1},
                     "spec": {
+                        "title": "Test control",
+                        "purpose": "Verify the test control condition.",
                         "entrypoint": "data.test.control.evaluate",
                         "applies_to": ["test-subject"],
                         "evidence": [],
@@ -675,6 +716,7 @@ class PolicySchemaTests(unittest.TestCase):
                         "version": 1,
                     },
                     "spec": {
+                        "title": "Invalid authored parameter policy",
                         "controls": [{
                             "instance_id": "test.macos.gatekeeper-enabled",
                             "implementation": "macos.security.setting_equals",
@@ -742,7 +784,10 @@ class PolicySchemaTests(unittest.TestCase):
                     "apiVersion": "compliance.example/v1",
                     "kind": "Baseline",
                     "metadata": {"id": "invalid", "version": 1},
-                    "spec": {"controls": [{"instance_id": "missing.implementation"}]},
+                    "spec": {
+                        "title": "Invalid test policy",
+                        "controls": [{"instance_id": "missing.implementation"}],
+                    },
                 }),
                 encoding="utf-8",
             )
@@ -765,6 +810,7 @@ class PolicySchemaTests(unittest.TestCase):
                     "kind": "BaselineOverlay",
                     "metadata": {"id": "invalid.overlay", "revision": 1},
                     "spec": {
+                        "title": "Invalid test overlay",
                         "extends": [{
                             "baseline": "parent@1",
                             "digest": "sha256:" + "0" * 64,
@@ -800,7 +846,10 @@ class PolicySchemaTests(unittest.TestCase):
                     "apiVersion": "compliance.example/v1",
                     "kind": "Baseline",
                     "metadata": {"id": "duplicate", "version": 1},
-                    "spec": {"controls": [control, control]},
+                    "spec": {
+                        "title": "Duplicate control test policy",
+                        "controls": [control, control],
+                    },
                 }),
                 encoding="utf-8",
             )
@@ -992,6 +1041,21 @@ class PlanRevisionTests(unittest.TestCase):
         self.assertEqual(excluded["disposition"], "excluded")
         self.assertTrue(active["definition_fingerprint"].startswith("sha256:"))
         self.assertTrue(excluded["definition_fingerprint"].startswith("sha256:"))
+        self.assertTrue(active["title"])
+        self.assertTrue(active["purpose"])
+        self.assertEqual(
+            active["title"], active["policy_inputs"]["definition"]["spec"]["title"]
+        )
+        self.assertEqual(
+            active["purpose"], active["policy_inputs"]["definition"]["spec"]["purpose"]
+        )
+        self.assertEqual(
+            excluded["title"], excluded["policy_inputs"]["definition"]["spec"]["title"]
+        )
+        self.assertEqual(
+            excluded["purpose"],
+            excluded["policy_inputs"]["definition"]["spec"]["purpose"],
+        )
         self.assertIn("derivations", active)
         self.assertIn("deviations", active)
         self.assertTrue(excluded["derivations"])
@@ -1006,6 +1070,7 @@ class PlanRevisionTests(unittest.TestCase):
             {"policy_source", "path"},
         )
         self.assertTrue(plan["resolved_baselines"])
+        self.assertTrue(all(item["title"] for item in plan["resolved_baselines"]))
         sources = plan['provenance']['planningComposition']['actual']['policySources']
         self.assertTrue(sources)
         self.assertTrue(all(source["name"] for source in sources))
@@ -1077,6 +1142,38 @@ class PlanRevisionTests(unittest.TestCase):
             if any("realization" in item for item in control["lineage"])
         )
         self.assertTrue(realization_control["provenance"])
+        self.assertTrue(all(
+            item["title"] for item in assurance_plan["resolved_requirement_baselines"]
+        ))
+
+    def test_plan_retains_authored_meaning_without_policy_checkout(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            shared = root / "shared"
+            selection = root / "selection"
+            shutil.copytree(self.root / "shared", shared)
+            shutil.copytree(self.root / "selection", selection)
+            plan = render_plan(
+                self.subject,
+                self.groups,
+                self.assignments,
+                (
+                    PolicySource("control-library", shared),
+                    PolicySource("verification-policy", selection),
+                ),
+            )
+
+        validate_assessment_plan(plan)
+        self.assertTrue(all(item["title"] for item in plan["resolved_baselines"]))
+        for control in [*plan["controls"], *plan["excluded_controls"]]:
+            self.assertEqual(
+                control["title"],
+                control["policy_inputs"]["definition"]["spec"]["title"],
+            )
+            self.assertEqual(
+                control["purpose"],
+                control["policy_inputs"]["definition"]["spec"]["purpose"],
+            )
 
     def test_active_subject_without_assignment_is_unassigned(self):
         plan = render_plan(

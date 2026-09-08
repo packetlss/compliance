@@ -12,6 +12,7 @@
     }
   },
   "spec": {
+    "title": "Illustrative CSA CCM SaaS foundations profile",
     "controls": [
       {
         "instance_id": "csa-ccm.saas.sso-enforced",

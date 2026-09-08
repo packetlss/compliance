@@ -61,6 +61,9 @@ copied literals cannot erase declaration or linkage differences.
 
 `policy_inputs` contains the resolved authored instance, Control manifest, parameter
 schema and sorted content digests of implementation-local non-test Rego modules.
+The exact plan separately projects the Control-owned title and purpose for both
+active and excluded checks and validates those fields against this frozen manifest.
+The prose is identity-bearing context, never a parameter or other executable input.
 The implementation fingerprint hashes these manifest/interface/module facts with
 JCS; source composition independently binds shared helpers. Changes in local module
 content or version invalidate destination pins. `parameter_facts` contains the

@@ -37,8 +37,9 @@ flowchart LR
 We should avoid writing host-specific Rego. Policy is divided into three
 layers:
 
-1. **Control implementation** — reusable Rego logic such as “required packages
-   are installed” or “an effective SSH option has the expected value.”
+1. **Control implementation** — reusable Rego logic plus an intrinsic authored
+   check title and purpose, such as “required packages are installed” or “an
+   effective SSH option has the expected value.”
 2. **Control instance** — a control plus parameters, identity, severity, and
    remediation. For example, require packages `a`, `b`, and `c`.
 3. **Baseline** — a versioned set of control instances attached to stable
@@ -209,6 +210,8 @@ metadata:
   id: host.packages.required
   version: 1
 spec:
+  title: Required host packages are installed
+  purpose: Verify that every package mandated by policy is installed.
   entrypoint: data.compliance.controls.host.packages.required.evaluate
   applies_to: [linux-host]
   evidence:
@@ -220,7 +223,9 @@ spec:
     remediation: Install missing packages from the approved repository
 ```
 
-This makes dependencies visible without parsing Rego. An assessment planner can
+The title and purpose are identity-bearing authored meaning, but never executable
+input. They remain invariant across parameter tailoring and are distinct from
+remediation. This makes dependencies visible without parsing Rego. An assessment planner can
 identify missing or stale evidence before evaluation, and collector scheduling
 can understand which evidence types are demanded by assigned baselines. The
 strict Draft 2020-12 control-manifest schema rejects unknown fields and requires
@@ -525,8 +530,9 @@ what policy applied at a point in time.
 `assessment-plan/v4` is enforced by a strict tooling-owned Draft 2020-12
 schema before it is returned or persisted and whenever a stored plan is read by
 the evaluator, explanation view, or plan display. The
-stable envelope, normalized subject, group and assignment paths, baseline and
-realization provenance, effective controls, exclusions, and
+stable envelope, normalized subject, group and assignment paths, titled baseline and
+realization provenance, effective controls with Control-owned title/purpose,
+exclusions with their frozen selected-Control definition, and
 resolution structures reject unknown fields. Domain payloads that are meant to
 remain extensible—control parameters, subject attributes, and structured
 resolution-error details—retain explicit open JSON boundaries. Semantic
@@ -586,7 +592,9 @@ other groups.
 
 `compliance policy diff BEFORE AFTER` now consumes two validated stored
 subject plans and compares their effective scope, requirements, active and
-excluded controls, and immutable provenance. It requires the same stable
+excluded controls, authored policy/check meaning, and immutable provenance. A
+title/purpose-only edit is therefore a semantic modification even though the
+technical criterion remains unchanged. It requires the same stable
 subject identity and never re-resolves a current policy catalog. Control
 instances are matched by `instance_id`; requirements and resolved baselines
 are matched by stable identity so revision changes remain attributable
@@ -758,6 +766,7 @@ metadata:
   id: linux-web-server
   version: 3
 spec:
+  title: Linux web-server policy
   controls:
     - instance_id: linux.packages.web-server
       implementation: host.packages.required

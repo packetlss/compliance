@@ -6,10 +6,11 @@
     "revision": 1
   },
   "spec": {
+    "title": "Company Linux server hardening policy",
     "extends": [
       {
         "baseline": "benchmark.example.linux-server-hardening@2026.1",
-        "digest": "sha256:51ebe6bc0fef9fcec421ab300732d6ec1a652d3c4eaafe15ae8195f0a1b7aa57"
+        "digest": "sha256:ff2cefa45a0a675599c5ce15d64bb3d4fc083d92287744e290d8afaf06cc630b"
       }
     ],
     "operations": []

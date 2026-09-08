@@ -64,6 +64,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         baseline_document = {
             "metadata": {"id": "test.baseline", "revision": 1},
             "spec": {
+                "title": plan["resolved_requirement_baselines"][0]["title"],
                 "requirements": [{
                     "requirement": requirement["reference"],
                     "digest": requirement["digest"],
@@ -358,7 +359,11 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
 
     def test_rendered_plan_and_generated_results_satisfy_contracts(self):
         validate_assessment_plan(self.plan)
-        validate_assessment_results(self.result_report())
+        result = self.result_report()
+        validate_assessment_results(result)
+        for item in result["results"]:
+            self.assertNotIn("title", item)
+            self.assertNotIn("purpose", item)
 
     def test_unavailable_policy_source_refuses_without_invented_provenance(self):
         fixture = Path(__file__).resolve().parent / "fixtures/macos-project"
@@ -389,6 +394,49 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             r"/controls/0/provenance/0.*group",
         ):
             validate_assessment_plan(document)
+
+    def test_plan_rejects_missing_or_contradictory_frozen_meaning(self):
+        missing = copy.deepcopy(self.plan)
+        del missing["controls"][0]["title"]
+        with self.assertRaisesRegex(ArtifactValidationError, r"/controls/0.*title"):
+            validate_assessment_plan(missing)
+
+        cases = (
+            (
+                lambda plan: plan["controls"][0].update(
+                    title="Contradictory active check title"
+                ),
+                r"/controls/0/title: differs from frozen Control title",
+            ),
+            (
+                lambda plan: plan["excluded_controls"][0].update(
+                    purpose="Contradictory excluded check purpose"
+                ),
+                r"/excluded_controls/0/purpose: differs from frozen Control purpose",
+            ),
+        )
+        for mutate, message in cases:
+            with self.subTest(message=message):
+                document = copy.deepcopy(self.plan)
+                mutate(document)
+                refresh_operation(document)
+                document.pop("id", None)
+                document["id"] = artifact_digest(document)
+                with self.assertRaisesRegex(ArtifactValidationError, message):
+                    validate_assessment_plan(document)
+
+        requirement_plan = copy.deepcopy(self.iam_plan)
+        requirement_plan["resolved_requirement_baselines"][0]["title"] = (
+            "Contradictory objective policy title"
+        )
+        refresh_operation(requirement_plan)
+        requirement_plan.pop("id", None)
+        requirement_plan["id"] = artifact_digest(requirement_plan)
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            r"resolved_requirement_baselines/0/title: differs from frozen",
+        ):
+            validate_assessment_plan(requirement_plan)
 
     def test_unconsumed_subject_label_is_not_identity_bearing(self):
         document = copy.deepcopy(self.plan)

@@ -16,6 +16,11 @@ Projects assemble this source with the reusable `control-library` source, which
 supplies controls, Rego helpers, and schemas. Source order has no precedence,
 and reusable resources must not be copied here.
 
+Every maintained `Baseline`, `BaselineOverlay`, and `RequirementBaseline` owns a
+required authored title. These titles name the exact assignable policy roots,
+participate in their normal content identities, and never select or order policy.
+Control title/purpose continues to come exclusively from `control-library`.
+
 ## Retained policy source
 
 The source contains sixteen synthetic resources with an assessment or assurance
@@ -73,11 +78,17 @@ verification-policy -> synthetic assessment and assurance resources
 The IAM project adds `environment-private` as a third source. All sixteen
 retained verification resources are preserved here.
 
-The canonical `policies/` content digest changed only because those three
-resources were removed:
+The earlier source-boundary migration changed the canonical `policies/` content
+digest because those three resources were removed:
 
 - before: `sha256:b479cb24083fd6f44e49465c2bb9f4aa026f2dda5e1620b01837693a2dc4ec14`
-- after: `sha256:4e4bec94fa7b73056989074ae51c03671bd254fa63c89d4e7d324d13a4313da4`
+- after that migration: `sha256:4e4bec94fa7b73056989074ae51c03671bd254fa63c89d4e7d324d13a4313da4`
+
+ADR 0017 implementation then added required titles and regenerated dependent
+pins, producing `sha256:d9048c194393a2a1242aaf12a7e1d8e3d77c69cae81c1a763d9a9db55707426a`
+for `control-library` and
+`sha256:580358f5de42040dc723dd6f7801be0287661bd3d1d8982c12c1f452485b4f37`
+for this verification-policy tree.
 
 The path-and-byte digest construction is unchanged.
 

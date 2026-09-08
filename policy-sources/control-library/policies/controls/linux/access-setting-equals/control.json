@@ -6,6 +6,8 @@
     "version": 1
   },
   "spec": {
+    "title": "Linux access settings match policy",
+    "purpose": "Verify that a Linux identity or access setting has the effective value mandated by policy.",
     "entrypoint": "data.compliance.controls.linux.access_setting_equals.evaluate",
     "applies_to": [
       "linux-host"

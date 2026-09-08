@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .artifact_validation import validate_assessment_plan, validate_assessment_results
+from .assessment_provenance import digest
 from .render_plan import load_json, render_plan, resolve_groups
 
 
@@ -744,6 +745,42 @@ def effective_criteria(control: JsonObject) -> str:
     )
 
 
+def control_implementation_pin(control: JsonObject) -> JsonObject:
+    """Recompute the existing exact Control pin from frozen plan inputs."""
+    facts = control["policy_inputs"]
+    definition = facts["definition"]
+    metadata = definition["metadata"]
+    return {
+        "id": metadata["id"],
+        "version": metadata["version"],
+        "fingerprint": digest({
+            "manifest": definition,
+            "parameters_schema": facts["parameters_schema"],
+            "implementation_modules": facts.get("implementation_modules", []),
+        }),
+    }
+
+
+def evidence_description(dependency: JsonObject) -> str:
+    rendered = f'{dependency["id"]} -> {dependency["type"]}'
+    if inputs := dependency.get("inputs"):
+        rendered += " inputs=" + json.dumps(
+            inputs, sort_keys=True, separators=(",", ":")
+        )
+    return rendered
+
+
+def freshness_description(value: str) -> str:
+    seconds = int(value[:-1]) if value.endswith("s") and value[:-1].isdigit() else None
+    if seconds is not None and seconds % 86400 == 0:
+        days = seconds // 86400
+        return f'{value} ({days} {"day" if days == 1 else "days"})'
+    if seconds is not None and seconds % 3600 == 0:
+        hours = seconds // 3600
+        return f'{value} ({hours} {"hour" if hours == 1 else "hours"})'
+    return value
+
+
 def lineage_description(control: JsonObject) -> str:
     """Explain the ordered baseline or realization steps for one definition."""
     def source(item: JsonObject) -> str:
@@ -822,7 +859,7 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
     }
 
     lines = [
-        f'Subject: {status["subject_id"]}',
+        f'Asset: {status["subject_id"]}',
         f'Type: {status["subject_type"]}',
         f'Lifecycle: {status["lifecycle"]}',
         f'Historical outcome: {outcome_label(status["historical_outcome"], color)}',
@@ -873,9 +910,27 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
     else:
         lines.append("Assessment: no result available for this subject")
 
-    lines.append("Control-objective baselines:")
-    if not plan.get("resolved_requirement_baselines"):
+    lines.append("Applicable policies:")
+    seen_policies = set()
+    for baseline in [
+        *plan.get("resolved_baselines", []),
+        *plan.get("resolved_requirement_baselines", []),
+    ]:
+        reference = baseline["reference"]
+        if reference in seen_policies:
+            continue
+        seen_policies.add(reference)
+        lines.append(f'  {baseline["title"]} ({reference})')
+        lines.append(f'    digest: {baseline["digest"]}')
+        for locator in baseline["policy_sources"]:
+            lines.append(
+                f'    source: {locator["policy_source"]}:{locator["path"]}'
+            )
+    if not seen_policies:
         lines.append("  none")
+
+    if plan.get("resolved_requirement_baselines"):
+        lines.append("Objective policy details:")
     seen_requirement_baselines = set()
     for baseline in plan.get("resolved_requirement_baselines", []):
         reference = baseline["reference"]
@@ -884,7 +939,10 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
         seen_requirement_baselines.add(reference)
         result = baseline_result_by_reference.get(reference)
         baseline_state = result.get("status", "no_assessment") if result else "no_assessment"
-        lines.append(f'  {outcome_label(baseline_state, color)}  {reference}')
+        lines.append(
+            f'  {outcome_label(baseline_state, color)}  '
+            f'{baseline["title"]} ({reference})'
+        )
         if result and result.get("reason"):
             lines.append(f'    {result["reason"]}')
         if result:
@@ -892,16 +950,16 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
                 for diagnostic in result.get('observed', {}).get(field, []):
                     lines.append('    ' + json.dumps(diagnostic, sort_keys=True))
 
-    lines.append("Control objectives:")
-    if not plan.get("requirements"):
-        lines.append("  none")
+    if plan.get("requirements"):
+        lines.append("Objectives:")
     for requirement in plan.get("requirements", []):
         result = requirement_result_by_reference.get(requirement["reference"])
         requirement_state = result.get("status", "no_assessment") if result else "no_assessment"
         lines.append(
-            f'  {outcome_label(requirement_state, color)}  {requirement["reference"]}: '
-            f'{requirement["title"]}'
+            f'  {outcome_label(requirement_state, color)}  '
+            f'Objective: {requirement["title"]} ({requirement["reference"]})'
         )
+        lines.append(f'    Meaning: {requirement["statement"]}')
         lines.append(f'    adoption: {requirement["adoption"]["status"]}')
         facts = requirement.get('parameter_facts', {})
         for name, slot in sorted(facts.get('states', {}).items()):
@@ -914,6 +972,16 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
             lines.append(f'    realization: {realization["reference"]}')
             if based_on := realization.get("based_on"):
                 lines.append(f'    based on: {based_on["realization"]}')
+            lines.append("    realized checks:")
+            controls_by_id = {
+                control["instance_id"]: control for control in plan["controls"]
+            }
+            for instance_id in requirement["technical_instance_ids"]:
+                control = controls_by_id[instance_id]
+                lines.append(
+                    f'      Check: {control["title"]} ({control["instance_id"]})'
+                )
+                lines.append(f'        Purpose: {control["purpose"]}')
         if result and result.get("reason"):
             lines.append(f'    {result["reason"]}')
         if result:
@@ -929,8 +997,10 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
         control_state = result.get("status", "no_assessment") if result else "no_assessment"
         suffix = " (different plan)" if previous is not None and current is None and result else ""
         lines.append(
-            f'  {outcome_label(control_state, color)}  {control["instance_id"]}{suffix}'
+            f'  {outcome_label(control_state, color)}  '
+            f'Check: {control["title"]} ({control["instance_id"]}){suffix}'
         )
+        lines.append(f'    Purpose: {control["purpose"]}')
         if result and result.get("reason"):
             lines.append(f'    {result["reason"]}')
         if result:
@@ -954,8 +1024,28 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
                 f'{waiver["approved_at"]}',
                 f'      digest: {waiver["digest"]}',
             ])
+        lines.append(f"    effective parameters: {effective_criteria(control)}")
         lines.append(f"    effective criteria: {effective_criteria(control)}")
-        lines.append("    policy evidence requirements: " + json.dumps(control.get('evidence', control.get('policy_inputs', {}).get('instance', {}).get('evidence', {})), sort_keys=True))
+        for dependency in control["evidence"]:
+            lines.append(f"    required evidence: {evidence_description(dependency)}")
+            lines.append(
+                f'      freshness: {freshness_description(dependency["max_age"])}'
+            )
+        implementation = control_implementation_pin(control)
+        lines.append(
+            f'    implementation: {implementation["id"]}@{implementation["version"]}'
+        )
+        lines.append(
+            f'    implementation fingerprint: {implementation["fingerprint"]}'
+        )
+        lines.append(
+            f'    instance definition fingerprint: {control["definition_fingerprint"]}'
+        )
+        for locator in control["implementation_sources"]:
+            lines.append(
+                f'    implementation source: '
+                f'{locator["policy_source"]}:{locator["path"]}'
+            )
         if control.get("external_refs"):
             lines.append("    external refs: " + ", ".join(control["external_refs"]))
         if lineage := lineage_description(control):
@@ -969,9 +1059,29 @@ def render_explanation(explanation: JsonObject, color: bool = False) -> str:
     if not plan["excluded_controls"]:
         lines.append("  none")
     for control in plan["excluded_controls"]:
-        lines.append(f'  ○ EXCLUDED  {control["instance_id"]}')
+        lines.append(
+            f'  ○ EXCLUDED  Check: {control["title"]} ({control["instance_id"]})'
+        )
+        lines.append(f'    Purpose: {control["purpose"]}')
+        lines.append("    disposition: excluded")
+        lines.append("    assessment result: none (excluded policy disposition)")
+        lines.append(f"    effective parameters: {effective_criteria(control)}")
         lines.append(f"    effective criteria: {effective_criteria(control)}")
-        lines.append("    policy evidence requirements: " + json.dumps(control.get('evidence', control.get('policy_inputs', {}).get('instance', {}).get('evidence', {})), sort_keys=True))
+        implementation = control_implementation_pin(control)
+        lines.append(
+            f'    implementation: {implementation["id"]}@{implementation["version"]}'
+        )
+        lines.append(
+            f'    implementation fingerprint: {implementation["fingerprint"]}'
+        )
+        lines.append(
+            f'    instance definition fingerprint: {control["definition_fingerprint"]}'
+        )
+        for locator in control["implementation_sources"]:
+            lines.append(
+                f'    implementation source: '
+                f'{locator["policy_source"]}:{locator["path"]}'
+            )
         if control.get("external_refs"):
             lines.append("    external refs: " + ", ".join(control["external_refs"]))
         if lineage := lineage_description(control):

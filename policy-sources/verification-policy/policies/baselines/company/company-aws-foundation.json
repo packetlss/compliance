@@ -6,10 +6,11 @@
     "revision": 1
   },
   "spec": {
+    "title": "Company AWS foundation policy",
     "extends": [
       {
         "baseline": "profile.csa-ccm.aws-foundations@4.1-profile1",
-        "digest": "sha256:195cf2276888c0ea78bb0d7de694375acb26e07b34edeee7668ea09ab52ecff1"
+        "digest": "sha256:6f0661efbaa08d41e28a87669218018dfc5be282abe7f2eee7654c5a350cc811"
       }
     ],
     "operations": [

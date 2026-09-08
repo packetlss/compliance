@@ -56,6 +56,80 @@ class PolicyResourceTests(unittest.TestCase):
             with self.subTest(path=path.relative_to(ROOT)):
                 Draft202012Validator.check_schema(read_json(path))
 
+    def test_authored_policy_and_check_meaning_is_required_non_whitespace(self):
+        digest = "sha256:" + "0" * 64
+        cases = {
+            "control.schema.json": (
+                read_json(POLICIES / "controls/linux/sysctl-required/control.json"),
+                ("title", "purpose"),
+            ),
+            "baseline.schema.json": (
+                {"title": "Technical policy", "controls": []},
+                ("title",),
+            ),
+            "baseline-overlay.schema.json": (
+                {
+                    "title": "Technical policy overlay",
+                    "extends": [{"baseline": "test.base@1", "digest": digest}],
+                    "operations": [],
+                },
+                ("title",),
+            ),
+            "requirement-baseline.schema.json": (
+                {
+                    "title": "Objective policy",
+                    "requirements": [{
+                        "requirement": "test.requirement@1",
+                        "digest": digest,
+                        "required": True,
+                    }],
+                },
+                ("title",),
+            ),
+        }
+        schema_root = POLICIES / "schemas/policy"
+        for filename, (valid_spec, names) in cases.items():
+            full_schema = read_json(schema_root / filename)
+            validator = Draft202012Validator(full_schema)
+            valid_document = {
+                "apiVersion": (
+                    "compliance.example/v1alpha1"
+                    if filename == "requirement-baseline.schema.json"
+                    else "compliance.example/v1"
+                ),
+                "kind": {
+                    "control.schema.json": "Control",
+                    "baseline.schema.json": "Baseline",
+                    "baseline-overlay.schema.json": "BaselineOverlay",
+                    "requirement-baseline.schema.json": "RequirementBaseline",
+                }[filename],
+                "metadata": {
+                    "id": "test.meaning",
+                    **(
+                        {"version": 1}
+                        if filename == "control.schema.json"
+                        else {"revision": 1}
+                    ),
+                },
+                "spec": valid_spec,
+            }
+            if filename == "control.schema.json":
+                valid_document = valid_spec
+            self.assertTrue(validator.is_valid(valid_document), filename)
+            for name in names:
+                for invalid in (None, "", " \t\n"):
+                    changed = json.loads(json.dumps(valid_document))
+                    if invalid is None:
+                        changed["spec"].pop(name)
+                    else:
+                        changed["spec"][name] = invalid
+                    with self.subTest(
+                        schema=filename,
+                        field=name,
+                        invalid=invalid,
+                    ):
+                        self.assertFalse(validator.is_valid(changed))
+
     def test_reusable_catalog_and_rego_entrypoints(self):
         source = PolicySource("control-library", POLICIES)
         controls, baselines, errors = load_policy_catalogs(source)

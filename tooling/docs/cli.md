@@ -105,6 +105,10 @@ overlay semantics, unknown implementations, and effective parameters that do
 not satisfy their implementation contract. This includes overlay-generated and
 excluded instances. Human output reports baseline and control counts;
 `--format json` provides the same counts and structured errors for CI.
+Every assignable policy root must provide its authored title, and every Control
+must provide its authored title and intrinsic purpose. Validation rejects missing
+or whitespace-only meaning, while exact-definition assembly rejects conflicting
+same-identity prose.
 `assessment run` also rolls technical results into requirement and top
 requirement-baseline results. `assessment status` shows objective and check
 counts separately, while `assessment explain` displays the selected
@@ -112,7 +116,9 @@ realization and its provenance. For every active or excluded control with a
 reviewed overlay deviation, the human explanation also displays alignment,
 deviation ID and classification, rationale, approval reference, and review
 date. Normative overlay operations also show the immutable inherited and
-resulting implementation, disposition, and parameters. The JSON explanation
+resulting implementation, disposition, and parameters. Normal explanation leads
+with applicable-policy titles, Objective title/statement, and Control-owned Check
+title/purpose; IDs and the existing detailed provenance remain visible. The JSON explanation
 retains the same information in
 `plan.controls[].deviations` or `plan.excluded_controls[].deviations`.
 

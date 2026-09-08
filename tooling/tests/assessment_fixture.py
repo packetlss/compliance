@@ -38,6 +38,8 @@ def assessment_plan(policy_sources, *, with_requirement=False):
         "controls": [{
             "instance_id": "test.check",
             "implementation": "test.control",
+            "title": "Synthetic test check",
+            "purpose": "Verify the structured synthetic test condition.",
             "entrypoint": "data.test.evaluate",
             "parameters": {},
             "severity": "medium",
@@ -103,6 +105,7 @@ def assessment_plan(policy_sources, *, with_requirement=False):
             "group": "test-hosts",
             "baseline": "test.baseline@1",
             "reference": "test.baseline@1",
+            "title": "Synthetic requirement policy",
             "digest": baseline_digest,
             "policy_sources": [{
                 "policy_source": policy_sources[0]["name"],
@@ -247,7 +250,8 @@ def freeze_policy_inputs(plan):
                     'parameters': copy.deepcopy(control['parameters']),
                     'evidence': {e['id']: {'max_age': e['max_age']} for e in control['evidence']}}
         definition = {'metadata': {'id': control['implementation'], 'version': 1},
-                      'spec': {'entrypoint': control['entrypoint'],
+                      'spec': {'title': control['title'], 'purpose': control['purpose'],
+                               'entrypoint': control['entrypoint'],
                                'evidence': [{k: v for k, v in e.items() if k != 'max_age'} for e in control['evidence']]}}
         control['policy_inputs'] = {'instance': instance, 'definition': definition, 'parameters_schema': {'type': 'object'}}
         from tools.render_plan import control_definition_fingerprint
@@ -257,7 +261,8 @@ def freeze_policy_inputs(plan):
             for reference in assignment['baselines']:
                 identity = pp.digest({'reference': reference})
                 plan['resolved_baselines'].append({'assignment': assignment['id'], 'group': assignment['group'],
-                    'reference': reference, 'digest': identity, 'lineage': [{'reference': reference, 'digest': identity}],
+                    'reference': reference, 'title': 'Synthetic technical policy',
+                    'digest': identity, 'lineage': [{'reference': reference, 'digest': identity}],
                     'deviations': [], 'policy_sources': [{'policy_source': policy_source_name, 'path': 'baselines/test.json'}]})
     requirements = {}
     for record in plan['requirements']:
@@ -279,7 +284,9 @@ def freeze_policy_inputs(plan):
         identifier, revision = baseline['reference'].rsplit('@', 1)
         for pin in baseline['requirements']:
             pin['digest'] = pp.digest(requirements[pin['requirement']])
-        doc = {'metadata': {'id': identifier, 'revision': revision}, 'spec': {'requirements': copy.deepcopy(baseline['requirements'])}}
+        doc = {'metadata': {'id': identifier, 'revision': revision},
+               'spec': {'title': baseline['title'],
+                        'requirements': copy.deepcopy(baseline['requirements'])}}
         states, ancestry = pp.resolve(baseline['reference'], {baseline['reference']: {**doc, '_sources': baseline['policy_sources']}}, requirements)
         baseline['digest'] = pp.digest(doc)
         baseline['parameter_derivation'] = {'states': states, 'ancestry': ancestry}

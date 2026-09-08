@@ -133,6 +133,20 @@ def _compact_result_fields(decision: JsonObject) -> JsonObject:
     }
 
 
+def _technical_control_input(control: JsonObject) -> JsonObject:
+    """Keep source-authored check prose outside the executable OPA input."""
+    projected = copy.deepcopy(control)
+    projected.pop("title", None)
+    projected.pop("purpose", None)
+    definition = projected.get("policy_inputs", {}).get("definition")
+    if isinstance(definition, dict):
+        spec = definition.get("spec")
+        if isinstance(spec, dict):
+            spec.pop("title", None)
+            spec.pop("purpose", None)
+    return projected
+
+
 def evaluate_control(
     opa: str,
     policy_sources: PolicySources,
@@ -239,7 +253,7 @@ def evaluate_plan_document(
                 "plan_id": plan["id"],
             },
             "subject": plan["subject"],
-            "control": control,
+            "control": _technical_control_input(control),
             "evidence": selected_evidence,
             # Waivers must not influence the technical decision produced by Rego.
             "waiver": None,

@@ -42,8 +42,14 @@ class ControlRealizationTests(unittest.TestCase):
                     'representation': 'duration', 'schema': schema, 'schema_digest': pp.digest(schema)}}
                 baseline = copy.deepcopy(self.baseline)
                 baseline['metadata'].update(id=f'review.baseline-{revision}', revision=1)
-                baseline['spec'] = {'requirements': [{'requirement': f'review.same-objective@{revision}',
-                    'digest': pp.digest(requirement), 'required': True}]}
+                baseline['spec'] = {
+                    'title': f'Review baseline {revision}',
+                    'requirements': [{
+                        'requirement': f'review.same-objective@{revision}',
+                        'digest': pp.digest(requirement),
+                        'required': True,
+                    }],
+                }
                 for folder, document in (('requirements', requirement), ('requirement-baselines', baseline)):
                     (root / folder).mkdir(exist_ok=True)
                     (root / folder / f'{revision}.json').write_text(json.dumps(document))

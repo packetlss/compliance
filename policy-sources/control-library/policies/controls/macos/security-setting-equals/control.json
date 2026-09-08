@@ -6,6 +6,8 @@
     "version": 1
   },
   "spec": {
+    "title": "macOS security settings match policy",
+    "purpose": "Verify that macOS security settings have the effective values mandated by policy.",
     "entrypoint": "data.compliance.controls.macos.security_setting_equals.evaluate",
     "applies_to": [
       "macos-workstation"

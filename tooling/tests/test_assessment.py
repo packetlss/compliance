@@ -16,6 +16,7 @@ from tools.assessment import (
     render_group_table,
     render_table,
     status_row,
+    control_implementation_pin,
 )
 from tools.artifact_validation import result_outcome
 from tools.assessment_provenance import artifact_digest, digest
@@ -289,6 +290,82 @@ class AssessmentStatusTests(unittest.TestCase):
         self.assertNotIn("Install shellcheck from the approved source.", rendered)
         self.assertIn("developer-workstation-policy-assignment", rendered)
         self.assertIn("benchmark.example.macos.audit-formula-required", rendered)
+
+        policy = self.plan["resolved_baselines"][0]
+        check = self.plan["controls"][0]
+        excluded = self.plan["excluded_controls"][0]
+        self.assertIn(f'Asset: {self.plan["subject"]["id"]}', rendered)
+        self.assertIn(f'{policy["title"]} ({policy["reference"]})', rendered)
+        self.assertIn(f'Check: {check["title"]} ({check["instance_id"]})', rendered)
+        self.assertIn(f'Purpose: {check["purpose"]}', rendered)
+        check_implementation = control_implementation_pin(check)
+        self.assertIn(
+            f'implementation: {check_implementation["id"]}@'
+            f'{check_implementation["version"]}',
+            rendered,
+        )
+        self.assertIn(
+            f'implementation fingerprint: {check_implementation["fingerprint"]}',
+            rendered,
+        )
+        self.assertIn(
+            f'instance definition fingerprint: {check["definition_fingerprint"]}',
+            rendered,
+        )
+        self.assertIn("effective parameters:", rendered)
+        self.assertIn("required evidence:", rendered)
+        self.assertIn("freshness:", rendered)
+        self.assertNotIn("Objectives:", rendered)
+        self.assertIn(
+            f'EXCLUDED  Check: {excluded["title"]} ({excluded["instance_id"]})',
+            rendered,
+        )
+        self.assertIn(f'Purpose: {excluded["purpose"]}', rendered)
+        excluded_implementation = control_implementation_pin(excluded)
+        self.assertIn(
+            f'implementation: {excluded_implementation["id"]}@'
+            f'{excluded_implementation["version"]}',
+            rendered,
+        )
+        self.assertIn(
+            'implementation fingerprint: '
+            f'{excluded_implementation["fingerprint"]}',
+            rendered,
+        )
+        self.assertIn("disposition: excluded", rendered)
+        self.assertIn("assessment result: none (excluded policy disposition)", rendered)
+
+    def test_assurance_explanation_keeps_objective_and_checks_distinct(self):
+        subject, groups, assignments = load_inventory_inputs(
+            self.root / "iam/inventory",
+            self.root / "iam/assignments",
+            "host/restricted-linux-01",
+            self.root / "schemas/inventory/resource.schema.json",
+        )
+        plan = render_plan(
+            subject,
+            groups,
+            assignments,
+            (
+                PolicySource("control-library", self.root / "shared"),
+                PolicySource("verification-policy", self.root / "selection"),
+                PolicySource("environment-private", self.root / "iam/policy"),
+            ),
+        )
+        rendered = render_explanation(build_explanation(plan, []))
+        requirement = plan["requirements"][0]
+        check = next(
+            item for item in plan["controls"]
+            if item["instance_id"] in requirement["technical_instance_ids"]
+        )
+
+        self.assertIn(
+            f'Objective: {requirement["title"]} ({requirement["reference"]})',
+            rendered,
+        )
+        self.assertIn(f'Meaning: {requirement["statement"]}', rendered)
+        self.assertIn(f'Check: {check["title"]} ({check["instance_id"]})', rendered)
+        self.assertIn(f'Purpose: {check["purpose"]}', rendered)
 
     def test_explanation_shows_complete_active_deviation(self):
         rendered = render_explanation(build_explanation(self.plan, []))

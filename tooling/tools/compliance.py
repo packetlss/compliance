@@ -833,6 +833,28 @@ def _run_historical_operation_view(args):
                                args.assessment_command == 'explain' or
                                getattr(args, 'reference', []) or getattr(args, 'level', []))
     account['visible_members'] = visible_members
+    if args.assessment_command == 'explain':
+        member = selected[0]
+        plan_by_id = {plan['id']: plan for plan in assessed_plans}
+        explanation_plan = plan_by_id.get(member['plan_id'])
+        if explanation_plan is None:
+            raise ValueError(
+                'exact assessed plan is required for historical explanation'
+            )
+        explanation_reports = (
+            [by_id[member['result_id']]] if member['result_id'] is not None else []
+        )
+        explanation = build_explanation(explanation_plan, explanation_reports)
+        if args.format == 'json':
+            print(json.dumps(explanation, indent=2, sort_keys=True))
+        else:
+            use_color = (
+                not args.no_color
+                and 'NO_COLOR' not in os.environ
+                and sys.stdout.isatty()
+            )
+            print(render_explanation(explanation, color=use_color))
+        return
     if args.format == 'json':
         print(json.dumps(account, indent=2, sort_keys=True))
     else:
@@ -859,13 +881,10 @@ def _run_historical_operation_view(args):
             for waiver in row['recorded_waiver_qualification']['waivers']:
                 label = waiver['qualification'].replace('_', ' ')
                 print(f"  Recorded waiver {waiver['waiver_id']}: {label}")
-        if args.assessment_command in ('explain', 'frameworks', 'groups'):
+        if args.assessment_command in ('frameworks', 'groups'):
             detail = (account.get('mappings') if args.assessment_command == 'frameworks' else
-                      account.get('groups') if args.assessment_command == 'groups' else
-                      account['visible_members'])
+                      account.get('groups'))
             print(json.dumps(detail, indent=2, sort_keys=True))
-        if args.assessment_command == 'explain':
-            print(json.dumps(account['assessment_results'], indent=2, sort_keys=True))
 
 
 def _set_handler(parser: argparse.ArgumentParser, handler: Handler) -> None:

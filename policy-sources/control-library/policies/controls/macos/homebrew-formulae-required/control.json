@@ -6,6 +6,8 @@
     "version": 1
   },
   "spec": {
+    "title": "Required Homebrew formulae are installed",
+    "purpose": "Verify that the Homebrew formulae mandated by policy are present.",
     "entrypoint": "data.compliance.controls.macos.homebrew_formulae_required.evaluate",
     "applies_to": [
       "macos-workstation"

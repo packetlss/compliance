@@ -12,6 +12,7 @@
     }
   },
   "spec": {
+    "title": "Illustrative CSA CCM AWS foundations profile",
     "controls": [
       {
         "instance_id": "csa-ccm.aws.root-mfa-enabled",

@@ -6,6 +6,7 @@
     "revision": 1
   },
   "spec": {
+    "title": "Synthetic system operation objectives",
     "requirements": [
       {
         "requirement": "verification.operation.system.o1@1",

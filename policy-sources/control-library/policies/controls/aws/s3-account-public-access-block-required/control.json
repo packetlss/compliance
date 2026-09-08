@@ -6,6 +6,8 @@
     "version": 1
   },
   "spec": {
+    "title": "Amazon S3 account public access is blocked",
+    "purpose": "Verify that all Amazon S3 account-level Block Public Access settings mandated by policy are enabled.",
     "entrypoint": "data.compliance.controls.aws.s3_account_public_access_block_required.evaluate",
     "applies_to": [
       "aws-account"

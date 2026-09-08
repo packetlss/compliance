@@ -6,10 +6,11 @@
     "revision": 1
   },
   "spec": {
+    "title": "Company macOS policy",
     "extends": [
       {
         "baseline": "benchmark.example.macos-hardening@2026.1",
-        "digest": "sha256:720bed5dfc2c2d22b884ff36b77fa19e31cd948d41968615ccaa2953b5c9050f"
+        "digest": "sha256:6fdc95a46ad537aea3fc9b043ded2fa0f84db1973ef3df1c4ba5a9e3fc1eef19"
       }
     ],
     "operations": [

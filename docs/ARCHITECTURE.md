@@ -121,8 +121,9 @@ synthesize an Objective.
 ADR 0017 requires the plan artifact, when retained, to contain enough authored
 meaning for offline interpretation. It does not make the core a plan or result
 retention service: external users and orchestration decide whether to retain these
-artifacts. The coordinated schema/source/plan/reporter migration is not implemented
-or authorized by ADR 0017; its bounded promotion contract is recorded in that ADR.
+artifacts. The coordinated schema/source/plan/reporter migration is implemented
+under [#100](https://github.com/packetlss/compliance/issues/100). The contract
+remains experimental and is not frozen.
 
 ## Explicit policy parameters and freshness
 
