@@ -365,6 +365,7 @@ class ExampleRunner:
             "kind": "Baseline",
             "metadata": {"id": "example.base", "revision": 1},
             "spec": {
+                "title": "Example base policy",
                 "controls": [{
                     "instance_id": "example.setting",
                     "implementation": "example.setting-equals",
@@ -389,6 +390,7 @@ class ExampleRunner:
             "kind": "BaselineOverlay",
             "metadata": {"id": "example.substitute", "revision": 1},
             "spec": {
+                "title": "Example substitution policy",
                 "extends": [{
                     "baseline": "example.base@1",
                     "digest": catalog["example.base@1"]["_digest"],
@@ -422,6 +424,7 @@ class ExampleRunner:
             "kind": "BaselineOverlay",
             "metadata": {"id": "example.sealed", "revision": 1},
             "spec": {
+                "title": "Example sealed policy",
                 "extends": [{
                     "baseline": "example.base@1",
                     "digest": catalog["example.base@1"]["_digest"],
@@ -444,6 +447,7 @@ class ExampleRunner:
             "kind": "BaselineOverlay",
             "metadata": {"id": "example.blocked-child", "revision": 1},
             "spec": {
+                "title": "Example rejected policy",
                 "extends": [{
                     "baseline": "example.sealed@1",
                     "digest": catalog["example.sealed@1"]["_digest"],
