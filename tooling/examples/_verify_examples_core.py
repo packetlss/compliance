@@ -1043,7 +1043,7 @@ class ExampleRunner:
                 str(rollout_results),
             ],
             contains=(
-                "Control objectives:",
+                "Objectives:",
                 "company.iam.role-based-access@1",
                 "waiver: standard-app-01-auditd-rollout",
             ),
