@@ -352,11 +352,15 @@ recorded. The local projection is not itself the authority merely because it
 stores a normalized copy. Collector-provided configuration evidence is not
 automatically a trusted policy-selection attribute.
 
-## 10. Required user views
+## 10. Inventory and current coverage operator views
+
+The implemented operator sequence is `Inventory → Coverage → Assessment`.
+`asset` / `assets` is user-facing CLI vocabulary only; the normalized resource,
+schema, internal object, wire fields, and identity remain `Subject`.
 
 The inventory and policy interface should expose:
 
-- **Subject inventory** — identity, lifecycle, trusted labels, and provenance.
+- **Asset inventory** — identity, lifecycle, trusted labels, and provenance.
 - **Resolved memberships** — direct and inherited groups with explanation.
 - **Group members** — all subjects currently resolved into a group.
 - **Group assignments** — baselines attached directly to the group.
@@ -375,10 +379,33 @@ are loaded from that project's `compliance.yaml`:
 ```sh
 uv run compliance inventory validate
 
+uv run compliance inventory list assets
+
 uv run compliance inventory graph
 
 uv run compliance inventory explain cloud-account/aws-111122223333
+
+uv run compliance coverage list assets
+
+uv run compliance coverage list groups --format json
+
+uv run compliance coverage list assignments
+
+uv run compliance coverage explain cloud-account/aws-111122223333
 ```
+
+Inventory list/explain is limited to supplied normalized facts and resolved
+membership attribution. Policy applicability is a coverage concern. Coverage
+reuses the planner and derives exactly `result_required`, `inactive`,
+`unassigned`, `no_assessable_policy`, or `invalid_resolution`; it does not own
+another applicability algorithm. Group and assignment views retain zero-effect
+rows and keep current members, assignment presence, assessable checks/Objectives,
+and invalid resolution separate.
+
+The JSON forms are purpose-specific experimental query projections. They are
+not resources, snapshots, digests, caches, plans, assessment inputs, or durable
+facts, and no query writes generated state. Supplied inventory is never presented
+as proof of external inventory exhaustiveness.
 
 The development validation registry defaults to `mock-fleet`, which exercises the contract
 with `aws-account` and `saas-tenant` subjects, while the

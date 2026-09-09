@@ -30,7 +30,7 @@ Stable destination CI contexts are:
 - `installed-release-provenance`
 - `macos-portability`
 
-`verification-scenarios` is the real canonical composed gate and owns all 20 retained public CLI leaves and 18 retained domain features. Normal validation uses one repository checkout and no historical sibling-repository App/PAT acquisition path.
+`verification-scenarios` is the real canonical composed gate and owns all 22 retained public CLI leaves and 19 retained domain features. Normal validation uses one repository checkout and no historical sibling-repository App/PAT acquisition path.
 
 From the repository root, `scripts/dev setup` creates this worktree's isolated environment and installs the repository-pinned Python, uv, and OPA without sudo or global package-manager changes. Downloads are cached outside semantic roots. Use `scripts/dev doctor` for read-only diagnosis. Quick checks read the current working tree:
 

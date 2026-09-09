@@ -160,6 +160,12 @@ class PolicyDiffTests(unittest.TestCase):
             change["after"]["parameters"],
             {"required": ["shellcheck", "shfmt"]},
         )
+        rendered = format_policy_diff(document)
+        title = change["after"]["title"]
+        self.assertLess(
+            rendered.index(f"Check: {title}"),
+            rendered.index(f"ID: {change['identity']}"),
+        )
 
     def test_prose_only_check_edit_is_semantic_but_not_executable(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -490,7 +496,7 @@ class PolicyDiffTests(unittest.TestCase):
         self.assertEqual(changes["host/configuration-linux-01"], "added")
         self.assertEqual(changes["host/restricted-linux-01"], "removed")
         self.assertEqual(changes["workstation/tooling-macos-fixture"], "modified")
-        self.assertIn("Subject detail: workstation/tooling-macos-fixture", rendered)
+        self.assertIn("Asset detail: workstation/tooling-macos-fixture", rendered)
         self.assertIn("EFFECTIVE POLICY CHANGED", rendered)
 
     def test_plan_set_context_only_change_is_unchanged(self):

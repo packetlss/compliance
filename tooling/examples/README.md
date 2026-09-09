@@ -2,8 +2,8 @@
 
 The tooling feature catalog covers every retained public `compliance` leaf
 command and the important component behaviors that span commands. After removal
-of in-core configuration generation it contains 20 CLI leaves and 18 domain
-features.
+of in-core configuration generation and addition of current coverage views it
+contains 22 CLI leaves and 19 domain features.
 
 The complete composed suite is owned by
 the canonical destination scenario root at `verification/scenarios/`.
@@ -26,6 +26,7 @@ missing or duplicate catalog entries.
 |---|---|
 | `config show`, `config validate`, `config list` | Project selection and resolved paths |
 | `inventory validate`, `inventory list`, `inventory graph`, `inventory explain` | Typed inventory, references, DAG membership, and assignment provenance |
+| `coverage list`, `coverage explain` | Current asset/group/assignment coverage and policy paths without assessment history |
 | `policy validate` | Named sources, controls, parameter schemas, baselines, overlays, requirements, realizations, and Rego entrypoints |
 | `policy diff`, `policy diff-set` | Stored-plan semantic comparison with distinct context changes |
 | `waiver validate`, `waiver list`, `waiver explain` | Bounded approvals, lifecycle, and exact target scope |

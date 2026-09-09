@@ -6,10 +6,11 @@ in [Actual composition and expected enforcement](composition.md). All maintained
 consumers use successor contracts; historical artifacts require historical tooling.
 
 Status: **Implemented prototype (v0.2)**
-Last updated: **2026-09-06**
+Last updated: **2026-09-09**
 
-The control-plane workflows share one `compliance` command. Inventory
-inspection, plan rendering, evaluation, and reporting remain separate modules
+The control-plane workflows share one `compliance` command. Their primary
+operator sequence is `Inventory → Coverage → Assessment`. Inventory
+inspection, current coverage, plan rendering, evaluation, and reporting remain separate modules
 behind that interface; combining their command surface does not combine their
 architectural responsibilities.
 
@@ -28,9 +29,12 @@ compliance
 │   └── list
 ├── inventory
 │   ├── validate
-│   ├── list {subjects,groups,assignments}
+│   ├── list {assets,groups,assignments} [--format {table,json}]
 │   ├── graph
-│   └── explain SUBJECT
+│   └── explain ASSET [--format {table,json}]
+├── coverage
+│   ├── list {assets,groups,assignments} [--format {table,json}]
+│   └── explain ASSET [--format {table,json}]
 ├── policy
 │   ├── validate
 │   ├── diff BEFORE AFTER [--format {table,json}]
@@ -49,6 +53,41 @@ compliance
     ├── frameworks
     └── explain SUBJECT
 ```
+
+`asset` / `assets` is CLI presentation vocabulary for a supplied governed
+object. It does not rename the underlying `Subject` resource, normalized domain
+object, schema fields, IDs, or identity algorithms. The replaced pre-freeze
+`inventory list subjects` selector is unsupported and has no alias.
+
+## Current inventory and coverage views
+
+`inventory list assets`, `groups`, and `assignments` presents the normalized
+facts supplied to the current project: asset identity/type/lifecycle, labels and
+source attribution; group parents/selectors/explicit members; or assignment
+targets and exact policy references. `inventory explain ASSET` joins only those
+supplied asset facts to direct and inherited group-membership attribution. It
+does not claim external discovery completeness and does not resolve policy.
+
+`coverage list assets`, `groups`, and `assignments` derives current assessment
+expectation through the existing planner. The asset view uses exactly
+`result_required`, `inactive`, `unassigned`, `no_assessable_policy`, and
+`invalid_resolution`. Assignment presence and assessability have separate
+counts. Every supplied group and assignment is retained, including zero-member
+and zero-assessable-effect rows. Invalid resolution is explicit and never
+rendered as an empty successful or unassigned plan.
+
+`coverage explain ASSET` follows current membership and applicable assignments
+to authored policy titles, Objectives when present, Checks, effective
+parameters, dispositions, adoption, and required evidence. Technical-only
+policy goes directly from applicable policy to Check and required evidence; it
+does not synthesize an Objective. Resolution errors remain visible and fail
+closed under the planner's existing boundary.
+
+These table/JSON objects are bounded, deterministic, experimental query
+projections. They are non-authoritative, non-persisted, non-identity-bearing,
+and are neither assessment inputs nor artifact families. Coverage does not own
+or cache resolution and does not perform evidence selection. `assessment`
+continues to own immutable result and historical-operation interpretation.
 
 `assessment run` is the normal local end-to-end operation. It resolves and
 persists the subject's immutable assessment plan, selects evidence, evaluates

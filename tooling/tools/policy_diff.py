@@ -644,10 +644,27 @@ def _compact(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"))
 
 
+def _domain_name(change: JsonObject) -> tuple[str, str]:
+    item = change["after"] or change["before"] or {}
+    label = {
+        "subject": "Asset",
+        "group": "Group",
+        "assignment": "Assignment",
+        "baseline": "Applicable policy",
+        "requirement_baseline": "Applicable objective policy",
+        "requirement": "Objective",
+        "control": "Check",
+        "resolution": "Policy resolution",
+    }.get(change["kind"], change["kind"].replace("_", " ").title())
+    title = item.get("title")
+    return label, title if isinstance(title, str) and title.strip() else change["identity"]
+
+
 def _format_change(change: JsonObject) -> list[str]:
+    label, name = _domain_name(change)
     lines = [
-        f"  {change['change'].upper():<9} "
-        f"{change['kind']} {change['identity']}"
+        f"  {change['change'].upper():<9} {label}: {name}",
+        f"    ID: {change['identity']}",
     ]
     old = change["before"]
     new = change["after"]
@@ -693,7 +710,7 @@ def format_policy_diff(document: JsonObject) -> str:
     summary = document["summary"]
     context = document["context"]
     lines = [
-        f"Policy diff: {document['subject_id']}",
+        f"Policy diff for asset: {document['subject_id']}",
         f"Before: {context['before']['plan_id']} ({context['before']['path']})",
         f"After:  {context['after']['plan_id']} ({context['after']['path']})",
         f"Comparison: {comparison['status'].upper()} ({comparison['reason']})",
@@ -780,7 +797,7 @@ def format_policy_diff_set(document: JsonObject) -> str:
         ),
         "",
     ]
-    headers = ("STATE", "SUBJECT", "BEFORE", "AFTER", "DETAIL")
+    headers = ("STATE", "ASSET", "BEFORE", "AFTER", "DETAIL")
     rows = [(
         item["change"].upper(),
         item["subject_id"],
@@ -811,7 +828,7 @@ def format_policy_diff_set(document: JsonObject) -> str:
     for item in detailed:
         lines.extend([
             "",
-            f"Subject detail: {item['subject_id']}",
+            f"Asset detail: {item['subject_id']}",
             format_policy_diff(item["diff"]),
         ])
     return "\n".join(lines)

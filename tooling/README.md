@@ -78,7 +78,10 @@ come from the automatically discovered repository registry
 ```sh
 uv sync
 uv run compliance config show
+uv run compliance inventory list assets
 uv run compliance inventory graph
+uv run compliance coverage list assets
+uv run compliance coverage explain cloud-account/aws-111122223333
 uv run compliance policy validate
 uv run compliance policy diff before-plan.json after-plan.json
 uv run compliance policy diff-set before-plans/ after-plans/
@@ -99,12 +102,13 @@ uv run compliance --project server-personas assessment status
 uv run compliance --project server-personas waiver list
 ```
 
-The command hierarchy keeps inventory, rendered plans, and assessments easy to
-discover:
+The command hierarchy follows `Inventory → Coverage → Assessment` while
+keeping rendered plans available as the adapter handoff:
 
 ```text
 compliance config      show or validate resolved project configuration
 compliance inventory   validate, list, graph, or explain inventory scope
+compliance coverage    list or explain current assessment expectation
 compliance policy      validate policy inputs or diff stored plan artifacts
 compliance waiver      validate or inspect temporary approved exceptions
 compliance plan        render or inspect immutable assessment plans
@@ -115,6 +119,8 @@ Common examples:
 
 ```sh
 uv run compliance inventory explain cloud-account/aws-111122223333
+uv run compliance coverage list assignments --format json
+uv run compliance coverage explain cloud-account/aws-111122223333
 uv run compliance plan render cloud-account/aws-111122223333
 uv run compliance policy diff before-plan.json after-plan.json --format json
 uv run compliance policy diff-set before-plans/ after-plans/ --format json
@@ -137,8 +143,11 @@ project registry or project file, or `--no-config` to require explicit paths. Se
 [`docs/cli.md`](docs/cli.md) for the complete discovery, precedence, and
 path-resolution contract.
 
-The assessment overview keeps policy coverage separate from the latest
-evaluation outcome. Operator views support `--format json` for automation.
+Inventory views present supplied normalized facts. Coverage views derive current
+policy applicability and assessment expectation without persistence; assessment
+views retain result/history responsibility. `asset` is CLI vocabulary only and
+does not rename the underlying `Subject` resource or IDs. Operator views support
+`--format json` for automation.
 Collectors remain separate executables and emit typed evidence; the unified
 CLI does not embed platform probes.
 
@@ -154,7 +163,7 @@ mappings with their current status and alignment to parent policy. It keeps a
 tailored company-policy pass visibly separate from an unaltered upstream
 framework mapping.
 
-Select the mock project explicitly to inspect its three-subject fleet:
+Select the mock project explicitly to inspect its three-asset fleet:
 
 ```sh
 uv run compliance --project mock-fleet inventory graph

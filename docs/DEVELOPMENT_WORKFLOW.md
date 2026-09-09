@@ -134,7 +134,7 @@ Runs repository validation plus focused tooling, policy-source, ordinary-project
 
 ### `verification-scenarios`
 
-Runs the canonical deterministic composed scenario/feature suite from a temporary non-Git assembly of explicit destination roots. It owns all 20 retained public CLI leaves and 18 retained domain features.
+Runs the canonical deterministic composed scenario/feature suite from a temporary non-Git assembly of explicit destination roots. It owns all 22 retained public CLI leaves and 19 retained domain features.
 
 ### `installed-release-provenance`
 
