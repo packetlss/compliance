@@ -223,10 +223,72 @@ def _check(control: JsonObject) -> JsonObject:
         "parameters": copy.deepcopy(control.get("parameters", {})),
         "required_evidence": _evidence(control.get("evidence", [])),
     }
-    for field in ("derivations", "deviations"):
-        if control.get(field):
-            row[field] = copy.deepcopy(control[field])
+    if control.get("deviations"):
+        row["deviations"] = [
+            {
+                field: deviation[field]
+                for field in (
+                    "id",
+                    "classification",
+                    "rationale",
+                    "approval_ref",
+                    "review_after",
+                )
+            }
+            for deviation in control["deviations"]
+        ]
     return row
+
+
+def _realization(requirement: JsonObject) -> JsonObject | None:
+    realization = requirement.get("realization")
+    if realization is None:
+        return None
+    return {
+        "reference": realization["reference"],
+        "classification": realization["classification"],
+    }
+
+
+_FAILURE_CONTEXT_FIELDS = {
+    "subject_id": "asset_id",
+    "subject_type": "asset_type",
+    "group": "group_id",
+    "assignment": "assignment_id",
+    "baseline": "policy_reference",
+    "requirement": "objective_reference",
+    "realization": "realization_reference",
+    "realizations": "candidate_realizations",
+    "instance_id": "check_id",
+    "implementation": "check_implementation",
+    "target": "target_check_id",
+    "operation": "policy_operation",
+    "sealed_by": "sealing_policy_reference",
+    "path": "authored_path",
+    "fields": "affected_fields",
+}
+
+
+def _resolution_failure(error: JsonObject) -> JsonObject:
+    failure: JsonObject = {"reason": str(error.get("type", "resolution-failed"))}
+    for source, target in _FAILURE_CONTEXT_FIELDS.items():
+        value = error.get(source)
+        if isinstance(value, str):
+            failure[target] = value
+        elif isinstance(value, list) and all(
+            isinstance(item, str) for item in value
+        ):
+            failure[target] = sorted(set(value))
+    return failure
+
+
+def _resolution(plan: JsonObject) -> JsonObject:
+    return {
+        "status": plan["resolution"]["status"],
+        "failures": [
+            _resolution_failure(error) for error in plan["resolution"]["errors"]
+        ],
+    }
 
 
 def _matches_path(item: JsonObject, assignment_id: str, reference: str) -> bool:
@@ -320,10 +382,8 @@ def _policy_paths(plan: JsonObject) -> list[JsonObject]:
                             checks, key=lambda item: item["instance_id"]
                         ),
                     }
-                    if "realization" in requirement:
-                        objective_row["realization"] = copy.deepcopy(
-                            requirement["realization"]
-                        )
+                    if realization := _realization(requirement):
+                        objective_row["realization"] = realization
                     objectives.append(objective_row)
                 assignment_row["policies"].append(
                     {
@@ -379,7 +439,7 @@ def build_coverage_explanation(plan: JsonObject) -> JsonObject:
         "coverage_class": _coverage_class(plan),
         "resolved_groups": copy.deepcopy(plan["resolved_groups"]),
         "assignments": _policy_paths(plan),
-        "resolution": copy.deepcopy(plan["resolution"]),
+        "resolution": _resolution(plan),
     }
 
 
@@ -423,9 +483,14 @@ def _format_check(lines: list[str], check: JsonObject, indent: str) -> None:
                 )
             )
     for deviation in check.get("deviations", []):
-        lines.append(
-            f'{indent}  Approved deviation: {deviation["rationale"]} '
-            f'({deviation["id"]})'
+        lines.extend(
+            [
+                f'{indent}  Approved deviation: {deviation["rationale"]}',
+                f'{indent}    ID: {deviation["id"]}',
+                f'{indent}    Classification: {deviation["classification"]}',
+                f'{indent}    Approval: {deviation["approval_ref"]}',
+                f'{indent}    Review after: {deviation["review_after"]}',
+            ]
         )
 
 
@@ -450,10 +515,17 @@ def format_coverage_explanation(document: JsonObject) -> str:
         lines.append("  none")
     if document["resolution"]["status"] != "valid":
         lines.append("Policy resolution: INVALID; no resolved policy is trustworthy.")
-        for error in document["resolution"]["errors"]:
+        for failure in document["resolution"]["failures"]:
             lines.append(
-                "  " + json.dumps(error, sort_keys=True, separators=(",", ":"))
+                "  Failure: " + failure["reason"].replace("-", " ").capitalize()
             )
+            lines.append(f'    Code: {failure["reason"]}')
+            for field, value in failure.items():
+                if field == "reason":
+                    continue
+                label = field.replace("_", " ").capitalize()
+                rendered = ", ".join(value) if isinstance(value, list) else value
+                lines.append(f"    {label}: {rendered}")
     for assignment in document["assignments"]:
         lines.append(
             f'  Assignment: {assignment["assignment_id"]} via {assignment["group_id"]}'
@@ -472,7 +544,10 @@ def format_coverage_explanation(document: JsonObject) -> str:
                     ]
                 )
                 if realization := objective.get("realization"):
-                    lines.append(f'        Realization: {realization["reference"]}')
+                    lines.append(
+                        f'        Realization: {realization["reference"]} '
+                        f'({realization["classification"]})'
+                    )
                 for check in objective["checks"]:
                     _format_check(lines, check, "        ")
             for check in policy["checks"]:

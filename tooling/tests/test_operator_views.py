@@ -371,6 +371,118 @@ class CoverageOperatorViewTests(unittest.TestCase):
         self.assertNotIn("Check:", rendered)
         self.assertNotIn("Coverage: unassigned", rendered)
 
+    def test_ordinary_explanations_exclude_plan_internal_provenance(self):
+        valid_output = io.StringIO()
+        with redirect_stdout(valid_output):
+            main(
+                [
+                    "--config",
+                    str(ROLLOUT_CONFIG),
+                    "coverage",
+                    "explain",
+                    "host/container-app-01",
+                    "--format",
+                    "json",
+                ]
+            )
+        valid = json.loads(valid_output.getvalue())
+
+        policies = [
+            policy
+            for assignment in valid["assignments"]
+            for policy in assignment["policies"]
+        ]
+        objective = next(
+            policy["objectives"][0]
+            for policy in policies
+            if policy["policy_type"] == "objective"
+        )
+        tailored = next(
+            check
+            for policy in policies
+            for check in policy["checks"]
+            if check["alignment"] == "tailored"
+        )
+        self.assertEqual(
+            set(objective["realization"]), {"reference", "classification"}
+        )
+        self.assertEqual(
+            set(tailored["deviations"][0]),
+            {
+                "id",
+                "classification",
+                "rationale",
+                "approval_ref",
+                "review_after",
+            },
+        )
+        self.assertNotIn("derivations", tailored)
+
+        invalid_output = io.StringIO()
+        with redirect_stdout(invalid_output):
+            main(
+                [
+                    "--config",
+                    str(ROLLOUT_CONFIG),
+                    "coverage",
+                    "explain",
+                    "host/persona-conflict-01",
+                    "--format",
+                    "json",
+                ]
+            )
+        invalid = json.loads(invalid_output.getvalue())
+        failure = next(
+            item
+            for item in invalid["resolution"]["failures"]
+            if item["reason"] == "control-instance-conflict"
+        )
+        self.assertEqual(set(failure), {"reason", "check_id"})
+
+        projected = json.dumps([valid, invalid], sort_keys=True)
+        for forbidden in (
+            "parent_fingerprint",
+            "definition_fingerprint",
+            "digest",
+            "policy_sources",
+            "inherited_lineage",
+            "lineage",
+            "provenance",
+            "before",
+            "after",
+            "existing",
+            "incoming",
+            "incoming_provenance",
+        ):
+            self.assertNotIn(f'"{forbidden}"', projected)
+
+        human_output = io.StringIO()
+        with redirect_stdout(human_output):
+            main(
+                [
+                    "--config",
+                    str(ROLLOUT_CONFIG),
+                    "coverage",
+                    "explain",
+                    "host/container-app-01",
+                ]
+            )
+            main(
+                [
+                    "--config",
+                    str(ROLLOUT_CONFIG),
+                    "coverage",
+                    "explain",
+                    "host/persona-conflict-01",
+                ]
+            )
+        rendered = human_output.getvalue()
+        self.assertIn("Approved deviation:", rendered)
+        self.assertIn("Code: control-instance-conflict", rendered)
+        self.assertNotIn("sha256:", rendered)
+        self.assertNotIn("parent_fingerprint", rendered)
+        self.assertNotIn("incoming_provenance", rendered)
+
     def test_objective_checks_require_one_matching_provenance_path(self):
         objective = {
             "reference": "objective/one",

@@ -513,7 +513,10 @@ resource, artifact, persistence, identity, cache, evidence selection, or second
 applicability algorithm. Its five current expectation classes remain
 `result_required`, `inactive`, `unassigned`, `no_assessable_policy`, and
 `invalid_resolution`. CLI `asset` vocabulary does not rename `Subject` wire or
-domain contracts. Assessment/history redesign remains outside this change.
+domain contracts. Ordinary explanations retain bounded authored meaning and
+failure context, while fingerprints, derivation state, lineage, digests, source
+locators, and raw planner provenance remain owned by the exact plan and advanced
+artifact surfaces. Assessment/history redesign remains outside this change.
 
 ### 2026-09-06 — Exact bound-plan/result historical pair (#90)
 

@@ -88,6 +88,12 @@ projections. They are non-authoritative, non-persisted, non-identity-bearing,
 and are neither assessment inputs nor artifact families. Coverage does not own
 or cache resolution and does not perform evidence selection. `assessment`
 continues to own immutable result and historical-operation interpretation.
+Ordinary coverage output projects authored deviation rationale/approval facts,
+realization reference/classification, and bounded resolution-failure meaning;
+it does not expose plan derivations, fingerprints, lineage, raw provenance,
+resource digests, policy-source locators, or raw planner diagnostics. Exact
+provenance remains available from the immutable plan and its advanced artifact
+surfaces.
 
 `assessment run` is the normal local end-to-end operation. It resolves and
 persists the subject's immutable assessment plan, selects evidence, evaluates
