@@ -357,7 +357,7 @@ def iam(root, private_source):
             "Company identity and access objectives (company.identity-access-objectives@1)",
             "Access is granted through centrally governed roles (company.iam.role-based-access@1)",
             "Interactive access to governed systems must be authorized through centrally governed role or group membership",
-            "IAM service integrations satisfy policy [PASS]",
+            "IAM service integrations satisfy policy (restricted.linux.rbac.company-iam-integration) [PASS]",
             "Purpose: Verify that required identity-service conditions and their governed relationships are supported by attributable evidence.",
         ):
             require(expected in explanation, f"IAM explanation lost {expected!r}")
