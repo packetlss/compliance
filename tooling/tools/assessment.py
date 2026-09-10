@@ -76,11 +76,6 @@ def load_assessment_plans(paths: list[Path]) -> list[JsonObject]:
     return [plans[identity] for identity in sorted(plans)]
 
 
-def result_state(report: JsonObject) -> str:
-    """Return the immutable result-owned operation outcome."""
-    return report["outcome"]
-
-
 def _result_index(reports: list[JsonObject]) -> dict[str, JsonObject]:
     return {report["id"]: report for report in reports}
 

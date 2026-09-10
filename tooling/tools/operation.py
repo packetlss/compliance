@@ -388,7 +388,6 @@ def account_operation(anchor, reports, evaluated_at, assessed_plans=()):
     """Exact-set historical accounting; result discovery never supplies the scope."""
     from .artifact_validation import validate_assessment_plan, validate_assessment_results
     from .assessment_provenance import operation_plan_id
-    from .assessment import result_state
     validate_assessment_plan(anchor)
     plan_by_id = {anchor['id']: anchor}
     for plan in assessed_plans:
@@ -422,7 +421,7 @@ def account_operation(anchor, reports, evaluated_at, assessed_plans=()):
             from .assessment_provenance import validate_result_against_plan
             validate_result_against_plan(result, assessed_plan)
             interpretation = 'validated'
-        state = ((result_state(result) if result else 'missing')
+        state = ((result['outcome'] if result else 'missing')
                  if disposition == 'result_required' else disposition)
         rows.append({**copy.deepcopy(member), 'plan_id': plan_id, 'state': state,
                      'accounting_disposition': disposition,
