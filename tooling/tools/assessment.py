@@ -217,10 +217,22 @@ def build_run_view(
     }
 
 
+def _request_text(request: JsonObject) -> str:
+    if request["all"]:
+        return "all assets"
+    parts = []
+    if request["subjects"]:
+        parts.append("assets " + ", ".join(request["subjects"]))
+    if request["groups"]:
+        parts.append("groups " + ", ".join(request["groups"]))
+    return "; ".join(parts)
+
+
 def render_run_view(view: JsonObject) -> str:
     summary = view["summary"]
     lines = [
-        f'Assessment operation {view["operation"]["operation_id"]}',
+        "Assessment run",
+        f'Scope: {_request_text(view["operation"]["request"])}',
         f'Assessment instant: {view["operation"]["evaluated_at"]}',
         (
             f'Exact accounting: {summary["filled_result_slots"]}/'
@@ -374,6 +386,7 @@ def build_status_view(
         "schema": STATUS_SCHEMA,
         "operation": {
             "operation_id": account["operation"]["operation_id"],
+            "request": copy.deepcopy(account["operation"]["request"]),
             "evaluated_at": account["evaluated_at"],
         },
         "query_instant": account["query_instant"],
@@ -435,7 +448,8 @@ def _asset_waivers_text(qualification: JsonObject) -> str:
 def render_status_view(view: JsonObject) -> str:
     summary = view["whole_operation"]
     lines = [
-        f'Assessment status for operation {view["operation"]["operation_id"]}',
+        "Assessment status",
+        f'Scope: {_request_text(view["operation"]["request"])}',
         f'Historical assessment instant: {view["operation"]["evaluated_at"]}',
         f'Current qualification as of: {view["query_instant"]}',
         (
@@ -1005,6 +1019,11 @@ def _objectives(plan: JsonObject, result: JsonObject | None) -> list[JsonObject]
                 if requirement["reference"] in statuses
                 else None
             ),
+            "historical_reason": (
+                statuses[requirement["reference"]]["reason"]
+                if requirement["reference"] in statuses
+                else None
+            ),
         }
         for requirement in plan["requirements"]
     ]
@@ -1038,8 +1057,6 @@ def render_explanation_view(view: JsonObject) -> str:
         ),
         "Frozen accounting disposition: "
         + slot["accounting_disposition"].replace("_", " "),
-        f'Operation: {view["operation"]["operation_id"]}',
-        f'Plan: {view["operation"]["plan_id"]}',
         f'Assessment instant: {view["operation"]["evaluated_at"]}',
         f'Current qualification as of: {current["as_of"]}',
         f'Current plan alignment: {current["plan_alignment"].replace("_", " ")}',
@@ -1094,6 +1111,11 @@ def render_explanation_view(view: JsonObject) -> str:
                 f'  {objective["title"]} ({objective["reference"]}) [{status}]'
             )
             lines.append(f'    {objective["statement"]}')
+            lines.append(
+                f'    Frozen adoption: {objective["adoption"].replace("_", " ")}'
+            )
+            if objective["historical_reason"]:
+                lines.append(f'    Historical reason: {objective["historical_reason"]}')
             if objective["realization"]:
                 lines.append(f'    Realization: {objective["realization"]}')
             if objective["realization_based_on"]:

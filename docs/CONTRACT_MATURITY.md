@@ -93,12 +93,12 @@ owns dependency/`max_age` meaning. The exact plan/result pair, not a duplicated 
 supports full historical interpretation. The refinement does not change evidence
 identity algorithms or add a core retention obligation.
 
-The non-anchored current-inventory view retains its predecessor result discovery but
-separately exposes and aggregates immutable historical outcome, exact rendered-plan
-alignment, coverage, and assessment absence. Anchored historical views additionally
-require an explicit query instant and expose selected-evidence timeliness, recorded
-waiver qualification, and frozen accounting independently. ADR 0010's assessment-time
-corrections remain its existing responsibility.
+The predecessor non-anchored current-inventory/latest-result Assessment view is
+removed under #105. Coverage exclusively owns current inventory policy expectation.
+Anchored historical Assessment views require an exact frozen operation and explicit
+query instant, and expose historical outcome, exact plan alignment, selected-evidence
+timeliness, recorded waiver qualification, and frozen accounting independently.
+ADR 0010's assessment-time corrections remain its existing responsibility.
 
 ## Explicit policy parameters and freshness
 

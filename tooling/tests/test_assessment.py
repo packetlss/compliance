@@ -133,7 +133,10 @@ class AssessmentOperatorViewTests(unittest.TestCase):
         self.assertEqual(view["assets"][0]["expected_result_slot"]["present"], False)
         self.assertNotIn("members", view)
         self.assertNotIn("controls", view)
-        self.assertIn("ASSET", render_run_view(view))
+        rendered = render_run_view(view)
+        self.assertIn("Scope: assets host/test", rendered)
+        self.assertIn("ASSET", rendered)
+        self.assertNotIn(view["operation"]["operation_id"], rendered)
 
     def test_run_summary_counts_result_owned_outcomes(self):
         report = self.result(status="fail")
@@ -158,6 +161,10 @@ class AssessmentOperatorViewTests(unittest.TestCase):
         )
         self.assertIn("whole-operation accounting", render_status_view(view).lower())
         self.assertIn("CURRENT EVIDENCE", render_status_view(grouped))
+        self.assertIn("Scope: assets host/test", render_status_view(view))
+        self.assertNotIn(
+            view["operation"]["operation_id"], render_status_view(view)
+        )
 
     def test_status_retains_empty_group_from_frozen_selection_witness(self):
         account = copy.deepcopy(self.account)
@@ -384,6 +391,41 @@ class AssessmentOperatorViewTests(unittest.TestCase):
             "test.parent-realization@1",
         )
         self.assertIn("Based on: test.parent-realization@1", render_explanation_view(view))
+
+    def test_objective_renders_frozen_adoption_and_historical_reason(self):
+        plan = assessment_plan(
+            [{"name": "shared", "digest": "sha256:" + "7" * 64}],
+            with_requirement=True,
+        )
+        plan["requirements"][0]["adoption"] = {
+            "status": "not_implemented",
+            "method": "none",
+            "owner": "unassigned",
+        }
+        plan["requirements"][0].pop("realization")
+        report = self.result(status="fail")
+        report["requirement_assessments"] = [{
+            "requirement": "test.requirement@1",
+            "status": "fail",
+            "reason": "The applicable requirement has no implemented realization.",
+        }]
+        account = self.account_with_result(report)
+
+        view = build_explanation_view(account, account["members"][0], plan, report)
+        rendered = render_explanation_view(view)
+
+        self.assertEqual(view["objectives"][0]["adoption"], "not_implemented")
+        self.assertEqual(
+            view["objectives"][0]["historical_reason"],
+            "The applicable requirement has no implemented realization.",
+        )
+        self.assertIn("Frozen adoption: not implemented", rendered)
+        self.assertIn(
+            "Historical reason: The applicable requirement has no implemented realization.",
+            rendered,
+        )
+        self.assertNotIn(view["operation"]["operation_id"], rendered)
+        self.assertNotIn(view["operation"]["plan_id"], rendered)
 
     def test_no_exact_plan_shows_only_bounded_result_owned_facts(self):
         report = self.result(status="unknown", disposition="invalid")

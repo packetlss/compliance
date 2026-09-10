@@ -160,7 +160,9 @@ same-identity prose.
 requirement-baseline results. Its bounded table and JSON views identify the exact
 operation request, assessment instant, per-asset expectation, exact result-slot
 presence, and immutable outcome. `accounting_complete` remains separate from
-`all_passed`; neither is inferred from the existence of output artifacts.
+`all_passed`; neither is inferred from the existence of output artifacts. Ordinary
+human output leads with the normalized asset/group scope. Stable operation and plan
+identities remain in JSON for drill-down rather than occupying the default table.
 
 `assessment status` reports one exact frozen operation. It requires a retained
 operation-bearing `--plan`, exact `--at`, and explicit qualification instant
@@ -182,7 +184,8 @@ title/statement, Control-owned Check title/purpose, effective parameters, requir
 evidence, immutable historical outcome, and separately labeled current
 qualification. Each applicable policy retains its exact group/assignment path and
 the objective/check identities attributed through that path. A technical-only plan
-has no synthetic Objective. Its JSON is a
+has no synthetic Objective. Objective output keeps frozen adoption distinct from the
+immutable requirement outcome and reason. Its JSON is a
 bounded projection and never embeds a whole plan or result. Stable operation, plan,
 result, asset, check, and dependency identities remain available for drill-down.
 
