@@ -883,7 +883,7 @@ class ExampleRunner:
                 "--at",
                 EXAMPLE_INSTANT,
             ],
-            contains=("Assessment operation", "ASSET", "RESULT SLOT"),
+            contains=("Assessment run", "Scope: all assets", "ASSET", "RESULT SLOT"),
         )
         mock_anchor = mock_plans / "cloud-account__aws-111122223333.json"
         historical_args = [
