@@ -183,7 +183,7 @@ def technical(root):
         for expected in (
             "Applicable policies:",
             "Linux package baseline (verification.technical-packages@1)",
-            "Required system packages are installed [PASS]",
+            "Required system packages are installed (verification.technical-packages.required) [PASS]",
             "Purpose: Verify that the packages mandated by policy are present.",
             'Effective parameters: {"ecosystem":"linux-native","required":[{"id":"auditd"}]}',
             "Required evidence: linux.packages/v1 (max age 86400s)",
