@@ -73,6 +73,12 @@ The toolset should answer four different questions without conflating them:
   while remaining separate internal modules. Those module paths are not a
   public Python API. Collectors remain external processes connected through
   typed evidence documents.
+- **Current operator views follow Inventory → Coverage → Assessment.**
+  Inventory presents supplied normalized facts. Coverage is an ephemeral query
+  projection over the existing membership, assignment, policy-resolution,
+  planning, adoption, and disposition owners. Assessment remains the historical
+  result concern. Coverage has no resource, persistence, identity, cache,
+  artifact, or alternate resolution algorithm.
 - **Assessment plans are the interoperability boundary.** A resolved technical
   control retains stable identity, parameters, fingerprint, lineage, and
   provenance in the assessment plan. Separately implemented programs may map
@@ -496,6 +502,21 @@ and [`waivers.md`](waivers.md).
   verification boundaries.
 
 ## 11. Decision log
+
+### 2026-09-09 — Current inventory and coverage operator views (#104)
+
+The operator sequence is `Inventory → Coverage → Assessment`. Inventory
+presents supplied normalized asset/group/assignment facts and membership
+attribution. Coverage is a purpose-specific, ephemeral table/JSON projection
+that calls the existing planner and accounting-disposition owner; it has no
+resource, artifact, persistence, identity, cache, evidence selection, or second
+applicability algorithm. Its five current expectation classes remain
+`result_required`, `inactive`, `unassigned`, `no_assessable_policy`, and
+`invalid_resolution`. CLI `asset` vocabulary does not rename `Subject` wire or
+domain contracts. Ordinary explanations retain bounded authored meaning and
+failure context, while fingerprints, derivation state, lineage, digests, source
+locators, and raw planner provenance remain owned by the exact plan and advanced
+artifact surfaces. Assessment/history redesign remains outside this change.
 
 ### 2026-09-06 — Exact bound-plan/result historical pair (#90)
 

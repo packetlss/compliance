@@ -352,11 +352,15 @@ recorded. The local projection is not itself the authority merely because it
 stores a normalized copy. Collector-provided configuration evidence is not
 automatically a trusted policy-selection attribute.
 
-## 10. Required user views
+## 10. Inventory and current coverage operator views
+
+The implemented operator sequence is `Inventory → Coverage → Assessment`.
+`asset` / `assets` is user-facing CLI vocabulary only; the normalized resource,
+schema, internal object, wire fields, and identity remain `Subject`.
 
 The inventory and policy interface should expose:
 
-- **Subject inventory** — identity, lifecycle, trusted labels, and provenance.
+- **Asset inventory** — identity, lifecycle, trusted labels, and provenance.
 - **Resolved memberships** — direct and inherited groups with explanation.
 - **Group members** — all subjects currently resolved into a group.
 - **Group assignments** — baselines attached directly to the group.
@@ -373,20 +377,43 @@ operator CLI. The project registry selects an isolated named project whose paths
 are loaded from that project's `compliance.yaml`:
 
 ```sh
-uv run compliance inventory validate
+scripts/dev cli inventory validate
 
-uv run compliance inventory graph
+scripts/dev cli inventory list assets
 
-uv run compliance inventory explain cloud-account/aws-111122223333
+scripts/dev cli inventory graph
+
+scripts/dev cli inventory explain cloud-account/aws-111122223333
+
+scripts/dev cli coverage list assets
+
+scripts/dev cli coverage list groups --format json
+
+scripts/dev cli coverage list assignments
+
+scripts/dev cli coverage explain cloud-account/aws-111122223333
 ```
 
-The development validation registry defaults to `mock-fleet`, which exercises the contract
-with `aws-account` and `saas-tenant` subjects, while the
-`iam-realization` project exercises a `linux-host` and requirement-baseline
-assignment. They are selected from the checkout root with `--project`. Each
-project retains its own inventory, evidence, plans, and results. Mock-fleet
-assembles the shared library with verification policy; IAM assembles the shared
-source with a private realization tree. Each
+Inventory list/explain is limited to supplied normalized facts and resolved
+membership attribution. Policy applicability is a coverage concern. Coverage
+reuses the planner and derives exactly `result_required`, `inactive`,
+`unassigned`, `no_assessable_policy`, or `invalid_resolution`; it does not own
+another applicability algorithm. Group and assignment views retain zero-effect
+rows and keep current members, assignment presence, assessable checks/Objectives,
+and invalid resolution separate.
+
+The JSON forms are purpose-specific experimental query projections. They are
+not resources, snapshots, digests, caches, plans, assessment inputs, or durable
+facts, and no query writes generated state. Supplied inventory is never presented
+as proof of external inventory exhaustiveness.
+
+The root development registry defaults to `mock-fleet`, which exercises the
+contract with `aws-account` and `saas-tenant` subjects. Root-registered projects
+are selected from the checkout root with `--project`. The `iam-realization`
+project separately exercises a `linux-host` and requirement-baseline assignment;
+because its private realization tree must be independently materialized, it is
+exercised through `scripts/dev gate iam` rather than the root registry. Each
+project retains its own inventory, evidence, plans, and results. Each
 mock-fleet subject resolves through a provider/service-model branch and
 a production branch before reaching a multi-parent assignment group. This
 keeps external system type, environment, and the resulting policy scope visible
@@ -403,13 +430,13 @@ Derived accounting/applicability and evaluation views are exposed separately:
 
 ```sh
 # Fleet overview; filter historical outcome and exact-plan alignment independently.
-uv run compliance assessment status --group aws-accounts --outcome fail --plan-alignment plan_aligned
+scripts/dev cli assessment status --group aws-accounts --outcome fail --plan-alignment plan_aligned
 
 # Roll up each dimension by every resolved DAG group.
-uv run compliance assessment groups
+scripts/dev cli assessment groups
 
 # Connect one subject's accounting disposition, plan, assignments, results, and exclusions.
-uv run compliance assessment explain cloud-account/aws-111122223333
+scripts/dev cli assessment explain cloud-account/aws-111122223333
 ```
 
 On `assessment status`, `--group`, `--outcome`, and `--plan-alignment` are

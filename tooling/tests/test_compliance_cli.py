@@ -194,7 +194,7 @@ class ComplianceCliTests(unittest.TestCase):
                 "inventory", "validate",
             ])
 
-        self.assertIn("valid inventory: 2 subject(s), 2 group(s), 2 assignment(s)", output.getvalue())
+        self.assertIn("valid inventory: 2 asset(s), 2 group(s), 2 assignment(s)", output.getvalue())
 
     def test_named_project_registry_project_uses_mock_fleet_inventory(self):
         output = io.StringIO()
@@ -208,7 +208,7 @@ class ComplianceCliTests(unittest.TestCase):
                 "validate",
             ])
 
-        self.assertIn("valid inventory: 2 subject(s), 2 group(s), 2 assignment(s)", output.getvalue())
+        self.assertIn("valid inventory: 2 asset(s), 2 group(s), 2 assignment(s)", output.getvalue())
 
     def test_policy_validate_uses_project_config(self):
         output = io.StringIO()

@@ -6,10 +6,11 @@ in [Actual composition and expected enforcement](composition.md). All maintained
 consumers use successor contracts; historical artifacts require historical tooling.
 
 Status: **Implemented prototype (v0.2)**
-Last updated: **2026-09-06**
+Last updated: **2026-09-09**
 
-The control-plane workflows share one `compliance` command. Inventory
-inspection, plan rendering, evaluation, and reporting remain separate modules
+The control-plane workflows share one `compliance` command. Their primary
+operator sequence is `Inventory → Coverage → Assessment`. Inventory
+inspection, current coverage, plan rendering, evaluation, and reporting remain separate modules
 behind that interface; combining their command surface does not combine their
 architectural responsibilities.
 
@@ -28,9 +29,12 @@ compliance
 │   └── list
 ├── inventory
 │   ├── validate
-│   ├── list {subjects,groups,assignments}
+│   ├── list {assets,groups,assignments} [--format {table,json}]
 │   ├── graph
-│   └── explain SUBJECT
+│   └── explain ASSET [--format {table,json}]
+├── coverage
+│   ├── list {assets,groups,assignments} [--format {table,json}]
+│   └── explain ASSET [--format {table,json}]
 ├── policy
 │   ├── validate
 │   ├── diff BEFORE AFTER [--format {table,json}]
@@ -49,6 +53,47 @@ compliance
     ├── frameworks
     └── explain SUBJECT
 ```
+
+`asset` / `assets` is CLI presentation vocabulary for a supplied governed
+object. It does not rename the underlying `Subject` resource, normalized domain
+object, schema fields, IDs, or identity algorithms. The replaced pre-freeze
+`inventory list subjects` selector is unsupported and has no alias.
+
+## Current inventory and coverage views
+
+`inventory list assets`, `groups`, and `assignments` presents the normalized
+facts supplied to the current project: asset identity/type/lifecycle, labels and
+source attribution; group parents/selectors/explicit members; or assignment
+targets and exact policy references. `inventory explain ASSET` joins only those
+supplied asset facts to direct and inherited group-membership attribution. It
+does not claim external discovery completeness and does not resolve policy.
+
+`coverage list assets`, `groups`, and `assignments` derives current assessment
+expectation through the existing planner. The asset view uses exactly
+`result_required`, `inactive`, `unassigned`, `no_assessable_policy`, and
+`invalid_resolution`. Assignment presence and assessability have separate
+counts. Every supplied group and assignment is retained, including zero-member
+and zero-assessable-effect rows. Invalid resolution is explicit and never
+rendered as an empty successful or unassigned plan.
+
+`coverage explain ASSET` follows current membership and applicable assignments
+to authored policy titles, Objectives when present, Checks, effective
+parameters, dispositions, adoption, and required evidence. Technical-only
+policy goes directly from applicable policy to Check and required evidence; it
+does not synthesize an Objective. Resolution errors remain visible and fail
+closed under the planner's existing boundary.
+
+These table/JSON objects are bounded, deterministic, experimental query
+projections. They are non-authoritative, non-persisted, non-identity-bearing,
+and are neither assessment inputs nor artifact families. Coverage does not own
+or cache resolution and does not perform evidence selection. `assessment`
+continues to own immutable result and historical-operation interpretation.
+Ordinary coverage output projects authored deviation rationale/approval facts,
+realization reference/classification, and bounded resolution-failure meaning;
+it does not expose plan derivations, fingerprints, lineage, raw provenance,
+resource digests, policy-source locators, or raw planner diagnostics. Exact
+provenance remains available from the immutable plan and its advanced artifact
+surfaces.
 
 `assessment run` is the normal local end-to-end operation. It resolves and
 persists the subject's immutable assessment plan, selects evidence, evaluates
@@ -331,10 +376,12 @@ operator workflow rather than only the command first used against it. The
 canonical project tree and path-ownership rules are defined in
 [`project-layout.md`](project-layout.md).
 
-`tooling/` is the sole Python/build root. From the destination root use
-`uv run --project tooling compliance` with an explicit project config, or select
-a project through the materialized registry. Source paths are acquisition
-locations; explicit names and content digests define policy identity. Destination
+`tooling/` is the sole Python/build root. From a repository checkout, use
+`scripts/dev cli ...` with an explicit project config or select a project
+through the root registry. This development adapter executes the managed
+environment's installed `compliance` entrypoint from the repository root;
+independently installed products use `compliance ...` directly. Source paths
+are acquisition locations; explicit names and content digests define policy identity. Destination
 [ADR 0005](../../docs/adr/0005-content-addressed-development-boundaries.md),
 [ADR 0009](../../docs/adr/0009-active-compliance-vocabulary.md), the system
 [architecture](../../docs/ARCHITECTURE.md), and the
@@ -358,19 +405,22 @@ results; projects may reference a shared policy catalog. From the destination
 root, select an ordinary project explicitly:
 
 ```sh
-uv run --project tooling compliance --config projects/mock-fleet/compliance.yaml inventory validate
-uv run --project tooling compliance --config projects/server-personas/compliance.yaml waiver list
+scripts/dev cli --config projects/mock-fleet/compliance.yaml inventory validate
+scripts/dev cli --config projects/server-personas/compliance.yaml waiver list
 ```
 
 Framework-oriented examples:
 
 ```sh
-uv run compliance --project mock-fleet assessment frameworks
-uv run compliance --project mock-fleet assessment frameworks \
+scripts/dev cli --project mock-fleet assessment frameworks
+scripts/dev cli --project mock-fleet assessment frameworks \
   --reference CSA-CCM-v4.1:LOG-domain
-uv run compliance --project iam-realization assessment frameworks \
-  --level objective
 ```
+
+The synthetic `iam-realization` project is intentionally absent from the root
+development registry because its `environment-private` source must be copied to
+an independent temporary materialization. `scripts/dev gate iam` owns that
+execution path.
 
 If `--project` is omitted, the project registry's `defaultProject` is used. In the canonical
 assembly above, unqualified commands select `linux-hardening-rollout`.
@@ -401,7 +451,7 @@ the named CLI form. Project configs require `policySources` and reject
 `paths.policies`. Named sources expose each revision in validation output and plans:
 
 ```sh
-uv run --project tooling compliance --no-config policy validate \
+scripts/dev cli --no-config policy validate \
   --policy-source control-library=policy-sources/control-library/policies \
   --policy-source verification-policy=policy-sources/verification-policy/policies
 ```
@@ -424,10 +474,10 @@ project file, fully resolved paths, and named policy sources; its JSON form is
 suitable for automation:
 
 ```sh
-uv run compliance config show
-uv run compliance config show --format json
-uv run compliance config validate
-uv run compliance config list
+scripts/dev cli config show
+scripts/dev cli config show --format json
+scripts/dev cli config validate
+scripts/dev cli config list
 ```
 
 Configuration initially contains stable repository and artifact locations.
@@ -445,8 +495,8 @@ single-subject directory and renders an index when several plans exist. Select
 one fleet plan with its stable subject ID or an explicit file path:
 
 ```sh
-uv run compliance --project mock-fleet plan show
-uv run compliance --project mock-fleet \
+scripts/dev cli --project mock-fleet plan show
+scripts/dev cli --project mock-fleet \
   plan show cloud-account/aws-111122223333
 ```
 

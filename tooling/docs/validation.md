@@ -7,6 +7,10 @@ Run the source gate from a clean, committed tooling checkout:
 ```
 
 From the repository root run `scripts/dev setup`; root `toolchain/versions.env` is the sole pin authority. Use `scripts/dev doctor` for read-only diagnosis.
+Run the managed installed operator entrypoint from that root with
+`scripts/dev cli config list` (and the same prefix for other `compliance`
+arguments). An independently installed product continues to use
+`compliance ...` directly.
 The gate performs frozen dependency setup, runs the complete tooling component
 suite, and checks this repository's revision and cleanliness before and after.
 It works at any checkout location, including a direct Git worktree. It neither
@@ -60,8 +64,8 @@ The complete feature suite is owned by destination
 [`verification/scenarios`](../../verification/scenarios/integration/README.md).
 The gate established by scenario PR #10 remains the owner of composed
 integration and explicit immutable external input selection. The retained
-tooling catalog after core configuration removal contains 20 public CLI leaves
-and 18 domain features. The scenario repository's persistent pre-cutover
+tooling catalog contains 22 public CLI leaves and 19 domain features. The
+scenario repository's persistent pre-cutover
 manifest is intentionally not advanced by tooling #67; scenario issue #11 owns
 the final coordinated cutover after affected producers and consumers merge.
 Components must not depend back on its manifest.

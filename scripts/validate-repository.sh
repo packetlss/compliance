@@ -15,6 +15,7 @@ require_file() {
 
 require_file AGENTS.md
 require_file README.md
+require_file compliance.yaml
 require_file t3.json
 require_file .github/ISSUE_TEMPLATE/implementation.md
 require_file .github/PULL_REQUEST_TEMPLATE.md

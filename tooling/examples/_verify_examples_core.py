@@ -58,12 +58,14 @@ CLI_EXAMPLES = {
     ("config", "validate"): "strict project registry and project validation",
     ("config", "list"): "project registry",
     ("inventory", "validate"): "resource schemas, references, and DAG",
-    ("inventory", "list"): "subject, group, and assignment identities",
+    ("inventory", "list"): "supplied asset, group, and assignment facts",
     ("inventory", "graph"): "multi-parent group hierarchy",
-    ("inventory", "explain"): "subject membership and policy coverage",
+    ("inventory", "explain"): "supplied asset facts and membership attribution",
+    ("coverage", "list"): "current asset, group, and assignment coverage",
+    ("coverage", "explain"): "current policy and assessment expectation for one asset",
     ("policy", "validate"): "policy schemas, pins, contracts, and Rego entrypoints",
-    ("policy", "diff"): "stored subject-plan semantic comparison",
-    ("policy", "diff-set"): "stored project-plan snapshot comparison",
+    ("policy", "diff"): "stored asset-plan semantic comparison",
+    ("policy", "diff-set"): "stored project asset-plan snapshot comparison",
     ("waiver", "validate"): "waiver schemas, windows, and overlaps",
     ("waiver", "list"): "deterministic waiver lifecycle view",
     ("waiver", "explain"): "one waiver and its approval provenance",
@@ -83,6 +85,7 @@ DOMAIN_EXAMPLES = {
     ),
     "evidence.schema-enforcement": "invalid typed evidence fails its controls closed",
     "inventory.multi-parent-dag": "one subject resolved through multiple parents",
+    "coverage.current-views": "current coverage remains separate from assessment history",
     "policy.multi-source-realization": "private realization over verification intent",
     "policy.control-implementations": "every reusable implementation appears in a plan",
     "policy.invalid-resolution": "conflicting assignments fail plan resolution closed",
@@ -164,7 +167,7 @@ def mock_fleet_inventory_contract_holds(
 ) -> bool:
     """Check stable mock-fleet inventory identities without coupling to its size."""
     return (
-        "3 subject(s)" in validation_output
+        "3 asset(s)" in validation_output
         and "cloud-services" in graph
         and "production-services" in graph
         and "aws-production-accounts" in graph
@@ -517,19 +520,22 @@ class ExampleRunner:
         self.cli(
             ("inventory", "validate"),
             [*rollout, "inventory", "validate"],
-            contains=("3 subject(s)", "4 assignment(s)"),
+            contains=("3 asset(s)", "4 assignment(s)"),
         )
 
         mock_inventory_validation = self.cli(
             ("inventory", "validate"),
             [*mock, "inventory", "validate"],
-            contains=("3 subject(s)",),
+            contains=("3 asset(s)",),
         )
-        for resource in ("subjects", "groups", "assignments"):
-            self.cli(
+        inventory_assets = ""
+        for resource in ("assets", "groups", "assignments"):
+            result = self.cli(
                 ("inventory", "list"),
-                [*mock, "inventory", "list", resource],
+                [*mock, "inventory", "list", resource, "--format", "json"],
             )
+            if resource == "assets":
+                inventory_assets = result
         graph = self.cli(
             ("inventory", "graph"),
             [*mock, "inventory", "graph"],
@@ -538,7 +544,7 @@ class ExampleRunner:
         explanation = self.cli(
             ("inventory", "explain"),
             [*mock, "inventory", "explain", "cloud-account/aws-111122223333"],
-            contains=("Resolved groups", "Policy assignments"),
+            contains=("Inventory source", "Resolved groups"),
         )
         self.domain(
             "inventory.multi-parent-dag",
@@ -547,6 +553,41 @@ class ExampleRunner:
                 graph,
                 explanation,
             ),
+        )
+
+        coverage_assets = json.loads(
+            self.cli(
+                ("coverage", "list"),
+                [*rollout, "coverage", "list", "assets", "--format", "json"],
+                contains=("invalid_resolution", "result_required"),
+            )
+        )
+        coverage_groups = json.loads(
+            self.cli(
+                ("coverage", "list"),
+                [*rollout, "coverage", "list", "groups", "--format", "json"],
+            )
+        )
+        coverage_assignments = json.loads(
+            self.cli(
+                ("coverage", "list"),
+                [*rollout, "coverage", "list", "assignments", "--format", "json"],
+            )
+        )
+        coverage_explanation = self.cli(
+            ("coverage", "explain"),
+            [*rollout, "coverage", "explain", "host/container-app-01"],
+            contains=("Applicable policy", "Objective:", "Check:"),
+        )
+        coverage_classes = {
+            item["coverage_class"] for item in coverage_assets["assets"]
+        }
+        self.domain(
+            "coverage.current-views",
+            coverage_classes == {"result_required", "invalid_resolution"}
+            and len(coverage_groups["groups"]) == 4
+            and len(coverage_assignments["assignments"]) == 4
+            and "Assessment result" not in coverage_explanation,
         )
 
         self.cli(
@@ -615,7 +656,11 @@ class ExampleRunner:
         self.domain(
             "output.json-contracts",
             waiver_document["schema"]
-            == "compliance.example/waiver-catalog/v1alpha1",
+            == "compliance.example/waiver-catalog/v1alpha1"
+            and json.loads(inventory_assets)["schema"]
+            == "compliance.example/inventory-assets-view/v1alpha1"
+            and coverage_assets["schema"]
+            == "compliance.example/coverage-assets-view/v1alpha1",
         )
 
         mock_evidence = self.collect("mock-fleet")

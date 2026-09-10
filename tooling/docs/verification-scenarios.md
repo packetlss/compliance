@@ -235,7 +235,7 @@ and [repository map](https://github.com/packetlss-labs/compliance-workspace/blob
 distinguish logical integration ownership from repository placement and preserve
 real information-sharing boundaries.
 
-The tooling feature catalog records the retained 20 CLI leaves and 18 domain
+The tooling feature catalog records the retained 22 CLI leaves and 19 domain
 features. Scenario issue #11 owns the final coordinated cutover and must select
 the final producer/consumer revisions without making an adapter a prerequisite
 for assessment.

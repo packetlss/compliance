@@ -118,29 +118,29 @@ then applies type and freshness requirements.
 From the destination repository root:
 
 ```sh
-uv run --project tooling compliance --config projects/mock-fleet/compliance.yaml config validate
-uv run --project tooling compliance --config projects/mock-fleet/compliance.yaml inventory graph
-uv run --project tooling compliance --config projects/mock-fleet/compliance.yaml policy validate
-uv run --project tooling compliance --config projects/mock-fleet/compliance.yaml plan show
+scripts/dev cli --config projects/mock-fleet/compliance.yaml config validate
+scripts/dev cli --config projects/mock-fleet/compliance.yaml inventory graph
+scripts/dev cli --config projects/mock-fleet/compliance.yaml policy validate
+scripts/dev cli --config projects/mock-fleet/compliance.yaml plan show
 
 uv run --project tooling python tooling/collectors/mock-api/collect.py \
   projects/mock-fleet/fixtures \
   projects/mock-fleet/generated/evidence
 
-uv run --project tooling compliance --config projects/mock-fleet/compliance.yaml \
+scripts/dev cli --config projects/mock-fleet/compliance.yaml \
   assessment run cloud-account/aws-111122223333
-uv run --project tooling compliance --config projects/mock-fleet/compliance.yaml \
+scripts/dev cli --config projects/mock-fleet/compliance.yaml \
   assessment run cloud-account/aws-444455556666
-uv run --project tooling compliance --config projects/mock-fleet/compliance.yaml \
+scripts/dev cli --config projects/mock-fleet/compliance.yaml \
   assessment run saas/acme-projects/company
 
-uv run --project tooling compliance --config projects/mock-fleet/compliance.yaml assessment status
-uv run --project tooling compliance --config projects/mock-fleet/compliance.yaml assessment frameworks
-uv run --project tooling compliance --config projects/mock-fleet/compliance.yaml \
+scripts/dev cli --config projects/mock-fleet/compliance.yaml assessment status
+scripts/dev cli --config projects/mock-fleet/compliance.yaml assessment frameworks
+scripts/dev cli --config projects/mock-fleet/compliance.yaml \
   assessment explain cloud-account/aws-111122223333
-uv run --project tooling compliance --config projects/mock-fleet/compliance.yaml \
+scripts/dev cli --config projects/mock-fleet/compliance.yaml \
   assessment explain cloud-account/aws-444455556666
-uv run --project tooling compliance --config projects/mock-fleet/compliance.yaml \
+scripts/dev cli --config projects/mock-fleet/compliance.yaml \
   assessment explain saas/acme-projects/company
 ```
 

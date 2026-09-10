@@ -34,6 +34,13 @@ ADR 0007 `composition-lock` is the sole forward complete expected-composition ab
 
 ## Primary intended user jobs
 
+The implemented current-state operator sequence is `Inventory → Coverage →
+Assessment`. Inventory exposes supplied normalized facts; coverage derives current
+assessment expectation through the existing semantic resolver; assessment owns
+results and historical interpretation. Coverage is not a durable fact, identity,
+artifact, cache, assessment input, or alternate policy resolver. `asset` is CLI
+vocabulary only and does not rename the underlying `Subject` domain or wire contract.
+
 The system preserves decided security intent through policy resolution, technical realization, infrastructure handoff, independent evidence, assessment, and explanation. Infrastructure tooling, repository topology, and evidence-collection mechanisms do not become authoritative for policy meaning.
 
 These jobs describe the intended product scope of the accepted core, not a claim that every operator workflow is complete in the current CLI.
@@ -373,7 +380,7 @@ The policy roots remain independently named/digested. Co-location does not merge
 
 Each ordinary project remains logically isolated with its own inventory, assignments, fixtures, waivers, and generated-state paths.
 
-Canonical verification scenarios are under `verification/scenarios/` and own the complete composed integration/feature suite: all 20 retained public CLI leaves and 18 retained domain features.
+Canonical verification scenarios are under `verification/scenarios/` and own the complete composed integration/feature suite: all 22 retained public CLI leaves and 19 retained domain features.
 
 ## Private-source boundary
 
@@ -419,7 +426,7 @@ No new publisher, tag namespace, signing/attestation system, registry, or releas
 Validation has three stable owners:
 
 1. **`component-validation`** — repository/tooling/policy/project/IAM focused gates.
-2. **`verification-scenarios`** — canonical non-Git composed integration and complete 20/18 feature coverage.
+2. **`verification-scenarios`** — canonical non-Git composed integration and complete 22/19 feature coverage.
 3. **`installed-release-provenance`** — standalone installed package, locked artifacts, release preparation/tag behavior, and generic policy-source release conformance.
 
 Normal validation uses one repository checkout. It does not use migration-era sibling repository App credentials, PAT fallback, sibling `repository:` checkouts, or repository-coordinate integration manifests.

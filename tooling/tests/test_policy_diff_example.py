@@ -65,6 +65,8 @@ class PolicyDiffExampleTests(unittest.TestCase):
             output / "incomplete/before", output / "incomplete/after"
         )
         self.assertIn("expected exit 0", stdout.getvalue())
+        self.assertIn("scripts/dev cli --no-config policy diff-set", stdout.getvalue())
+        self.assertNotIn("uv run compliance", stdout.getvalue())
         self.assertFalse(unchanged["summary"]["changed"])
         self.assertEqual(unchanged["summary"]["unchanged"], 2)
         self.assertEqual(changed["summary"]["modified"], 1)

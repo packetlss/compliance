@@ -28,7 +28,20 @@ from .assessment import (
     render_table,
 )
 from .evaluate_plan import evaluate_plan_document, write_json
-from .inventory import explain_subject, format_group_graph
+from .coverage import (
+    build_coverage_explanation,
+    build_coverage_list,
+    format_coverage_explanation,
+    format_coverage_list,
+    resolve_coverage_plans,
+)
+from .inventory import (
+    build_inventory_explanation,
+    build_inventory_list,
+    format_group_graph,
+    format_inventory_explanation,
+    format_inventory_list,
+)
 from .policy_sources import (
     PolicySource,
     normalize_policy_sources,
@@ -243,22 +256,61 @@ def _run_inventory(args: argparse.Namespace) -> None:
     subjects, groups, assignments = _load_catalog(args)
     if args.inventory_command == "validate":
         print(
-            f"valid inventory: {len(subjects)} subject(s), "
+            f"valid inventory: {len(subjects)} asset(s), "
             f"{len(groups)} group(s), {len(assignments)} assignment(s)"
         )
     elif args.inventory_command == "graph":
         print(format_group_graph(groups))
     elif args.inventory_command == "list":
-        values = {
-            "subjects": sorted(subjects),
-            "groups": sorted(group["id"] for group in groups),
-            "assignments": sorted(assignment["id"] for assignment in assignments),
-        }[args.resource]
-        print(json.dumps(values, indent=2))
+        document = build_inventory_list(args.resource, subjects, groups, assignments)
+        if args.format == "json":
+            print(json.dumps(document, indent=2, sort_keys=True))
+        else:
+            print(format_inventory_list(document))
     elif args.inventory_command == "explain":
-        if args.subject_id not in subjects:
-            raise ValueError(f"unknown subject id: {args.subject_id}")
-        print(explain_subject(subjects[args.subject_id], groups, assignments))
+        if args.asset_id not in subjects:
+            raise ValueError(f"unknown asset id: {args.asset_id}")
+        document = build_inventory_explanation(subjects[args.asset_id], groups)
+        if args.format == "json":
+            print(json.dumps(document, indent=2, sort_keys=True))
+        else:
+            print(format_inventory_explanation(document))
+
+
+def _run_coverage(args: argparse.Namespace) -> None:
+    subjects, groups, assignments = _load_catalog(args)
+    policy_sources = _resolved_policy_sources(args)
+    if args.coverage_command == "explain":
+        if args.asset_id not in subjects:
+            raise ValueError(f"unknown asset id: {args.asset_id}")
+        plans = resolve_coverage_plans(
+            {args.asset_id: subjects[args.asset_id]},
+            groups,
+            assignments,
+            policy_sources,
+            config=args.project_config,
+        )
+        document = build_coverage_explanation(plans[0])
+        if args.format == "json":
+            print(json.dumps(document, indent=2, sort_keys=True))
+        else:
+            print(format_coverage_explanation(document))
+        return
+
+    plans = resolve_coverage_plans(
+        subjects,
+        groups,
+        assignments,
+        policy_sources,
+        config=args.project_config,
+    )
+    document = build_coverage_list(
+        args.resource, subjects, groups, assignments, plans
+    )
+    if args.format == "json":
+        print(json.dumps(document, indent=2, sort_keys=True))
+    else:
+        print(format_coverage_list(document))
 
 
 def _run_policy_validate(args: argparse.Namespace) -> None:
@@ -954,7 +1006,7 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="compliance",
         description=(
-            "Inspect inventory, render policy, and run or "
+            "Inspect supplied inventory, explain current coverage, and run or "
             "report assessments. Composition diagnostics: compliance composition "
             "show/validate [--format json]."
         ),
@@ -997,18 +1049,47 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
         child = inventory_commands.add_parser(name, help=help_text)
         _add_inventory_sources(child, config)
         _set_handler(child, _run_inventory)
-    inventory_list = inventory_commands.add_parser("list", help="list inventory resources")
-    inventory_list.add_argument("resource", choices=("subjects", "groups", "assignments"))
+    inventory_list = inventory_commands.add_parser(
+        "list", help="list supplied inventory resources"
+    )
+    inventory_list.add_argument("resource", choices=("assets", "groups", "assignments"))
+    inventory_list.add_argument("--format", choices=("table", "json"), default="table")
     _add_inventory_sources(inventory_list, config)
     _set_handler(inventory_list, _run_inventory)
-    inventory_explain = inventory_commands.add_parser("explain", help="explain scope for one subject")
-    inventory_explain.add_argument("subject_id")
+    inventory_explain = inventory_commands.add_parser(
+        "explain", help="explain supplied facts and membership for one asset"
+    )
+    inventory_explain.add_argument("asset_id", metavar="ASSET")
+    inventory_explain.add_argument("--format", choices=("table", "json"), default="table")
     _add_inventory_sources(inventory_explain, config)
     _set_handler(inventory_explain, _run_inventory)
 
+    coverage_parser = commands.add_parser(
+        "coverage", help="inspect current policy coverage and assessment expectation"
+    )
+    coverage_commands = coverage_parser.add_subparsers(
+        dest="coverage_command", required=True
+    )
+    coverage_list = coverage_commands.add_parser(
+        "list", help="list current asset, group, or assignment coverage"
+    )
+    coverage_list.add_argument(
+        "resource", choices=("assets", "groups", "assignments")
+    )
+    coverage_list.add_argument("--format", choices=("table", "json"), default="table")
+    _add_policy_sources(coverage_list, config)
+    _set_handler(coverage_list, _run_coverage)
+    coverage_explain = coverage_commands.add_parser(
+        "explain", help="explain current policy coverage for one asset"
+    )
+    coverage_explain.add_argument("asset_id", metavar="ASSET")
+    coverage_explain.add_argument("--format", choices=("table", "json"), default="table")
+    _add_policy_sources(coverage_explain, config)
+    _set_handler(coverage_explain, _run_coverage)
+
     policy_parser = commands.add_parser(
         "policy",
-        help="validate policy inputs or compare rendered subject policy",
+        help="validate policy inputs or compare rendered asset policy",
     )
     policy_commands = policy_parser.add_subparsers(dest="policy_command", required=True)
     policy_validate = policy_commands.add_parser(
@@ -1021,7 +1102,7 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
     _set_handler(policy_validate, _run_policy_validate)
     policy_diff = policy_commands.add_parser(
         "diff",
-        help="compare two stored assessment plans for the same subject",
+        help="compare two stored assessment plans for the same asset",
     )
     policy_diff.add_argument("before", type=Path, help="earlier assessment plan")
     policy_diff.add_argument("after", type=Path, help="later assessment plan")
@@ -1029,7 +1110,7 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
     _set_handler(policy_diff, _run_policy_diff)
     policy_diff_set = policy_commands.add_parser(
         "diff-set",
-        help="compare two directories of stored assessment plans by subject",
+        help="compare two directories of stored assessment plans by asset",
     )
     policy_diff_set.add_argument(
         "before",

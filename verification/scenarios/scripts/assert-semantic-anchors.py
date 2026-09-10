@@ -92,6 +92,79 @@ class Scenario:
 def technical(root):
     s = Scenario(root, "technical-only-packages")
     try:
+        def write_resource(path, document):
+            path.write_text(json.dumps(document))
+
+        empty_policy = s.work / "verification-policy/baselines/technical/coverage-empty.json"
+        write_resource(empty_policy, {
+            "apiVersion": "compliance.example/v1", "kind": "Baseline",
+            "metadata": {"id": "verification.coverage-empty", "revision": 1},
+            "spec": {"title": "Intentionally empty coverage policy", "controls": []},
+        })
+        for name, asset_id, lifecycle, labels in (
+            ("coverage-inactive", "host/coverage-inactive", "retired", {"profile": "managed-linux"}),
+            ("coverage-unassigned", "host/coverage-unassigned", "active", {}),
+            ("coverage-no-assessable", "host/coverage-no-assessable", "active", {"coverage": "no-assessable"}),
+            ("coverage-invalid", "host/coverage-invalid", "unknown", {"profile": "managed-linux"}),
+        ):
+            write_resource(s.project / f"inventory/{name}.json", {
+                "apiVersion": "compliance.example/v1alpha1", "kind": "Subject",
+                "metadata": {"name": name, "labels": labels},
+                "spec": {
+                    "id": asset_id, "type": "linux-host", "lifecycle": lifecycle,
+                    "source": {"name": "synthetic-inventory", "externalId": asset_id,
+                               "observedAt": AT},
+                },
+            })
+        for name, selector in (
+            ("coverage-no-assessable", {"coverage": "no-assessable"}),
+            ("coverage-empty", None),
+        ):
+            spec = {"selector": {"matchLabels": selector}} if selector else {}
+            write_resource(s.project / f"inventory/{name}-group.json", {
+                "apiVersion": "compliance.example/v1alpha1", "kind": "InventoryGroup",
+                "metadata": {"name": name}, "spec": spec,
+            })
+            write_resource(s.project / f"assignments/{name}.json", {
+                "apiVersion": "compliance.example/v1alpha1", "kind": "PolicyAssignment",
+                "metadata": {"name": name},
+                "spec": {
+                    "targetRef": {"kind": "InventoryGroup", "name": name},
+                    "baselineRefs": [{"name": "verification.coverage-empty", "revision": "1"}],
+                },
+            })
+
+        require(not (s.project / "generated").exists(), "coverage fixture started with generated state")
+        coverage = json.loads(s.cli("coverage", "list", "assets", "--format", "json"))
+        require(
+            {row["coverage_class"] for row in coverage["assets"]}
+            == {"result_required", "inactive", "unassigned", "no_assessable_policy", "invalid_resolution"},
+            "coverage asset view lost an accepted assessment-expectation class",
+        )
+        groups = json.loads(s.cli("coverage", "list", "groups", "--format", "json"))
+        empty_group = next(row for row in groups["groups"] if row["group_id"] == "coverage-empty")
+        require(empty_group["current_asset_count"] == 0
+                and empty_group["direct_assignment_count"] == 1,
+                "zero-effect coverage group was omitted or collapsed")
+        assignments = json.loads(s.cli("coverage", "list", "assignments", "--format", "json"))
+        empty_assignment = next(row for row in assignments["assignments"]
+                                if row["assignment_id"] == "coverage-empty")
+        no_assessable = next(row for row in assignments["assignments"]
+                             if row["assignment_id"] == "coverage-no-assessable")
+        require(empty_assignment["current_asset_count"] == 0
+                and no_assessable["current_asset_count"] == 1
+                and no_assessable["assessable_asset_count"] == 0
+                and no_assessable["coverage_classes"]["no_assessable_policy"] == 1,
+                "coverage assignment presence was collapsed into assessability")
+        current_explanation = s.cli("coverage", "explain", "host/technical-A")
+        require("Applicable policy: Linux package baseline" in current_explanation
+                and "Check: Required system packages are installed" in current_explanation
+                and "Required evidence: linux.packages/v1" in current_explanation
+                and "Objective:" not in current_explanation,
+                "technical-only current coverage was not explained directly")
+        require(not (s.project / "generated").exists(),
+                "coverage query persisted generated state")
+
         evidence = s.collect()
         happy, plans, results = s.assess("host/technical-A", evidence=evidence, tag="happy")
         require(happy["accounting_complete"] and happy["all_passed"], "technical happy operation")

@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=tooling/tools/schemas/project-registry.schema.json
+schema: compliance.example/project-registry/v1alpha1
+defaultProject: mock-fleet
+projects:
+  mock-fleet:
+    config: projects/mock-fleet/compliance.yaml
+  server-personas:
+    config: projects/server-personas/compliance.yaml

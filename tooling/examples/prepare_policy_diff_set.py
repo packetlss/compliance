@@ -143,7 +143,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     print(f"Prepared synthetic policy diff-set samples under {output}")
     for name, (before, after) in pairs.items():
         command = " ".join((
-            "uv run compliance --no-config policy diff-set",
+            "scripts/dev cli --no-config policy diff-set",
             shlex.quote(str(before)),
             shlex.quote(str(after)),
         ))

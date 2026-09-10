@@ -68,6 +68,8 @@ class ExampleCoverageTests(unittest.TestCase):
             ("config", "list"),
             ("config", "show"),
             ("config", "validate"),
+            ("coverage", "explain"),
+            ("coverage", "list"),
             ("inventory", "explain"),
             ("inventory", "graph"),
             ("inventory", "list"),
@@ -90,6 +92,7 @@ class ExampleCoverageTests(unittest.TestCase):
             "assessment.filters",
             "assessment.framework-alignment",
             "collector.mock-api",
+            "coverage.current-views",
             "evidence.contracts",
             "evidence.schema-enforcement",
             "inventory.multi-parent-dag",
@@ -108,7 +111,7 @@ class ExampleCoverageTests(unittest.TestCase):
         })
 
     def test_mock_fleet_inventory_oracle_uses_named_dag_not_group_count(self):
-        validation = "valid inventory: 3 subject(s), 7 group(s), 2 assignment(s)"
+        validation = "valid inventory: 3 asset(s), 7 group(s), 2 assignment(s)"
         graph = "cloud-services -> production-services -> aws-production-accounts"
         explanation = "Resolved groups: aws-production-accounts"
 
@@ -228,6 +231,7 @@ class ExampleCoverageTests(unittest.TestCase):
         tooling = Path(__file__).resolve().parents[1]
         retained_symbols = {
             "inventory": "format_group_graph",
+            "coverage": "build_coverage_list",
             "render_plan": "render_plan",
             "evaluate_plan": "evaluate_plan_document",
             "assessment": "build_status_report",
