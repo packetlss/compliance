@@ -47,11 +47,10 @@ compliance
 │   ├── render SUBJECT
 │   └── show [PLAN]
 └── assessment
-    ├── run SUBJECT [--at RFC3339]
-    ├── status
-    ├── groups
-    ├── frameworks
-    └── explain SUBJECT
+    ├── run ASSET [--at RFC3339]
+    ├── status [--by group] --plan PLAN --at RFC3339 --as-of RFC3339
+    ├── mappings --plan PLAN --at RFC3339 --as-of RFC3339
+    └── explain ASSET --plan PLAN --at RFC3339 --as-of RFC3339
 ```
 
 `asset` / `assets` is CLI presentation vocabulary for a supplied governed
@@ -158,17 +157,24 @@ must provide its authored title and intrinsic purpose. Validation rejects missin
 or whitespace-only meaning, while exact-definition assembly rejects conflicting
 same-identity prose.
 `assessment run` also rolls technical results into requirement and top
-requirement-baseline results. `assessment status` shows objective and check
-counts separately, while `assessment explain` displays the selected
-realization and its provenance. For every active or excluded control with a
-reviewed overlay deviation, the human explanation also displays alignment,
-deviation ID and classification, rationale, approval reference, and review
-date. Normative overlay operations also show the immutable inherited and
-resulting implementation, disposition, and parameters. Normal explanation leads
-with applicable-policy titles, Objective title/statement, and Control-owned Check
-title/purpose; IDs and the existing detailed provenance remain visible. The JSON explanation
-retains the same information in
-`plan.controls[].deviations` or `plan.excluded_controls[].deviations`.
+requirement-baseline results. Its bounded table and JSON views identify the exact
+operation request, assessment instant, per-asset expectation, exact result-slot
+presence, and immutable outcome. `accounting_complete` remains separate from
+`all_passed`; neither is inferred from the existence of output artifacts.
+
+`assessment status` reports one exact frozen operation. It requires a retained
+operation-bearing `--plan`, exact `--at`, and explicit qualification instant
+`--as-of`. Repeatable `--assessed-plans` inputs resolve each retained result only by
+exact `plan_id`; no current-plan, subject-only, filename, traversal-order, or latest
+fallback exists. `assessment status --by group` uses the same operation and filters
+and leaves whole-operation accounting visible and unchanged by filtering.
+
+`assessment explain ASSET` leads with applicable-policy titles, optional Objective
+title/statement, Control-owned Check title/purpose, effective parameters, required
+evidence, immutable historical outcome, and separately labeled current
+qualification. A technical-only plan has no synthetic Objective. Its JSON is a
+bounded projection and never embeds a whole plan or result. Stable operation, plan,
+result, asset, check, and dependency identities remain available for drill-down.
 
 The assessment plan is the machine-readable external-adapter handoff. Its
 active and excluded control records retain stable implementation and instance
@@ -256,40 +262,40 @@ does not suppress control evaluation. Projects that assign requirement
 baselines receive objective and top-baseline roll-ups in addition to their
 technical results.
 
-`assessment frameworks` exposes every current `external_refs` mapping in the
-selected project. Objective mappings carry rolled-up requirement status;
-technical mappings carry independently attributable check status and parent
-alignment. `TAILORED` or otherwise deviated mappings remain visibly distinct
-from unaltered mappings, so a company-policy pass is not silently promoted into
-an upstream-framework conformance claim. The command supports exact
+`assessment mappings` exposes exact attributable `external_refs` already frozen in
+the selected operation. Objective mappings carry a relationally validated rolled-up
+requirement outcome; technical mappings carry an independently attributable check
+outcome and policy alignment. `TAILORED` or otherwise deviated mappings remain
+visibly distinct from unaltered mappings. The command supports exact
 `--reference`, `--level {objective,technical}`, and resolved `--group` filters,
-all repeatable with OR semantics. Its JSON output preserves claim type, immutable
-historical outcome, exact-plan alignment, separate policy alignment, subject, and
-policy-object identity.
+all repeatable with OR semantics. The view is traceability only and cannot establish
+mapping completeness, external conformity, certification, an audit opinion, or
+legal compliance.
 
 ## Frozen operation selection and reporting
 
-`plan render` and `assessment run` accept multiple subject IDs, repeated `--group`
+`plan render` and `assessment run` accept multiple asset IDs, repeated `--group`
 selectors, or `--all`. They freeze expected membership before evaluation. Empty
 selection fails; unassigned/inactive/no-active-policy rows are accounted without
 synthetic pass or N/A. `assessment run` captures one instant and reports
 `accounting_complete` separately from `all_passed`.
 
-For immutable history, `assessment status/groups/frameworks/explain` accept a stored
+For immutable history, `assessment status`, `mappings`, and `explain` accept a stored
 `--plan` anchor, repeatable `--assessed-plans` exact plan files or bounded plan
-directories, and an exact `--at` instant. Use `--no-config` when current project
-inputs are unavailable. Reporting indexes those ordinary inputs solely by validated
-`plan_id`, validates every interpreted pair, and uses only frozen operation facts and
-exact matching result envelopes. Filters remain visibly filtered. See [operation accounting](operation-accounting.md)
+directories, an exact `--at` instant, and an explicit `--as-of` instant. Use
+`--no-config` when current project inputs are unavailable. Reporting indexes those
+ordinary inputs solely by validated `plan_id`, validates every interpreted pair,
+and uses only frozen operation facts and exact matching result envelopes. Filters
+remain visibly filtered. See [operation accounting](operation-accounting.md)
 for wire representation, identity, output paths and the concrete assertion contracts.
 
 ## Historical results and operational views
 
-Non-anchored `assessment status`, `groups`, `frameworks`, and `explain` retain
-current-inventory plan rendering and use only results for the exact rendered plan.
-They do not substitute a result for the Subject under a different plan. Historical
-outcome, exact plan
-alignment, coverage, and assessment absence are separate fields and aggregates.
+The predecessor non-anchored current-plan/latest-result presentation path is removed.
+Current assessment expectation belongs to `coverage`; Assessment does not call that
+projection or rebuild it. Historical outcome, exact expected-slot presence, frozen
+accounting, plan alignment, evidence timeliness, and waiver qualification are
+separate fields and aggregates.
 `--outcome` and `--plan-alignment` filter those dimensions independently; no filter
 changes or discards the other dimension. Their report timestamp remains query time;
 they do not re-evaluate selected evidence or waiver age.
@@ -313,9 +319,17 @@ No persisted attempt/status artifact is introduced.
 Every anchored historical view requires `--as-of RFC3339`; wall-clock time is never
 substituted. Optional `--comparison-plan PLAN` supplies the validated comparison
 operation. Without it, alignment is unavailable while evidence and recorded-waiver
-qualifications remain available. JSON exposes dependency/control details and separate
-whole-operation and group summaries; framework mappings retain historical status and
-may carry the applicable qualifications. Filters do not alter frozen accounting.
+qualifications remain available. JSON exposes bounded dependency/control details and
+separate whole-operation and group summaries; mappings retain historical status where
+exact relational interpretation is available. Filters do not alter frozen accounting.
+Missing slots have `historical_outcome: null`; missing/no-assessment is never promoted
+to an immutable result outcome.
+
+When a result fills an exact frozen slot but its assessed plan is absent from the
+bounded input set, `assessment explain` returns only result-owned outcome, reason,
+dependency disposition, closed evaluation-error, and recorded-waiver facts. It says
+that full interpretation is unavailable and does not attach policy/check meaning,
+evidence type/freshness, roll-up validity, timeliness, or plan alignment.
 
 #32 retains factual v4 provenance only for ADR 0011. #80 derives the view from a
 validated v4 result, exact assessed plan, optional comparison plan and explicit query
@@ -409,12 +423,17 @@ scripts/dev cli --config projects/mock-fleet/compliance.yaml inventory validate
 scripts/dev cli --config projects/server-personas/compliance.yaml waiver list
 ```
 
-Framework-oriented examples:
+Mapping traceability examples over one retained exact operation:
 
 ```sh
-scripts/dev cli --project mock-fleet assessment frameworks
-scripts/dev cli --project mock-fleet assessment frameworks \
-  --reference CSA-CCM-v4.1:LOG-domain
+scripts/dev cli --project mock-fleet assessment mappings \
+  --plan generated/plans/cloud-account__aws-111122223333.json \
+  --assessed-plans generated/plans --at 2026-09-01T00:00:00Z \
+  --as-of 2026-09-01T00:00:00Z
+scripts/dev cli --project mock-fleet assessment mappings \
+  --plan generated/plans/cloud-account__aws-111122223333.json \
+  --assessed-plans generated/plans --at 2026-09-01T00:00:00Z \
+  --as-of 2026-09-01T00:00:00Z --reference CSA-CCM-v4.1:LOG-domain
 ```
 
 The synthetic `iam-realization` project is intentionally absent from the root
@@ -486,10 +505,10 @@ remain command arguments. This avoids hiding the scope of an operator action
 inside a project default.
 
 Canonical projects use extensionless `plan` and `results` paths. These are
-per-subject artifact directories: `plan render` and `assessment run` derive a
-stable JSON filename from the subject ID. This gives single-subject and fleet
-projects identical behavior while `assessment status` reads the configured
-result directory recursively. Paths with a filename extension remain supported
+per-asset artifact directories: `plan render` and `assessment run` derive a
+stable JSON filename from the underlying Subject ID. This gives single-asset and
+fleet projects identical behavior while `assessment status` reads the configured
+bounded result directory recursively. Paths with a filename extension remain supported
 for explicit single-artifact workflows. `plan show` opens the only plan in a
 single-subject directory and renders an index when several plans exist. Select
 one fleet plan with its stable subject ID or an explicit file path:

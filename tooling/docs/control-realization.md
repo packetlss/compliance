@@ -339,9 +339,9 @@ so an inconsistent parent tick cannot be accepted merely because its JSON shape 
 valid.
 
 Requirement `external_refs` are frozen into the exact plan and interpreted with the
-compact immutable requirement assessment. `assessment frameworks --level objective`
-therefore exposes the current result of the complete realized objective rather
-than inferring it from one mapped technical check.
+compact immutable requirement assessment. `assessment mappings --level objective`
+therefore exposes the immutable outcome of the complete realized objective from an
+exact validated pair rather than inferring it from one mapped technical check.
 
 The registered `iam-realization` project assembles the named `control-library`,
 `verification-policy`, and `environment-private` sources locally. The private

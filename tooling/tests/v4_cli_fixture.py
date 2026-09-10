@@ -58,7 +58,9 @@ evaluate := {
         assert len(report['provenance']['selectedEvidence']) == len(plan['controls'])
         assert all('evidence_ids' not in item for item in report['results'])
         assert json.loads(run('plan','show','host/configuration-linux-01','--format','json'))['id'] == plan['id']
-        run('assessment','explain','host/configuration-linux-01','--format','json')
+        run('assessment','explain','host/configuration-linux-01','--plan',str(plan_path),
+            '--results',str(project/'generated/results'),'--at','2026-08-23T12:00:00Z',
+            '--as-of','2026-08-23T12:00:00Z','--format','json')
         actual = composition_validation(load_config(path))['actual']
         lock = {'schema':COMPOSITION_LOCK_SCHEMA, 'expected':{
             'tooling':actual['tooling'], 'policySources':{item['name']:{'content':item['content']} for item in actual['policySources']}}}
@@ -76,7 +78,10 @@ evaluate := {
         ambiguous = json.loads(result_path.read_text())
         assert ambiguous['outcome'] == 'unknown'
         assert ambiguous['provenance']['selectedEvidence'] == []
-        assert '"disposition": "ambiguous"' in run('assessment','explain','host/configuration-linux-01')
+        assert 'Multiple distinct equally latest eligible' in run(
+            'assessment','explain','host/configuration-linux-01','--plan',str(plan_path),
+            '--results',str(project/'generated/results'),'--at','2026-08-23T12:00:00Z',
+            '--as-of','2026-08-23T12:00:00Z')
         before = result_path.read_bytes()
         (evidence/'second.json').write_text('{not JSON')
         try:
@@ -104,13 +109,13 @@ evaluate := {
         (evidence/'second-subject.json').write_text(json.dumps({**doc, 'id':'second:observation',
             'subject':{'id':second_subject,'type':'linux-host'}}))
         account = json.loads(run('assessment','run',first_subject,second_subject,'--at','2026-08-23T12:00:00Z','--format','json'))
-        assert account['accounting_complete'] and account['all_passed'], account
+        assert account['summary']['accounting_complete'] and account['summary']['all_passed'], account
         multi_plan = json.loads(plan_path.read_text())
         assert multi_plan['id'] != plan['id']
         historical = json.loads(run('assessment','status','--plan',str(plan_path),
             '--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',
             '--as-of','2026-08-23T12:00:00Z','--format','json'))
-        assert historical['all_passed']
+        assert historical['whole_operation']['all_passed']
         historical_explanation = json.loads(run(
             'assessment','explain',first_subject,'--plan',str(plan_path),
             '--assessed-plans',str(project/'generated/plans'),
@@ -118,48 +123,36 @@ evaluate := {
             '--at','2026-08-23T12:00:00Z','--as-of','2026-08-23T12:00:00Z',
             '--format','json'
         ))
-        assert historical_explanation['schema'] == 'compliance.example/assessment-explanation/v1'
-        assert historical_explanation['plan']['id'] == multi_plan['id']
-        assert historical_explanation['plan']['controls'][0]['title']
-        assert historical_explanation['plan']['controls'][0]['purpose']
-        orphan_frameworks = json.loads(run(
-            'assessment','frameworks','--plan',str(plan_path),
+        assert historical_explanation['schema'] == 'compliance.example/assessment-explanation-view/v1alpha1'
+        assert historical_explanation['operation']['plan_id'] == multi_plan['id']
+        assert historical_explanation['checks'][0]['check']['title']
+        assert historical_explanation['checks'][0]['check']['purpose']
+        orphan_mappings = json.loads(run(
+            'assessment','mappings','--plan',str(plan_path),
             '--at','2026-08-23T12:00:00Z','--as-of','2026-08-23T12:00:00Z',
             '--format','json'
         ))
-        orphan = next(row for row in orphan_frameworks['members']
-                      if row['subject_id'] == second_subject)
-        assert orphan['result_id'] and orphan['historical_interpretation'] == 'unavailable'
-        assert all(mapping['subject_id'] != second_subject
-                   for mapping in orphan_frameworks['mappings'])
+        assert all(mapping['historical_outcome'] is None
+                   for mapping in orphan_mappings['mappings']
+                   if mapping['asset_id'] == second_subject)
         (project/'generated/results/host__installed-second.json').unlink()
         historical = json.loads(run('assessment','status','--plan',str(plan_path),
             '--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',
             '--as-of','2026-08-23T12:00:00Z','--format','json'))
-        assert not historical['accounting_complete'] and not historical['all_passed']
-        no_assessment = json.loads(run(
-            'assessment','status','--plan',str(plan_path),'--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',
-            '--as-of','2026-08-23T12:00:00Z','--outcome','no_assessment','--format','json'
-        ))
-        assert [row['historical_outcome'] for row in no_assessment['visible_members']] == ['no_assessment']
+        assert not historical['whole_operation']['accounting_complete'] and not historical['whole_operation']['all_passed']
+        missing_asset = next(row for row in historical['assets'] if row['asset_id'] == second_subject)
+        assert missing_asset['historical_outcome'] is None
+        assert not missing_asset['expected_result_slot']['present']
         filtered_groups = json.loads(run(
-            'assessment','groups','--plan',str(plan_path),'--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',
-            '--as-of','2026-08-23T12:00:00Z','--outcome','no_assessment','--format','json'
+            'assessment','status','--by','group','--plan',str(plan_path),'--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',
+            '--as-of','2026-08-23T12:00:00Z','--format','json'
         ))
         assert filtered_groups['groups']
-        assert all(
-            summary['qualification_summary'].get('historical_outcomes.pass', 0) == 0
-            and summary['qualification_summary'].get('historical_outcomes.no_assessment', 0) <= 1
-            for summary in filtered_groups['groups']
-        )
-        filtered_frameworks = json.loads(run(
-            'assessment','frameworks','--plan',str(plan_path),'--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',
-            '--as-of','2026-08-23T12:00:00Z','--outcome','no_assessment','--format','json'
+        assert any(group['frozen_accounting']['missing_result_slots'] for group in filtered_groups['groups'])
+        filtered_mappings = json.loads(run(
+            'assessment','mappings','--plan',str(plan_path),'--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',
+            '--as-of','2026-08-23T12:00:00Z','--format','json'
         ))
-        assert {row['subject_id'] for row in filtered_frameworks['visible_members']} == {second_subject}
-        assert all(
-            mapping['subject_id'] == second_subject
-            and mapping['historical_outcome'] == 'no_assessment'
-            for mapping in filtered_frameworks['mappings']
-        )
+        assert filtered_mappings['schema'] == 'compliance.example/assessment-mappings-view/v1alpha1'
+        assert not filtered_mappings['whole_operation']['accounting_complete']
         return report['provenance']['evaluationComposition']['actual']['tooling']['execution']['kind']

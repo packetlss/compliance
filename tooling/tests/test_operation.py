@@ -417,7 +417,7 @@ class OperationTests(unittest.TestCase):
         )
         row = account['members'][0]
         self.assertEqual(row['state'], 'missing')
-        self.assertEqual(row['historical_outcome'], 'no_assessment')
+        self.assertIsNone(row['historical_outcome'])
         self.assertEqual(row['plan_alignment'], 'different_plan')
         self.assertEqual(row['evidence_timeliness'], {'qualification': 'unavailable'})
 

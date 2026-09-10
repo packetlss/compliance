@@ -429,22 +429,24 @@ complete convention is documented in
 Derived accounting/applicability and evaluation views are exposed separately:
 
 ```sh
-# Fleet overview; filter historical outcome and exact-plan alignment independently.
-scripts/dev cli assessment status --group aws-accounts --outcome fail --plan-alignment plan_aligned
+# Exact-operation overview; filter outcome and current plan alignment independently.
+scripts/dev cli assessment status --plan PLAN --assessed-plans PLANS \
+  --at RFC3339 --as-of RFC3339 --group aws-accounts --outcome fail
 
-# Roll up each dimension by every resolved DAG group.
-scripts/dev cli assessment groups
+# Roll up the same exact operation by every resolved DAG group.
+scripts/dev cli assessment status --by group --plan PLAN --at RFC3339 --as-of RFC3339
 
-# Connect one subject's accounting disposition, plan, assignments, results, and exclusions.
-scripts/dev cli assessment explain cloud-account/aws-111122223333
+# Explain one exact asset slot from bounded retained artifacts.
+scripts/dev cli assessment explain cloud-account/aws-111122223333 \
+  --plan PLAN --assessed-plans PLANS --at RFC3339 --as-of RFC3339
 ```
 
 On `assessment status`, `--group`, `--outcome`, and `--plan-alignment` are
 independent repeatable filters: values within one dimension use OR semantics and
-different dimensions combine with AND semantics. A subject matching any selected
+different dimensions combine with AND semantics. An asset matching any selected
 group, outcome, and plan-alignment filter is shown. Group
-rollups use resolved membership, including ancestors. Because the inventory is
-a DAG, one subject is intentionally counted in every group to which it
+rollups use frozen resolved membership, including ancestors. Because inventory is
+a DAG, one asset is intentionally counted in every group to which it
 resolves; group totals must not be added together as a fleet total. Every view
 has an equivalent `--format json` document.
 
@@ -474,15 +476,14 @@ retired lifecycle derives `inactive`. An assigned policy containing no active
 controls or requirements derives `no_assessable_policy`, not pass. The evaluator
 refuses every plan whose derived disposition is not `result_required`.
 
-The operator overview keeps historical outcome, exact-plan alignment, and derived
-coverage/applicability as separate fields and separate aggregates. A previous PASS for another exact plan
-therefore remains `historical_outcome: pass` with `plan_alignment: different_plan`;
-absence is `historical_outcome: no_assessment` with alignment unavailable. Any
-attention ordering in the table is presentation-only. Machine-readable output also
-retains result counters, resolution errors, plan ID, and evaluation timestamp. The
-subject explanation shows the same independent dimensions with control reasons,
-remediation, assignment paths, and documented excluded controls. Group aggregation
-never reduces them to a single compliance percentage.
+The exact-operation overview keeps immutable outcome, expected-slot presence,
+accounting, and current qualification separate. A historical PASS remains
+`historical_outcome: pass` when a comparison operation yields
+`plan_alignment: different_plan`. An unfilled exact slot has
+`historical_outcome: null` plus `expected_result_slot.present: false`; missing is not
+an immutable outcome. The asset explanation and `status --by group` preserve these
+dimensions and never reduce them to a compliance percentage. Current coverage is
+queried separately through `coverage`.
 
 ## 12. Prototype limitations
 

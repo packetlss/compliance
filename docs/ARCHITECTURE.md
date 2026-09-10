@@ -341,6 +341,24 @@ remains an external operating choice: deleting an assessed plan reduces later
 historical interpretation but neither rewrites its result nor affects future
 assessments. Query-time views never reselect evidence or reconstruct refused attempts.
 
+### Assessment operator presentation
+
+[#105](https://github.com/packetlss/compliance/issues/105) implements the bounded
+Assessment operator projection on these owners. `assessment run` reports exact
+operation scope and slot accounting; `assessment status` and `status --by group`
+combine immutable outcomes with separately labeled current qualification;
+`assessment explain ASSET` joins exact plan meaning to exact result facts; and
+`assessment mappings` exposes attributable traceability without a conformity claim.
+
+The predecessor non-anchored current-plan/latest-result views and the separate
+`assessment groups` / `assessment frameworks` leaves are removed without aliases.
+Assessment never depends on `coverage.py`: Coverage remains the ephemeral current
+projection and `operation.py` remains the exact frozen-operation accounting owner.
+Missing slots, non-assessable disposition, historical outcome, accounting
+completeness, plan alignment, evidence timeliness, and waiver qualification remain
+separate dimensions. The views are experimental, non-persisted, non-identity-bearing
+query output and introduce no generic reporting framework or artifact family.
+
 ## External-adapter boundary
 
 The core ends at provenance-bearing assessment plans/results. It does not own backend configuration compilation, Ansible/cloud-init/Terraform/MDM rendering, backend capability registration, provider credentials/state, approval, execution/apply behavior, or an executable adapter/plugin runtime.
@@ -426,7 +444,7 @@ No new publisher, tag namespace, signing/attestation system, registry, or releas
 Validation has three stable owners:
 
 1. **`component-validation`** — repository/tooling/policy/project/IAM focused gates.
-2. **`verification-scenarios`** — canonical non-Git composed integration and complete 22/19 feature coverage.
+2. **`verification-scenarios`** — canonical non-Git composed integration and complete 21/19 feature coverage.
 3. **`installed-release-provenance`** — standalone installed package, locked artifacts, release preparation/tag behavior, and generic policy-source release conformance.
 
 Normal validation uses one repository checkout. It does not use migration-era sibling repository App credentials, PAT fallback, sibling `repository:` checkouts, or repository-coordinate integration manifests.

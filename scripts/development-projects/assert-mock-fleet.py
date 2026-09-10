@@ -67,41 +67,41 @@ def assert_assessment_plan_handoff(plan: dict, subject_id: str) -> None:
         fail(f"assessment plan lost named source provenance for {subject_id}")
 
 
-def assert_framework_filters(run_root: Path) -> None:
-    report = load(run_root / "frameworks.json")
+def assert_mapping_filters(run_root: Path) -> None:
+    report = load(run_root / "mappings.json")
     mappings = report.get("mappings", [])
-    subjects = {mapping.get("subject_id") for mapping in mappings}
-    if subjects != {
+    assets = {mapping.get("asset_id") for mapping in mappings}
+    if assets != {
         "cloud-account/aws-111122223333",
         "cloud-account/aws-444455556666",
         "saas/acme-projects/company",
     }:
-        fail(f"framework report lost cloud or SaaS subjects: {subjects}")
+        fail(f"mapping report lost cloud or SaaS assets: {assets}")
     if not any(mapping.get("policy_alignment") == "tailored" for mapping in mappings):
-        fail("framework alignment output lost tailored mappings")
+        fail("mapping output lost tailored policy alignment")
     if not any(str(mapping.get("external_ref", "")).startswith("CSA-CCM-v4.1:") for mapping in mappings):
-        fail("framework alignment output lost CSA CCM mappings")
+        fail("mapping output lost CSA CCM traceability")
 
-    aws = load(run_root / "frameworks-aws.json")
-    aws_subjects = {mapping.get("subject_id") for mapping in aws.get("mappings", [])}
+    aws = load(run_root / "mappings-aws.json")
+    aws_subjects = {mapping.get("asset_id") for mapping in aws.get("mappings", [])}
     if aws.get("filters", {}).get("groups") != ["aws-production-accounts"]:
-        fail("AWS framework report did not record its group filter")
+        fail("AWS mapping report did not record its group filter")
     if aws_subjects != {
         "cloud-account/aws-111122223333",
         "cloud-account/aws-444455556666",
     }:
         fail(f"AWS group filter returned unexpected subjects: {aws_subjects}")
 
-    saas = load(run_root / "frameworks-saas.json")
-    saas_subjects = {mapping.get("subject_id") for mapping in saas.get("mappings", [])}
+    saas = load(run_root / "mappings-saas.json")
+    saas_subjects = {mapping.get("asset_id") for mapping in saas.get("mappings", [])}
     if saas.get("filters", {}).get("groups") != ["production-saas-tenants"]:
-        fail("SaaS framework report did not record its group filter")
+        fail("SaaS mapping report did not record its group filter")
     if saas_subjects != {"saas/acme-projects/company"}:
         fail(f"SaaS group filter returned unexpected subjects: {saas_subjects}")
 
-    s3 = load(run_root / "frameworks-s3.json")
+    s3 = load(run_root / "mappings-s3.json")
     if s3.get("filters", {}).get("external_refs") != ["AWS-Security-Hub:S3.1"]:
-        fail("S3 framework report did not record its reference filter")
+        fail("S3 mapping report did not record its reference filter")
     if s3.get("filters", {}).get("levels") != ["technical"]:
         fail("S3 framework report did not record its technical-level filter")
     s3_mappings = s3.get("mappings", [])
@@ -157,7 +157,7 @@ def assert_runtime(run_root: Path) -> None:
     ):
         fail(f"missing SaaS evidence did not remain unknown: {unknown_summary}")
 
-    assert_framework_filters(run_root)
+    assert_mapping_filters(run_root)
 
 
 def main() -> int:

@@ -278,29 +278,26 @@ class ComplianceCliTests(unittest.TestCase):
 
         self.assertIn("2 realization(s)", output.getvalue())
 
-    def test_framework_view_exposes_external_mappings(self):
-        output = io.StringIO()
-        with tempfile.TemporaryDirectory() as temporary:
-            results = Path(temporary) / "results"
-            results.mkdir()
-            with redirect_stdout(output):
-                main([
-                    "--config",
-                    str(self.config_path),
-                    "--project",
-                    "cloud",
-                    "assessment",
-                    "frameworks",
-                    "--results",
-                    str(results),
-                    "--format",
-                    "json",
-                ])
-
-        document = json.loads(output.getvalue())
-        self.assertEqual(document["summary"]["reference_count"], 1)
-        self.assertEqual(document["summary"]["mapping_count"], 2)
-        self.assertIn("Technical results do not", document["disclaimer"])
+    def test_assessment_command_cutover_has_no_predecessor_aliases(self):
+        parser = build_parser(ProjectConfig())
+        common = [
+            "--plan", "plan.json", "--at", "2026-09-01T00:00:00Z",
+            "--as-of", "2026-09-02T00:00:00Z",
+        ]
+        args = parser.parse_args(["assessment", "mappings", *common])
+        self.assertEqual(args.assessment_command, "mappings")
+        grouped = parser.parse_args(["assessment", "status", "--by", "group", *common])
+        self.assertEqual(grouped.by, "group")
+        for removed in ("frameworks", "groups"):
+            with self.subTest(removed=removed), redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit):
+                    parser.parse_args(["assessment", removed])
+        import tools.assessment as assessment
+        for removed_symbol in (
+            "latest_report", "reports_for_plan", "build_status_report",
+            "build_group_report", "build_framework_report",
+        ):
+            self.assertFalse(hasattr(assessment, removed_symbol))
 
     def test_extensionless_artifact_path_uses_subject_filename(self):
         self.assertEqual(

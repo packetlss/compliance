@@ -218,15 +218,15 @@ def assert_provenance(plan: dict, result: dict, config: dict, assembly_root: Pat
             fail("IAM plan changed restricted technical intent")
 
 
-def assert_frameworks(frameworks: dict) -> None:
-    mappings = frameworks.get("mappings", [])
+def assert_mappings(report: dict) -> None:
+    mappings = report.get("mappings", [])
     matches = [
         mapping
         for mapping in mappings
         if mapping.get("external_ref") == "example-regulatory-framework:IAM-01"
     ]
     if len(matches) != 1 or matches[0].get("historical_outcome") != "fail":
-        fail(f"IAM objective framework mapping changed: {matches}")
+        fail(f"IAM objective traceability mapping changed: {matches}")
 
 
 def main() -> int:
@@ -245,7 +245,7 @@ def main() -> int:
     assert_result(result)
     documents = [load(path) for path in sorted((run_root / "evidence").rglob("*.json"))]
     assert_provenance(plan, result, config, assembly_root, documents)
-    assert_frameworks(load(run_root / "frameworks.json"))
+    assert_mappings(load(run_root / "mappings.json"))
     explain = (run_root / "explain.txt").read_text(encoding="utf-8")
     for expected in (
         "restricted.linux.central-role-access@1",

@@ -546,12 +546,13 @@ realization check references.
 
 Every requirement or technical instance retains its `external_refs` in the
 plan; compact immutable results do not copy those mappings or technical
-alignment. After validating the exact plan/result pair, `assessment frameworks`
+alignment. After validating the exact plan/result pair, `assessment mappings`
 presents objective and technical mappings separately: only a requirement
 assessment represents the declared complete objective, while a technical
 mapping is supporting traceability. A tailored technical check retains its
 company result and plan-owned `TAILORED` alignment rather than being reported
-as unaltered parent-framework conformance.
+as unaltered parent-framework conformance. This is bounded traceability, not a
+mapping-completeness, conformity, certification, audit-opinion, or legal conclusion.
 
 Accounting disposition is derived from frozen lifecycle, relevant assignment,
 active-control, and requirement membership. Retired, unassigned, and

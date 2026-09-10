@@ -43,28 +43,23 @@ tooling_run python tooling/collectors/mock-api/collect.py \
   --collected-at "$FIXED_INSTANT"
 
 printf '\n== Mock-fleet assessment plans and fixed-time results ==\n'
-for subject in \
-  cloud-account/aws-111122223333 \
-  cloud-account/aws-444455556666 \
-  saas/acme-projects/company; do
-  "${mock_cli[@]}" plan render "$subject" --output "$MOCK_RUN_ROOT/plans"
-  "${mock_cli[@]}" assessment run "$subject" \
-    --evidence "$MOCK_RUN_ROOT/evidence" \
-    --plan-output "$MOCK_RUN_ROOT/plans" \
-    --output "$MOCK_RUN_ROOT/results" \
-    --at "$FIXED_INSTANT"
-done
-"${mock_cli[@]}" assessment frameworks \
-  --results "$MOCK_RUN_ROOT/results" --format json > "$MOCK_RUN_ROOT/frameworks.json"
-"${mock_cli[@]}" assessment frameworks \
-  --results "$MOCK_RUN_ROOT/results" --group aws-production-accounts \
-  --format json > "$MOCK_RUN_ROOT/frameworks-aws.json"
-"${mock_cli[@]}" assessment frameworks \
-  --results "$MOCK_RUN_ROOT/results" --group production-saas-tenants \
-  --format json > "$MOCK_RUN_ROOT/frameworks-saas.json"
-"${mock_cli[@]}" assessment frameworks \
-  --results "$MOCK_RUN_ROOT/results" --reference AWS-Security-Hub:S3.1 \
-  --level technical --format json > "$MOCK_RUN_ROOT/frameworks-s3.json"
+"${mock_cli[@]}" assessment run --all \
+  --evidence "$MOCK_RUN_ROOT/evidence" \
+  --plan-output "$MOCK_RUN_ROOT/plans" \
+  --output "$MOCK_RUN_ROOT/results" \
+  --at "$FIXED_INSTANT"
+mock_anchor="$MOCK_RUN_ROOT/plans/cloud-account__aws-111122223333.json"
+mapping_args=(--plan "$mock_anchor" --assessed-plans "$MOCK_RUN_ROOT/plans" \
+  --results "$MOCK_RUN_ROOT/results" --at "$FIXED_INSTANT" --as-of "$FIXED_INSTANT")
+"${mock_cli[@]}" assessment mappings "${mapping_args[@]}" \
+  --format json > "$MOCK_RUN_ROOT/mappings.json"
+"${mock_cli[@]}" assessment mappings "${mapping_args[@]}" \
+  --group aws-production-accounts --format json > "$MOCK_RUN_ROOT/mappings-aws.json"
+"${mock_cli[@]}" assessment mappings "${mapping_args[@]}" \
+  --group production-saas-tenants --format json > "$MOCK_RUN_ROOT/mappings-saas.json"
+"${mock_cli[@]}" assessment mappings "${mapping_args[@]}" \
+  --reference AWS-Security-Hub:S3.1 --level technical \
+  --format json > "$MOCK_RUN_ROOT/mappings-s3.json"
 
 printf '\n== Mock-fleet missing-evidence behavior ==\n'
 "${mock_cli[@]}" assessment run saas/acme-projects/company \

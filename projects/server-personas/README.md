@@ -34,7 +34,9 @@ scripts/dev cli --config projects/server-personas/compliance.yaml assessment run
 scripts/dev cli --config projects/server-personas/compliance.yaml assessment run \
   host/container-app-01
 scripts/dev cli --config projects/server-personas/compliance.yaml assessment explain \
-  host/container-app-01
+  host/container-app-01 --plan generated/plans/host__container-app-01.json \
+  --assessed-plans generated/plans --at 2026-09-01T00:00:00Z \
+  --as-of 2026-09-01T00:00:00Z
 ```
 
 The container subject should pass. The standard subject intentionally lacks
@@ -47,10 +49,9 @@ The assessment plans expose the complete baseline lineage, external benchmark
 references, resolved parameters, and any deviations. The container plan retains
 `auditd`, `containerd`, ASLR, and forwarding as resolved technical controls.
 
-`assessment explain` shows that the container forwarding criterion was inherited
-as `0` and tailored to `1`, together with
-the overlay, pinned parent fingerprint, deviation approval, and review date.
-These immutable derivation records are consumed directly by
+`assessment explain` shows the exact effective forwarding Check, parameters,
+required evidence, immutable outcome, and current qualification. The complete
+immutable derivation records remain in the assessed plan and are consumed by
 `compliance policy diff BEFORE AFTER`, so a historical plan comparison can show
 the exact forwarding criteria and approved deviation without consulting the
 current policy checkout.

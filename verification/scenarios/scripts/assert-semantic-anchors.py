@@ -167,7 +167,7 @@ def technical(root):
 
         evidence = s.collect()
         happy, plans, results = s.assess("host/technical-A", evidence=evidence, tag="happy")
-        require(happy["accounting_complete"] and happy["all_passed"], "technical happy operation")
+        require(happy["summary"]["accounting_complete"] and happy["summary"]["all_passed"], "technical happy operation")
         plan = json.loads((plans / "host__technical-A.json").read_text())
         report = json.loads((results / "host__technical-A.json").read_text())
         validate_assessment_plan(plan); validate_assessment_results(report)
@@ -183,11 +183,10 @@ def technical(root):
         for expected in (
             "Applicable policies:",
             "Linux package baseline (verification.technical-packages@1)",
-            "Check: Required system packages are installed (verification.technical-packages.required)",
+            "Required system packages are installed [PASS]",
             "Purpose: Verify that the packages mandated by policy are present.",
-            'effective parameters: {"ecosystem":"linux-native","required":[{"id":"auditd"}]}',
-            "required evidence: observation -> linux.packages/v1",
-            "freshness: 86400s (1 day)",
+            'Effective parameters: {"ecosystem":"linux-native","required":[{"id":"auditd"}]}',
+            "Required evidence: linux.packages/v1 (max age 86400s)",
         ):
             require(expected in explanation, f"technical explanation lost {expected!r}")
         require("Objectives:" not in explanation, "technical explanation synthesized an Objective")
@@ -215,7 +214,7 @@ def technical(root):
             "--results", str(missing_results), "--at", AT, "--as-of", AT,
             historical=True,
         )
-        require('"disposition": "absent"' in missing_explanation,
+        require("No matching routed linux.packages/v1 observation" in missing_explanation,
                 "missing evidence disposition was not explainable")
 
         stale_doc = json.loads(original)
@@ -310,7 +309,7 @@ def technical(root):
         (evidence / "distinct.json").unlink()
         overlay, overlay_plans, _ = s.assess("host/technical-A", evidence=evidence, tag="overlay")
         overlay_plan = json.loads((overlay_plans / "host__technical-A.json").read_text())
-        require(not overlay["all_passed"] and overlay_plan["id"] != json.loads((copy_plans / "host__technical-A.json").read_text())["id"],
+        require(not overlay["summary"]["all_passed"] and overlay_plan["id"] != json.loads((copy_plans / "host__technical-A.json").read_text())["id"],
                 "tailored effective policy did not differ relationally")
         require(overlay_plan["controls"][0]["parameters"]["required"] == [{"id":"auditd"},{"id":"aide"}],
                 "overlay did not tailor effective package policy")
@@ -324,7 +323,7 @@ def technical(root):
                                    "--results", str(results), "--at", AT, "--as-of", AT,
                                    "--comparison-plan", str(plans / "host__technical-A.json"), "--format", "json",
                                    historical=True))
-        require(history["all_passed"], "technical historical happy outcome changed")
+        require(history["whole_operation"]["all_passed"], "technical historical happy outcome changed")
     finally:
         s.close()
 
@@ -334,7 +333,7 @@ def iam(root, private_source):
     try:
         evidence = s.collect(); original = documents(evidence)
         happy, plans, results = s.assess("host/A", "host/B", evidence=evidence, tag="happy")
-        require(happy["accounting_complete"] and happy["all_passed"], "IAM happy operation")
+        require(happy["summary"]["accounting_complete"] and happy["summary"]["all_passed"], "IAM happy operation")
         reports = documents(results)
         for report in reports.values():
             validate_assessment_results(report)
@@ -356,14 +355,14 @@ def iam(root, private_source):
         )
         for expected in (
             "Company identity and access objectives (company.identity-access-objectives@1)",
-            "Objective: Access is granted through centrally governed roles (company.iam.role-based-access@1)",
-            "Meaning: Interactive access to governed systems must be authorized through centrally governed role or group membership",
-            "Check: IAM service integrations satisfy policy (restricted.linux.rbac.company-iam-integration)",
+            "Access is granted through centrally governed roles (company.iam.role-based-access@1)",
+            "Interactive access to governed systems must be authorized through centrally governed role or group membership",
+            "IAM service integrations satisfy policy [PASS]",
             "Purpose: Verify that required identity-service conditions and their governed relationships are supported by attributable evidence.",
         ):
             require(expected in explanation, f"IAM explanation lost {expected!r}")
         require(
-            "Check: Access is granted through centrally governed roles" not in explanation,
+            "Checks:\n  Access is granted through centrally governed roles" not in explanation,
             "IAM explanation reused Objective title as Check meaning",
         )
         iam_control = next(row for row in plan_a["controls"] if row["implementation"] == "iam.integration.required")
@@ -409,8 +408,10 @@ def iam(root, private_source):
         require(waived_row["status"]=="waived" and waived_row["waiver"]["underlying_status"]=="fail", "fail-only waiver")
         waived_history=json.loads(s.cli("assessment","status","--plan",str(waiver_plans/"host__A.json"),"--results",str(waiver_results),
                                         "--at",AT,"--as-of","2026-09-03T00:00:00Z","--format","json",historical=True))
-        require(waived_history["members"][0]["historical_outcome"]=="waived" and
-                waived_history["qualification_summary"]["recorded_waivers.expired"] > 0, "expired waiver rewrote history")
+        waived_asset = waived_history["assets"][0]
+        require(waived_asset["historical_outcome"]=="waived" and
+                waived_asset["current_qualification"]["recorded_waivers"][0]["qualification"] == "expired",
+                "expired waiver rewrote history")
 
         restore()
         for path in list(evidence.glob("host-A-iam-*.json")): path.unlink()
@@ -424,46 +425,48 @@ def iam(root, private_source):
         restore(); inventory = s.project / "inventory/host-C.yaml"
         inventory.write_text((s.project / "inventory/host-B.yaml").read_text().replace("host-b", "host-c").replace("host/B", "host/C"))
         selected_c, c_plans, _ = s.assess("host/A", "host/B", evidence=evidence, tag="nonselected-c")
-        require(len(selected_c["members"]) == 2 and
+        require(len(selected_c["assets"]) == 2 and
                 json.loads((c_plans / "host__A.json").read_text())["id"] == plan_a["id"], "nonselected C changed A/B identity")
 
         history_args = ["assessment", "status", "--plan", str(plans / "host__A.json"),
                         "--assessed-plans", str(plans), "--results", str(results), "--at", AT]
         current = json.loads(s.cli(*history_args, "--as-of", AT, "--comparison-plan", str(plans / "host__A.json"), "--format", "json", historical=True))
         aged = json.loads(s.cli(*history_args, "--as-of", "2026-09-03T00:00:01Z", "--comparison-plan", str(plans / "host__A.json"), "--format", "json", historical=True))
-        require({row["plan_alignment"] for row in current["members"]} == {"plan_aligned"},
+        require({row["current_qualification"]["plan_alignment"] for row in current["assets"]} == {"plan_aligned"},
                 "matching exact comparison plan was not aligned")
-        require(all(control["within_recorded_age_limits"]
-                    for row in current["members"] for control in row["evidence_timeliness"]["controls"]),
+        require(all(row["current_qualification"]["selected_evidence"]["status"] ==
+                    "within_recorded_age_limits" for row in current["assets"]),
                 "happy query instant did not keep all selected evidence within recorded age limits")
-        require(current["all_passed"] and aged["all_passed"] and aged["qualification_summary"]["evidence_timeliness.stale_selected_dependencies"] > 0,
+        require(current["whole_operation"]["all_passed"] and aged["whole_operation"]["all_passed"] and
+                any(row["current_qualification"]["selected_evidence"]["status"] == "reassessment_due"
+                    for row in aged["assets"]),
                 "historical outcome/timeliness separation")
-        frameworks = json.loads(s.cli("assessment", "frameworks", "--reference", "example-regulatory-framework:IAM-01",
+        mappings = json.loads(s.cli("assessment", "mappings", "--reference", "example-regulatory-framework:IAM-01",
                                       "--plan", str(plans / "host__A.json"), "--results", str(results), "--at", AT,
                                       "--as-of", AT, "--comparison-plan", str(plans / "host__A.json"), "--format", "json",
                                       historical=True))
-        require(frameworks["mappings"] and {row["external_ref"] for row in frameworks["mappings"]} == {"example-regulatory-framework:IAM-01"}
-                and {row["historical_outcome"] for row in frameworks["mappings"]} == {"pass"}
-                and "no external conformity" in frameworks["claim"],
-                "company IAM framework view exceeded traceability semantics")
+        require(mappings["mappings"] and {row["external_ref"] for row in mappings["mappings"]} == {"example-regulatory-framework:IAM-01"}
+                and {row["historical_outcome"] for row in mappings["mappings"]} == {"pass"}
+                and "do not establish" in mappings["note"],
+                "company IAM mapping view exceeded traceability semantics")
         _, comparison_plans, _ = s.assess("host/A", evidence=evidence, tag="comparison-singleton")
         different = json.loads(s.cli(*history_args, "--as-of", AT, "--comparison-plan", str(comparison_plans / "host__A.json"), "--format", "json", historical=True))
-        require(next(m for m in different["members"] if m["subject_id"] == "host/A")["plan_alignment"] == "different_plan"
-                and len(different["members"]) == 2, "different operation plan alignment")
+        require(next(m for m in different["assets"] if m["asset_id"] == "host/A")["current_qualification"]["plan_alignment"] == "different_plan"
+                and len(different["assets"]) == 2, "different operation plan alignment")
 
         (results / "host__B.json").unlink()
         missing = json.loads(s.cli(*history_args, "--as-of", AT, "--format", "json", historical=True))
-        require(not missing["accounting_complete"] and not missing["all_passed"], "missing exact operation result")
+        require(not missing["whole_operation"]["accounting_complete"] and not missing["whole_operation"]["all_passed"], "missing exact operation result")
         _, _, singleton_results = s.assess("host/B", evidence=evidence, tag="singleton")
         (results / "host__B.json").write_bytes((singleton_results / "host__B.json").read_bytes())
-        require(not json.loads(s.cli(*history_args, "--as-of", AT, "--format", "json", historical=True))["accounting_complete"],
+        require(not json.loads(s.cli(*history_args, "--as-of", AT, "--format", "json", historical=True))["whole_operation"]["accounting_complete"],
                 "another operation filled the B slot")
 
         realization = s.work / "environment-private/realizations/restricted/company-iam-policy-assessment.json"
         realization_bytes = realization.read_bytes(); realization.unlink()
         absent, absent_plans, _ = s.assess("host/A", evidence=evidence, tag="missing-realization")
         absent_plan = json.loads((absent_plans / "host__A.json").read_text())
-        require(not absent["all_passed"] and absent_plan["requirements"][0]["adoption"]["status"]=="not_implemented",
+        require(not absent["summary"]["all_passed"] and absent_plan["requirements"][0]["adoption"]["status"]=="not_implemented",
                 "missing realization lost not_implemented semantics")
         realization.write_bytes(realization_bytes)
 

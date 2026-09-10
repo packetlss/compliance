@@ -427,6 +427,7 @@ def account_operation(anchor, reports, evaluated_at, assessed_plans=()):
         rows.append({**copy.deepcopy(member), 'plan_id': plan_id, 'state': state,
                      'accounting_disposition': disposition,
                      'historical_interpretation': interpretation,
+                     'result_present': result is not None,
                      'result_id': result['id'] if result else None})
     interpretation_complete = all(
         row['accounting_disposition'] != 'result_required'
@@ -561,7 +562,9 @@ def qualify_operation(
                      if assessed_plan is None or comparison_anchor is None or comparison_plan_id is None
                      else 'plan_aligned' if comparison_plan_id == row['plan_id'] else 'different_plan')
         row['plan_alignment'] = alignment
-        row['historical_outcome'] = row['state'] if row['result_id'] else 'no_assessment'
+        # Missing and non-assessable slots are accounting facts, not immutable
+        # historical outcomes.  Only an exact result owns an outcome.
+        row['historical_outcome'] = row['state'] if row['result_id'] else None
         report = reports_by_id.get(row['result_id'])
         if report is None or assessed_plan is None:
             row['evidence_timeliness'] = {'qualification': 'unavailable'}
@@ -583,7 +586,13 @@ def summarize_qualifications(rows):
     """Aggregate each operational dimension without imposing precedence."""
     totals = Counter()
     for row in rows:
-        totals['historical_outcomes.' + row['historical_outcome']] += 1
+        if row['historical_outcome'] is not None:
+            totals['historical_outcomes.' + row['historical_outcome']] += 1
+        totals['expected_slots.required' if row['accounting_disposition'] == 'result_required'
+               else 'expected_slots.not_required'] += 1
+        if row['accounting_disposition'] == 'result_required':
+            totals['expected_slots.filled' if row['result_present']
+                   else 'expected_slots.missing'] += 1
         totals['plan_alignment.' + row['plan_alignment']] += 1
         totals['coverage.' + row['accounting_disposition']] += 1
         timing = row['evidence_timeliness']

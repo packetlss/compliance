@@ -79,6 +79,11 @@ The toolset should answer four different questions without conflating them:
   planning, adoption, and disposition owners. Assessment remains the historical
   result concern. Coverage has no resource, persistence, identity, cache,
   artifact, or alternate resolution algorithm.
+- **Assessment reporting is exact-operation-first.** `assessment run`, `status`,
+  `status --by group`, `mappings`, and `explain` project the frozen operation,
+  exact bound plans/results, and separately derived current qualification. They do
+  not call Coverage, select a latest result, reconstruct a historical denominator
+  from current inputs, or create a shared reporting/diagnostic framework.
 - **Assessment plans are the interoperability boundary.** A resolved technical
   control retains stable identity, parameters, fingerprint, lineage, and
   provenance in the assessment plan. Separately implemented programs may map
@@ -648,7 +653,7 @@ and commands are unsupported, and adaptation is external.
 | 2026-08-23 | Build OPA bundle, catalog, and schemas as one policy release | Proposed |
 | 2026-08-23 | Keep group definitions and assignments in Git; resolve membership from inventory | Proposed |
 | 2026-08-23 | Derive company policy through explicit overlays on immutable baselines | Accepted |
-| 2026-08-23 | Keep company compliance separate from parent benchmark alignment | Accepted and exposed in framework mapping views |
+| 2026-08-23 | Keep company compliance separate from parent benchmark alignment | Accepted and exposed in bounded assessment mapping views |
 | 2026-08-23 | Target assignments at stable groups; use singleton groups for one asset | Proposed |
 | 2026-08-23 | Version inventory, assignments, and policy independently in each plan | Proposed |
 | 2026-08-23 | Treat policy-selecting inventory labels as authoritative data | Proposed |

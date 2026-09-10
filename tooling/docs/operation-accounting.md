@@ -101,7 +101,8 @@ Multi-subject outputs require distinct per-subject paths. Plans are published
 before member evaluation, preserving the expected denominator if evaluation stops.
 Already trustworthy children remain independently valid if a later member refuses.
 
-Historical `status`, `groups`, `explain` and `frameworks` accept `--plan` and `--at`.
+Historical `status`, `status --by group`, `explain` and `mappings` require `--plan`,
+`--at`, and `--as-of`.
 They use the anchor's frozen denominator and accept only results matching exact
 subject, expected plan and recorded instant. `--assessed-plans` accepts repeatable
 exact plan files or bounded plan directories and indexes them only by validated
@@ -127,9 +128,10 @@ fail-only waivers and independent technical assessment retain their behavior.
 
 Historical mapping filters are visibly filtered. Mapping references and whole-operation
 accounting remain separate, and mappings never produce external conformity. Current
-inventory views without `--plan` retain their legacy operator comparison role.
+inventory policy expectation belongs only to Coverage; Assessment has no non-anchored
+current-plan/latest-result reporting path.
 
-Historical operation views additionally require explicit `--as-of q` and may accept
+Historical operation views require explicit `--as-of q` and may accept
 a validated `--comparison-plan`. They derive, without changing artifacts or accounting,
 exact operation-bound plan alignment, selected required-evidence timeliness, and the
 recorded applied-waiver window. Dependency timeliness uses only frozen successful-use
@@ -145,6 +147,9 @@ anchor, each exact bound plan needed to interpret a retained result, and the res
 The anchor alone proves missing expected slots; no plan artifact is invented for a
 member whose result is absent. Deleting a historical result plan makes full
 interpretation of that result unavailable without affecting future assessment.
+The bounded explanation then exposes only result-owned outcome, reason, dependency
+disposition, closed error and recorded-waiver facts. It does not reconstruct
+plan-owned Check/dependency meaning or call the Coverage projection.
 
 ## Concrete typed assertion contracts
 
