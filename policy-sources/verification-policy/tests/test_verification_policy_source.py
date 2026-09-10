@@ -10,8 +10,9 @@ import shutil
 import tempfile
 import unittest
 
+from tools.assessment import build_explanation_view, render_explanation_view
 from tools.control_realization import roll_up_plan_requirements
-from tools.assessment import build_explanation, render_explanation
+from tools.operation import account_operation, qualify_operation
 from tools.policy_sources import PolicySource, policy_source_revisions, source_tree_digest
 from tools.render_plan import (
     load_policy_catalogs,
@@ -19,6 +20,7 @@ from tools.render_plan import (
     render_plan,
     resolve_baseline,
 )
+from tools.waivers import parse_timestamp
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -172,7 +174,16 @@ class VerificationPolicySourceTests(unittest.TestCase):
             item for item in plan["excluded_controls"]
             if item["instance_id"] == "benchmark.example.macos.audit-formula-required"
         )
-        rendered = render_explanation(build_explanation(plan, []))
+        instant = "2026-09-04T00:00:00Z"
+        account = qualify_operation(
+            account_operation(plan, [], instant, [plan]),
+            [],
+            parse_timestamp(instant),
+            assessed_plans=[plan],
+        )
+        rendered = render_explanation_view(
+            build_explanation_view(account, account["members"][0], plan, None)
+        )
 
         self.assertEqual(excluded["title"], "Required Homebrew formulae are installed")
         self.assertEqual(
@@ -182,7 +193,7 @@ class VerificationPolicySourceTests(unittest.TestCase):
         self.assertEqual(excluded["disposition"], "excluded")
         self.assertEqual(excluded["deviations"][0]["id"], "DEV-MAC-002")
         self.assertIn(excluded["deviations"][0]["rationale"], rendered)
-        self.assertIn("assessment result: none (excluded policy disposition)", rendered)
+        self.assertIn("[EXCLUDED POLICY DISPOSITION]", rendered)
 
     def test_retained_technical_assignment_conflict_fails_closed(self) -> None:
         subject = {

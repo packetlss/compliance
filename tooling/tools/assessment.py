@@ -974,9 +974,27 @@ def render_explanation_view(view: JsonObject) -> str:
                 )
     if excluded := view.get("excluded_checks"):
         lines.append("Excluded checks:")
-        for check in excluded:
+        for item in excluded:
             lines.append(
-                f'  {check["title"]} ({check["instance_id"]}) [EXCLUDED POLICY DISPOSITION]'
+                f'  {item["title"]} ({item["instance_id"]}) [EXCLUDED POLICY DISPOSITION]'
             )
-            lines.append(f'    Purpose: {check["purpose"]}')
+            lines.append(f'    Purpose: {item["purpose"]}')
+            lines.append(
+                "    Effective parameters: "
+                + json.dumps(
+                    item["effective_parameters"],
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+            )
+            if item["policy_alignment"] != "unaltered":
+                lines.append(
+                    f'    Policy alignment: {item["policy_alignment"].replace("_", " ")}'
+                )
+            for deviation in item["deviations"]:
+                lines.append(
+                    f'    Deviation {deviation["id"]} ({deviation["classification"]}): '
+                    f'{deviation["rationale"]}; approval {deviation["approval_ref"]}; '
+                    f'review after {deviation["review_after"]}'
+                )
     return "\n".join(lines)
