@@ -125,7 +125,8 @@ scripts/dev cli --config projects/mock-fleet/compliance.yaml plan show
 
 uv run --project tooling python tooling/collectors/mock-api/collect.py \
   projects/mock-fleet/fixtures \
-  projects/mock-fleet/generated/evidence
+  projects/mock-fleet/generated/evidence \
+  --collected-at 2026-09-01T00:00:00Z
 
 scripts/dev cli --config projects/mock-fleet/compliance.yaml \
   assessment run --all --at 2026-09-01T00:00:00Z

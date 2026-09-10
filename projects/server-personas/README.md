@@ -27,7 +27,8 @@ scripts/dev cli --config projects/server-personas/compliance.yaml waiver validat
 scripts/dev cli --config projects/server-personas/compliance.yaml waiver list
 uv run --project tooling python tooling/collectors/mock-api/collect.py \
   projects/server-personas/fixtures \
-  projects/server-personas/generated/evidence
+  projects/server-personas/generated/evidence \
+  --collected-at 2026-09-01T00:00:00Z
 
 scripts/dev cli --config projects/server-personas/compliance.yaml assessment run \
   host/standard-app-01 --at 2026-09-01T00:00:00Z
