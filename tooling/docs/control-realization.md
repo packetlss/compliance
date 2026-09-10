@@ -257,13 +257,11 @@ than pass.
 The unified CLI evaluates the selected realization and performs the deterministic
 roll-up as part of an assessment. The failing IAM fixture produces three
 technical passes, one technical failure, a failed IAM objective, and a failed
-top requirement baseline:
+top requirement baseline. Its private source must be independently materialized,
+so the repository-owned gate runs that operator flow in a temporary assembly:
 
 ```sh
-scripts/dev cli --project iam-realization \
-  assessment run host/restricted-linux-01
-scripts/dev cli --project iam-realization \
-  assessment explain host/restricted-linux-01
+scripts/dev gate iam
 ```
 
 ## 7. Selection and coverage rules

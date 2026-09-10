@@ -110,6 +110,10 @@ class CliAdapterTests(unittest.TestCase):
             Path(config["project_registry"]), REPOSITORY_ROOT / "compliance.yaml"
         )
         self.assertEqual(config["selected_project"], "mock-fleet")
+        self.assertEqual(
+            [project["name"] for project in config["projects"]],
+            ["mock-fleet", "server-personas"],
+        )
 
         coverage_result = run_dev(
             "cli", "coverage", "list", "assets", "--format", "json"

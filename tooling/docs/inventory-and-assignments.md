@@ -407,13 +407,13 @@ not resources, snapshots, digests, caches, plans, assessment inputs, or durable
 facts, and no query writes generated state. Supplied inventory is never presented
 as proof of external inventory exhaustiveness.
 
-The development validation registry defaults to `mock-fleet`, which exercises the contract
-with `aws-account` and `saas-tenant` subjects, while the
-`iam-realization` project exercises a `linux-host` and requirement-baseline
-assignment. They are selected from the checkout root with `--project`. Each
-project retains its own inventory, evidence, plans, and results. Mock-fleet
-assembles the shared library with verification policy; IAM assembles the shared
-source with a private realization tree. Each
+The root development registry defaults to `mock-fleet`, which exercises the
+contract with `aws-account` and `saas-tenant` subjects. Root-registered projects
+are selected from the checkout root with `--project`. The `iam-realization`
+project separately exercises a `linux-host` and requirement-baseline assignment;
+because its private realization tree must be independently materialized, it is
+exercised through `scripts/dev gate iam` rather than the root registry. Each
+project retains its own inventory, evidence, plans, and results. Each
 mock-fleet subject resolves through a provider/service-model branch and
 a production branch before reaching a multi-parent assignment group. This
 keeps external system type, environment, and the resulting policy scope visible

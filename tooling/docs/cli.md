@@ -415,9 +415,12 @@ Framework-oriented examples:
 scripts/dev cli --project mock-fleet assessment frameworks
 scripts/dev cli --project mock-fleet assessment frameworks \
   --reference CSA-CCM-v4.1:LOG-domain
-scripts/dev cli --project iam-realization assessment frameworks \
-  --level objective
 ```
+
+The synthetic `iam-realization` project is intentionally absent from the root
+development registry because its `environment-private` source must be copied to
+an independent temporary materialization. `scripts/dev gate iam` owns that
+execution path.
 
 If `--project` is omitted, the project registry's `defaultProject` is used. In the canonical
 assembly above, unqualified commands select `linux-hardening-rollout`.

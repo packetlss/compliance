@@ -102,7 +102,6 @@ contract:
 ```sh
 scripts/dev cli config list
 scripts/dev cli --project mock-fleet inventory validate
-scripts/dev cli --project iam-realization inventory validate
 scripts/dev cli --project server-personas assessment status
 scripts/dev cli --project server-personas waiver list
 ```
@@ -175,13 +174,12 @@ scripts/dev cli --project mock-fleet inventory graph
 scripts/dev cli --project mock-fleet assessment status
 ```
 
-Select the IAM project to see technical checks roll up through an implemented
-control objective to its assigned requirement baseline:
+The IAM project requires an independently materialized synthetic private source,
+so it is deliberately absent from the root development registry. Exercise that
+boundary through its repository gate:
 
 ```sh
-scripts/dev cli --project iam-realization assessment status
-scripts/dev cli --project iam-realization \
-  assessment explain host/restricted-linux-01
+scripts/dev gate iam
 ```
 
 `compliance` is the sole supported operator entry point. The Python modules

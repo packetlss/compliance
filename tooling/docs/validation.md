@@ -64,8 +64,8 @@ The complete feature suite is owned by destination
 [`verification/scenarios`](../../verification/scenarios/integration/README.md).
 The gate established by scenario PR #10 remains the owner of composed
 integration and explicit immutable external input selection. The retained
-tooling catalog after core configuration removal contains 20 public CLI leaves
-and 18 domain features. The scenario repository's persistent pre-cutover
+tooling catalog contains 22 public CLI leaves and 19 domain features. The
+scenario repository's persistent pre-cutover
 manifest is intentionally not advanced by tooling #67; scenario issue #11 owns
 the final coordinated cutover after affected producers and consumers merge.
 Components must not depend back on its manifest.
