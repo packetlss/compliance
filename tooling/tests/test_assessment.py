@@ -205,6 +205,41 @@ class AssessmentOperatorViewTests(unittest.TestCase):
             "not_applicable",
         )
 
+    def test_non_assessable_dispositions_remain_visible_in_status_and_explanation(self):
+        for disposition in ("inactive", "unassigned", "no_assessable_policy"):
+            with self.subTest(disposition=disposition):
+                account = copy.deepcopy(self.account)
+                member = account["members"][0]
+                member.update(
+                    accounting_disposition=disposition,
+                    state=disposition,
+                    result_present=False,
+                    result_id=None,
+                    historical_outcome=None,
+                )
+
+                asset_view = build_status_view(account)
+                group_view = build_status_view(account, by_group=True)
+                explanation = build_explanation_view(account, member, None, None)
+                display = disposition.replace("_", " ").upper()
+
+                self.assertIn(display, render_status_view(asset_view))
+                self.assertEqual(
+                    group_view["groups"][0]["frozen_accounting"][
+                        "accounting_dispositions"
+                    ],
+                    {disposition: 1},
+                )
+                self.assertIn(display, render_status_view(group_view))
+                self.assertEqual(
+                    explanation["expected_result_slot"]["accounting_disposition"],
+                    disposition,
+                )
+                self.assertIn(
+                    disposition.replace("_", " "),
+                    render_explanation_view(explanation),
+                )
+
     def test_status_filters_do_not_change_whole_operation_accounting(self):
         report = self.result(status="fail")
         account = self.account_with_result(report)
@@ -363,6 +398,43 @@ class AssessmentOperatorViewTests(unittest.TestCase):
         self.assertNotIn("plan", view)
         self.assertNotIn("result", view)
         self.assertIn("full policy", render_explanation_view(view))
+
+    def test_no_exact_plan_retains_result_owned_waiver_and_window_qualification(self):
+        waiver = {
+            "id": "test-waiver",
+            "underlying_status": "fail",
+            "valid_from": "2026-08-01T00:00:00Z",
+            "expires_at": "2026-08-24T00:00:00Z",
+            "rationale": "Bounded reason.",
+            "owner": "owner",
+            "approval_ref": "approval/1",
+            "approved_by": "approver",
+            "approved_at": "2026-07-31T00:00:00Z",
+        }
+        report = self.result(status="waived", waiver=waiver)
+        account = qualify_operation(
+            self.account_with_result(report, plan_available=False),
+            [report],
+            parse_timestamp(self.query),
+            assessed_plans=[],
+        )
+        member = account["members"][0]
+
+        view = build_explanation_view(account, member, None, report)
+        rendered = render_explanation_view(view)
+
+        self.assertEqual(
+            member["recorded_waiver_qualification"]["waivers"][0]["qualification"],
+            "expired",
+        )
+        self.assertEqual(view["raw_result_facts"][0]["waiver"]["id"], "test-waiver")
+        self.assertEqual(
+            view["current_qualification"]["recorded_waivers"][0]["qualification"],
+            "expired",
+        )
+        self.assertIn("Recorded waiver test-waiver", rendered)
+        self.assertIn("current qualification expired", rendered)
+        self.assertIn("approval approval/1 by approver", rendered)
 
     def test_missing_exact_slot_is_not_promoted_to_an_outcome(self):
         view = build_explanation_view(

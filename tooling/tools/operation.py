@@ -597,14 +597,17 @@ def qualify_operation(
         # historical outcomes.  Only an exact result owns an outcome.
         row['historical_outcome'] = row['state'] if row['result_id'] else None
         report = reports_by_id.get(row['result_id'])
-        if report is None or assessed_plan is None:
+        if report is None:
             row['evidence_timeliness'] = {'qualification': 'unavailable'}
             row['recorded_waiver_qualification'] = {'waivers': [], 'counts': {
                 'within_window': 0, 'expired': 0, 'not_yet_in_window': 0}}
             continue
-        timeliness = _evidence_timeliness(report, assessed_plan, query_instant)
-        row['evidence_timeliness'] = timeliness
         row['recorded_waiver_qualification'] = _recorded_waiver_qualification(report, query_instant)
+        row['evidence_timeliness'] = (
+            {'qualification': 'unavailable'}
+            if assessed_plan is None
+            else _evidence_timeliness(report, assessed_plan, query_instant)
+        )
     account['query_instant'] = query_instant.isoformat().replace('+00:00', 'Z')
     account['qualification_summary'] = summarize_qualifications(account['members'])
     account['all_passed_meaning'] = (

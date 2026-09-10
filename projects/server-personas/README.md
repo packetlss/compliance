@@ -30,12 +30,14 @@ uv run --project tooling python tooling/collectors/mock-api/collect.py \
   projects/server-personas/generated/evidence
 
 scripts/dev cli --config projects/server-personas/compliance.yaml assessment run \
-  host/standard-app-01
+  host/standard-app-01 --at 2026-09-01T00:00:00Z
 scripts/dev cli --config projects/server-personas/compliance.yaml assessment run \
-  host/container-app-01
+  host/container-app-01 --at 2026-09-01T00:00:00Z
 scripts/dev cli --config projects/server-personas/compliance.yaml assessment explain \
-  host/container-app-01 --plan generated/plans/host__container-app-01.json \
-  --assessed-plans generated/plans --at 2026-09-01T00:00:00Z \
+  host/container-app-01 \
+  --plan projects/server-personas/generated/plans/host__container-app-01.json \
+  --assessed-plans projects/server-personas/generated/plans \
+  --at 2026-09-01T00:00:00Z \
   --as-of 2026-09-01T00:00:00Z
 ```
 

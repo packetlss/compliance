@@ -147,8 +147,10 @@ The group table aggregates current plan alignment, evidence timeliness and recor
 waiver qualification independently from its exact slot accounting. Group identity
 and membership come only from frozen operation facts, including an empty requested
 group retained by the selection witness; no current inventory or Coverage projection
-is consulted. Explanation preserves every exact policy-to-check group/assignment path
-rather than collapsing a check shared by multiple applicable policies.
+is consulted. Frozen disposition counts and per-asset/explanation labels preserve the
+distinction among inactive, unassigned, no-assessable-policy, and result-required
+members. Explanation preserves every exact policy-to-check group/assignment path rather
+than collapsing a check shared by multiple applicable policies.
 
 A multi-subject historical view retains one operation-bearing plan as denominator
 anchor, each exact bound plan needed to interpret a retained result, and the results.
@@ -156,7 +158,8 @@ The anchor alone proves missing expected slots; no plan artifact is invented for
 member whose result is absent. Deleting a historical result plan makes full
 interpretation of that result unavailable without affecting future assessment.
 The bounded explanation then exposes only result-owned outcome, reason, dependency
-disposition, closed error and recorded-waiver facts. It does not reconstruct
+disposition, closed error and recorded-waiver facts, plus waiver-window qualification
+derived from the retained waiver timestamps and explicit query instant. It does not reconstruct
 plan-owned Check/dependency meaning or call the Coverage projection.
 
 ## Concrete typed assertion contracts

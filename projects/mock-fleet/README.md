@@ -131,17 +131,17 @@ scripts/dev cli --config projects/mock-fleet/compliance.yaml \
   assessment run --all --at 2026-09-01T00:00:00Z
 
 scripts/dev cli --config projects/mock-fleet/compliance.yaml assessment status \
-  --plan generated/plans/cloud-account__aws-111122223333.json \
-  --assessed-plans generated/plans --at 2026-09-01T00:00:00Z \
+  --plan projects/mock-fleet/generated/plans/cloud-account__aws-111122223333.json \
+  --assessed-plans projects/mock-fleet/generated/plans --at 2026-09-01T00:00:00Z \
   --as-of 2026-09-01T00:00:00Z
 scripts/dev cli --config projects/mock-fleet/compliance.yaml assessment mappings \
-  --plan generated/plans/cloud-account__aws-111122223333.json \
-  --assessed-plans generated/plans --at 2026-09-01T00:00:00Z \
+  --plan projects/mock-fleet/generated/plans/cloud-account__aws-111122223333.json \
+  --assessed-plans projects/mock-fleet/generated/plans --at 2026-09-01T00:00:00Z \
   --as-of 2026-09-01T00:00:00Z
 scripts/dev cli --config projects/mock-fleet/compliance.yaml \
   assessment explain cloud-account/aws-111122223333 \
-  --plan generated/plans/cloud-account__aws-111122223333.json \
-  --assessed-plans generated/plans --at 2026-09-01T00:00:00Z \
+  --plan projects/mock-fleet/generated/plans/cloud-account__aws-111122223333.json \
+  --assessed-plans projects/mock-fleet/generated/plans --at 2026-09-01T00:00:00Z \
   --as-of 2026-09-01T00:00:00Z
 ```
 

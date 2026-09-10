@@ -171,6 +171,8 @@ and leaves whole-operation accounting visible and unchanged by filtering. Frozen
 group rows retain even an empty group named by the operation's selection witness.
 They show group-local exact slot accounting beside separately aggregated current
 plan alignment, selected-evidence timeliness, and recorded-waiver qualification.
+Frozen accounting-disposition counts keep inactive, unassigned, and no-assessable-
+policy members distinct even though none requires a result.
 The default per-asset table likewise keeps current waiver qualification distinct
 from the immutable historical outcome. A dependency-free check makes no positive
 evidence-timeliness claim.
@@ -335,9 +337,10 @@ to an immutable result outcome.
 
 When a result fills an exact frozen slot but its assessed plan is absent from the
 bounded input set, `assessment explain` returns only result-owned outcome, reason,
-dependency disposition, closed evaluation-error, and recorded-waiver facts. It says
+dependency disposition, closed evaluation-error, and recorded-waiver facts, plus the
+waiver window qualification derived directly from those result-owned timestamps. It says
 that full interpretation is unavailable and does not attach policy/check meaning,
-evidence type/freshness, roll-up validity, timeliness, or plan alignment.
+evidence type/freshness, roll-up validity, dependency timeliness, or plan alignment.
 
 #32 retains factual v4 provenance only for ADR 0011. #80 derives the view from a
 validated v4 result, exact assessed plan, optional comparison plan and explicit query
@@ -435,12 +438,12 @@ Mapping traceability examples over one retained exact operation:
 
 ```sh
 scripts/dev cli --project mock-fleet assessment mappings \
-  --plan generated/plans/cloud-account__aws-111122223333.json \
-  --assessed-plans generated/plans --at 2026-09-01T00:00:00Z \
+  --plan projects/mock-fleet/generated/plans/cloud-account__aws-111122223333.json \
+  --assessed-plans projects/mock-fleet/generated/plans --at 2026-09-01T00:00:00Z \
   --as-of 2026-09-01T00:00:00Z
 scripts/dev cli --project mock-fleet assessment mappings \
-  --plan generated/plans/cloud-account__aws-111122223333.json \
-  --assessed-plans generated/plans --at 2026-09-01T00:00:00Z \
+  --plan projects/mock-fleet/generated/plans/cloud-account__aws-111122223333.json \
+  --assessed-plans projects/mock-fleet/generated/plans --at 2026-09-01T00:00:00Z \
   --as-of 2026-09-01T00:00:00Z --reference CSA-CCM-v4.1:LOG-domain
 ```
 

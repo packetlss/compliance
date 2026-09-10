@@ -29,6 +29,9 @@ HISTORICAL_OUTCOMES = (
     "pass", "fail", "unknown", "error", "waived", "not_applicable",
 )
 PLAN_ALIGNMENTS = ("plan_aligned", "different_plan", "plan_alignment_unavailable")
+ACCOUNTING_DISPOSITIONS = (
+    "result_required", "inactive", "unassigned", "no_assessable_policy",
+)
 
 
 def load_result_reports(path: Path | None) -> list[JsonObject]:
@@ -305,6 +308,17 @@ def _group_status(
         "group_id": group_id,
         "frozen_accounting": {
             "selected_assets": len(frozen),
+            "accounting_dispositions": {
+                disposition: sum(
+                    member["accounting_disposition"] == disposition
+                    for member in frozen
+                )
+                for disposition in ACCOUNTING_DISPOSITIONS
+                if any(
+                    member["accounting_disposition"] == disposition
+                    for member in frozen
+                )
+            },
             "expected_result_slots": len(required),
             "filled_result_slots": sum(m["result_present"] for m in required),
             "missing_result_slots": sum(not m["result_present"] for m in required),
@@ -437,7 +451,8 @@ def render_status_view(view: JsonObject) -> str:
     if view["view"] == "groups":
         lines.append(
             "GROUP  VISIBLE/FROZEN  EXPECTED/FILLED/MISSING  ACCOUNTING COMPLETE  "
-            "HISTORICAL OUTCOMES  CURRENT PLAN  CURRENT EVIDENCE  CURRENT WAIVERS"
+            "DISPOSITIONS  HISTORICAL OUTCOMES  CURRENT PLAN  CURRENT EVIDENCE  "
+            "CURRENT WAIVERS"
         )
         for group in view["groups"]:
             frozen = group["frozen_accounting"]
@@ -448,6 +463,7 @@ def render_status_view(view: JsonObject) -> str:
                 f'{frozen["expected_result_slots"]}/{frozen["filled_result_slots"]}/'
                 f'{frozen["missing_result_slots"]}  '
                 f'{str(frozen["accounting_complete"]).upper()}  '
+                f'{_counts_text(frozen["accounting_dispositions"])}  '
                 f'{_counts_text(group["historical_outcomes"])}  '
                 f'{_counts_text(current["plan_alignment"])}  '
                 f'{_counts_text(current["selected_evidence"])}  '
@@ -455,7 +471,7 @@ def render_status_view(view: JsonObject) -> str:
             )
         return "\n".join(lines)
     lines.append(
-        "ASSET  RESULT SLOT  HISTORICAL OUTCOME  PLAN ALIGNMENT  "
+        "ASSET  ACCOUNTING DISPOSITION  RESULT SLOT  HISTORICAL OUTCOME  PLAN ALIGNMENT  "
         "CURRENT EVIDENCE  CURRENT WAIVERS"
     )
     for asset in view["assets"]:
@@ -466,7 +482,9 @@ def render_status_view(view: JsonObject) -> str:
         outcome = (asset["historical_outcome"] or "-").replace("_", " ").upper()
         current = asset["current_qualification"]
         lines.append(
-            f'{asset["asset_id"]}  {presence}  {outcome}  '
+            f'{asset["asset_id"]}  '
+            f'{slot["accounting_disposition"].replace("_", " ").upper()}  '
+            f'{presence}  {outcome}  '
             f'{current["plan_alignment"].replace("_", " ").upper()}  '
             f'{current["selected_evidence"]["status"].replace("_", " ").upper()}  '
             f'{_asset_waivers_text(current)}'
@@ -838,7 +856,11 @@ def build_explanation_view(
             "The exact frozen operation requires a result for this asset, but its "
             "slot is missing. No result was synthesized."
             if slot["required"]
-            else "The frozen member is non-assessable and no result is required."
+            else (
+                "The frozen member accounting disposition is "
+                f'{slot["accounting_disposition"].replace("_", " ")}; '
+                "no result is required."
+            )
         )
         if plan is not None:
             base["applicable_policies"] = _applicable_policies(plan)
@@ -859,8 +881,9 @@ def build_explanation_view(
             "interpretation": "limited_without_exact_plan",
             "explanation": (
                 "The result artifact is retained, but its exact assessed plan is "
-                "unavailable. Only raw result-owned facts are shown; full policy, "
-                "dependency, timeliness, roll-up, and plan-alignment interpretation "
+                "unavailable. Only raw result-owned facts and separately derived "
+                "recorded-waiver window qualification are shown; full policy, "
+                "dependency-timeliness, roll-up, and plan-alignment interpretation "
                 "is unavailable."
             ),
             "raw_result_facts": [
@@ -1013,16 +1036,23 @@ def render_explanation_view(view: JsonObject) -> str:
         "Exact result slot: " + (
             "filled" if slot["present"] else "missing" if slot["required"] else "not required"
         ),
+        "Frozen accounting disposition: "
+        + slot["accounting_disposition"].replace("_", " "),
         f'Operation: {view["operation"]["operation_id"]}',
         f'Plan: {view["operation"]["plan_id"]}',
         f'Assessment instant: {view["operation"]["evaluated_at"]}',
         f'Current qualification as of: {current["as_of"]}',
         f'Current plan alignment: {current["plan_alignment"].replace("_", " ")}',
         f'Current selected-evidence qualification: {current["selected_evidence"]["status"].replace("_", " ")}',
+        "Current recorded-waiver qualification: " + _asset_waivers_text(current),
     ]
     if "explanation" in view:
         lines.extend(["", view["explanation"]])
     if view["interpretation"] == "limited_without_exact_plan":
+        waiver_qualification = {
+            item["instance_id"]: item
+            for item in current["recorded_waivers"]
+        }
         for item in view["raw_result_facts"]:
             lines.append(
                 f'  Check identity {item["instance_id"]}: '
@@ -1032,6 +1062,20 @@ def render_explanation_view(view: JsonObject) -> str:
                 lines.append(
                     f'    dependency {disposition["dependency_id"]}: '
                     f'{disposition["disposition"]}'
+                )
+            if waiver := item.get("waiver"):
+                qualification = waiver_qualification.get(item["instance_id"], {})
+                lines.append(
+                    f'    Recorded waiver {waiver["id"]}: underlying '
+                    f'{waiver["underlying_status"].upper()}; valid from '
+                    f'{waiver["valid_from"]} until {waiver["expires_at"]}; '
+                    f'current qualification '
+                    f'{qualification.get("qualification", "unavailable").replace("_", " ")}'
+                )
+                lines.append(
+                    f'      Governance: owner {waiver["owner"]}; approval '
+                    f'{waiver["approval_ref"]} by {waiver["approved_by"]} at '
+                    f'{waiver["approved_at"]}; rationale {waiver["rationale"]}'
                 )
         return "\n".join(lines)
     if policies := view.get("applicable_policies"):
