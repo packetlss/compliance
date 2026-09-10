@@ -152,8 +152,58 @@ class AssessmentOperatorViewTests(unittest.TestCase):
         self.assertIsNone(view["assets"][0]["historical_outcome"])
         self.assertEqual(view["whole_operation"]["missing_result_slots"], 1)
         self.assertEqual(grouped["groups"][0]["frozen_accounting"]["missing_result_slots"], 1)
+        self.assertEqual(
+            grouped["groups"][0]["current_qualification"]["plan_alignment"],
+            {"plan_alignment_unavailable": 1},
+        )
         self.assertIn("whole-operation accounting", render_status_view(view).lower())
-        self.assertIn("GROUP", render_status_view(grouped))
+        self.assertIn("CURRENT EVIDENCE", render_status_view(grouped))
+
+    def test_status_retains_empty_group_from_frozen_selection_witness(self):
+        account = copy.deepcopy(self.account)
+        account["operation"]["request"] = {
+            "all": False,
+            "subjects": ["host/test"],
+            "groups": ["empty-requested"],
+        }
+        account["operation"]["selection_witness"] = {
+            "mode": "groups",
+            "groups": [{"id": "empty-requested", "parents": []}],
+        }
+
+        view = build_status_view(
+            account,
+            group_ids=["empty-requested"],
+            outcomes=["pass"],
+            by_group=True,
+        )
+
+        self.assertEqual(len(view["groups"]), 1)
+        group = view["groups"][0]
+        self.assertEqual(group["group_id"], "empty-requested")
+        self.assertEqual(group["visible_assets"], 0)
+        self.assertEqual(group["frozen_accounting"]["selected_assets"], 0)
+        self.assertEqual(group["current_qualification"]["assets"], 0)
+
+    def test_dependency_free_operation_makes_no_positive_timeliness_claim(self):
+        account = copy.deepcopy(self.account)
+        account["members"][0]["evidence_timeliness"] = {
+            "dependencies": [],
+            "controls": [],
+            "timely_selected_dependencies": 0,
+            "stale_selected_dependencies": 0,
+            "unavailable_required_dependencies": 0,
+            "controls_within_recorded_age_limits": 0,
+            "controls_needing_reassessment": 0,
+            "controls_with_unavailable_timeliness": 0,
+        }
+
+        view = build_status_view(account)
+
+        self.assertEqual(
+            view["assets"][0]["current_qualification"]["selected_evidence"]["status"],
+            "not_applicable",
+        )
 
     def test_status_filters_do_not_change_whole_operation_accounting(self):
         report = self.result(status="fail")
@@ -234,6 +284,51 @@ class AssessmentOperatorViewTests(unittest.TestCase):
         self.assertEqual(view["objectives"], [])
         self.assertEqual(view["applicable_policies"][0]["title"], "Synthetic technical policy")
         self.assertEqual(view["checks"][0]["check"]["title"], "Synthetic test check")
+        self.assertEqual(
+            view["checks"][0]["policy_attribution"],
+            [{
+                "policy_reference": "test.baseline@1",
+                "group": "test-hosts",
+                "assignment": "test-policy",
+            }],
+        )
+
+    def test_multi_policy_explanation_retains_every_policy_to_check_path(self):
+        plan = copy.deepcopy(self.plan)
+        second = copy.deepcopy(plan["resolved_baselines"][0])
+        second.update(
+            reference="test.second@1",
+            title="Second synthetic policy",
+            assignment="second-policy",
+        )
+        plan["resolved_baselines"].append(second)
+        plan["controls"][0]["provenance"].append({
+            "group": "test-hosts",
+            "assignment": "second-policy",
+            "baseline": "test.second@1",
+        })
+        report = self.result()
+        account = self.account_with_result(report)
+
+        view = build_explanation_view(account, account["members"][0], plan, report)
+        rendered = render_explanation_view(view)
+
+        self.assertEqual(
+            [item["reference"] for item in view["applicable_policies"]],
+            ["test.baseline@1", "test.second@1"],
+        )
+        self.assertEqual(
+            view["applicable_policies"][1]["paths"],
+            [{"group": "test-hosts", "assignment": "second-policy"}],
+        )
+        self.assertEqual(
+            view["applicable_policies"][1]["check_instance_ids"],
+            ["test.check"],
+        )
+        self.assertEqual(len(view["checks"][0]["policy_attribution"]), 2)
+        self.assertIn("Synthetic technical policy (test.baseline@1)", rendered)
+        self.assertIn("Second synthetic policy (test.second@1)", rendered)
+        self.assertIn("test-hosts -> second-policy", rendered)
 
     def test_objective_retains_bounded_realization_lineage(self):
         plan = assessment_plan(
@@ -343,6 +438,15 @@ class AssessmentOperatorViewTests(unittest.TestCase):
         historical = view["checks"][0]["historical_result"]
         self.assertEqual(historical["current_waiver_qualification"]["qualification"], "expired")
         self.assertIn("remains WAIVED", historical["explanation"])
+        self.assertIn(
+            "test-waiver=EXPIRED",
+            render_status_view(build_status_view(account)),
+        )
+        grouped = build_status_view(account, by_group=True)
+        self.assertEqual(
+            grouped["groups"][0]["current_qualification"]["recorded_waivers"],
+            {"expired": 1},
+        )
 
 
 if __name__ == "__main__":

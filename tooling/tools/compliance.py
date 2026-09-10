@@ -722,7 +722,11 @@ def _run_assessment(args: argparse.Namespace) -> None:
 
 
 def _run_historical_operation_view(args):
-    from .operation import account_operation, qualify_operation
+    from .operation import (
+        account_operation,
+        frozen_group_memberships,
+        qualify_operation,
+    )
     if not args.plan or not args.at or not args.as_of:
         raise ValueError(
             'assessment reporting requires --plan, --at, and --as-of for one exact frozen operation'
@@ -743,9 +747,7 @@ def _run_historical_operation_view(args):
     )
     by_id = {r['id']: r for r in reports}
     plan_by_id = {plan['id']: plan for plan in assessed_plans}
-    known_groups = {
-        group['id'] for row in account['members'] for group in row['resolved_groups']
-    }
+    known_groups = set(frozen_group_memberships(account['operation']))
     unknown_groups = sorted(set(args.group) - known_groups)
     if unknown_groups:
         raise ValueError('unknown frozen operation group(s): ' + ', '.join(unknown_groups))

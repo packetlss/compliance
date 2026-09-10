@@ -167,12 +167,20 @@ operation-bearing `--plan`, exact `--at`, and explicit qualification instant
 `--as-of`. Repeatable `--assessed-plans` inputs resolve each retained result only by
 exact `plan_id`; no current-plan, subject-only, filename, traversal-order, or latest
 fallback exists. `assessment status --by group` uses the same operation and filters
-and leaves whole-operation accounting visible and unchanged by filtering.
+and leaves whole-operation accounting visible and unchanged by filtering. Frozen
+group rows retain even an empty group named by the operation's selection witness.
+They show group-local exact slot accounting beside separately aggregated current
+plan alignment, selected-evidence timeliness, and recorded-waiver qualification.
+The default per-asset table likewise keeps current waiver qualification distinct
+from the immutable historical outcome. A dependency-free check makes no positive
+evidence-timeliness claim.
 
 `assessment explain ASSET` leads with applicable-policy titles, optional Objective
 title/statement, Control-owned Check title/purpose, effective parameters, required
 evidence, immutable historical outcome, and separately labeled current
-qualification. A technical-only plan has no synthetic Objective. Its JSON is a
+qualification. Each applicable policy retains its exact group/assignment path and
+the objective/check identities attributed through that path. A technical-only plan
+has no synthetic Objective. Its JSON is a
 bounded projection and never embeds a whole plan or result. Stable operation, plan,
 result, asset, check, and dependency identities remain available for drill-down.
 

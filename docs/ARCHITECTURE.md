@@ -398,7 +398,7 @@ The policy roots remain independently named/digested. Co-location does not merge
 
 Each ordinary project remains logically isolated with its own inventory, assignments, fixtures, waivers, and generated-state paths.
 
-Canonical verification scenarios are under `verification/scenarios/` and own the complete composed integration/feature suite: all 22 retained public CLI leaves and 19 retained domain features.
+Canonical verification scenarios are under `verification/scenarios/` and own the complete composed integration/feature suite: all 21 retained public CLI leaves and 19 retained domain features.
 
 ## Private-source boundary
 

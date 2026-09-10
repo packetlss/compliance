@@ -142,6 +142,14 @@ control with no required evidence receives no timeliness claim. Comparison membe
 never changes the historical denominator. Historical outcomes and roll-ups remain
 unchanged, and `all_passed` is labeled only as a frozen historical fact.
 
+The default status table reports current recorded-waiver qualification per asset.
+The group table aggregates current plan alignment, evidence timeliness and recorded
+waiver qualification independently from its exact slot accounting. Group identity
+and membership come only from frozen operation facts, including an empty requested
+group retained by the selection witness; no current inventory or Coverage projection
+is consulted. Explanation preserves every exact policy-to-check group/assignment path
+rather than collapsing a check shared by multiple applicable policies.
+
 A multi-subject historical view retains one operation-bearing plan as denominator
 anchor, each exact bound plan needed to interpret a retained result, and the results.
 The anchor alone proves missing expected slots; no plan artifact is invented for a

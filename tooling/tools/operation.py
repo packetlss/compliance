@@ -178,6 +178,38 @@ def select_from_witness(request, witness):
     return sorted(selected)
 
 
+def frozen_group_memberships(projection):
+    """Return exact group membership available from one frozen operation."""
+    memberships = {
+        group['id']: set()
+        for member in projection['members']
+        for group in member['resolved_groups']
+    }
+    for member in projection['members']:
+        for group in member['resolved_groups']:
+            memberships[group['id']].add(member['subject_id'])
+
+    witness = projection['selection_witness']
+    if witness.get('mode') != 'groups':
+        return {key: sorted(value) for key, value in sorted(memberships.items())}
+
+    from .render_plan import resolve_groups
+    groups = witness['groups']
+    catalog = {group['id']: group for group in groups}
+    memberships.update({group_id: set() for group_id in catalog})
+    labels = {
+        row['subject_id']: row['labels'] for row in witness.get('candidates', [])
+    }
+    for member in projection['members']:
+        subject = {
+            'id': member['subject_id'],
+            'labels': labels.get(member['subject_id'], {}),
+        }
+        for group in resolve_groups(catalog, subject):
+            memberships[group['id']].add(member['subject_id'])
+    return {key: sorted(value) for key, value in sorted(memberships.items())}
+
+
 def _member_resolved_groups(plan):
     """Keep only membership attribution needed to derive applicable assignments."""
     by_id = {group['id']: group for group in plan['resolved_groups']}

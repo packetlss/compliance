@@ -102,9 +102,12 @@ def _qualification(member: JsonObject, query_instant: str | None) -> JsonObject:
     else:
         reassessment_due = bool(evidence["controls_needing_reassessment"])
         timeliness_unavailable = bool(evidence["controls_with_unavailable_timeliness"])
+        no_required_evidence = not evidence["controls"]
         evidence_view = {
             "status": (
-                "reassessment_due_and_partly_unavailable"
+                "not_applicable"
+                if no_required_evidence
+                else "reassessment_due_and_partly_unavailable"
                 if reassessment_due and timeliness_unavailable
                 else "reassessment_due"
                 if reassessment_due
@@ -138,11 +141,15 @@ def _qualification(member: JsonObject, query_instant: str | None) -> JsonObject:
     }
 
 
-def _asset_status(member: JsonObject, query_instant: str | None) -> JsonObject:
+def _asset_status(
+    member: JsonObject,
+    query_instant: str | None,
+    groups: list[str],
+) -> JsonObject:
     return {
         "asset_id": member["subject_id"],
         "asset_type": member["subject"]["type"],
-        "groups": [group["id"] for group in member["resolved_groups"]],
+        "groups": groups,
         "expected_result_slot": _slot(member),
         "historical_outcome": member.get("historical_outcome"),
         "historical_interpretation": member["historical_interpretation"],
@@ -237,27 +244,54 @@ def _matches_member_filters(
     groups: set[str],
     outcomes: set[str],
     alignments: set[str],
+    memberships: JsonObject,
 ) -> bool:
-    member_groups = {group["id"] for group in member["resolved_groups"]}
     return (
-        (not groups or bool(groups & member_groups))
+        (
+            not groups
+            or any(member["subject_id"] in memberships.get(group, []) for group in groups)
+        )
         and (not outcomes or member.get("historical_outcome") in outcomes)
         and (not alignments or member.get("plan_alignment") in alignments)
     )
+
+
+def _current_qualification_summary(
+    members: list[JsonObject],
+    query_instant: str | None,
+) -> JsonObject:
+    qualifications = [_qualification(member, query_instant) for member in members]
+    return {
+        "assets": len(members),
+        "plan_alignment": dict(sorted(Counter(
+            item["plan_alignment"] for item in qualifications
+        ).items())),
+        "selected_evidence": dict(sorted(Counter(
+            item["selected_evidence"]["status"] for item in qualifications
+        ).items())),
+        "recorded_waivers": dict(sorted(Counter(
+            waiver["qualification"]
+            for item in qualifications
+            for waiver in item["recorded_waivers"]
+        ).items())),
+    }
 
 
 def _group_status(
     group_id: str,
     all_members: list[JsonObject],
     visible_members: list[JsonObject],
+    member_ids: list[str],
+    query_instant: str | None,
 ) -> JsonObject:
+    selected = set(member_ids)
     frozen = [
         member for member in all_members
-        if group_id in {group["id"] for group in member["resolved_groups"]}
+        if member["subject_id"] in selected
     ]
     visible = [
         member for member in visible_members
-        if group_id in {group["id"] for group in member["resolved_groups"]}
+        if member["subject_id"] in selected
     ]
     required = [m for m in frozen if m["accounting_disposition"] == "result_required"]
     outcomes = Counter(m.get("historical_outcome") for m in visible)
@@ -285,6 +319,9 @@ def _group_status(
             for outcome in HISTORICAL_OUTCOMES
             if outcomes[outcome]
         },
+        "current_qualification": _current_qualification_summary(
+            visible, query_instant
+        ),
     }
 
 
@@ -300,10 +337,19 @@ def build_status_view(
     selected_groups = set(group_ids or [])
     selected_outcomes = set(outcomes or [])
     selected_alignments = set(plan_alignments or [])
+    from .operation import frozen_group_memberships
+
+    memberships = frozen_group_memberships(account["operation"])
     visible = [
         member
         for member in account["members"]
-        if _matches_member_filters(member, selected_groups, selected_outcomes, selected_alignments)
+        if _matches_member_filters(
+            member,
+            selected_groups,
+            selected_outcomes,
+            selected_alignments,
+            memberships,
+        )
     ]
     filters = {
         "groups": sorted(selected_groups),
@@ -323,18 +369,30 @@ def build_status_view(
         "view": "groups" if by_group else "assets",
     }
     if by_group:
-        known_groups = sorted({
-            group["id"]
-            for member in account["members"]
-            for group in member["resolved_groups"]
-        })
+        known_groups = sorted(memberships)
         selected = sorted(selected_groups) if selected_groups else known_groups
         view["groups"] = [
-            _group_status(group_id, account["members"], visible) for group_id in selected
+            _group_status(
+                group_id,
+                account["members"],
+                visible,
+                memberships[group_id],
+                account["query_instant"],
+            )
+            for group_id in selected
         ]
     else:
         view["assets"] = [
-            _asset_status(member, account["query_instant"]) for member in visible
+            _asset_status(
+                member,
+                account["query_instant"],
+                [
+                    group_id
+                    for group_id, member_ids in memberships.items()
+                    if member["subject_id"] in member_ids
+                ],
+            )
+            for member in visible
         ]
     return view
 
@@ -345,6 +403,19 @@ def _filters_line(filters: JsonObject) -> str | None:
         if filters.get(key):
             values.append(f'{key.replace("_", "-")}=' + ",".join(filters[key]))
     return "Filters: " + "  ".join(values) if values else None
+
+
+def _counts_text(counts: JsonObject) -> str:
+    return ",".join(
+        f'{key.replace("_", " ").upper()}={value}' for key, value in counts.items()
+    ) or "-"
+
+
+def _asset_waivers_text(qualification: JsonObject) -> str:
+    return ",".join(
+        f'{waiver["waiver_id"]}={waiver["qualification"].replace("_", " ").upper()}'
+        for waiver in qualification["recorded_waivers"]
+    ) or "-"
 
 
 def render_status_view(view: JsonObject) -> str:
@@ -365,21 +436,28 @@ def render_status_view(view: JsonObject) -> str:
     lines.append("")
     if view["view"] == "groups":
         lines.append(
-            "GROUP  ASSETS  EXPECTED/FILLED/MISSING  ACCOUNTING COMPLETE  HISTORICAL OUTCOMES"
+            "GROUP  VISIBLE/FROZEN  EXPECTED/FILLED/MISSING  ACCOUNTING COMPLETE  "
+            "HISTORICAL OUTCOMES  CURRENT PLAN  CURRENT EVIDENCE  CURRENT WAIVERS"
         )
         for group in view["groups"]:
             frozen = group["frozen_accounting"]
-            outcomes = ",".join(
-                f"{key.upper()}={value}" for key, value in group["historical_outcomes"].items()
-            ) or "-"
+            current = group["current_qualification"]
             lines.append(
-                f'{group["group_id"]}  {frozen["selected_assets"]}  '
+                f'{group["group_id"]}  {group["visible_assets"]}/'
+                f'{frozen["selected_assets"]}  '
                 f'{frozen["expected_result_slots"]}/{frozen["filled_result_slots"]}/'
                 f'{frozen["missing_result_slots"]}  '
-                f'{str(frozen["accounting_complete"]).upper()}  {outcomes}'
+                f'{str(frozen["accounting_complete"]).upper()}  '
+                f'{_counts_text(group["historical_outcomes"])}  '
+                f'{_counts_text(current["plan_alignment"])}  '
+                f'{_counts_text(current["selected_evidence"])}  '
+                f'{_counts_text(current["recorded_waivers"])}'
             )
         return "\n".join(lines)
-    lines.append("ASSET  RESULT SLOT  HISTORICAL OUTCOME  PLAN ALIGNMENT  CURRENT EVIDENCE")
+    lines.append(
+        "ASSET  RESULT SLOT  HISTORICAL OUTCOME  PLAN ALIGNMENT  "
+        "CURRENT EVIDENCE  CURRENT WAIVERS"
+    )
     for asset in view["assets"]:
         slot = asset["expected_result_slot"]
         presence = (
@@ -390,7 +468,8 @@ def render_status_view(view: JsonObject) -> str:
         lines.append(
             f'{asset["asset_id"]}  {presence}  {outcome}  '
             f'{current["plan_alignment"].replace("_", " ").upper()}  '
-            f'{current["selected_evidence"]["status"].replace("_", " ").upper()}'
+            f'{current["selected_evidence"]["status"].replace("_", " ").upper()}  '
+            f'{_asset_waivers_text(current)}'
         )
     return "\n".join(lines)
 
@@ -423,8 +502,11 @@ def build_mappings_view(
     levels: list[str] | None = None,
 ) -> JsonObject:
     """Project exact attributable mapping facts without a completeness claim."""
+    from .operation import frozen_group_memberships
+
     reports_by_id = _result_index(reports)
     plans_by_id = _plan_index(assessed_plans)
+    memberships = frozen_group_memberships(account["operation"])
     selected_groups = set(group_ids or [])
     selected_outcomes = set(outcomes or [])
     selected_alignments = set(plan_alignments or [])
@@ -432,8 +514,10 @@ def build_mappings_view(
     selected_levels = set(levels or [])
     mappings: list[JsonObject] = []
     for member in account["members"]:
-        member_groups = {group["id"] for group in member["resolved_groups"]}
-        if selected_groups and not selected_groups.intersection(member_groups):
+        if selected_groups and not any(
+            member["subject_id"] in memberships.get(group, [])
+            for group in selected_groups
+        ):
             continue
         report = reports_by_id.get(member["result_id"])
         plan = plans_by_id.get(member["plan_id"])
@@ -637,6 +721,17 @@ def _dependency_fact(
     return fact
 
 
+def _policy_attribution(control: JsonObject) -> list[JsonObject]:
+    paths = {
+        (item["baseline"], item["group"], item["assignment"])
+        for item in control["provenance"]
+    }
+    return [
+        {"policy_reference": reference, "group": group, "assignment": assignment}
+        for reference, group, assignment in sorted(paths)
+    ]
+
+
 def _check_explanation(
     control: JsonObject,
     result: JsonObject | None,
@@ -698,6 +793,7 @@ def _check_explanation(
             "remediation": control.get("remediation", ""),
         },
         "effective_parameters": copy.deepcopy(control["parameters"]),
+        "policy_attribution": _policy_attribution(control),
         "policy_alignment": control.get("alignment", "unaltered"),
         "deviations": [
             {
@@ -823,10 +919,39 @@ def _applicable_policies(plan: JsonObject) -> list[JsonObject]:
         ("objective", "resolved_requirement_baselines"),
     ):
         for item in plan.get(field, []):
-            policies.setdefault(
+            policy = policies.setdefault(
                 item["reference"],
-                {"title": item["title"], "reference": item["reference"], "kind": kind},
+                {
+                    "title": item["title"],
+                    "reference": item["reference"],
+                    "kind": kind,
+                    "paths": [],
+                    "objective_references": [],
+                    "check_instance_ids": [],
+                },
             )
+            path = {"group": item["group"], "assignment": item["assignment"]}
+            if path not in policy["paths"]:
+                policy["paths"].append(path)
+    for control in [*plan["controls"], *plan["excluded_controls"]]:
+        for attribution in _policy_attribution(control):
+            policy = policies.get(attribution["policy_reference"])
+            if policy is not None and control["instance_id"] not in policy["check_instance_ids"]:
+                policy["check_instance_ids"].append(control["instance_id"])
+    for requirement in plan["requirements"]:
+        for attribution in requirement["provenance"]:
+            policy = policies.get(attribution["baseline"])
+            if policy is None:
+                continue
+            if requirement["reference"] not in policy["objective_references"]:
+                policy["objective_references"].append(requirement["reference"])
+            for instance_id in requirement["technical_instance_ids"]:
+                if instance_id not in policy["check_instance_ids"]:
+                    policy["check_instance_ids"].append(instance_id)
+    for policy in policies.values():
+        policy["paths"].sort(key=lambda item: (item["group"], item["assignment"]))
+        policy["objective_references"].sort()
+        policy["check_instance_ids"].sort()
     return [policies[key] for key in sorted(policies)]
 
 
@@ -871,6 +996,7 @@ def _excluded_checks(plan: JsonObject) -> list[JsonObject]:
             "disposition": "excluded",
             "policy_alignment": control.get("alignment", "deviated"),
             "effective_parameters": copy.deepcopy(control["parameters"]),
+            "policy_attribution": _policy_attribution(control),
             "deviations": copy.deepcopy(control.get("deviations", [])),
         }
         for control in plan["excluded_controls"]
@@ -912,6 +1038,10 @@ def render_explanation_view(view: JsonObject) -> str:
         lines.extend(["", "Applicable policies:"])
         for policy in policies:
             lines.append(f'  {policy["title"]} ({policy["reference"]})')
+            for path in policy["paths"]:
+                lines.append(
+                    f'    Applies via: {path["group"]} -> {path["assignment"]}'
+                )
     if objectives := view.get("objectives"):
         lines.append("Objectives:")
         for objective in objectives:
@@ -924,8 +1054,17 @@ def render_explanation_view(view: JsonObject) -> str:
                 lines.append(f'    Realization: {objective["realization"]}')
             if objective["realization_based_on"]:
                 lines.append(f'    Based on: {objective["realization_based_on"]}')
+            if objective["check_instance_ids"]:
+                lines.append(
+                    "    Realized by checks: "
+                    + ", ".join(objective["check_instance_ids"])
+                )
     if "checks" in view:
         lines.append("Checks:")
+        policy_titles = {
+            policy["reference"]: policy["title"]
+            for policy in view.get("applicable_policies", [])
+        }
         for item in view["checks"]:
             check = item["check"]
             historical = item["historical_result"]
@@ -934,6 +1073,13 @@ def render_explanation_view(view: JsonObject) -> str:
                 f'  {check["title"]} ({check["instance_id"]}) [{status.upper()}]'
             )
             lines.append(f'    Purpose: {check["purpose"]}')
+            for attribution in item["policy_attribution"]:
+                reference = attribution["policy_reference"]
+                title = policy_titles.get(reference, reference)
+                lines.append(
+                    f'    Policy: {title} ({reference}); applies via '
+                    f'{attribution["group"]} -> {attribution["assignment"]}'
+                )
             lines.append(
                 "    Effective parameters: "
                 + json.dumps(item["effective_parameters"], sort_keys=True, separators=(",", ":"))
@@ -969,11 +1115,22 @@ def render_explanation_view(view: JsonObject) -> str:
                 )
     if excluded := view.get("excluded_checks"):
         lines.append("Excluded checks:")
+        policy_titles = {
+            policy["reference"]: policy["title"]
+            for policy in view.get("applicable_policies", [])
+        }
         for item in excluded:
             lines.append(
                 f'  {item["title"]} ({item["instance_id"]}) [EXCLUDED POLICY DISPOSITION]'
             )
             lines.append(f'    Purpose: {item["purpose"]}')
+            for attribution in item["policy_attribution"]:
+                reference = attribution["policy_reference"]
+                title = policy_titles.get(reference, reference)
+                lines.append(
+                    f'    Policy: {title} ({reference}); applies via '
+                    f'{attribution["group"]} -> {attribution["assignment"]}'
+                )
             lines.append(
                 "    Effective parameters: "
                 + json.dumps(
