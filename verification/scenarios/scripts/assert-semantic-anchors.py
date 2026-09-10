@@ -442,7 +442,8 @@ def iam(root, private_source):
                     for row in aged["assets"]),
                 "historical outcome/timeliness separation")
         mappings = json.loads(s.cli("assessment", "mappings", "--reference", "example-regulatory-framework:IAM-01",
-                                      "--plan", str(plans / "host__A.json"), "--results", str(results), "--at", AT,
+                                      "--plan", str(plans / "host__A.json"), "--assessed-plans", str(plans),
+                                      "--results", str(results), "--at", AT,
                                       "--as-of", AT, "--comparison-plan", str(plans / "host__A.json"), "--format", "json",
                                       historical=True))
         require(mappings["mappings"] and {row["external_ref"] for row in mappings["mappings"]} == {"example-regulatory-framework:IAM-01"}
