@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from assessment_fixture import evidence_plan
+from assessment_fixture import assessment_plan, evidence_plan
 from tools.assessment import (
     build_explanation_view,
     build_mappings_view,
@@ -234,6 +234,26 @@ class AssessmentOperatorViewTests(unittest.TestCase):
         self.assertEqual(view["objectives"], [])
         self.assertEqual(view["applicable_policies"][0]["title"], "Synthetic technical policy")
         self.assertEqual(view["checks"][0]["check"]["title"], "Synthetic test check")
+
+    def test_objective_retains_bounded_realization_lineage(self):
+        plan = assessment_plan(
+            [{"name": "shared", "digest": "sha256:" + "7" * 64}],
+            with_requirement=True,
+        )
+        plan["requirements"][0]["realization"]["based_on"] = {
+            "realization": "test.parent-realization@1",
+            "digest": "sha256:" + "9" * 64,
+        }
+        report = self.result()
+        account = self.account_with_result(report)
+
+        view = build_explanation_view(account, account["members"][0], plan, report)
+
+        self.assertEqual(
+            view["objectives"][0]["realization_based_on"],
+            "test.parent-realization@1",
+        )
+        self.assertIn("Based on: test.parent-realization@1", render_explanation_view(view))
 
     def test_no_exact_plan_shows_only_bounded_result_owned_facts(self):
         report = self.result(status="unknown", disposition="invalid")

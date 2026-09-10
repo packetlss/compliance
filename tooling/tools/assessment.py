@@ -851,6 +851,11 @@ def _objectives(plan: JsonObject, result: JsonObject | None) -> list[JsonObject]
                 if requirement.get("realization")
                 else None
             ),
+            "realization_based_on": (
+                requirement["realization"].get("based_on", {}).get("realization")
+                if requirement.get("realization")
+                else None
+            ),
             "check_instance_ids": copy.deepcopy(requirement["technical_instance_ids"]),
             "historical_outcome": (
                 statuses[requirement["reference"]]["status"]
@@ -922,6 +927,8 @@ def render_explanation_view(view: JsonObject) -> str:
             lines.append(f'    {objective["statement"]}')
             if objective["realization"]:
                 lines.append(f'    Realization: {objective["realization"]}')
+            if objective["realization_based_on"]:
+                lines.append(f'    Based on: {objective["realization_based_on"]}')
     if "checks" in view:
         lines.append("Checks:")
         for item in view["checks"]:
