@@ -384,7 +384,7 @@ def main() -> None:
     assert_assessment_plan_handoff(container_plan, actual)
     forwarding = next(
         row for row in container_plan["controls"]
-        if row["instance_id"] == "company.linux-server.ip-forwarding"
+        if row["instance_id"] == "benchmark.example.linux-server.ip-forwarding-disabled"
     )
     require(forwarding["title"] == "Linux kernel settings match policy",
             "container plan lost Check title")
