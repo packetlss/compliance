@@ -260,9 +260,9 @@ technical passes, one technical failure, a failed IAM objective, and a failed
 top requirement baseline:
 
 ```sh
-uv run compliance --project iam-realization \
+scripts/dev cli --project iam-realization \
   assessment run host/restricted-linux-01
-uv run compliance --project iam-realization \
+scripts/dev cli --project iam-realization \
   assessment explain host/restricted-linux-01
 ```
 

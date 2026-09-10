@@ -7,6 +7,10 @@ Run the source gate from a clean, committed tooling checkout:
 ```
 
 From the repository root run `scripts/dev setup`; root `toolchain/versions.env` is the sole pin authority. Use `scripts/dev doctor` for read-only diagnosis.
+Run the managed installed operator entrypoint from that root with
+`scripts/dev cli config list` (and the same prefix for other `compliance`
+arguments). An independently installed product continues to use
+`compliance ...` directly.
 The gate performs frozen dependency setup, runs the complete tooling component
 suite, and checks this repository's revision and cleanliness before and after.
 It works at any checkout location, including a direct Git worktree. It neither

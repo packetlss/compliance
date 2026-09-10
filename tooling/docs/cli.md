@@ -376,10 +376,12 @@ operator workflow rather than only the command first used against it. The
 canonical project tree and path-ownership rules are defined in
 [`project-layout.md`](project-layout.md).
 
-`tooling/` is the sole Python/build root. From the destination root use
-`uv run --project tooling compliance` with an explicit project config, or select
-a project through the materialized registry. Source paths are acquisition
-locations; explicit names and content digests define policy identity. Destination
+`tooling/` is the sole Python/build root. From a repository checkout, use
+`scripts/dev cli ...` with an explicit project config or select a project
+through the root registry. This development adapter executes the managed
+environment's installed `compliance` entrypoint from the repository root;
+independently installed products use `compliance ...` directly. Source paths
+are acquisition locations; explicit names and content digests define policy identity. Destination
 [ADR 0005](../../docs/adr/0005-content-addressed-development-boundaries.md),
 [ADR 0009](../../docs/adr/0009-active-compliance-vocabulary.md), the system
 [architecture](../../docs/ARCHITECTURE.md), and the
@@ -403,17 +405,17 @@ results; projects may reference a shared policy catalog. From the destination
 root, select an ordinary project explicitly:
 
 ```sh
-uv run --project tooling compliance --config projects/mock-fleet/compliance.yaml inventory validate
-uv run --project tooling compliance --config projects/server-personas/compliance.yaml waiver list
+scripts/dev cli --config projects/mock-fleet/compliance.yaml inventory validate
+scripts/dev cli --config projects/server-personas/compliance.yaml waiver list
 ```
 
 Framework-oriented examples:
 
 ```sh
-uv run compliance --project mock-fleet assessment frameworks
-uv run compliance --project mock-fleet assessment frameworks \
+scripts/dev cli --project mock-fleet assessment frameworks
+scripts/dev cli --project mock-fleet assessment frameworks \
   --reference CSA-CCM-v4.1:LOG-domain
-uv run compliance --project iam-realization assessment frameworks \
+scripts/dev cli --project iam-realization assessment frameworks \
   --level objective
 ```
 
@@ -446,7 +448,7 @@ the named CLI form. Project configs require `policySources` and reject
 `paths.policies`. Named sources expose each revision in validation output and plans:
 
 ```sh
-uv run --project tooling compliance --no-config policy validate \
+scripts/dev cli --no-config policy validate \
   --policy-source control-library=policy-sources/control-library/policies \
   --policy-source verification-policy=policy-sources/verification-policy/policies
 ```
@@ -469,10 +471,10 @@ project file, fully resolved paths, and named policy sources; its JSON form is
 suitable for automation:
 
 ```sh
-uv run compliance config show
-uv run compliance config show --format json
-uv run compliance config validate
-uv run compliance config list
+scripts/dev cli config show
+scripts/dev cli config show --format json
+scripts/dev cli config validate
+scripts/dev cli config list
 ```
 
 Configuration initially contains stable repository and artifact locations.
@@ -490,8 +492,8 @@ single-subject directory and renders an index when several plans exist. Select
 one fleet plan with its stable subject ID or an explicit file path:
 
 ```sh
-uv run compliance --project mock-fleet plan show
-uv run compliance --project mock-fleet \
+scripts/dev cli --project mock-fleet plan show
+scripts/dev cli --project mock-fleet \
   plan show cloud-account/aws-111122223333
 ```
 

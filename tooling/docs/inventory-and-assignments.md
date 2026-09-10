@@ -377,21 +377,21 @@ operator CLI. The project registry selects an isolated named project whose paths
 are loaded from that project's `compliance.yaml`:
 
 ```sh
-uv run compliance inventory validate
+scripts/dev cli inventory validate
 
-uv run compliance inventory list assets
+scripts/dev cli inventory list assets
 
-uv run compliance inventory graph
+scripts/dev cli inventory graph
 
-uv run compliance inventory explain cloud-account/aws-111122223333
+scripts/dev cli inventory explain cloud-account/aws-111122223333
 
-uv run compliance coverage list assets
+scripts/dev cli coverage list assets
 
-uv run compliance coverage list groups --format json
+scripts/dev cli coverage list groups --format json
 
-uv run compliance coverage list assignments
+scripts/dev cli coverage list assignments
 
-uv run compliance coverage explain cloud-account/aws-111122223333
+scripts/dev cli coverage explain cloud-account/aws-111122223333
 ```
 
 Inventory list/explain is limited to supplied normalized facts and resolved
@@ -430,13 +430,13 @@ Derived accounting/applicability and evaluation views are exposed separately:
 
 ```sh
 # Fleet overview; filter historical outcome and exact-plan alignment independently.
-uv run compliance assessment status --group aws-accounts --outcome fail --plan-alignment plan_aligned
+scripts/dev cli assessment status --group aws-accounts --outcome fail --plan-alignment plan_aligned
 
 # Roll up each dimension by every resolved DAG group.
-uv run compliance assessment groups
+scripts/dev cli assessment groups
 
 # Connect one subject's accounting disposition, plan, assignments, results, and exclusions.
-uv run compliance assessment explain cloud-account/aws-111122223333
+scripts/dev cli assessment explain cloud-account/aws-111122223333
 ```
 
 On `assessment status`, `--group`, `--outcome`, and `--plan-alignment` are

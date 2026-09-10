@@ -21,19 +21,19 @@ its tailored child to the same subject.
 Run from the checkout root:
 
 ```sh
-uv run --project tooling compliance --config projects/server-personas/compliance.yaml inventory validate
-uv run --project tooling compliance --config projects/server-personas/compliance.yaml policy validate
-uv run --project tooling compliance --config projects/server-personas/compliance.yaml waiver validate
-uv run --project tooling compliance --config projects/server-personas/compliance.yaml waiver list
+scripts/dev cli --config projects/server-personas/compliance.yaml inventory validate
+scripts/dev cli --config projects/server-personas/compliance.yaml policy validate
+scripts/dev cli --config projects/server-personas/compliance.yaml waiver validate
+scripts/dev cli --config projects/server-personas/compliance.yaml waiver list
 uv run --project tooling python tooling/collectors/mock-api/collect.py \
   projects/server-personas/fixtures \
   projects/server-personas/generated/evidence
 
-uv run --project tooling compliance --config projects/server-personas/compliance.yaml assessment run \
+scripts/dev cli --config projects/server-personas/compliance.yaml assessment run \
   host/standard-app-01
-uv run --project tooling compliance --config projects/server-personas/compliance.yaml assessment run \
+scripts/dev cli --config projects/server-personas/compliance.yaml assessment run \
   host/container-app-01
-uv run --project tooling compliance --config projects/server-personas/compliance.yaml assessment explain \
+scripts/dev cli --config projects/server-personas/compliance.yaml assessment explain \
   host/container-app-01
 ```
 
@@ -58,9 +58,9 @@ current policy checkout.
 The third subject deliberately has both persona labels:
 
 ```sh
-uv run --project tooling compliance --config projects/server-personas/compliance.yaml plan render \
+scripts/dev cli --config projects/server-personas/compliance.yaml plan render \
   host/persona-conflict-01
-uv run --project tooling compliance --config projects/server-personas/compliance.yaml plan show \
+scripts/dev cli --config projects/server-personas/compliance.yaml plan show \
   host/persona-conflict-01
 ```
 

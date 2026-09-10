@@ -70,24 +70,29 @@ Runnable end-to-end examples are available for:
 
 ## Operator CLI
 
-The prototype uses `uv` for locked Python dependencies and exposes one
-operator-facing command. In the current transitional checkout, repository paths
-come from the automatically discovered repository registry
-[`compliance.yaml`](../verification/scenarios/compliance.yaml):
+The prototype exposes one operator-facing command. From a repository checkout,
+initialize the pinned development environment once and invoke its installed
+entry point through the repository adapter. Repository paths come from the
+automatically discovered root registry [`compliance.yaml`](../compliance.yaml):
 
 ```sh
-uv sync
-uv run compliance config show
-uv run compliance inventory list assets
-uv run compliance inventory graph
-uv run compliance coverage list assets
-uv run compliance coverage explain cloud-account/aws-111122223333
-uv run compliance policy validate
-uv run compliance policy diff before-plan.json after-plan.json
-uv run compliance policy diff-set before-plans/ after-plans/
-uv run compliance assessment status
-uv run compliance assessment frameworks
+scripts/dev setup
+scripts/dev cli config show
+scripts/dev cli inventory list assets
+scripts/dev cli inventory graph
+scripts/dev cli coverage list assets
+scripts/dev cli coverage explain cloud-account/aws-111122223333
+scripts/dev cli policy validate
+scripts/dev cli policy diff before-plan.json after-plan.json
+scripts/dev cli policy diff-set before-plans/ after-plans/
+scripts/dev cli assessment status
+scripts/dev cli assessment frameworks
 ```
+
+Repository development and testing use `scripts/dev cli ...`; an independently
+installed product is invoked as `compliance ...`. The adapter does not define a
+second CLI: it executes the managed environment's installed `compliance`
+entrypoint from the repository root and makes the pinned OPA available.
 
 That registry exposes multiple isolated projects. `mock-fleet` is the current
 default; list or select projects from the checkout root without passing config
@@ -95,11 +100,11 @@ paths. This checkout topology is transition metadata, not a permanent product
 contract:
 
 ```sh
-uv run compliance config list
-uv run compliance --project mock-fleet inventory validate
-uv run compliance --project iam-realization inventory validate
-uv run compliance --project server-personas assessment status
-uv run compliance --project server-personas waiver list
+scripts/dev cli config list
+scripts/dev cli --project mock-fleet inventory validate
+scripts/dev cli --project iam-realization inventory validate
+scripts/dev cli --project server-personas assessment status
+scripts/dev cli --project server-personas waiver list
 ```
 
 The command hierarchy follows `Inventory → Coverage → Assessment` while
@@ -118,23 +123,23 @@ compliance assessment  run assessments or inspect fleet, group, and subject stat
 Common examples:
 
 ```sh
-uv run compliance inventory explain cloud-account/aws-111122223333
-uv run compliance coverage list assignments --format json
-uv run compliance coverage explain cloud-account/aws-111122223333
-uv run compliance plan render cloud-account/aws-111122223333
-uv run compliance policy diff before-plan.json after-plan.json --format json
-uv run compliance policy diff-set before-plans/ after-plans/ --format json
+scripts/dev cli inventory explain cloud-account/aws-111122223333
+scripts/dev cli coverage list assignments --format json
+scripts/dev cli coverage explain cloud-account/aws-111122223333
+scripts/dev cli plan render cloud-account/aws-111122223333
+scripts/dev cli policy diff before-plan.json after-plan.json --format json
+scripts/dev cli policy diff-set before-plans/ after-plans/ --format json
 uv run python compliance-tooling/examples/prepare_policy_diff_set.py
 uv run python compliance-tooling/examples/verify_examples.py
 uv run python compliance-tooling/examples/verify_examples.py --show waiver
-uv run compliance --project mock-fleet plan show
-uv run compliance --project mock-fleet \
+scripts/dev cli --project mock-fleet plan show
+scripts/dev cli --project mock-fleet \
   plan show cloud-account/aws-111122223333
-uv run compliance assessment run cloud-account/aws-111122223333
-uv run compliance assessment status --group aws-accounts --outcome fail --plan-alignment plan_aligned
-uv run compliance assessment groups
-uv run compliance assessment frameworks
-uv run compliance assessment explain cloud-account/aws-111122223333
+scripts/dev cli assessment run cloud-account/aws-111122223333
+scripts/dev cli assessment status --group aws-accounts --outcome fail --plan-alignment plan_aligned
+scripts/dev cli assessment groups
+scripts/dev cli assessment frameworks
+scripts/dev cli assessment explain cloud-account/aws-111122223333
 ```
 
 Command-line path options override configuration. Use `--project NAME` to
@@ -166,16 +171,16 @@ framework mapping.
 Select the mock project explicitly to inspect its three-asset fleet:
 
 ```sh
-uv run compliance --project mock-fleet inventory graph
-uv run compliance --project mock-fleet assessment status
+scripts/dev cli --project mock-fleet inventory graph
+scripts/dev cli --project mock-fleet assessment status
 ```
 
 Select the IAM project to see technical checks roll up through an implemented
 control objective to its assigned requirement baseline:
 
 ```sh
-uv run compliance --project iam-realization assessment status
-uv run compliance --project iam-realization \
+scripts/dev cli --project iam-realization assessment status
+scripts/dev cli --project iam-realization \
   assessment explain host/restricted-linux-01
 ```
 

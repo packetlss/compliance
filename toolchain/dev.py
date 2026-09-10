@@ -181,6 +181,28 @@ def gate(args: argparse.Namespace) -> int:
     return run(["bash", GATES[args.area]], check=False, env=env).returncode
 
 
+def cli(arguments: list[str]) -> int:
+    """Replace this process with the managed product CLI from the repository root."""
+    _, opa = selected()
+    python = ENV / "bin/python"
+    entrypoint = ENV / "bin/compliance"
+    required = (python, entrypoint, opa)
+    if any(not path.is_file() or not os.access(path, os.X_OK) for path in required):
+        print(
+            "ERROR: managed development environment is unavailable; "
+            "run scripts/dev setup",
+            file=sys.stderr,
+        )
+        return 1
+    env = os.environ.copy()
+    env["PATH"] = os.pathsep.join(
+        (str(opa.parent), str(ENV / "bin"), env.get("PATH", ""))
+    )
+    os.chdir(ROOT)
+    os.execve(str(entrypoint), [str(entrypoint), *arguments], env)
+    raise AssertionError("execve returned unexpectedly")
+
+
 def readiness(_: argparse.Namespace) -> int:
     if not shutil.which("gh"): print("ERROR: gh is required", file=sys.stderr); return 1
     pr = json.loads(run(["gh", "pr", "view", "--json", "headRefOid,baseRefName,body,reviews,statusCheckRollup"], capture=True).stdout)
@@ -203,8 +225,10 @@ def readiness(_: argparse.Namespace) -> int:
 
 
 def main() -> int:
+    if len(sys.argv) > 1 and sys.argv[1] == "cli":
+        return cli(sys.argv[2:])
     parser = argparse.ArgumentParser(); sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("setup").set_defaults(func=setup); sub.add_parser("doctor").set_defaults(func=doctor); sub.add_parser("readiness").set_defaults(func=readiness)
+    sub.add_parser("setup").set_defaults(func=setup); sub.add_parser("doctor").set_defaults(func=doctor); sub.add_parser("readiness").set_defaults(func=readiness); sub.add_parser("cli", help="run the managed compliance CLI from the repository root")
     p = sub.add_parser("check"); p.add_argument("area", choices=COMMANDS); p.add_argument("selection", nargs=argparse.REMAINDER); p.set_defaults(func=check)
     p = sub.add_parser("gate"); p.add_argument("area", choices=GATES); p.set_defaults(func=gate)
     args = parser.parse_args()

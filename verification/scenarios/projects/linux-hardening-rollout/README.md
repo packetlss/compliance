@@ -123,9 +123,11 @@ criteria, approval, review date, and baseline/control/source provenance.
 The third subject deliberately selects both sibling persona assignments:
 
 ```sh
-uv run compliance --project linux-hardening-rollout plan render \
+scripts/dev cli --config verification/scenarios/compliance.yaml \
+  --project linux-hardening-rollout plan render \
   host/persona-conflict-01
-uv run compliance --project linux-hardening-rollout plan show \
+scripts/dev cli --config verification/scenarios/compliance.yaml \
+  --project linux-hardening-rollout plan show \
   host/persona-conflict-01
 ```
 

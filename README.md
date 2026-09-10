@@ -32,7 +32,23 @@ Stable destination CI contexts are:
 
 `verification-scenarios` is the real canonical composed gate and owns all 22 retained public CLI leaves and 19 retained domain features. Normal validation uses one repository checkout and no historical sibling-repository App/PAT acquisition path.
 
-From the repository root, `scripts/dev setup` creates this worktree's isolated environment and installs the repository-pinned Python, uv, and OPA without sudo or global package-manager changes. Downloads are cached outside semantic roots. Use `scripts/dev doctor` for read-only diagnosis. Quick checks read the current working tree:
+From the repository root, `scripts/dev setup` creates this worktree's isolated environment and installs the repository-pinned Python, uv, and OPA without sudo or global package-manager changes. Downloads are cached outside semantic roots. Use `scripts/dev doctor` for read-only diagnosis.
+
+Repository development and manual testing use the managed CLI adapter, which
+runs the installed product entry point from the repository root with the pinned
+toolchain:
+
+```sh
+scripts/dev cli config list
+scripts/dev cli inventory list assets
+scripts/dev cli coverage list assets
+scripts/dev cli coverage explain cloud-account/aws-111122223333
+```
+
+Use `compliance ...` directly when exercising an independently installed
+product. `scripts/dev cli` is only the repository-development invocation path.
+
+Quick checks read the current working tree:
 
 ```sh
 scripts/dev check tooling
