@@ -606,7 +606,7 @@ def _resolve_plan_show_path(
     if selector is None:
         if configured is None:
             raise ValueError(
-                f"show requires PLAN, SUBJECT, or configured {configured_hint}"
+                f"show requires PLAN, ASSET, or configured {configured_hint}"
             )
         return configured
     if selector.exists():

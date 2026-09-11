@@ -389,7 +389,17 @@ class ComplianceCliTests(unittest.TestCase):
         self.assertIn("assets", rendered)
         self.assertNotIn("subject", rendered.lower())
 
-    def test_plan_show_selects_subject_from_configured_directory(self):
+    def test_plan_show_missing_selector_uses_asset_vocabulary(self):
+        parser = build_parser(ProjectConfig())
+        args = parser.parse_args(["plan", "show"])
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"show requires PLAN, ASSET, or configured paths\.plan",
+        ):
+            args.handler(args)
+
+    def test_plan_show_selects_asset_from_configured_directory(self):
         with tempfile.TemporaryDirectory() as temporary:
             plans = Path(temporary) / "plans"
             plans.mkdir()

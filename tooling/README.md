@@ -193,4 +193,4 @@ Python dependencies. CLI discovery, planning, evaluation, provenance, and
 negative contracts use tooling-owned synthetic fixtures. See
 [validation ownership and commands](docs/validation.md) for focused development
 and the separate installed-package/release gates. The complete composed feature
-suite is owned by `compliance-verification-scenarios`.
+suite is owned by `verification/scenarios/` in this repository.

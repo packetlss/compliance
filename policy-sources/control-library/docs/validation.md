@@ -50,7 +50,7 @@ The gate retains:
 The direct reusable-source assertions live in `tests/test_policy_resources.py`.
 Verification resource bytes and mappings belong to verification-policy validation;
 project source composition and full feature coverage belong to the canonical
-`compliance-verification-scenarios` integration lane. This component runs no
+`verification/scenarios/` gate in this repository. This component runs no
 project matrix, tooling-owned full unit suite, or complete feature runner. Retired
 producer-specific historical readers, fixtures, schemas, and bundle builders are
 not part of current validation.
