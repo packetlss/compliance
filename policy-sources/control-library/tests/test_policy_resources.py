@@ -310,6 +310,159 @@ class PolicyResourceTests(unittest.TestCase):
                 ["payload", section, setting],
             )
 
+    def test_aws_control_parameters_admit_only_declared_typed_facts(self):
+        boolean_schema = read_json(
+            POLICIES / "controls/aws/account-setting-equals/parameters.schema.json"
+        )
+        numeric_schema = read_json(
+            POLICIES / "controls/aws/account-number-at-least/parameters.schema.json"
+        )
+        boolean_validator = Draft202012Validator(boolean_schema)
+        numeric_validator = Draft202012Validator(numeric_schema)
+
+        for section, setting in (
+            ("root_user", "mfa_enabled"),
+            ("cloudtrail", "multi_region_enabled"),
+            ("security_contact", "configured"),
+        ):
+            with self.subTest(section=section, setting=setting):
+                boolean_validator.validate({
+                    "section": section,
+                    "setting": setting,
+                    "expected": True,
+                })
+        numeric_validator.validate({
+            "section": "cloudtrail",
+            "setting": "retention_days",
+            "minimum": 90,
+        })
+
+        for validator, parameters in (
+            (boolean_validator, {
+                "section": "opaque_extension",
+                "setting": "enabled",
+                "expected": True,
+            }),
+            (boolean_validator, {
+                "section": "cloudtrail",
+                "setting": "retention_days",
+                "expected": True,
+            }),
+            (numeric_validator, {
+                "section": "opaque_extension",
+                "setting": "retention_days",
+                "minimum": 90,
+            }),
+            (numeric_validator, {
+                "section": "root_user",
+                "setting": "mfa_enabled",
+                "minimum": 1,
+            }),
+        ):
+            with self.subTest(parameters=parameters):
+                self.assertFalse(validator.is_valid(parameters))
+
+    def test_saas_control_parameters_admit_only_declared_typed_facts(self):
+        boolean_schema = read_json(
+            POLICIES / "controls/saas/tenant-setting-equals/parameters.schema.json"
+        )
+        numeric_schema = read_json(
+            POLICIES / "controls/saas/tenant-number-at-least/parameters.schema.json"
+        )
+        boolean_validator = Draft202012Validator(boolean_schema)
+        numeric_validator = Draft202012Validator(numeric_schema)
+
+        for section, setting in (
+            ("authentication", "sso_enforced"),
+            ("authentication", "mfa_enforced"),
+            ("guest_access", "allowed"),
+        ):
+            with self.subTest(section=section, setting=setting):
+                boolean_validator.validate({
+                    "section": section,
+                    "setting": setting,
+                    "expected": True,
+                })
+        numeric_validator.validate({
+            "section": "audit_log",
+            "setting": "retention_days",
+            "minimum": 180,
+        })
+
+        for validator, parameters in (
+            (boolean_validator, {
+                "section": "opaque_extension",
+                "setting": "enabled",
+                "expected": True,
+            }),
+            (boolean_validator, {
+                "section": "audit_log",
+                "setting": "retention_days",
+                "expected": True,
+            }),
+            (numeric_validator, {
+                "section": "opaque_extension",
+                "setting": "retention_days",
+                "minimum": 180,
+            }),
+            (numeric_validator, {
+                "section": "authentication",
+                "setting": "sso_enforced",
+                "minimum": 1,
+            }),
+        ):
+            with self.subTest(parameters=parameters):
+                self.assertFalse(validator.is_valid(parameters))
+
+    def test_linux_access_control_parameters_admit_only_declared_typed_facts(self):
+        schema = read_json(
+            POLICIES / "controls/linux/access-setting-equals/parameters.schema.json"
+        )
+        validator = Draft202012Validator(schema)
+        valid = (
+            {"section": "packages", "setting": "sssd_installed", "expected": True},
+            {"section": "sssd", "setting": "domain", "expected": "company.example"},
+            {"section": "ssh", "setting": "allowed_groups", "expected": ["operators"]},
+            {
+                "section": "accounts",
+                "setting": "unmanaged_interactive_accounts",
+                "expected": [],
+            },
+        )
+        for parameters in valid:
+            with self.subTest(parameters=parameters):
+                validator.validate(parameters)
+
+        invalid = (
+            {"section": "opaque_extension", "setting": "enabled", "expected": True},
+            {"section": "packages", "setting": "sssd_installed", "expected": "yes"},
+            {"section": "sssd", "setting": "domain", "expected": True},
+            {"section": "ssh", "setting": "allowed_groups", "expected": "operators"},
+            {
+                "section": "accounts",
+                "setting": "unmanaged_interactive_accounts",
+                "expected": False,
+            },
+        )
+        for parameters in invalid:
+            with self.subTest(parameters=parameters):
+                self.assertFalse(validator.is_valid(parameters))
+
+    def test_configuration_evidence_extensions_remain_schema_valid(self):
+        for filename, extension in (
+            ("aws-account-configuration-v1.schema.json", {"organization": {"id": "o-test"}}),
+            ("saas-tenant-configuration-v1.schema.json", {"billing": {"tier": "test"}}),
+            ("linux-access-configuration-v1.schema.json", {"pam": {"profile": "test"}}),
+        ):
+            schema = read_json(POLICIES / "schemas/evidence" / filename)
+            evidence_type = schema["properties"]["type"]["const"]
+            payload = copy.deepcopy(EXPECTED_EVIDENCE_PAYLOADS[evidence_type])
+            payload.update(extension)
+            with self.subTest(schema=filename):
+                Draft202012Validator(schema).validate(
+                    evidence_document(schema, payload)
+                )
+
     def test_schema_identities_are_unique(self):
         schemas = sorted(POLICIES.rglob("*.schema.json"))
         identities = [

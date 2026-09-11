@@ -93,7 +93,13 @@ for this verification-policy tree.
 Stage 6A's typed AWS security-contact and SaaS guest-access schema additions
 advance the `control-library` content digest to
 `sha256:12075201052d1cf5291d055f13a8c85178c5d0fc1e72e80a5d92c85b8f5a1979`.
-The verification-policy tree digest is unchanged.
+The bounded #113 admission cleanup then restricts the five field-selecting
+control parameter schemas to declared typed evidence facts. Its semantic
+pre-freeze schema and Linux implementation-pin changes advance the
+`control-library` content digest to
+`sha256:ed3ac97cde55cb76f1d988f23465113d71d9311e38d3657ff019d89f0f0387b5`
+and this verification-policy tree digest to
+`sha256:a0319bf2601f724cccc92df43f48b9e6971a3c5ef3c7ee583c92fadad23cbb71`.
 
 The path-and-byte digest construction is unchanged.
 

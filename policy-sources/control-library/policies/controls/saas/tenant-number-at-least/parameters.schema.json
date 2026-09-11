@@ -4,8 +4,8 @@
   "required": ["section", "setting", "minimum"],
   "additionalProperties": false,
   "properties": {
-    "section": {"type": "string", "minLength": 1},
-    "setting": {"type": "string", "minLength": 1},
+    "section": {"const": "audit_log"},
+    "setting": {"const": "retention_days"},
     "minimum": {"type": "number"}
   }
 }

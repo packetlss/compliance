@@ -172,6 +172,15 @@ optional AWS security-contact and SaaS guest-access payload fields, and producer
 guidance add no runtime evidence-family abstraction, compatibility alias, identity
 change, or freeze.
 
+The bounded Stage 6 producer-contract cleanup under
+[#113](https://github.com/packetlss/compliance/issues/113) makes the extension
+boundary enforceable at policy admission. The five maintained field-selecting
+AWS, SaaS, and Linux controls admit only their explicitly declared and typed
+payload facts. Undeclared evidence extensions remain valid, preserved, and
+identity-bearing producer content, but cannot become criterion inputs. This is
+a semantic pre-freeze parameter-contract change, not Stage 7 control
+consolidation or a new selector abstraction.
+
 ## Closed-world operation accounting
 
 [ADR 0016](adr/0016-closed-world-policy-assessment.md) is **Experimental,
