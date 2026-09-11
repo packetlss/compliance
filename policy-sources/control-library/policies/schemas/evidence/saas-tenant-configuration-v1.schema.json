@@ -57,6 +57,14 @@
           "properties": {
             "retention_days": {"type": ["integer", "null"], "minimum": 0}
           }
+        },
+        "guest_access": {
+          "type": "object",
+          "required": ["allowed"],
+          "additionalProperties": true,
+          "properties": {
+            "allowed": {"type": ["boolean", "null"]}
+          }
         }
       }
     }

@@ -90,6 +90,11 @@ for `control-library` and
 `sha256:580358f5de42040dc723dd6f7801be0287661bd3d1d8982c12c1f452485b4f37`
 for this verification-policy tree.
 
+Stage 6A's typed AWS security-contact and SaaS guest-access schema additions
+advance the `control-library` content digest to
+`sha256:12075201052d1cf5291d055f13a8c85178c5d0fc1e72e80a5d92c85b8f5a1979`.
+The verification-policy tree digest is unchanged.
+
 The path-and-byte digest construction is unchanged.
 
 ## Validation

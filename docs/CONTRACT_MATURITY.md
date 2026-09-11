@@ -155,6 +155,23 @@ current-plan/latest-result presentation path and the `assessment groups` and
 No assessment/result status, artifact identity, Coverage responsibility, or trust
 boundary changes.
 
+## Inventory and evidence producer contracts
+
+Stage 6A is **Experimental, implemented** under
+[#111](https://github.com/packetlss/compliance/issues/111). It retains `Subject`
+stable fields and labels for applicability, with `spec.attributes` as the rich
+adapter-specific extension point. Inventory remains scope/applicability input;
+evidence remains assessment-outcome input.
+
+The 12 active evidence types retain their identities and self-contained schemas.
+Each schema conforms to the unchanged seven-field evidence envelope and owns a
+typed payload for one observation/selection unit. Evidence types are collector
+capabilities rather than control identities; already declared facts can support
+new criteria without collector or wire-schema changes. The conformance rule,
+optional AWS security-contact and SaaS guest-access payload fields, and producer
+guidance add no runtime evidence-family abstraction, compatibility alias, identity
+change, or freeze.
+
 ## Closed-world operation accounting
 
 [ADR 0016](adr/0016-closed-world-policy-assessment.md) is **Experimental,

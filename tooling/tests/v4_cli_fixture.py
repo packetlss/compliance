@@ -39,9 +39,12 @@ evaluate := {
 ''')
         evidence = project/'generated/evidence'
         evidence.mkdir(parents=True)
-        doc = {'id':'test:observation','type':'test.linux-host/v1',
+        doc = {'schema':'compliance.example/evidence/v1',
+               'id':'test:observation','type':'test.linux-host/v1',
                'subject':{'id':'host/configuration-linux-01','type':'linux-host'},
-               'collected_at':'2026-08-23T11:00:00Z','payload':{'value':True}}
+               'collected_at':'2026-08-23T11:00:00Z',
+               'collector':{'id':'test-collector','version':'1'},
+               'payload':{'value':True}}
         (evidence/'observation.json').write_text(json.dumps(doc))
         def run(*command):
             output = io.StringIO()

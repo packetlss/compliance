@@ -40,6 +40,16 @@ REQUIREMENT_POLICY_KINDS = {
     "RequirementBaseline": ("requirement-baselines", "requirement-baseline.schema.json"),
     "ControlRealization": ("realizations", "control-realization.schema.json"),
 }
+EVIDENCE_ENVELOPE_FIELDS = (
+    "schema",
+    "id",
+    "subject",
+    "type",
+    "collected_at",
+    "collector",
+    "payload",
+)
+EVIDENCE_ENVELOPE_SCHEMA = "compliance.example/evidence/v1"
 
 
 class BaselineResolutionError(ValueError):
@@ -569,6 +579,11 @@ def _load_evidence_schema_catalog_root(
             })
             continue
 
+        envelope_errors = _evidence_schema_envelope_errors(schema, source)
+        if envelope_errors:
+            errors.extend(envelope_errors)
+            continue
+
         evidence_type = (
             schema.get("properties", {}).get("type", {}).get("const")
             if isinstance(schema, dict)
@@ -592,6 +607,179 @@ def _load_evidence_schema_catalog_root(
         schema["_source"] = source
         catalog[evidence_type] = schema
     return catalog, errors
+
+
+def _evidence_schema_envelope_errors(
+    schema: Any,
+    source: str,
+) -> list[JsonObject]:
+    """Require the common producer envelope without a shared runtime schema."""
+    if not isinstance(schema, dict):
+        return [{
+            "type": "evidence-schema-envelope-invalid",
+            "source": source,
+            "path": "",
+            "message": "must be an object schema defining the evidence envelope",
+        }]
+    errors: list[JsonObject] = []
+
+    def require(condition: bool, path: str, message: str) -> None:
+        if not condition:
+            errors.append({
+                "type": "evidence-schema-envelope-invalid",
+                "source": source,
+                "path": path,
+                "message": message,
+            })
+
+    required = schema.get("required")
+    properties = schema.get("properties")
+    require(schema.get("type") == "object", "/type", "must be object")
+    require(
+        schema.get("additionalProperties") is True,
+        "/additionalProperties",
+        "must be true so opaque envelope extensions remain preserved",
+    )
+    require(
+        isinstance(required, list)
+        and len(required) == len(EVIDENCE_ENVELOPE_FIELDS)
+        and set(required) == set(EVIDENCE_ENVELOPE_FIELDS),
+        "/required",
+        "must contain exactly the seven common evidence envelope fields",
+    )
+    require(
+        isinstance(properties, dict)
+        and set(properties) == set(EVIDENCE_ENVELOPE_FIELDS),
+        "/properties",
+        "must declare exactly the seven common evidence envelope fields",
+    )
+    if not isinstance(properties, dict):
+        return errors
+
+    schema_field = properties.get("schema")
+    require(
+        isinstance(schema_field, dict)
+        and schema_field.get("const") == EVIDENCE_ENVELOPE_SCHEMA,
+        "/properties/schema/const",
+        f"must be {EVIDENCE_ENVELOPE_SCHEMA}",
+    )
+
+    id_field = properties.get("id")
+    require(
+        isinstance(id_field, dict)
+        and id_field.get("type") == "string"
+        and id_field.get("minLength") == 1,
+        "/properties/id",
+        "must be a non-empty string",
+    )
+
+    subject = properties.get("subject")
+    require(
+        isinstance(subject, dict) and subject.get("type") == "object",
+        "/properties/subject/type",
+        "must be object",
+    )
+    if isinstance(subject, dict):
+        subject_required = subject.get("required")
+        subject_properties = subject.get("properties")
+        require(
+            isinstance(subject_required, list)
+            and len(subject_required) == 2
+            and set(subject_required) == {"id", "type"},
+            "/properties/subject/required",
+            "must contain exactly id and type",
+        )
+        require(
+            subject.get("additionalProperties") is True,
+            "/properties/subject/additionalProperties",
+            "must be true so subject attribution extensions remain preserved",
+        )
+        require(
+            isinstance(subject_properties, dict)
+            and set(subject_properties) == {"id", "type"},
+            "/properties/subject/properties",
+            "must declare exactly id and type",
+        )
+        if isinstance(subject_properties, dict):
+            subject_id = subject_properties.get("id")
+            subject_type = subject_properties.get("type")
+            require(
+                isinstance(subject_id, dict)
+                and subject_id.get("type") == "string"
+                and subject_id.get("minLength") == 1,
+                "/properties/subject/properties/id",
+                "must be a non-empty string",
+            )
+            require(
+                isinstance(subject_type, dict)
+                and isinstance(subject_type.get("const"), str)
+                and bool(subject_type["const"]),
+                "/properties/subject/properties/type/const",
+                "must declare one non-empty subject type",
+            )
+
+    type_field = properties.get("type")
+    require(
+        isinstance(type_field, dict)
+        and isinstance(type_field.get("const"), str)
+        and bool(type_field["const"]),
+        "/properties/type/const",
+        "must declare one non-empty evidence type",
+    )
+
+    collected_at = properties.get("collected_at")
+    require(
+        isinstance(collected_at, dict)
+        and collected_at.get("type") == "string"
+        and collected_at.get("format") == "date-time",
+        "/properties/collected_at",
+        "must be a date-time string",
+    )
+
+    collector = properties.get("collector")
+    require(
+        isinstance(collector, dict) and collector.get("type") == "object",
+        "/properties/collector/type",
+        "must be object",
+    )
+    if isinstance(collector, dict):
+        collector_required = collector.get("required")
+        collector_properties = collector.get("properties")
+        require(
+            isinstance(collector_required, list)
+            and len(collector_required) == 2
+            and set(collector_required) == {"id", "version"},
+            "/properties/collector/required",
+            "must contain exactly id and version",
+        )
+        require(
+            collector.get("additionalProperties") is True,
+            "/properties/collector/additionalProperties",
+            "must be true so collector attribution extensions remain preserved",
+        )
+        require(
+            isinstance(collector_properties, dict)
+            and set(collector_properties) == {"id", "version"},
+            "/properties/collector/properties",
+            "must declare exactly id and version",
+        )
+        if isinstance(collector_properties, dict):
+            for name in ("id", "version"):
+                field = collector_properties.get(name)
+                require(
+                    isinstance(field, dict)
+                    and field.get("type") == "string"
+                    and field.get("minLength") == 1,
+                    f"/properties/collector/properties/{name}",
+                    "must be a non-empty string",
+                )
+
+    require(
+        isinstance(properties.get("payload"), dict),
+        "/properties/payload",
+        "must define the typed observation payload",
+    )
+    return errors
 
 
 def load_evidence_schema_catalog(

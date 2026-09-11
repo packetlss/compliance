@@ -207,16 +207,16 @@ for readability; the dependency-free prototype currently uses equivalent JSON.
 apiVersion: compliance.example/v1
 kind: Control
 metadata:
-  id: host.packages.required
+  id: linux.packages.required
   version: 1
 spec:
   title: Required host packages are installed
   purpose: Verify that every package mandated by policy is installed.
-  entrypoint: data.compliance.controls.host.packages.required.evaluate
+  entrypoint: data.compliance.controls.linux.packages_required.evaluate
   applies_to: [linux-host]
   evidence:
     - id: packages
-      type: host.packages/v1
+      type: linux.packages/v1
   parameters_schema: parameters.schema.json
   defaults:
     severity: high
@@ -285,39 +285,54 @@ payload:
     "id": "host/system-x",
     "type": "linux-host"
   },
-  "type": "host.packages/v1",
+  "type": "linux.packages/v1",
   "collected_at": "2026-08-23T08:15:00Z",
-  "expires_at": "2026-08-23T09:15:00Z",
   "collector": {
     "id": "host-agent/system-x",
     "version": "1.2.0"
   },
   "payload": {
+    "ecosystem": "linux-native",
     "packages": [
-      {"name": "a", "version": "1.0.0", "architecture": "amd64"},
-      {"name": "b", "version": "2.1.0", "architecture": "amd64"},
-      {"name": "c", "version": "3.4.0", "architecture": "amd64"}
+      {"id": "a", "version": "1.0.0"},
+      {"id": "b", "version": "2.1.0"},
+      {"id": "c", "version": "3.4.0"}
     ]
   }
 }
 ```
 
-Initial evidence types could be:
+The active producer contracts are:
 
 | Evidence type | Payload represents |
 |---|---|
-| `host.packages/v1` | Installed packages with version and architecture |
-| `host.sshd.effective/v1` | Effective SSH daemon settings, not merely file contents |
-| `host.sysctl.effective/v1` | Effective kernel parameter values |
-| `linux.packages/v1` | Implemented open Linux-native package observation |
-| `linux.sysctl/v1` | Implemented open effective Linux kernel-parameter observation |
-| `aws.account.configuration/v1` | Normalized account, IAM, audit, and extensible AWS API observations |
+| `aws.account.configuration/v1` | Normalized AWS account, root-user, CloudTrail, and security-contact observations |
 | `aws.s3.account-public-access-block/v1` | Account-level Amazon S3 Block Public Access settings |
-| `saas.tenant.configuration/v1` | Normalized authentication, audit, and extensible SaaS API observations |
+| `iam.integration.observation/v1` | Independently observed consumer-to-service integration relationship |
+| `iam.service.observation/v1` | Named service assertion attributed to its source |
+| `linux.access.configuration/v1` | Linux access packages, identity domain, SSH groups, and unmanaged accounts |
+| `linux.packages/v1` | Linux-native installed package inventory |
+| `linux.sysctl/v1` | Effective Linux kernel-parameter observations |
+| `macos.homebrew/v1` | Installed Homebrew formula and cask inventories |
+| `macos.security/v1` | Gatekeeper and System Integrity Protection observations |
+| `macos.system/v1` | macOS product, build, and architecture observations |
+| `organization.assertion/v1` | Time-bounded organizational assertion for an exact beneficiary |
+| `saas.tenant.configuration/v1` | Provider-neutral tenant, authentication, audit, and guest-access observations |
 
-The common envelope enables provenance, freshness, and routing. JSON
-Schema beside each evidence type validates the payload. Domain-specific schemas
-avoid building a universal configuration model.
+The seven common fields are exactly `schema`, `id`, `subject`, `type`,
+`collected_at`, `collector`, and `payload`. Identity and subject attribution,
+evidence type, collection time, and collector attribution belong to the envelope;
+the observable fact belongs to the typed payload. The schema catalog validates
+that every active, self-contained evidence schema preserves this envelope before
+it can satisfy a control dependency. This is a conformance rule, not a shared
+runtime base schema or evidence-family hierarchy.
+
+An evidence type names a collector capability and one semantic observation and
+selection unit. It is not a control ID. Collectors report observations without
+knowing which controls, package names, settings, desired values, or thresholds
+will consume them. JSON Schema beside each evidence type validates the payload;
+domain-specific schemas avoid both schema-per-control design and a universal
+configuration model.
 
 The runnable mock fleet implements the AWS and SaaS types. A shared evidence
 directory may contain observations for several subjects, but the assessment
@@ -337,6 +352,9 @@ Evidence schemas define a **minimum compatibility contract**:
 - Collectors may emit richer documents than current controls consume.
 - The evidence store preserves unknown fields and the assessment input builder
   does not silently discard them.
+- Undefined extension fields remain complete-document, identity-bearing content,
+  but are not supported control inputs until their meaning and type are declared
+  by that evidence type's payload schema.
 - Opaque extension fields remain part of the complete document. A field named
   `integrity` gains no product semantics merely because an open schema permits it.
 
@@ -390,28 +408,31 @@ fields are preserved unchanged in OPA input. A valid document that is missing
 or stale after this validation step is still omitted from the control input and
 therefore produces `unknown`, never `pass`.
 
-For example, `host.packages/v1` can require `name` and `version` while allowing
+For example, `linux.packages/v1` requires the Linux-native ecosystem and package
+identity while allowing
 a collector to add repository, signature, installation time, vendor, or other
 package metadata. A future policy can use an added field after the minimum
-schema is updated, without requiring changes to the collection or evaluation
-protocol.
+schema declares it, without requiring changes to the collection or evaluation
+protocol. A new package requirement or version threshold reuses this observation;
+it does not add a control-shaped field to the collector output.
 
 The relevant part of its schema would be intentionally open:
 
 ```json
 {
   "type": "object",
-  "required": ["packages"],
+  "required": ["ecosystem", "packages"],
   "additionalProperties": true,
   "properties": {
+    "ecosystem": {"const": "linux-native"},
     "packages": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name", "version"],
+        "required": ["id"],
         "additionalProperties": true,
         "properties": {
-          "name": {"type": "string", "minLength": 1},
+          "id": {"type": "string", "minLength": 1},
           "version": {"type": "string"}
         }
       }
@@ -419,6 +440,28 @@ The relevant part of its schema would be intentionally open:
   }
 }
 ```
+
+### Evidence reuse and new-type rule
+
+A new control reuses an existing evidence type when it asks a different policy
+question about an already declared observable fact, the subject type is
+compatible, and the authority, permissions, cadence, atomicity, and one-document
+selection unit remain the same. Reuse must not require the collector to know the
+control ID or desired policy value.
+
+If a newly needed fact belongs to that same observation unit but is not yet in
+the payload contract, extend the existing schema with an optional typed field.
+Create a new evidence type only when the observable fact materially differs in
+subject or relationship, source authority, permissions, cadence, atomicity or
+selection unit, value semantics/cardinality/units/unknown representation, or
+would otherwise require unrelated collector results to be merged.
+
+A new control ID, package name, setting, or threshold is never sufficient reason
+for a new evidence type. This rule preserves the existing distinctions between
+AWS account and S3 observations, Linux access/sysctl/packages, Linux packages and
+macOS Homebrew, IAM service assertions and integration relationships, and
+organizational assertions. Provider-neutral SaaS configuration remains appropriate
+only where normalized facts retain the same meaning.
 
 ## 4. Hierarchy and policy assignment
 
@@ -509,9 +552,9 @@ see [artifact provenance](artifact-provenance.md) for the complete envelope.
   "controls": [
     {
       "instance_id": "linux.packages.web-server",
-      "implementation": "host.packages.required",
-      "parameters": {"required": ["a", "b", "c"]},
-      "evidence": [{"type": "host.packages/v1", "max_age": "1h"}],
+      "implementation": "linux.packages.required",
+      "parameters": {"ecosystem": "linux-native", "required": ["a", "b", "c"]},
+      "evidence": [{"type": "linux.packages/v1", "max_age": "1h"}],
       "provenance": {
         "baseline": "linux-web-server@3",
         "assignment": "production-linux-policy",
@@ -661,13 +704,25 @@ network calls during evaluation.
   },
   "control": {
     "instance_id": "linux.packages.web-server",
-    "implementation": "host.packages.required",
+    "implementation": "linux.packages.required",
     "parameters": {
+      "ecosystem": "linux-native",
       "required": ["a", "b", "c"]
     }
   },
   "evidence": [
-    {"type": "host.packages/v1", "collected_at": "...", "payload": {}}
+    {
+      "schema": "compliance.example/evidence/v1",
+      "id": "evidence:linux.packages:system-x",
+      "subject": {"id": "host/system-x", "type": "linux-host"},
+      "type": "linux.packages/v1",
+      "collected_at": "2026-08-23T08:15:00Z",
+      "collector": {"id": "host-agent/system-x", "version": "1.2.0"},
+      "payload": {
+        "ecosystem": "linux-native",
+        "packages": [{"id": "a", "version": "1.0.0"}]
+      }
+    }
   ],
   "waiver": null
 }
@@ -698,7 +753,7 @@ Every control implementation returns the same result shape:
 
 ```json
 {
-  "control_id": "host.packages.required",
+  "control_id": "linux.packages.required",
   "instance_id": "linux.packages.web-server",
   "subject_id": "host/system-x",
   "plan_id": "sha256:...",
@@ -777,19 +832,22 @@ spec:
   title: Linux web-server policy
   controls:
     - instance_id: linux.packages.web-server
-      implementation: host.packages.required
+      implementation: linux.packages.required
       parameters:
+        ecosystem: linux-native
         required: [a, b, c]
-    - instance_id: linux.sshd.root-login
-      implementation: host.sshd.option_equals
+    - instance_id: linux.access.sssd-installed
+      implementation: linux.access.setting_equals
       parameters:
-        option: permitrootlogin
-        expected: "no"
+        section: packages
+        setting: sssd_installed
+        expected: true
     - instance_id: linux.sysctl.aslr
-      implementation: host.sysctl.value_equals
+      implementation: linux.sysctl.required
       parameters:
-        key: kernel.randomize_va_space
-        expected: "2"
+        settings:
+          - key: kernel.randomize_va_space
+            value: "2"
 ```
 
 Proposed assignment and baseline composition rules:
@@ -827,15 +885,14 @@ policies/
 ├── controls/
 │   ├── common/
 │   │   └── result.rego
-│   ├── host/
+│   ├── linux/
 │   │   ├── packages-required/
 │   │   │   ├── control.json
 │   │   │   ├── parameters.schema.json
 │   │   │   ├── policy.rego
-│   │   │   ├── policy_test.rego
-│   │   │   └── fixtures/
-│   │   ├── sshd-option-equals/
-│   │   └── sysctl-value-equals/
+│   │   │   └── policy_test.rego
+│   │   ├── access-setting-equals/
+│   │   └── sysctl-required/
 │   └── saas/
 ├── baselines/
 │   ├── upstream/
@@ -860,9 +917,9 @@ policies/
 │   │   └── control-realization.schema.json
 │   ├── assessment-input-v1.schema.json
 │   └── evidence/
-│       ├── host-packages-v1.schema.json
-│       ├── host-sshd-effective-v1.schema.json
-│       └── host-sysctl-effective-v1.schema.json
+│       ├── linux-packages-v1.schema.json
+│       ├── macos-homebrew-v1.schema.json
+│       └── saas-tenant-configuration-v1.schema.json
 ├── tests/
 │   └── integration/
 ├── build/                   generated; not edited by hand

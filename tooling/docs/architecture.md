@@ -508,6 +508,22 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-11 — Inventory and evidence producer contracts (#111)
+
+The pre-freeze producer surface retains normalized `Subject` resources for
+applicability and independently typed evidence observations for assessment.
+`Subject` stable fields and labels drive scope; `spec.attributes` remains the
+rich adapter-specific extension point and is not selector input. Evidence retains
+the seven-field envelope, with each self-contained source schema owning one typed
+observation/selection-unit payload. Catalog admission now checks common-envelope
+conformance without a runtime base schema or evidence-family hierarchy.
+
+Evidence types name collector capabilities, not controls. New criteria reuse an
+existing type when subject, authority, permissions, cadence, atomicity, and
+selection semantics match; a same-unit undeclared fact is added as an optional
+typed payload field, while a materially distinct observation requires a new type.
+No current type is merged, renamed, aliased, deleted, or frozen by this decision.
+
 ### 2026-09-11 — Exact-operation Assessment operator views (#105)
 
 Assessment presentation consumes exact frozen-operation accounting, exact retained

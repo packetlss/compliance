@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from contract_fixtures import fixture_root
+from contract_fixtures import evidence_schema, fixture_root
 
 from tools.artifact_validation import validate_assessment_plan
 from tools.render_plan import (
@@ -14,6 +14,7 @@ from tools.render_plan import (
     control_definition_fingerprint,
     load_baseline_catalog,
     load_control_catalog,
+    load_evidence_schema_catalog,
     load_inventory_inputs,
     load_json,
     load_policy_catalogs,
@@ -617,6 +618,62 @@ class PolicySchemaTests(unittest.TestCase):
 
         self.assertEqual(errors[0]["type"], "control-evidence-schema-missing")
         self.assertEqual(errors[0]["evidence_type"], "test.missing/v1")
+
+    def test_evidence_schema_catalog_rejects_nonconforming_envelopes(self):
+        cases = (
+            (
+                "/required",
+                lambda schema: schema["required"].remove("collected_at"),
+            ),
+            (
+                "/properties",
+                lambda schema: schema["properties"].update({
+                    "expires_at": {"type": "string", "format": "date-time"},
+                }),
+            ),
+            (
+                "/properties/schema/const",
+                lambda schema: schema["properties"]["schema"].update({
+                    "const": "test/evidence/v1",
+                }),
+            ),
+            (
+                "/properties/subject/properties/type/const",
+                lambda schema: schema["properties"]["subject"]["properties"][
+                    "type"
+                ].pop("const"),
+            ),
+            (
+                "/properties/collector/additionalProperties",
+                lambda schema: schema["properties"]["collector"].update({
+                    "additionalProperties": False,
+                }),
+            ),
+            (
+                "/properties/payload",
+                lambda schema: schema["properties"].update({"payload": True}),
+            ),
+        )
+        for expected_path, mutate in cases:
+            with self.subTest(path=expected_path), tempfile.TemporaryDirectory() as directory:
+                policies = Path(directory) / "policies"
+                schemas = policies / "schemas/evidence"
+                schemas.mkdir(parents=True)
+                schema = evidence_schema("test.evidence/v1", "test-subject")
+                mutate(schema)
+                (schemas / "test.schema.json").write_text(
+                    json.dumps(schema),
+                    encoding="utf-8",
+                )
+
+                catalog, errors = load_evidence_schema_catalog(policies)
+
+            self.assertEqual(catalog, {})
+            envelope_errors = [
+                error for error in errors
+                if error["type"] == "evidence-schema-envelope-invalid"
+            ]
+            self.assertIn(expected_path, {error["path"] for error in envelope_errors})
 
     def test_declared_rego_entrypoint_must_name_an_existing_rule(self):
         with tempfile.TemporaryDirectory() as directory:
