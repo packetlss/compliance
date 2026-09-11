@@ -39,7 +39,7 @@ initial contract targets exactly one stable subject ID and one effective
 technical control instance ID:
 
 ```yaml
-# yaml-language-server: $schema=../../compliance-tooling/schemas/waivers/resource.schema.json
+# yaml-language-server: $schema=../schemas/waivers/resource.schema.json
 apiVersion: compliance.example/v1alpha1
 kind: Waiver
 metadata:

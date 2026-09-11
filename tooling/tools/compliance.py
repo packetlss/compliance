@@ -555,7 +555,7 @@ def _format_plan_summary(plan: dict) -> str:
 def _plan_index_entry(plan: dict, path: Path) -> dict:
     from .operation import plan_disposition
     return {
-        "subject_id": plan.get("subject", {}).get("id", "unknown"),
+        "asset_id": plan.get("subject", {}).get("id", "unknown"),
         "plan_id": plan.get("id", "unknown"),
         "resolution": plan.get("resolution", {}).get("status", "unknown"),
         "disposition": plan_disposition(plan),
@@ -569,7 +569,7 @@ def _plan_index_entry(plan: dict, path: Path) -> dict:
 def _format_plan_index(entries: list[dict]) -> str:
     headers = ("ASSET", "PLAN", "RESOLUTION", "DISPOSITION", "A/X", "OBJECTIVES")
     rows = [(
-        entry["subject_id"],
+        entry["asset_id"],
         entry["plan_id"][:23],
         entry["resolution"].upper(),
         entry["disposition"].upper(),

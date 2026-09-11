@@ -936,8 +936,8 @@ The assessment plan records normalized actual source content once under
 `provenance.planningComposition.actual.policySources`; the composition algorithm
 and digest validate that record. Evaluation verifies the actual evaluation source
 composition against planning before invoking OPA. Production deployments should
-pin immutable source artifacts; unpinned sibling directories are the prototype's
-local-development transport.
+pin immutable source artifacts; unpinned co-located or externally materialized
+directories are local-development transport.
 
 ## 10. Policy build gates
 

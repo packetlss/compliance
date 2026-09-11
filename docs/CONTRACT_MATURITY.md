@@ -72,7 +72,7 @@ assessment-results/v4
 
 with provisional composition/lock/plan/result digest algorithms.
 
-These are **experimental**, implemented by #31/#32 and used by all destination consumers after #34–#36. #33 retires predecessor support.
+These are **experimental**, implemented by #31/#32 and used by all destination consumers after #34–#36. #33 retired predecessor support.
 
 The pre-freeze result/plan ownership refinement is **Experimental, implemented**
 under [#90](https://github.com/packetlss/compliance/issues/90).

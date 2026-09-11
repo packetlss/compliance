@@ -16,7 +16,7 @@ A policy source is an independently named/materialized semantic input. Repositor
 
 Canonical runtime/generated-artifact provenance is content-addressed. Preserve the applicable tooling source/distribution identity, policy-source content digests, actual composition identity, evaluator executable identity, evidence snapshot identity, and artifact-specific semantic identities. Git metadata remains useful review/navigation provenance but is not required after runtime inputs are materialized.
 
-ADR 0007 accepts the successor line `project-config/v1alpha3`, `composition-lock/v1alpha1`, `assessment-provenance/v1alpha1`, and assessment plan/results v4. Its destination implementation packets are #31–#36. Consumer cutover is complete; #33 retires the predecessor config, release-lock, and assessment readers. Historical artifacts require historical tooling.
+ADR 0007 accepts the successor line `project-config/v1alpha3`, `composition-lock/v1alpha1`, `assessment-provenance/v1alpha1`, and assessment plan/results v4. Destination issues #31–#36 completed its implementation and consumer cutover; #33 retired the predecessor config, release-lock, and assessment readers. Historical artifacts require historical tooling.
 
 Before result identity freeze, [#90](https://github.com/packetlss/compliance/issues/90)
 replaces the duplicated self-contained result representation with an
@@ -63,7 +63,7 @@ The plan is not:
 - a backend configuration specification or authorization to apply changes; or
 - evidence that settings were deployed or remain effective at the present moment.
 
-This clarifies existing artifact meaning, not a new payload or readiness claim: #31 establishes the composition foundation, and #32 implements v1alpha3 assessment generation through provenance-bearing v4 plans/results.
+This clarifies existing artifact meaning, not a new payload or readiness claim: #31 established the composition foundation, and #32 implemented v1alpha3 assessment generation through provenance-bearing v4 plans/results.
 
 ## First-core policy and assurance model
 
@@ -98,7 +98,7 @@ Requirements are desired assurance objectives. Realizations are design-time mapp
 
 Issue [#37](https://github.com/packetlss/compliance/issues/37) is closed architecture history. ADR 0012 and bounded successor #73 own parameter/freshness resolution; ADR 0016 below supersedes ADRs 0013–0015 with closed-world assessment. Any residual methodology or renewed architecture work requires a new focused promotion rather than treating #37 as current authority.
 
-[ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns the common required-evidence `unknown`, attributable execution `error`, and assessment-wide refusal boundary. It clarifies ADRs 0006/0007; #32 implements its schema-invalid-evidence and evidence selection ambiguity corrections as the only semantic preservation exceptions after #31. These corrections are implemented in the sole supported v4 path. #31 is complete; broader assurance design requires separate architecture review.
+[ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns the common required-evidence `unknown`, attributable execution `error`, and assessment-wide refusal boundary. It clarifies ADRs 0006/0007; #32 implemented its schema-invalid-evidence and evidence selection ambiguity corrections as the only semantic preservation exceptions after #31. These corrections are implemented in the sole supported v4 path. #31 is complete; broader assurance design requires separate architecture review.
 
 The implemented evidence core supports required dependencies only: every
 declared dependency is required by definition and has no optionality

@@ -77,13 +77,13 @@ environment and verifies its assets under their historical checksum rules.
 [ADR 0012](../../docs/adr/0012-explicit-policy-parameter-resolution.md) accepts
 explicit policy parameters and policy-owned effective evidence freshness.
 Controls retain reusable evidence dependency contracts and optional capability
-restrictions; adopter policy chooses effective `max_age`. Current manifests
-still own those ages until the coordinated migration in
-[#73](https://github.com/packetlss/compliance/issues/73). This documentation
-promotion changes no policy/schema bytes or effective values.
+restrictions; adopter policy chooses effective `max_age`. The coordinated
+[#73](https://github.com/packetlss/compliance/issues/73) migration completed that
+ownership change; current manifests provide dependency contracts rather than
+effective freshness policy.
 
 Synthetic baselines, illustrative benchmark mappings, and the example IAM
-requirement chain live in `compliance-verification-policy`. Restricted
+requirement chain live in `policy-sources/verification-policy/`. Restricted
 realizations, environment parameters, inventory, assignments, evidence, plans,
 results, and any externally generated configuration remain in their owning
 project or adapter boundaries.

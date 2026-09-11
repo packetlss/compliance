@@ -152,7 +152,11 @@ A future downstream starter should be designed from post-consolidation release c
 
 ## Current migration evidence
 
-The six migrated source domains have destination authority records in `docs/history/pre-consolidation.md`. Canonical integration now runs entirely from the destination checkout and owns all 20 retained public CLI leaves and 18 retained domain features. Normal validation contains no old sibling-repository acquisition path.
+The six migrated source domains have destination authority records in
+`docs/history/pre-consolidation.md`. Canonical integration now runs entirely from
+the destination checkout and owns all 21 retained public CLI leaves and 19 retained
+domain features. Normal validation contains no old sibling-repository acquisition
+path.
 
 Retirement and final documentation/authority cutover completed under destination #29. The archived repositories remain historical provenance.
 

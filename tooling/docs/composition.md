@@ -1,6 +1,6 @@
 # Actual composition and expected enforcement
 
-Status: implemented foundation for #31; assessment v4 emission remains #32.
+Status: implemented through #31–#36; assessment v4 emission completed under #32.
 
 [ADR 0007](../../docs/adr/0007-unified-actual-and-expected-composition-provenance.md)
 and [ADR 0009](../../docs/adr/0009-active-compliance-vocabulary.md) govern this
@@ -155,7 +155,7 @@ No network, Git, acquisition resolver, or expected lock participates. A plain
 installation without this receipt cannot produce successor actual provenance.
 Historical installations and artifacts require their historical tooling.
 
-## Diagnostics and transition to #32
+## Diagnostics after the #32 cutover
 
 ```sh
 compliance --config ./compliance.yaml composition show --format json

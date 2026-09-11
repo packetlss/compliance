@@ -372,9 +372,14 @@ class ComplianceCliTests(unittest.TestCase):
 
         document = json.loads(output.getvalue())
         self.assertEqual(
+            {entry["asset_id"] for entry in document["plans"]},
+            {"host/one", "host/two"},
+        )
+        self.assertEqual(
             {entry["disposition"] for entry in document["plans"]},
             {"unassigned"},
         )
+        self.assertTrue(all("subject_id" not in entry for entry in document["plans"]))
         self.assertTrue(all("coverage" not in entry for entry in document["plans"]))
         self.assertTrue(all("assessable" not in entry for entry in document["plans"]))
 

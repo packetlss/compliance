@@ -180,12 +180,12 @@ Fleet/group views aggregate these dimensions separately:
 2. plan alignment;
 3. evidence timeliness;
 4. recorded waiver validity qualification; and
-5. existing coverage/applicability states.
+5. frozen accounting dispositions.
 
 A historical PASS with stale evidence must not contribute to any operator-facing
 claim equivalent to “currently passing.” Group membership remains a DAG: a subject
 may appear in several group aggregates, while fleet unique-subject totals remain
-unique. Preserve existing coverage/applicability distinctions. Do not recompute
+unique. Preserve the four frozen accounting dispositions independently. Do not recompute
 historical requirement/realization roll-ups using query-time qualifications.
 
 ADR 0010's logical required-child precedence remains:
