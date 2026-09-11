@@ -179,6 +179,10 @@ def assert_assessment_plan_handoff(plan: dict, actual: dict) -> None:
         realization.get("reference") == "company.linux.central-role-access@1",
         "selected realization lineage changed",
     )
+    require(
+        "classification" not in realization,
+        "plan retained retired realization information classification",
+    )
     require(realization.get("policy_sources"), "realization source provenance is missing")
     technical_ids = set(requirement.get("technical_instance_ids", []))
     require(

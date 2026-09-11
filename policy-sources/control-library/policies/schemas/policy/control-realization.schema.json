@@ -21,8 +21,7 @@
       "type": "object",
       "required": [
         "id",
-        "revision",
-        "classification"
+        "revision"
       ],
       "additionalProperties": false,
       "properties": {
@@ -31,14 +30,6 @@
         },
         "revision": {
           "$ref": "#/$defs/revision"
-        },
-        "classification": {
-          "type": "string",
-          "enum": [
-            "internal",
-            "confidential",
-            "restricted"
-          ]
         }
       }
     },

@@ -1923,7 +1923,6 @@ def render_plan(
                         requirement_candidate["realization"] = {
                             "reference": realization_reference,
                             "digest": realization["_digest"],
-                            "classification": realization["metadata"]["classification"],
                             "policy_sources": realization.get("_sources", []),
                             **(
                                 {"based_on": copy.deepcopy(realization["spec"]["based_on"])}

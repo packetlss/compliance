@@ -524,7 +524,7 @@ class PolicySchemaTests(unittest.TestCase):
                 verification
                 / "realizations/company/company-linux-role-based-access.json"
             )
-            realization["metadata"]["classification"] = "restricted"
+            realization["spec"]["adoption"]["owner"] = "different-owner"
             target.write_text(json.dumps(realization), encoding="utf-8")
 
             _, _, errors = load_policy_catalogs((

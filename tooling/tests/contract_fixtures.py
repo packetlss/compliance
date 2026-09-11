@@ -479,7 +479,6 @@ def build_fixture(root):
             "satisfaction": {"allOf": [check["instance_id"] for check in checks]},
         },
     )
-    realization["metadata"]["classification"] = "internal"
     write(
         selection,
         "realizations/company/company-linux-role-based-access.json",

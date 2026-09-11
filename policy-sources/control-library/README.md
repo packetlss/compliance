@@ -94,6 +94,10 @@ realizations, environment parameters, inventory, assignments, evidence, plans,
 results, and any externally generated configuration remain in their owning
 project or adapter boundaries.
 
+The reusable `ControlRealization` contract carries no information-classification
+enum. Source/package ownership, acquisition, repository access, and deployment
+controls enforce confidentiality; core policy and frozen plan semantics do not.
+
 Current source-boundary tests derive their inventory directly from `policies/`.
 They require complete reusable controls and shared schemas, reject
 adoption-specific resources and external mappings, and validate identities,

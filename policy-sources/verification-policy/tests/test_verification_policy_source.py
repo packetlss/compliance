@@ -126,7 +126,10 @@ class VerificationPolicySourceTests(unittest.TestCase):
             ["environment-private", "verification-policy"],
         )
 
-        self.mutate_private(target, lambda item: item["metadata"].update(classification="restricted"))
+        self.mutate_private(
+            target,
+            lambda item: item["spec"]["adoption"].update(owner="different-owner"),
+        )
         _, _, errors = load_policy_catalogs(combined)
         conflict = next(error for error in errors if error["type"] == "policy-resource-conflict")
         self.assertEqual(conflict["kind"], "ControlRealization")
@@ -269,6 +272,11 @@ class VerificationPolicySourceTests(unittest.TestCase):
             requirement["realization"]["reference"],
             "company.linux.central-role-access@1",
         )
+        self.assertNotIn("classification", requirement["realization"])
+        self.assertNotIn(
+            "classification",
+            json.loads((self.root / REALIZATION).read_text())["metadata"],
+        )
         self.assertEqual(
             requirement["external_refs"],
             ["example-regulatory-framework:IAM-01"],
@@ -300,7 +308,6 @@ class VerificationPolicySourceTests(unittest.TestCase):
             target,
             lambda item: item["metadata"].update(
                 id="company.linux.alternate-role-access",
-                classification="restricted",
             ),
         )
         combined = (*sources(self.root), PolicySource("environment-private", private))

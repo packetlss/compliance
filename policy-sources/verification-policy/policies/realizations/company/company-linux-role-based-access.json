@@ -3,8 +3,7 @@
   "kind": "ControlRealization",
   "metadata": {
     "id": "company.linux.central-role-access",
-    "revision": 1,
-    "classification": "internal"
+    "revision": 1
   },
   "spec": {
     "requirement": {

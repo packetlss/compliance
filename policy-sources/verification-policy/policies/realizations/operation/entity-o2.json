@@ -3,8 +3,7 @@
   "kind": "ControlRealization",
   "metadata": {
     "id": "verification.operation.entity.o2.realization",
-    "revision": 1,
-    "classification": "internal"
+    "revision": 1
   },
   "spec": {
     "requirement": {

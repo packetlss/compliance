@@ -88,7 +88,6 @@ def assessment_plan(policy_sources, *, with_requirement=False):
             "realization": {
                 "reference": "test.realization@1",
                 "digest": "sha256:" + "8" * 64,
-                "classification": "internal",
                 "policy_sources": [{
                     "policy_source": policy_sources[0]["name"],
                     "path": "realizations/test.json",

@@ -407,6 +407,9 @@ Real need-to-know environments remain in separate authorized repositories/worksp
 `verification/fixtures/iam-private-boundary/` is a synthetic proof only. Its private `policy/` subtree is physically copied to a distinct temporary `environment-private` source root before execution. Validation rejects symlink/same-inode shortcuts and removes the fixture-side policy from the execution assembly so success cannot depend on recursive central-checkout traversal.
 
 The runtime source set remains explicitly named `control-library`, `verification-policy`, and `environment-private`; no source has order precedence.
+Control realizations and frozen plans carry no core information-classification
+field; confidentiality remains a source ownership, acquisition, repository-access,
+and deployment boundary outside assessment semantics.
 
 ## Policy-source assembly
 
