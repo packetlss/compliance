@@ -87,6 +87,13 @@ class OperationTests(unittest.TestCase):
         return {'id': subject_id, 'type': 'linux-host', 'status': 'active',
                 'labels': labels or {}}
 
+    def test_all_selection_error_uses_asset_vocabulary(self):
+        with self.assertRaisesRegex(
+            ValueError,
+            '--all is exclusive of explicit assets and groups',
+        ):
+            normalize_request({'all': True, 'subjects': ['host/A'], 'groups': []})
+
     def test_explicit_selection_ignores_supplied_nonselected_candidate(self):
         plans = self.plans()
         groups = [{'id':'test-hosts','parents':[],'members':['host/A','host/B']}]

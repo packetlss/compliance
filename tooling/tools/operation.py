@@ -44,7 +44,7 @@ def normalize_request(selection):
         'groups': sorted(set(selection.get('groups', []))),
     }
     if request['all'] and (request['subjects'] or request['groups']):
-        raise ValueError('--all is exclusive of explicit subjects and groups')
+        raise ValueError('--all is exclusive of explicit assets and groups')
     if not request['all'] and not (request['subjects'] or request['groups']):
         raise ValueError('empty operation selection')
     return request
