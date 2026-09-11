@@ -475,6 +475,22 @@ class PolicyResourceTests(unittest.TestCase):
             with self.subTest(parameters=parameters):
                 self.assertFalse(validator.is_valid(parameters))
 
+    def test_macos_minimum_version_requires_three_numeric_components(self):
+        schema = read_json(
+            POLICIES
+            / "controls/macos/system-minimum-version/parameters.schema.json"
+        )
+        validator = Draft202012Validator(schema)
+
+        for minimum in ("0.0.0", "15.0.0", "026.00.001"):
+            with self.subTest(minimum=minimum):
+                validator.validate({"minimum": minimum})
+
+        for minimum in ("15.0", "15.0.0.1", "v15.0.0", "15.a.0", 15):
+            with self.subTest(minimum=minimum):
+                self.assertFalse(validator.is_valid({"minimum": minimum}))
+        self.assertFalse(validator.is_valid({}))
+
     def test_configuration_evidence_extensions_remain_schema_valid(self):
         for filename, extension in (
             ("aws-account-configuration-v1.schema.json", {"organization": {"id": "o-test"}}),

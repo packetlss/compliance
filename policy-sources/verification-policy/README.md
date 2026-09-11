@@ -110,6 +110,14 @@ refresh advances `control-library` to
 and this verification-policy tree to
 `sha256:39311689dfae8c3e4d1b2a7104033577350d8aa81184a49715d724eafd43a7aa`.
 
+The bounded #117 macOS cleanup replaces SemVer evaluation with domain-local
+numeric dotted-version comparison. The explicit three-component policy minimums
+and maintained verification-policy bytes remain unchanged, while the
+control-library implementation advances its source identity to
+`sha256:042c11299bf2f224a9f162836cacd876ba4a6125ce4ee2579ca64f3312680bac`.
+The verification-policy tree therefore remains
+`sha256:39311689dfae8c3e4d1b2a7104033577350d8aa81184a49715d724eafd43a7aa`.
+
 The path-and-byte digest construction is unchanged.
 
 ## Validation
