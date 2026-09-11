@@ -19,12 +19,9 @@
           "illustrative-linux-benchmark:1.1"
         ],
         "parameters": {
-          "settings": [
-            {
-              "key": "kernel.randomize_va_space",
-              "value": "2"
-            }
-          ]
+          "settings": {
+            "kernel.randomize_va_space": "2"
+          }
         },
         "evidence": {
           "observation": {
@@ -39,12 +36,9 @@
           "illustrative-linux-benchmark:1.2"
         ],
         "parameters": {
-          "settings": [
-            {
-              "key": "net.ipv4.ip_forward",
-              "value": "0"
-            }
-          ]
+          "settings": {
+            "net.ipv4.ip_forward": "0"
+          }
         },
         "evidence": {
           "observation": {

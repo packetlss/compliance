@@ -10,21 +10,18 @@
     "extends": [
       {
         "baseline": "company.linux-server-hardening@1",
-        "digest": "sha256:020eeef7e970c7d72644e7a09a08c36a9bf487c08359b6584af293eca239314f"
+        "digest": "sha256:57bd91cecc2b6266b3676be8fa9b205f08bc904d6d7164dc18e9d85f967fab29"
       }
     ],
     "operations": [
       {
         "op": "tailor",
         "target": "benchmark.example.linux-server.ip-forwarding-disabled",
-        "expected_parent_fingerprint": "sha256:e0093723d2740bd3a7e59717dc2832dee90784a2f770dee7ab92bcadbfd6b4bf",
+        "expected_parent_fingerprint": "sha256:915a4af338d0397029462fbca2069aeb4166615dc65301460502447ff43d8591",
         "parameters": {
-          "settings": [
-            {
-              "key": "net.ipv4.ip_forward",
-              "value": "1"
-            }
-          ]
+          "settings": {
+            "net.ipv4.ip_forward": "1"
+          }
         },
         "deviation": {
           "id": "DEV-LINUX-CONTAINER-001",

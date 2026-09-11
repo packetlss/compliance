@@ -850,8 +850,7 @@ spec:
       implementation: linux.sysctl.required
       parameters:
         settings:
-          - key: kernel.randomize_va_space
-            value: "2"
+          kernel.randomize_va_space: "2"
 ```
 
 Proposed assignment and baseline composition rules:

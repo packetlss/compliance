@@ -448,6 +448,33 @@ class PolicyResourceTests(unittest.TestCase):
             with self.subTest(parameters=parameters):
                 self.assertFalse(validator.is_valid(parameters))
 
+    def test_linux_sysctl_control_uses_keyed_parameter_contract(self):
+        schema = read_json(
+            POLICIES / "controls/linux/sysctl-required/parameters.schema.json"
+        )
+        validator = Draft202012Validator(schema)
+
+        for parameters in (
+            {"settings": {"kernel.randomize_va_space": "2"}},
+            {
+                "settings": {
+                    "kernel.randomize_va_space": "2",
+                    "net.ipv4.ip_forward": "0",
+                }
+            },
+        ):
+            with self.subTest(parameters=parameters):
+                validator.validate(parameters)
+
+        for parameters in (
+            {"settings": {}},
+            {"settings": {"invalid": "2"}},
+            {"settings": {"net.ipv4.ip_forward": 0}},
+            {"settings": [{"key": "net.ipv4.ip_forward", "value": "0"}]},
+        ):
+            with self.subTest(parameters=parameters):
+                self.assertFalse(validator.is_valid(parameters))
+
     def test_configuration_evidence_extensions_remain_schema_valid(self):
         for filename, extension in (
             ("aws-account-configuration-v1.schema.json", {"organization": {"id": "o-test"}}),

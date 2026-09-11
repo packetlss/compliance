@@ -8,13 +8,36 @@ sysctl_evidence := [doc |
 	doc.type == "linux.sysctl/v1"
 ]
 
-observed_settings := {setting.key: setting.value |
+observed_keys := {setting.key |
 	some doc in sysctl_evidence
 	some setting in doc.payload.settings
 }
 
-required_settings := {setting.key: setting.value |
-	some setting in input.control.parameters.settings
+observed_values := {key: values |
+	some key in observed_keys
+	values := {setting.value |
+		some doc in sysctl_evidence
+		some setting in doc.payload.settings
+		setting.key == key
+	}
+}
+
+observed_settings := {key: value |
+	some key in observed_keys
+	values := observed_values[key]
+	count(values) == 1
+	some value in values
+}
+
+conflicting := sort([key |
+	some key in observed_keys
+	count(observed_values[key]) > 1
+])
+
+required_settings := input.control.parameters.settings
+
+has_conflicts if {
+	count(conflicting) > 0
 }
 
 missing := sort([key |
@@ -39,6 +62,18 @@ outcome := {
 	"observed": {},
 } if {
 	count(sysctl_evidence) == 0
+}
+
+else := {
+	"status": "unknown",
+	"reason": sprintf("Selected linux.sysctl/v1 evidence contains conflicting values for: %s", [concat(", ", conflicting)]),
+	"expected": {"settings": required_settings},
+	"observed": {
+		"settings": observed_settings,
+		"conflicting": conflicting,
+	},
+} if {
+	has_conflicts
 }
 
 else := {

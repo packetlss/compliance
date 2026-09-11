@@ -343,8 +343,8 @@ Applicable policy: Company container-runtime host policy
 
 Check: Linux kernel settings match policy
 Purpose: Verify that configured Linux kernel parameters have the values mandated by policy.
-Effective parameters: settings=[{key=net.ipv4.ip_forward,value=1}]
-Tailoring: settings changed from [{key=net.ipv4.ip_forward,value=0}] to [{key=net.ipv4.ip_forward,value=1}]
+Effective parameters: settings={net.ipv4.ip_forward=1}
+Tailoring: settings changed from {net.ipv4.ip_forward=0} to {net.ipv4.ip_forward=1}
 Why: Approved container runtime hosts require IPv4 forwarding for workload networking.
 Required evidence: linux.sysctl/v1
 Freshness: 24 hours
@@ -363,9 +363,9 @@ Policy lineage:
 Check instance: benchmark.example.linux-server.ip-forwarding-disabled
 Control implementation: linux.sysctl.required@1
 Alignment/disposition: tailored / evaluate
-Parent fingerprint: sha256:e0093723d2740bd3a7e59717dc2832dee90784a2f770dee7ab92bcadbfd6b4bf
-Before: settings=[{key=net.ipv4.ip_forward,value=0}]
-After: settings=[{key=net.ipv4.ip_forward,value=1}]
+Parent fingerprint: sha256:915a4af338d0397029462fbca2069aeb4166615dc65301460502447ff43d8591
+Before: settings={net.ipv4.ip_forward=0}
+After: settings={net.ipv4.ip_forward=1}
 Deviation: DEV-LINUX-CONTAINER-001 / required-platform-feature
 Approval/review: company-policy/container-runtime-host-networking / 2027-08-31
 ```

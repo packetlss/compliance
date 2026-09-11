@@ -101,6 +101,15 @@ pre-freeze schema and Linux implementation-pin changes advance the
 and this verification-policy tree digest to
 `sha256:a0319bf2601f724cccc92df43f48b9e6971a3c5ef3c7ee583c92fadad23cbb71`.
 
+The bounded #115 sysctl cleanup replaces duplicate-capable desired-setting arrays
+with one keyed policy value per sysctl name while leaving the observation contract
+unchanged. The local evaluator now coalesces equal duplicate observations and
+returns attributable `unknown` for divergent values. Its semantic source and pin
+refresh advances `control-library` to
+`sha256:383f7b150337c1a79440f1c520648d1d050ad84ec63a98a7baf804fabd0ef066`
+and this verification-policy tree to
+`sha256:39311689dfae8c3e4d1b2a7104033577350d8aa81184a49715d724eafd43a7aa`.
+
 The path-and-byte digest construction is unchanged.
 
 ## Validation
