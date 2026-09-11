@@ -1,13 +1,14 @@
 """Reusable-source contracts, independent of any adopting project or policy."""
 from __future__ import annotations
 
+import copy
 import json
 import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, FormatChecker
 
 from tools.policy_sources import PolicySource
 from tools.render_plan import load_policy_catalogs, validate_rego_entrypoints
@@ -29,6 +30,84 @@ EXPECTED_CONTROL_IDS = {
     "saas.tenant.number_at_least",
     "saas.tenant.setting_equals",
 }
+EXPECTED_EVIDENCE_PAYLOADS = {
+    "aws.account.configuration/v1": {
+        "account": {"id": "111122223333"},
+        "root_user": {"mfa_enabled": True},
+        "cloudtrail": {"multi_region_enabled": True, "retention_days": 90},
+    },
+    "aws.s3.account-public-access-block/v1": {
+        "block_public_acls": True,
+        "block_public_policy": True,
+        "ignore_public_acls": True,
+        "restrict_public_buckets": True,
+    },
+    "iam.integration.observation/v1": {
+        "consumer": "host/test",
+        "service": "service/iam",
+        "asserted_by": "test-collector",
+        "source_assertion_locator": "assertion://iam/current",
+        "integrated": True,
+    },
+    "iam.service.observation/v1": {
+        "consumer": "host/test",
+        "source_assertion": {
+            "subject_id": "service/iam",
+            "asserted_by": "test-collector",
+            "source_locator": "assertion://iam/current",
+            "condition": "available",
+            "outcome": "positive",
+        },
+    },
+    "linux.access.configuration/v1": {
+        "packages": {"sssd_installed": True},
+        "sssd": {"domain": "example.invalid"},
+        "ssh": {"allowed_groups": ["operators"]},
+        "accounts": {"unmanaged_interactive_accounts": []},
+    },
+    "linux.packages/v1": {
+        "ecosystem": "linux-native",
+        "packages": [{"id": "auditd", "version": "1"}],
+    },
+    "linux.sysctl/v1": {
+        "settings": [{"key": "kernel.randomize_va_space", "value": "2"}],
+    },
+    "macos.homebrew/v1": {
+        "formulae": [{"name": "opa", "version": "1"}],
+        "casks": [],
+    },
+    "macos.security/v1": {
+        "gatekeeper": {"status": "enabled"},
+        "sip": {"status": "enabled"},
+    },
+    "macos.system/v1": {
+        "product_name": "macOS",
+        "product_version": "15.0",
+        "build_version": "24A000",
+        "architecture": "arm64",
+    },
+    "organization.assertion/v1": {
+        "beneficiary": "entity/test",
+        "asserted_by": "test-collector",
+        "source_locator": "assertion://organization/current",
+        "scheme": "test-assurance",
+        "outcome": "positive",
+        "valid_from": "2026-09-01T00:00:00Z",
+        "valid_until": "2026-10-01T00:00:00Z",
+    },
+    "saas.tenant.configuration/v1": {
+        "tenant": {"id": "test", "provider": "example"},
+        "authentication": {"sso_enforced": True, "mfa_enforced": True},
+        "audit_log": {"retention_days": 180},
+    },
+}
+SUBJECT_IDS = {
+    "aws-account": "cloud-account/test",
+    "entity": "entity/test",
+    "linux-host": "host/test",
+    "macos-workstation": "workstation/test",
+    "saas-tenant": "saas/test",
+}
 
 
 def read_json(path: Path):
@@ -45,6 +124,20 @@ def external_refs(value):
     elif isinstance(value, list):
         for item in value:
             yield from external_refs(item)
+
+
+def evidence_document(schema, payload):
+    evidence_type = schema["properties"]["type"]["const"]
+    subject_type = schema["properties"]["subject"]["properties"]["type"]["const"]
+    return {
+        "schema": "compliance.example/evidence/v1",
+        "id": f"evidence:{evidence_type}",
+        "subject": {"id": SUBJECT_IDS[subject_type], "type": subject_type},
+        "type": evidence_type,
+        "collected_at": "2026-09-01T00:00:00Z",
+        "collector": {"id": "test-collector", "version": "1"},
+        "payload": payload,
+    }
 
 
 class PolicyResourceTests(unittest.TestCase):
@@ -159,6 +252,63 @@ class PolicyResourceTests(unittest.TestCase):
                 self.assertNotIn("integrity", schema["required"])
                 self.assertNotIn("integrity", schema["properties"])
                 self.assertTrue(schema["additionalProperties"])
+
+    def test_all_active_evidence_types_accept_minimal_full_envelopes(self):
+        schemas = sorted(POLICIES.glob("schemas/evidence/*.schema.json"))
+        actual_types = {
+            read_json(path)["properties"]["type"]["const"] for path in schemas
+        }
+        self.assertEqual(actual_types, set(EXPECTED_EVIDENCE_PAYLOADS))
+        self.assertEqual(len(schemas), 12)
+
+        for path in schemas:
+            with self.subTest(schema=path.relative_to(ROOT)):
+                schema = read_json(path)
+                evidence_type = schema["properties"]["type"]["const"]
+                document = evidence_document(
+                    schema,
+                    EXPECTED_EVIDENCE_PAYLOADS[evidence_type],
+                )
+                errors = list(Draft202012Validator(
+                    schema,
+                    format_checker=FormatChecker(),
+                ).iter_errors(document))
+                self.assertEqual(errors, [])
+
+    def test_new_optional_configuration_facts_are_typed_when_present(self):
+        cases = (
+            (
+                "aws-account-configuration-v1.schema.json",
+                "security_contact",
+                "configured",
+            ),
+            (
+                "saas-tenant-configuration-v1.schema.json",
+                "guest_access",
+                "allowed",
+            ),
+        )
+        for filename, section, setting in cases:
+            schema = read_json(POLICIES / "schemas/evidence" / filename)
+            evidence_type = schema["properties"]["type"]["const"]
+            for value in (True, False, None):
+                payload = copy.deepcopy(EXPECTED_EVIDENCE_PAYLOADS[evidence_type])
+                payload[section] = {setting: value}
+                with self.subTest(schema=filename, value=value):
+                    Draft202012Validator(schema).validate(
+                        evidence_document(schema, payload)
+                    )
+
+            payload = copy.deepcopy(EXPECTED_EVIDENCE_PAYLOADS[evidence_type])
+            payload[section] = {setting: "undetermined"}
+            errors = list(Draft202012Validator(schema).iter_errors(
+                evidence_document(schema, payload)
+            ))
+            self.assertEqual(len(errors), 1)
+            self.assertEqual(
+                list(errors[0].absolute_path),
+                ["payload", section, setting],
+            )
 
     def test_schema_identities_are_unique(self):
         schemas = sorted(POLICIES.rglob("*.schema.json"))

@@ -33,13 +33,17 @@ acquisition metadata; it does not participate in policy content identity.
 The gate retains:
 
 - All retained library resource, parameter, policy, and evidence schemas,
-  reference compatibility, and compiled Rego entrypoint validation.
+  common evidence-envelope conformance, reference compatibility, and compiled
+  Rego entrypoint validation.
+- Minimal valid producer documents for all 12 active evidence types, including
+  macOS and organizational assertions, plus typed optional AWS security-contact
+  and SaaS guest-access facts.
 - Direct current-state source-boundary checks, exhaustive reusable-file coverage,
   unique identities, resolved references, and adoption-specific resource and
   external-mapping absence.
-- Negative cases for missing/invalid parameter schemas, missing evidence schemas,
-  invalid control manifests, rejected configuration facets, and nonexistent Rego
-  entrypoints.
+- Negative cases for missing/invalid parameter schemas, missing or
+  envelope-nonconforming evidence schemas, invalid control manifests, rejected
+  configuration facets, and nonexistent Rego entrypoints.
 - Current generic producer tests: path-and-raw-byte source identity, deterministic
   archive identity, exact candidate content and representation digests,
   materialized content verification, no-Git construction, optional noncanonical

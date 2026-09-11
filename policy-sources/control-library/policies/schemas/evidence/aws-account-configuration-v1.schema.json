@@ -52,6 +52,14 @@
             "multi_region_enabled": {"type": ["boolean", "null"]},
             "retention_days": {"type": ["integer", "null"], "minimum": 0}
           }
+        },
+        "security_contact": {
+          "type": "object",
+          "required": ["configured"],
+          "additionalProperties": true,
+          "properties": {
+            "configured": {"type": ["boolean", "null"]}
+          }
         }
       }
     }

@@ -42,6 +42,43 @@ def instance(identifier, implementation, parameters, **extra):
     }
 
 
+def evidence_schema(evidence_type, subject_type):
+    return {
+        "$schema": DRAFT,
+        "type": "object",
+        "required": [
+            "schema", "id", "subject", "type", "collected_at",
+            "collector", "payload",
+        ],
+        "additionalProperties": True,
+        "properties": {
+            "schema": {"const": "compliance.example/evidence/v1"},
+            "id": {"type": "string", "minLength": 1},
+            "subject": {
+                "type": "object",
+                "required": ["id", "type"],
+                "additionalProperties": True,
+                "properties": {
+                    "id": {"type": "string", "minLength": 1},
+                    "type": {"const": subject_type},
+                },
+            },
+            "type": {"const": evidence_type},
+            "collected_at": {"type": "string", "format": "date-time"},
+            "collector": {
+                "type": "object",
+                "required": ["id", "version"],
+                "additionalProperties": True,
+                "properties": {
+                    "id": {"type": "string", "minLength": 1},
+                    "version": {"type": "string", "minLength": 1},
+                },
+            },
+            "payload": {"type": "object", "additionalProperties": True},
+        },
+    }
+
+
 def fixture_root(test):
     temporary = tempfile.TemporaryDirectory(prefix="tooling-contract-")
     cleanup = test.addClassCleanup if isinstance(test, type) else test.addCleanup
@@ -133,14 +170,7 @@ def build_fixture(root):
         write(
             shared,
             f"schemas/evidence/{kind}.schema.json",
-            {
-                "$schema": DRAFT,
-                "type": "object",
-                "properties": {
-                    "type": {"const": f"test.{kind}/v1"},
-                    "subject": {"properties": {"type": {"const": kind}}},
-                },
-            },
+            evidence_schema(f"test.{kind}/v1", kind),
         )
     controls = [
         (

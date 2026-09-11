@@ -88,6 +88,11 @@ The compliance platform remains authoritative for its own objects: group
 definitions and selectors, policy assignments, baseline releases, rendered
 assessment plans, decisions, findings, and waivers.
 
+The source-snapshot concern above is ingestion provenance, not another current
+inventory resource or producer contract. The implemented producer surface remains
+individual `Subject` resources; it has no inventory snapshot, synchronization, or
+discovery-framework abstraction.
+
 ### 2.2 Canonical authoring conventions
 
 The canonical inventory contract uses familiar Kubernetes resource
@@ -180,6 +185,32 @@ be derived from mutable display names. Examples include `host/server-123`,
 Subject lifecycle values should include at least `active`, `retired`, and
 `unknown`. Retiring a subject stops normal assessment scheduling but does not
 delete its historical plans, evidence, or results.
+
+### 3.1 Producer-facing normalization contract
+
+An inventory adapter emits one `Subject` for each governed object. The stable,
+cross-source contract is:
+
+- `spec.id`: stable opaque subject identity used by evidence and references;
+- `spec.type`: normalized governed-object type used for control compatibility;
+- `spec.lifecycle`: normalized `active`, `retired`, or `unknown` state;
+- `spec.source`: source name, external identity, observation time, and optional
+  source revision;
+- `metadata.labels`: trusted normalized strings available to group selectors;
+- `metadata.annotations`: non-selecting descriptive or source metadata; and
+- `spec.attributes`: the open, rich adapter-specific extension point.
+
+Adapters should put provider/domain records under `spec.attributes` rather than
+create provider-specific `Subject` families or flatten them into selector labels.
+Promoting an attribute into a normalized label is a deliberate governance choice:
+labels can change applicability, so they need stable meaning and trusted sourcing.
+Selectors consume only `metadata.labels`; they never traverse arbitrary
+`spec.attributes` or annotations.
+
+`InventoryGroup` and `PolicyAssignment` remain governance-owned inputs. An
+inventory producer supplies normalized subjects; it does not choose its own group
+membership or desired policy. This contract introduces no second hierarchy,
+snapshot resource, synchronization service, or discovery framework.
 
 ## 4. Group contract
 

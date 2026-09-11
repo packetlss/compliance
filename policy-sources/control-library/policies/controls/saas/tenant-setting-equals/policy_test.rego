@@ -30,3 +30,27 @@ test_missing if {
 }
 
 test_inconclusive if tenant_setting_equals.evaluate.status == "unknown" with input as assessment_input(null)
+
+test_missing_optional_guest_access_is_unknown if {
+	actual := tenant_setting_equals.evaluate with input as {
+		"assessment": {"plan_id": "plan"},
+		"subject": {"id": "saas/test"},
+		"control": {
+			"instance_id": "test.guest-access",
+			"implementation": "saas.tenant.setting_equals",
+			"severity": "high",
+			"remediation": "Fix it",
+			"parameters": {"section": "guest_access", "setting": "allowed", "expected": false},
+		},
+		"evidence": [{
+			"id": "evidence-1",
+			"type": "saas.tenant.configuration/v1",
+			"payload": {
+				"tenant": {"id": "test", "provider": "example"},
+				"authentication": {"sso_enforced": true, "mfa_enforced": true},
+				"audit_log": {"retention_days": 180},
+			},
+		}],
+	}
+	actual.status == "unknown"
+}
