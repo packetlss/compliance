@@ -130,11 +130,19 @@ A future genuine private/external consumer may use its own least-privilege acqui
 
 ### Active work is routed before archival
 
-Historical repository issues are not left as active implementation authority when their source repository becomes provenance-only. ADR 0007 implementation is routed to destination #31–#36, detailed assurance design to destination #37, and the dormant product-DNA follow-up to destination #38. Stale workspace productization assumptions are closed rather than copied verbatim.
+Historical repository issues are not left as active implementation authority when
+their source repository becomes provenance-only. At transfer time, ADR 0007
+implementation was routed to destination #31–#36, detailed assurance design to
+destination #37, and the dormant product-DNA follow-up to destination #38. Those
+issues are completed or closed history; stale workspace productization assumptions
+were closed rather than copied verbatim.
 
 ### ADR 0007 may follow source consolidation
 
-Full v1alpha3/v4 implementation was not a prerequisite for co-location. Until bounded successor cutovers complete, current runtime contracts remain experimental migration inputs. Co-location must not silently absorb detailed assurance design from destination #37.
+Full v1alpha3/v4 implementation was not a prerequisite for co-location. Until the
+bounded successor cutovers completed, runtime contracts remained experimental
+migration inputs. Co-location did not absorb detailed assurance design from
+destination #37; that issue is now promotion history.
 
 ### Retirement
 
@@ -144,7 +152,11 @@ A future downstream starter should be designed from post-consolidation release c
 
 ## Current migration evidence
 
-The six migrated source domains have destination authority records in `docs/history/pre-consolidation.md`. Canonical integration now runs entirely from the destination checkout and owns all 20 retained public CLI leaves and 18 retained domain features. Normal validation contains no old sibling-repository acquisition path.
+The six migrated source domains have destination authority records in
+`docs/history/pre-consolidation.md`. Canonical integration now runs entirely from
+the destination checkout and owns all 21 retained public CLI leaves and 19 retained
+domain features. Normal validation contains no old sibling-repository acquisition
+path.
 
 Retirement and final documentation/authority cutover completed under destination #29. The archived repositories remain historical provenance.
 

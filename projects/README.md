@@ -42,7 +42,7 @@ for each project, preserves expected failures and project isolation, and
 removes generated output. It does not fetch or pin historical repositories.
 
 The complete registered feature suite remains owned by the canonical
-verification-scenarios migration stage and is not invoked by this focused gate.
+`verification/scenarios/` gate and is not invoked by this focused gate.
 
 Both projects use `project-config/v1alpha3` and emit assessment plans/results v4.
 Unlocked source/editable execution records actual tooling and independently named

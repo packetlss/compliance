@@ -2,15 +2,15 @@
 
 - **Status:** Implemented under #78; experimental, not frozen
 - **Date:** 2026-09-06
-- **Promotion and residual architecture contract:** [#37](https://github.com/packetlss/compliance/issues/37)
+- **Promotion history:** [#37](https://github.com/packetlss/compliance/issues/37)
 - **Supersedes:** [ADR 0013](0013-scoped-assurance-and-obligation-instances.md), [ADR 0014](0014-attributable-applicability-and-authority-acceptance.md), [ADR 0015](0015-bounded-external-claims-and-assurance-recognition.md)
 - **Clarifies:** [ADR 0006](0006-regulatory-assurance-and-external-adapter-boundary.md)
 
 Current runtime routing: [#78](https://github.com/packetlss/compliance/issues/78)
 implements the bounded successor. [Operation accounting](../../tooling/docs/operation-accounting.md)
 specifies its embedded projection and concrete typed assertion examples. The
-promotion-stage statements below retain the original design history; #37 remains
-open for residual architecture and escalation.
+promotion-stage statements below retain the original design history; #37 is closed
+promotion history. New residual architecture requires a focused exploration.
 
 ## Context and authority
 
@@ -277,8 +277,8 @@ cannot author a passing reality assertion: required evidence must still qualify.
 | Plan/results/provenance/reporting | Immutable resolved scope/policy/evidence attribution, omission detection and bounded company results; no new wire family chosen |
 | Common assurance | Determine whether any explicit reuse mechanism is actually needed; typed evidence may suffice; direct result graphs require separate review |
 
-#37 remains open for residual assurance questions. After this promotion, the next
-step is narrow **read-only repository-grounded implementation exploration** of
+At promotion time, #37 remained open for residual assurance questions. The next
+step was narrow **read-only repository-grounded implementation exploration** of
 closed-world expected assessment/run accounting, typed external/procedural assurance
 dependencies and evidence qualification, exact beneficiary/scope attribution, and
 whether explicit common-assurance reuse is needed. Inspect actual post-#73 code;

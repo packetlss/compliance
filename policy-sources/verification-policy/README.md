@@ -131,11 +131,10 @@ Coverage retained by the verification-policy component gate:
 
 Project-by-project behavior, deliberate conflict outcomes, and the complete
 CLI/domain feature suite belong to the canonical
-`compliance-verification-scenarios` integration gate. The full tooling unit
-suite belongs to tooling. Component validation does not invoke these suites or
-automatically update scenario pins. A change to the selected development
-revision is verified in a disposable candidate scenario composition before the
-persistent integration manifest is advanced separately.
+`verification/scenarios/` gate in this repository. The full tooling unit suite
+belongs to tooling. Component validation does not invoke these suites. Candidate
+changes are verified from the exact destination revision; there is no separate
+scenario pin or persistent integration manifest to advance.
 
 Destination CI runs the gate in `component-validation` after repository, tooling,
 and control-library checks. Its single ordinary read-only checkout does not persist

@@ -7,13 +7,15 @@
 
 This is the destination-owned normative restatement of accepted workspace ADR 0006. Its original ownership/topology restatement is clarified by the successor decisions below.
 
-[ADR 0010](0010-required-evidence-status-and-assessment-refusal.md) clarifies the common required-evidence `unknown` / `error` / assessment-refusal boundary; detailed assurance design remains with #37.
+[ADR 0010](0010-required-evidence-status-and-assessment-refusal.md) clarifies
+the common required-evidence `unknown` / `error` / assessment-refusal boundary.
+Detailed assurance design was promoted through #37 and narrowed by ADR 0016.
 
 [ADR 0016](0016-closed-world-policy-assessment.md) clarifies this boundary: optional company objective
 assurance remains core; engine-established external legal/certification conformity
 is not a generic core responsibility. Framework mappings are attributable company
 policy/reporting content. Existing explicit N/A behavior remains unchanged and
-separately routed under #37.
+is not reopened by this ADR; any successor change requires focused promotion.
 
 ## Context
 
@@ -69,7 +71,9 @@ Preserve these constraints:
 
 The core does not establish organizational certification, legal compliance or external-framework conformity. It may report exact company-policy results and mappings as bounded company reporting with attributable provenance; modeled mappings and evaluated evidence do not upgrade those results into external conformity claims.
 
-Detailed successor terminology/evidence/mapping/result semantics remain open in destination issue #37.
+Destination issue #37 is completed promotion history for the successor
+terminology/evidence/mapping/result semantics implemented through ADR 0016 and
+#78. New semantics require a focused architecture issue.
 
 ### In-core configuration generation is removed
 
@@ -102,7 +106,12 @@ Adapter output is not evidence that configuration was approved, applied, success
 
 ## Current implementation state
 
-Configuration-generation code/artifacts are removed. The consolidated canonical scenario covers both technical assessment and objective assurance without an in-core adapter. ADR 0007 defines the accepted provenance successor; destination #31–#36 own its implementation/consumer migration. Destination #37 owns detailed assurance semantics.
+Configuration-generation code/artifacts are removed. The consolidated canonical
+scenario covers both technical assessment and objective assurance without an
+in-core adapter. ADR 0007 defines the accepted provenance successor; destination
+#31–#36 are completed implementation/consumer-migration history. #37 is completed
+promotion history for the detailed assurance semantics narrowed by ADR 0016 and
+implemented under #78.
 
 ## Consequences
 

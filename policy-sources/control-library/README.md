@@ -77,13 +77,13 @@ environment and verifies its assets under their historical checksum rules.
 [ADR 0012](../../docs/adr/0012-explicit-policy-parameter-resolution.md) accepts
 explicit policy parameters and policy-owned effective evidence freshness.
 Controls retain reusable evidence dependency contracts and optional capability
-restrictions; adopter policy chooses effective `max_age`. Current manifests
-still own those ages until the coordinated migration in
-[#73](https://github.com/packetlss/compliance/issues/73). This documentation
-promotion changes no policy/schema bytes or effective values.
+restrictions; adopter policy chooses effective `max_age`. The coordinated
+[#73](https://github.com/packetlss/compliance/issues/73) migration completed that
+ownership change; current manifests provide dependency contracts rather than
+effective freshness policy.
 
 Synthetic baselines, illustrative benchmark mappings, and the example IAM
-requirement chain live in `compliance-verification-policy`. Restricted
+requirement chain live in `policy-sources/verification-policy/`. Restricted
 realizations, environment parameters, inventory, assignments, evidence, plans,
 results, and any externally generated configuration remain in their owning
 project or adapter boundaries.
@@ -100,7 +100,8 @@ identity remain separate concepts.
 ## Closed-world assurance ownership
 
 [ADR 0016](../../docs/adr/0016-closed-world-policy-assessment.md) supersedes ADRs
-0013–0015; it is accepted design, not yet implemented under #37. This library owns
+0013–0015; its bounded successor is implemented under #78 and remains experimental.
+This library owns
 reusable policy/evidence schemas and technology-neutral requirement contracts;
 tooling owns inventory, planning, qualification, run accounting and results.
 Adopter policy/governance owns supplied scope, company requirements, demonstration
@@ -119,10 +120,9 @@ external obligation universe or engine-established conformity. Preserve ADR 0012
 parameter consumption and freshness, existing missing-realization behavior and ADR 0010
 qualification/outcomes. Source names/content digests grant no truth, authority or precedence.
 
-#73 is complete. #37 next routes narrow exploration of supplied expected-set accounting,
-typed external/procedural evidence qualification, exact beneficiary attribution and
-whether common assurance reuse is needed. No runtime/schema/policy-resource edits or
-wire/version choices are authorized by this documentation promotion.
+#73 and #78 are complete; #37 is their architecture-promotion history. Any new
+assurance semantics or common reuse mechanism requires a focused architecture
+exploration. No broader assurance subsystem is authorized by this material.
 
 ## Component validation
 
@@ -137,4 +137,5 @@ The co-located tooling input and setup are documented in
 schemas, source boundary, content/release/archive identities, and Rego without a
 parent workspace, sibling checkout, or adopting project. Destination CI runs it in
 `component-validation`.
-The complete composed feature suite is owned by `compliance-verification-scenarios`.
+The complete composed feature suite is owned by `verification/scenarios/` in this
+repository.

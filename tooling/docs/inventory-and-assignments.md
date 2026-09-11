@@ -1,7 +1,7 @@
 # Inventory, Groups, and Policy Assignments
 
 Status: **Working proposal with prototype (v0.1)**  
-Last updated: **2026-08-23**
+Last updated: **2026-09-11**
 
 This document defines how governed assets enter the inventory, how they become
 members of a group DAG, and how group-level policy assignments resolve to
@@ -16,8 +16,8 @@ Subject/group/assignment facts and expected policy membership before evaluation.
 Dangling explicit Subject references fail catalog loading. Direct membership
 retains simultaneous inherited edges; each Subject is assessed once.
 Accounting is exact to supplied inputs, never a guarantee of external inventory
-exhaustiveness. Unassigned remains distinct from explicit N/A. #37 owns residual
-architecture and escalation; no second inventory hierarchy is introduced.
+exhaustiveness. Unassigned remains distinct from explicit N/A. New architecture or
+escalation requires a new focused promotion; no second inventory hierarchy is introduced.
 
 ## 1. Complete relationship
 
@@ -508,5 +508,6 @@ queried separately through `coverage`.
 - Assignment activation windows and enforcement modes are not implemented.
 - Coarse control applicability is validated by subject type; a first-class
   rendered `not_applicable` collection is still to be designed.
-- Coverage is calculated from the current file projection. Persistent historical
-  coverage, trends, and source-snapshot health are not yet implemented.
+- Coverage is deliberately calculated from the current supplied file projection and
+  is never persisted as historical state. Frozen assessment history is interpreted
+  only through its exact operation, retained plans, and results.

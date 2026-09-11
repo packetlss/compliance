@@ -134,7 +134,10 @@ Evidence is snapshotted before evaluation; the same snapshot is digested and
 consumed. Filesystem paths are not provenance identity. Evaluator-reported evidence
 IDs do not replace orchestration-owned successful selections.
 
-Future typed manual/procedural assurance evidence defined by destination #37 uses the same actual evidence provenance when it becomes an evaluator input; this ADR does not decide which assurance documents qualify or how objective states roll up.
+Typed manual/procedural assurance evidence promoted through #37 and implemented
+under #78 uses the same actual evidence provenance when it becomes an evaluator
+input; this ADR does not decide which assurance documents qualify or how objective
+states roll up.
 
 ### Exact plan/result historical record and validation
 
@@ -204,16 +207,19 @@ There is no ADR 0007 successor for removed configuration plans, render results, 
 
 ## Migration and compatibility
 
-Current `project-config/v1alpha1`, `project-config/v1alpha2`, `release-lock/v1alpha2`, assessment v1, and assessment v3 are unfrozen migration inputs. Historical Git/releases/artifacts remain immutable but current tooling need not be a universal reader after bounded consumer cutover.
+Predecessor `project-config/v1alpha1`, `project-config/v1alpha2`,
+`release-lock/v1alpha2`, assessment v1, and assessment v3 were unfrozen migration
+inputs. They are removed from current tooling; historical Git/releases/artifacts
+remain immutable and require historical tooling.
 
-Destination implementation sequencing is owned by:
+Destination implementation sequencing was:
 
 - #31 — actual composition, project-config v1alpha3, composition lock;
 - #32 — provenance-bearing assessment plan/results v4;
 - #34 — ordinary project consumer migration;
 - #35 — IAM/private-source consumer migration;
 - #36 — canonical scenario consumer migration; and
-- #33 — old-reader retirement after all consumers are migrated.
+- #33 — old-reader retirement after all consumers migrated.
 
 [#90](https://github.com/packetlss/compliance/issues/90) implements the later pre-freeze
 result/plan ownership cutover, including intrinsic and relational validation and

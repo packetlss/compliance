@@ -22,8 +22,8 @@ validity/status/refusal boundary and explicitly reconcile #32. It clarifies
 ADRs 0006 and 0007 and owns the normative definitions and evidence-condition
 matrix below. It supersedes the tooling decision's schema-invalid-evidence
 → `error` classification, retaining the historical decision and rationale.
-Preserving that classification or deferring this common boundary to #37 would
-leave the accepted invalid-evidence constraint unresolved.
+At promotion time, preserving that classification or deferring this common
+boundary to #37 would have left the accepted invalid-evidence constraint unresolved.
 
 #62 extends this ADR with evidence selection ambiguity: deterministic ordering
 does not establish legitimate authority among distinct equally latest eligible
@@ -294,12 +294,12 @@ and configuration foundation delivered by #31.
 this decision. Its composition/configuration foundation and transitional refusal
 before v4 generation are unchanged.
 
-[#37](https://github.com/packetlss/compliance/issues/37) may rely on this common
-evidence validity/refusal boundary. It retains assurance terminology,
-manual/hybrid evidence qualification, authority for procedural evidence, N/A
-determinations, mapping coverage, adoption/realization semantics, and broader
-assurance result design. This ADR resolves none of those matters. ADR 0009's
-vocabulary and generic independently named-source model remain unchanged.
+The historical [#37](https://github.com/packetlss/compliance/issues/37) promotion
+relied on this common evidence validity/refusal boundary. ADR 0016 and #78 own its
+bounded successor; assurance terminology, manual/hybrid evidence qualification,
+authority for procedural evidence, N/A determinations, mapping interpretation,
+and adoption/realization semantics remain outside this ADR. ADR 0009's vocabulary
+and generic independently named-source model remain unchanged.
 
 #62's accepted decision supersedes the earlier unresolved candidate-selection
 follow-up. #32 implemented it alongside the schema-invalid-evidence correction
@@ -309,7 +309,7 @@ identity invariance under those permutations. This adds no dependency to #31.
 
 Collector authority/precedence, explicit supersession, payload merging or
 multi-observation control semantics, new freshness or current-status semantics,
-and #37 assurance semantics are outside this decision and #32's correction.
+and successor assurance semantics are outside this decision and #32's correction.
 
 ## Validation and escalation
 
@@ -322,7 +322,7 @@ Return to architecture if rejected evidence cannot be bound under existing
 provenance algorithms; a new result state or evidence identity algorithm is
 required; mixed valid/invalid behavior needs an authority/supersession model;
 current roll-ups cannot represent this decision; an external compatibility
-consumer/freeze exists; or implementation materially overlaps unresolved #37
+consumer/freeze exists; or implementation materially overlaps new assurance
 semantics. Also return to exploration if selection needs a new equivalence
 algorithm, collector precedence, explicit supersession, payload merging or
 multi-observation semantics, changed freshness eligibility, or a new artifact

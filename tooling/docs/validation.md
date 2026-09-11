@@ -60,15 +60,12 @@ policy, plan, or result is written into the checkout.
 
 ## Composed assertions and their owners
 
-The complete feature suite is owned by destination
+The complete feature suite is owned by
 [`verification/scenarios`](../../verification/scenarios/integration/README.md).
-The gate established by scenario PR #10 remains the owner of composed
-integration and explicit immutable external input selection. The retained
+Its gate owns composed integration and explicit immutable input selection. The retained
 tooling catalog contains 21 public CLI leaves and 19 domain features. The
-scenario repository's persistent pre-cutover
-manifest is intentionally not advanced by tooling #67; scenario issue #11 owns
-the final coordinated cutover after affected producers and consumers merge.
-Components must not depend back on its manifest.
+co-located scenario project consumes the current committed destination revision;
+component tests do not depend back on its feature manifest.
 
 Repository coordinates and revisions are review metadata, not canonical semantic identity. Destination [ADR 0005](../../docs/adr/0005-content-addressed-development-boundaries.md) and the current [repository map](../../docs/REPOSITORIES.md) govern topology while retaining logical ownership and content-addressed inputs.
 
@@ -83,11 +80,9 @@ The following old tooling assertions are no longer component gates:
 | `test_every_policy_unit_is_classified_exactly_once`, `test_roles_and_actions_preserve_dependency_direction`, `test_embedded_external_mappings_are_complete` | Control-library classification/resource validation and verification-policy resource validation |
 | `test_migrated_resources_preserve_classified_content`, `test_retired_resources_are_absent_and_explained`, `test_classified_source_migration_has_no_pending_actions` | Control-library classification manifest/source-boundary checks; immutable migration evidence and verification-policy source identity remain producer-owned |
 
-The configuration-removal cutover deliberately changes tooling runtime,
-examples, and packaged schemas without advancing the scenario manifest. Issue
-#67 records the focused component and package evidence; scenario issue #11
-owns final composed validation. Never automatically advance the scenario
-manifest from this repository.
+Historical configuration-removal validation and cutover records retain their
+original issue references. Current composed validation belongs to the destination
+scenario gate and its checked-in feature catalog.
 
 ## Separate package and release gates
 

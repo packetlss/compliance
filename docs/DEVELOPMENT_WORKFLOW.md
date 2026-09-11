@@ -200,4 +200,4 @@ Generated evidence/results, credentials, backend state, adapter output and priva
 
 ## Firewall boundary
 
-Firewall/network-policy work is out of scope unless explicitly reopened by the product owner. Destination #38 is a dormant conceptual-alignment issue and does not authorize technical coupling.
+Firewall/network-policy work is out of scope unless explicitly reopened by the product owner. Closed historical issue #38 does not authorize technical coupling.

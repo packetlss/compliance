@@ -6,7 +6,7 @@ in [Actual composition and expected enforcement](composition.md). All maintained
 consumers use successor contracts; historical artifacts require historical tooling.
 
 Status: **Implemented prototype (v0.2)**
-Last updated: **2026-09-09**
+Last updated: **2026-09-11**
 
 The control-plane workflows share one `compliance` command. Their primary
 operator sequence is `Inventory → Coverage → Assessment`. Inventory
@@ -44,8 +44,8 @@ compliance
 │   ├── list
 │   └── explain WAIVER
 ├── plan
-│   ├── render SUBJECT
-│   └── show [PLAN]
+│   ├── render [ASSET ...] [--group GROUP ... | --all]
+│   └── show [PLAN_OR_ASSET]
 └── assessment
     ├── run ASSET [--at RFC3339]
     ├── status [--by group] --plan PLAN --at RFC3339 --as-of RFC3339
@@ -317,7 +317,7 @@ System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evid
 Anchored status/explanation/group views separately expose historical outcomes
 at `evaluated_at`, **Plan-aligned / Different plan / Plan alignment unavailable**,
 selected-evidence timeliness as of explicit `q`, recorded waiver validity, and
-existing coverage/applicability. Prefer **Selected evidence within recorded age
+frozen accounting disposition. Prefer **Selected evidence within recorded age
 limits as of …**, **Evidence stale — reassessment due**, and **Evidence timeliness
 unavailable**. Concurrent stale and unavailable conditions must both remain visible.
 Historical PASS with stale evidence cannot support a “currently passing” claim.
@@ -524,8 +524,8 @@ stable JSON filename from the underlying Subject ID. This gives single-asset and
 fleet projects identical behavior while `assessment status` reads the configured
 bounded result directory recursively. Paths with a filename extension remain supported
 for explicit single-artifact workflows. `plan show` opens the only plan in a
-single-subject directory and renders an index when several plans exist. Select
-one fleet plan with its stable subject ID or an explicit file path:
+single-asset directory and renders an index when several plans exist. Select
+one fleet plan with its stable asset ID or an explicit file path:
 
 ```sh
 scripts/dev cli --project mock-fleet plan show

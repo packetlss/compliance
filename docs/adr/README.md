@@ -27,7 +27,7 @@ Accepted destination decisions:
 - [ADR 0014 — Attributable applicability determinations and authority acceptance](0014-attributable-applicability-and-authority-acceptance.md) — superseded by [ADR 0016](0016-closed-world-policy-assessment.md); historical design.
 - [ADR 0015 — Bounded external claims and explicit assurance recognition](0015-bounded-external-claims-and-assurance-recognition.md) — superseded by [ADR 0016](0016-closed-world-policy-assessment.md); historical design.
 
-- [ADR 0016 — Closed-world company policy assessment](0016-closed-world-policy-assessment.md) — experimental, implemented under #78; supersedes ADRs 0013–0015 and clarifies ADR 0006; #37. ADR 0012 remains unchanged.
+- [ADR 0016 — Closed-world company policy assessment](0016-closed-world-policy-assessment.md) — experimental, implemented under #78; supersedes ADRs 0013–0015 and clarifies ADR 0006. Its promotion history is #37; ADR 0012 remains unchanged.
 
 - [ADR 0017 — Author policy and technical-check meaning on canonical source objects](0017-source-authored-policy-and-check-meaning.md) — accepted and implemented under #100; experimental, not frozen. Its architecture contract is #97.
 - [ADR 0018 — Retain minimal durable assessment explanation facts](0018-durable-assessment-explanation-facts.md) — implemented under #102; experimental, not frozen. Its architecture contract is #98.
@@ -39,11 +39,11 @@ Current system-level documents:
 - [`../DEVELOPMENT_WORKFLOW.md`](../DEVELOPMENT_WORKFLOW.md)
 - [`../CONTRACT_MATURITY.md`](../CONTRACT_MATURITY.md)
 
-ADR 0007 foundation/cutover issues #31–#36 and ADR 0012 implementation #73 are
-completed history. [#37](https://github.com/packetlss/compliance/issues/37) remains
-open for residual architecture and escalation. ADR 0016 supersedes the three-ADR
+ADR 0007 foundation/cutover issues #31–#36, architecture issue
+[#37](https://github.com/packetlss/compliance/issues/37), and ADR 0012
+implementation #73 are completed history. ADR 0016 supersedes the three-ADR
 migration; #78 implements its bounded embedded operation accounting and ordinary
 typed assertion successor. Direct result consumption, new semantics or common
-abstractions require separate architecture review.
+abstractions require a new focused architecture review.
 
 Do not treat historical workspace topology or issue numbers as current component/repository boundaries. Historical references remain provenance links only.

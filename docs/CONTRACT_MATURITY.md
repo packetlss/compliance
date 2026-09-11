@@ -72,7 +72,7 @@ assessment-results/v4
 
 with provisional composition/lock/plan/result digest algorithms.
 
-These are **experimental**, implemented by #31/#32 and used by all destination consumers after #34–#36. #33 retires predecessor support.
+These are **experimental**, implemented by #31/#32 and used by all destination consumers after #34–#36. #33 retired predecessor support.
 
 The pre-freeze result/plan ownership refinement is **Experimental, implemented**
 under [#90](https://github.com/packetlss/compliance/issues/90).
@@ -175,14 +175,15 @@ and observed consumer relationships use ordinary evidence dependencies. Governan
 owns external applicability, sufficiency and inventory exhaustiveness; mappings
 never establish external conformity. ADR 0010/0012, explicit N/A, missing-realization
 failure, fail-only waivers and technical-only assessment remain unchanged.
-#37 remains the parent architecture/escalation issue. Historical artifacts require
-their historical tooling; no historical result is reinterpreted.
+Issue #37 is closed architecture history. New semantics or escalation require a
+new focused architecture promotion. Historical artifacts require their historical
+tooling; no historical result is reinterpreted.
 
 ## Accepted vocabulary convergence
 
 [ADR 0009](adr/0009-active-compliance-vocabulary.md), implementing #57's architecture decision, makes `control-library` the maintained reusable semantic source name. This intentional pre-freeze rename changes name-bearing composition/provenance identity without changing policy-tree bytes/content digest or the `compliance-control-library` distribution. Historical `shared-library` artifacts remain distinct; no alias is added.
 
-`composition-lock` is the sole forward complete expected-composition abstraction. The `workspace-config` → `project-registry` rename is implemented in Tranche 2 with unchanged selection semantics and no retired-discriminator alias. Registry data remains nonsemantic to composition; tooling source bytes change existing tooling provenance. Neither vocabulary decision freezes a contract or changes technical control/assurance names pending #37.
+`composition-lock` is the sole forward complete expected-composition abstraction. The `workspace-config` → `project-registry` rename is implemented in Tranche 2 with unchanged selection semantics and no retired-discriminator alias. Registry data remains nonsemantic to composition; tooling source bytes change existing tooling provenance. Neither vocabulary decision freezes a contract or changes technical control/assurance names without separate review.
 
 ## Current maturity guidance
 
@@ -203,9 +204,9 @@ None of these are frozen merely by this classification.
 
 ### Design pass required
 
-Destination #37 retains residual assurance questions, including methodology,
-sampling, N/A changes and any direct result dependency graphs. #78 implements
-only its bounded frozen accounting and typed assertion successor. Any new common
+Residual assurance questions, including methodology, sampling, N/A changes and
+any direct result dependency graphs, require a new focused architecture promotion.
+#78 implements only bounded frozen accounting and typed assertions. Any new common
 abstraction, semantics or trust boundary requires renewed architecture review.
 
 ### Experimental generated/public views

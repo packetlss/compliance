@@ -12,7 +12,7 @@ import yaml
 from tools import policy_parameters as p
 from tools.artifact_validation import validate_assessment_plan
 from tools.policy_diff import build_policy_diff
-from tools.operation import plan_coverage
+from tools.operation import plan_disposition
 
 
 def run(root):
@@ -44,7 +44,7 @@ def run(root):
             return plan
 
         first = render('original')
-        assert plan_coverage(first)['assessable']
+        assert plan_disposition(first) == 'result_required'
         requirement = first['requirements'][0]
         slot = requirement['parameter_facts']['states']['privileged_evidence_max_age']
         assert slot['value'] == '86400s'
@@ -72,13 +72,13 @@ def run(root):
         selected['spec']['baselineRefs'] = [{'name': parent['metadata']['id'], 'revision': '2'}]
         assignment.write_text(yaml.safe_dump(selected))
         second = render('tailored')
-        assert plan_coverage(second)['assessable']
+        assert plan_disposition(second) == 'result_required'
         assert realization_path.read_bytes() == realization_bytes
         assert all(c['evidence'][0]['max_age'] == '3600s' for c in second['controls'])
         assert build_policy_diff(first, second)['summary']['changed']
         selected['spec']['baselineRefs'] = [{'name': parent['metadata']['id'], 'revision': revision} for revision in ['1', '2']]
         assignment.write_text(yaml.safe_dump(selected))
-        assert not plan_coverage(render('conflict'))['assessable']
+        assert plan_disposition(render('conflict')) == 'invalid'
         print('ADR 0012: private tailoring, immutable fan-out, and assignment conflict passed.')
 
 

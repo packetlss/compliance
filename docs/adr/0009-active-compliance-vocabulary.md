@@ -62,8 +62,8 @@ independently resolved actual composition before domain execution.
 It is not actual provenance, an acquisition manifest, a release catalog, a
 repository manifest, or a source of missing runtime identity. Release versions,
 distributions, and representations retain their release/acquisition purposes.
-`release-lock/v1alpha2` remains only a temporary migration contract pending #33
-after consumer cutover; this decision does not delete it or other old readers.
+`release-lock/v1alpha2` was a temporary migration contract. #33 removed it and the
+other predecessor readers after consumer cutover.
 
 ### Project selection and assurance vocabulary
 
@@ -74,20 +74,22 @@ define a development workspace. Its implementation is deferred to Tranche 2,
 not implemented in the Tranches 0–1 PR. Current schemas, fields, selection, and
 CLI remain unchanged here.
 
-Technical control/assurance resource and wire names remain unchanged pending
-#37, including `Control`, `Baseline`, `BaselineOverlay`, `ControlRequirement`,
-`ControlRealization`, `RequirementBaseline`, `implementation`, `instance_id`, and
-`control_id`. Technical assessment and optional objective assurance retain their
-existing semantics; missing or inconclusive required evidence remains `unknown`.
+Technical control/assurance resource and wire names remain unchanged by this
+vocabulary decision, including `Control`, `Baseline`, `BaselineOverlay`,
+`ControlRequirement`, `ControlRealization`, `RequirementBaseline`, `implementation`,
+`instance_id`, and `control_id`. Subsequent #37 promotion history does not change
+these names.
+Technical assessment and optional objective assurance retain their existing
+semantics; missing or inconclusive required evidence remains `unknown`.
 
 ## Sequencing and non-goals
 
-Tranches 0–1 record this decision and migrate maintained semantic compositions
-before #31 establishes successor fixtures. #31 retains actual composition,
-project-config v1alpha3, composition digest/lock, and installed-wheel provenance
-implementation. #32 and #34–#36 retain artifact/consumer cutover; #33 retains
-release-lock and old-reader retirement. Those successor consumers use the new
-vocabulary from their first artifacts.
+Tranches 0–1 recorded this decision and migrated maintained semantic compositions
+before #31 established successor fixtures. #31 implemented actual composition,
+project-config v1alpha3, composition digest/lock, and installed-wheel provenance;
+#32 and #34–#36 completed artifact/consumer cutover, while #33 retired release-lock
+and old readers. Those successor consumers use the new vocabulary from their first
+artifacts.
 
 This tranche implements no project-registry schema/model/CLI changes, ADR 0007
 successors, assessment v4, release/composition CLI rename, assurance redesign,

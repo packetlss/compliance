@@ -71,7 +71,9 @@ Recording actual provenance and enforcing a predeclared expected composition are
 
 The transitional multi-repository dependency graph has been consolidated into `packetlss/compliance`. Component, canonical scenario, and installed-release validation now run from the destination checkout. The old workspace and component repositories are archived historical provenance after retirement under destination issue #29.
 
-The accepted provenance successor is ADR 0007. Its implementation remains tracked by destination issues #31–#36. Pre-freeze compatibility remains governed by this ADR until explicit freezes are reviewed.
+The accepted provenance successor is ADR 0007. Destination issues #31–#36 are its
+completed implementation and consumer-migration history. Pre-freeze compatibility
+remains governed by this ADR until explicit freezes are reviewed.
 
 ## Consequences
 

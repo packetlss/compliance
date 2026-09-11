@@ -127,9 +127,9 @@ scripts/dev cli coverage explain cloud-account/aws-111122223333
 scripts/dev cli plan render cloud-account/aws-111122223333
 scripts/dev cli policy diff before-plan.json after-plan.json --format json
 scripts/dev cli policy diff-set before-plans/ after-plans/ --format json
-uv run python compliance-tooling/examples/prepare_policy_diff_set.py
-uv run python compliance-tooling/examples/verify_examples.py
-uv run python compliance-tooling/examples/verify_examples.py --show waiver
+uv run --project tooling python tooling/examples/prepare_policy_diff_set.py
+uv run --project tooling python tooling/examples/verify_examples.py
+uv run --project tooling python tooling/examples/verify_examples.py --show waiver
 scripts/dev cli --project mock-fleet plan show
 scripts/dev cli --project mock-fleet \
   plan show cloud-account/aws-111122223333
@@ -193,4 +193,4 @@ Python dependencies. CLI discovery, planning, evaluation, provenance, and
 negative contracts use tooling-owned synthetic fixtures. See
 [validation ownership and commands](docs/validation.md) for focused development
 and the separate installed-package/release gates. The complete composed feature
-suite is owned by `compliance-verification-scenarios`.
+suite is owned by `verification/scenarios/` in this repository.

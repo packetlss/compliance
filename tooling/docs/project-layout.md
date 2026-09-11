@@ -6,7 +6,7 @@ in [Actual composition and expected enforcement](composition.md). All maintained
 consumers use successor contracts; historical artifacts require historical tooling.
 
 Status: **Accepted convention (v0.3)**
-Last updated: **2026-09-04**
+Last updated: **2026-09-11**
 
 A project is the smallest independently operable compliance scope. It owns one
 inventory projection, its policy assignments, collected evidence, rendered
@@ -114,10 +114,10 @@ tooling installation. An additional private source may be a partial tree—for e
 may contain only `realizations/`—because schemas and reusable controls can
 resolve from the shared source during environment-local assembly.
 
-Workspace [ADR 0005](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/adr/0005-content-addressed-development-boundaries.md)
-governs development topology. Current transition ownership is summarized by the
-workspace [architecture](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/ARCHITECTURE.md)
-and [repository map](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/REPOSITORIES.md).
+Destination [ADR 0005](../../docs/adr/0005-content-addressed-development-boundaries.md)
+governs development topology. Current ownership is summarized by the local
+[architecture](../../docs/ARCHITECTURE.md) and
+[repository map](../../docs/REPOSITORIES.md).
 
 Maintained projects declare all six operational paths together with at least
 one named `policySources` entry. This prevents a
@@ -190,8 +190,8 @@ contract exists.
 
 Inventory labels may select stable operational personas, but the policy
 difference itself does not belong in inventory. The development
-`compliance-development-projects/projects/server-personas` project and the stable
-`compliance-verification-scenarios/projects/linux-hardening-rollout` scenario
+`projects/server-personas` project and the stable
+`verification/scenarios/projects/linux-hardening-rollout` scenario
 both assign a company base baseline to one leaf group and an explicitly derived
 baseline to a sibling feature group. The stable scenario additionally assigns
 company operations policy and a complete shared access objective at the

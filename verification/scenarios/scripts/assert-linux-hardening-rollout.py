@@ -15,7 +15,7 @@ from tools.assessment_provenance import validate_result_against_plan, validate_s
 from tools.evaluator import opa_evaluator_identity
 from tools.evidence_provenance import evidence_set_provenance
 from tools.policy_sources import source_tree_digest
-from tools.operation import plan_coverage
+from tools.operation import plan_disposition
 from tools.project_config import load_config
 from tools.tooling_source import TOOLING_SOURCE_DIGEST_ALGORITHM, tooling_source_digest
 
@@ -416,7 +416,7 @@ def main() -> None:
         ),
         "contradictory persona lost its no-precedence conflict evidence",
     )
-    require(plan_coverage(conflict)["assessable"] is False, "contradictory persona became assessable")
+    require(plan_disposition(conflict) == "invalid", "contradictory persona became assessable")
     require(not (run_root / "results/host__persona-conflict-01.json").exists(), "assessment result was emitted for contradictory persona")
 
     assert_assurance_narrative(scenario_root / "README.md")

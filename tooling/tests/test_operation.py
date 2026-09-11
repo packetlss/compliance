@@ -87,6 +87,13 @@ class OperationTests(unittest.TestCase):
         return {'id': subject_id, 'type': 'linux-host', 'status': 'active',
                 'labels': labels or {}}
 
+    def test_all_selection_error_uses_asset_vocabulary(self):
+        with self.assertRaisesRegex(
+            ValueError,
+            '--all is exclusive of explicit assets and groups',
+        ):
+            normalize_request({'all': True, 'subjects': ['host/A'], 'groups': []})
+
     def test_explicit_selection_ignores_supplied_nonselected_candidate(self):
         plans = self.plans()
         groups = [{'id':'test-hosts','parents':[],'members':['host/A','host/B']}]
@@ -390,6 +397,7 @@ class OperationTests(unittest.TestCase):
             [report], boundary, assessed_plans=plans
         )
         row = at_boundary['members'][0]
+        self.assertNotIn('qualification_summary', at_boundary)
         self.assertEqual(row['historical_outcome'], 'pass')
         self.assertEqual(row['plan_alignment'], 'plan_alignment_unavailable')
         self.assertEqual(row['evidence_timeliness']['timely_selected_dependencies'], 1)

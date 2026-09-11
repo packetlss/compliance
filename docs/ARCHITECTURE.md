@@ -16,7 +16,7 @@ A policy source is an independently named/materialized semantic input. Repositor
 
 Canonical runtime/generated-artifact provenance is content-addressed. Preserve the applicable tooling source/distribution identity, policy-source content digests, actual composition identity, evaluator executable identity, evidence snapshot identity, and artifact-specific semantic identities. Git metadata remains useful review/navigation provenance but is not required after runtime inputs are materialized.
 
-ADR 0007 accepts the successor line `project-config/v1alpha3`, `composition-lock/v1alpha1`, `assessment-provenance/v1alpha1`, and assessment plan/results v4. Its destination implementation packets are #31–#36. Consumer cutover is complete; #33 retires the predecessor config, release-lock, and assessment readers. Historical artifacts require historical tooling.
+ADR 0007 accepts the successor line `project-config/v1alpha3`, `composition-lock/v1alpha1`, `assessment-provenance/v1alpha1`, and assessment plan/results v4. Destination issues #31–#36 completed its implementation and consumer cutover; #33 retired the predecessor config, release-lock, and assessment readers. Historical artifacts require historical tooling.
 
 Before result identity freeze, [#90](https://github.com/packetlss/compliance/issues/90)
 replaces the duplicated self-contained result representation with an
@@ -30,7 +30,7 @@ Actual composition provenance and expected enforcement are separate: every succe
 
 [ADR 0009](adr/0009-active-compliance-vocabulary.md) intentionally renames the maintained reusable semantic source from `shared-library` to `control-library`. The component path `policy-sources/control-library/`, semantic root `policy-sources/control-library/policies/`, and distribution `compliance-control-library` remain distinct namespaces; tooling receives source names explicitly. The name grants no precedence, trust, mandatory dependency, or reserved role. Policy-tree content identity is unchanged, while name-bearing composition/provenance identities change without a compatibility alias.
 
-ADR 0007 `composition-lock` is the sole forward complete expected-composition abstraction. The #57 `workspace-config` → `project-registry` cutover is implemented: the registry selects one project configuration by explicit name or default without composing policy or merging project state. Registry data/location and repository/workspace topology are nonsemantic; the retired discriminator is unsupported without an alias. The changed tooling source bytes affect only existing tooling provenance; technical control/assurance resource names remain unchanged pending #37.
+ADR 0007 `composition-lock` is the sole forward complete expected-composition abstraction. The #57 `workspace-config` → `project-registry` cutover is implemented: the registry selects one project configuration by explicit name or default without composing policy or merging project state. Registry data/location and repository/workspace topology are nonsemantic; the retired discriminator is unsupported without an alias. The changed tooling source bytes affect only existing tooling provenance; technical control/assurance resource names remain unchanged unless separately reviewed.
 
 ## Primary intended user jobs
 
@@ -51,7 +51,7 @@ These jobs describe the intended product scope of the accepted core, not a claim
 - **Auditor / reviewer:** obtain attributable evidence and explanations of whether decided controls were satisfied, failed, unknown, waived, or otherwise qualified, with the provenance needed to understand the conclusion. Provenance identifies the inputs and execution used; it does not itself authenticate observation truth or approval authority. A point-in-time assessment is not automatically proof of continuous effectiveness. Framework mappings are attributable reporting content, not engine-established certification or legal-compliance conclusions.
 - **Evidence operator:** understand evidence demand and health: required evidence types, the subjects and controls requiring them, freshness requirements, missing/stale/invalid/otherwise unusable evidence, and the assessment outcomes blocked by those problems. This is an intended product job even though the current CLI does not provide a complete evidence-operator workflow. It does not introduce a new evidence resource or collection-failure taxonomy.
 
-These jobs do not themselves settle evidence or temporal interpretation. [ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns assessment-time evidence validity/status/refusal, and [ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) owns immutable history, exact plan alignment and derived operational evidence timeliness. ADR 0016 below owns the closed-world responsibility boundary; manual/procedural methodology and sampling inference remain with #37; policy-gap discovery, evidence-operator CLI design, collector failure taxonomy and durable evidence retention remain separate work. Point-in-time assessments cannot establish continuous effectiveness.
+These jobs do not themselves settle evidence or temporal interpretation. [ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns assessment-time evidence validity/status/refusal, and [ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) owns immutable history, exact plan alignment and derived operational evidence timeliness. ADR 0016 below owns the closed-world responsibility boundary; manual/procedural methodology, sampling inference, policy-gap discovery, evidence-operator CLI design, collector failure taxonomy and durable evidence retention require separately promoted work. Point-in-time assessments cannot establish continuous effectiveness.
 
 ### Assessment-plan meaning
 
@@ -63,7 +63,7 @@ The plan is not:
 - a backend configuration specification or authorization to apply changes; or
 - evidence that settings were deployed or remain effective at the present moment.
 
-This clarifies existing artifact meaning, not a new payload or readiness claim: #31 establishes the composition foundation, and #32 implements v1alpha3 assessment generation through provenance-bearing v4 plans/results.
+This clarifies existing artifact meaning, not a new payload or readiness claim: #31 established the composition foundation, and #32 implemented v1alpha3 assessment generation through provenance-bearing v4 plans/results.
 
 ## First-core policy and assurance model
 
@@ -96,9 +96,9 @@ subject / group assignment
 
 Requirements are desired assurance objectives. Realizations are design-time mappings, not proof of implementation. Authored adoption/implementation labels cannot create pass. Missing, stale, invalid, or inconclusive required evidence is `unknown`. Realization selection is deterministic and fail-closed; source order is never precedence. Technical results remain independently attributable. Framework mappings are attributable policy/reporting content and do not establish external conformity or certification/legal compliance.
 
-Destination [#37](https://github.com/packetlss/compliance/issues/37) remains the open parent assurance architecture effort. ADR 0012 and bounded successor #73 own parameter/freshness resolution; ADR 0016 below supersedes ADRs 0013–0015 with closed-world assessment. Residual methodology and narrow repository-grounded exploration remain with #37; promotion does not complete that issue.
+Issue [#37](https://github.com/packetlss/compliance/issues/37) is closed architecture history. ADR 0012 and bounded successor #73 own parameter/freshness resolution; ADR 0016 below supersedes ADRs 0013–0015 with closed-world assessment. Any residual methodology or renewed architecture work requires a new focused promotion rather than treating #37 as current authority.
 
-[ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns the common required-evidence `unknown`, attributable execution `error`, and assessment-wide refusal boundary. It clarifies ADRs 0006/0007; #32 implements its schema-invalid-evidence and evidence selection ambiguity corrections as the only semantic preservation exceptions after #31. These corrections are implemented in the sole supported v4 path. #31 is complete; broader assurance design remains with #37.
+[ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns the common required-evidence `unknown`, attributable execution `error`, and assessment-wide refusal boundary. It clarifies ADRs 0006/0007; #32 implemented its schema-invalid-evidence and evidence selection ambiguity corrections as the only semantic preservation exceptions after #31. These corrections are implemented in the sole supported v4 path. #31 is complete; broader assurance design requires separate architecture review.
 
 The implemented evidence core supports required dependencies only: every
 declared dependency is required by definition and has no optionality
@@ -231,8 +231,8 @@ operation accounting and concrete external assertions through existing typed evi
 selection, member commitment, operation identity and bound-plan representation.
 The [operation contract](../tooling/docs/operation-accounting.md) specifies exact
 selection, membership, plan identity, result matching and historical reporting.
-#37 remains open for residual architecture and mandatory escalation. No direct result
-graph, external conformity engine or certificate subsystem is introduced.
+Any direct result graph, external conformity engine, certificate subsystem, or
+other residual assurance architecture requires a new focused exploration and promotion.
 
 ## Historical assessment and operational interpretation
 
@@ -265,7 +265,7 @@ historical roll-up recomputation is allowed. Historical `waived` remains waived
 after expiry; validity is qualified from the retained exact applied-waiver snapshot.
 Whole-catalog waiver revision/content is not result identity or a historical
 assertion fact, and unrelated waivers do not perturb a result. Outcome, alignment,
-timeliness, waiver validity and coverage/applicability aggregate independently under
+timeliness, waiver validity and frozen accounting disposition aggregate independently under
 ADR 0011's state matrix. Neither plan alignment nor timely evidence establishes
 present-state certainty, absence of drift, or continuous effectiveness.
 
@@ -455,7 +455,7 @@ Normal validation uses one repository checkout. It does not use migration-era si
 
 Historical `packetlss-labs` component repositories and `compliance-workspace` preserve prior commits, issues, PRs, tags, Releases, assets, architecture, and migration evidence. They are retirement/provenance surfaces, not runtime identity or future implementation authority.
 
-Repository retirement and archival are complete. ADR 0007 foundation/cutover issues #31–#36 are completed history. Active assurance architecture and post-#73 coordinated migration planning remain with #37; #73 owns only ADR 0012 implementation. Dormant product-DNA review remains with #38.
+Repository retirement and archival are complete. ADR 0007 foundation/cutover issues #31–#36, assurance architecture issue #37, and product-DNA follow-up #38 are closed history. Current work is routed through focused promoted issues under [roadmap #85](https://github.com/packetlss/compliance/issues/85); #73 owns only ADR 0012 implementation.
 
 ## Compatibility/freeze model
 

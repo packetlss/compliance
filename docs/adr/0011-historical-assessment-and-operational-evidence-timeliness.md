@@ -180,12 +180,12 @@ Fleet/group views aggregate these dimensions separately:
 2. plan alignment;
 3. evidence timeliness;
 4. recorded waiver validity qualification; and
-5. existing coverage/applicability states.
+5. frozen accounting dispositions.
 
 A historical PASS with stale evidence must not contribute to any operator-facing
 claim equivalent to “currently passing.” Group membership remains a DAG: a subject
 may appear in several group aggregates, while fleet unique-subject totals remain
-unique. Preserve existing coverage/applicability distinctions. Do not recompute
+unique. Preserve the four frozen accounting dispositions independently. Do not recompute
 historical requirement/realization roll-ups using query-time qualifications.
 
 ADR 0010's logical required-child precedence remains:
@@ -300,7 +300,7 @@ history, result index, run object, retention service, or artifact-discovery subs
 No evidence collection/scheduling, continuous monitoring, evidence retention/storage,
 findings lifecycle, collector precedence/authority, evidence supersession, payload
 merging/multi-observation semantics, new freshness eligibility, future timestamp or
-evidence `expires_at` behavior, the required-only dependency model, #37 manual/procedural
+evidence `expires_at` behavior, the required-only dependency model, new manual/procedural
 assurance, new logical result states, persisted operational-status artifact, adapter
 execution, release/signing/acquisition, or firewall/network-policy work is authorized.
 
@@ -317,4 +317,5 @@ freshness eligibility; a new result state, persistent artifact family or trust
 boundary; changed logical roll-ups; broader assessment-history selection/supersession;
 an external compatibility freeze/consumer; removal of evaluation enforcement;
 positional dependency identity; a result graph/cross-result dependency; core history,
-retention, latest-result, or discovery services; or material overlap with #37 assurance.
+retention, latest-result, or discovery services; or material overlap with new
+assurance semantics.
