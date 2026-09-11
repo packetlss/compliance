@@ -140,7 +140,10 @@ class VerificationPolicySourceTests(unittest.TestCase):
             "benchmark.example.linux-server.ip-forwarding-disabled"
         ]
 
-        self.assertEqual(forwarding["parameters"]["settings"][0]["value"], "1")
+        self.assertEqual(
+            forwarding["parameters"]["settings"],
+            {"net.ipv4.ip_forward": "1"},
+        )
         self.assertEqual(forwarding["alignment"], "tailored")
         self.assertEqual(forwarding["deviations"][0]["id"], "DEV-LINUX-CONTAINER-001")
         self.assertEqual(

@@ -129,7 +129,7 @@ def assert_assessment_plan_handoff(plan: dict, actual: dict) -> None:
     )
     require(
         forwarding.get("parameters")
-        == {"settings": [{"key": "net.ipv4.ip_forward", "value": "1"}]},
+        == {"settings": {"net.ipv4.ip_forward": "1"}},
         "resolved forwarding parameters changed",
     )
     require(forwarding.get("disposition") == "evaluate", "active control disposition changed")
@@ -144,12 +144,12 @@ def assert_assessment_plan_handoff(plan: dict, actual: dict) -> None:
     )
     require(
         tailoring["before"]["parameters"]
-        == {"settings": [{"key": "net.ipv4.ip_forward", "value": "0"}]},
+        == {"settings": {"net.ipv4.ip_forward": "0"}},
         "base forwarding value changed",
     )
     require(
         tailoring["after"]["parameters"]
-        == {"settings": [{"key": "net.ipv4.ip_forward", "value": "1"}]},
+        == {"settings": {"net.ipv4.ip_forward": "1"}},
         "tailored forwarding value changed",
     )
     require(

@@ -10,7 +10,7 @@
     "extends": [
       {
         "baseline": "benchmark.example.linux-server-hardening@2026.1",
-        "digest": "sha256:ff2cefa45a0a675599c5ce15d64bb3d4fc083d92287744e290d8afaf06cc630b"
+        "digest": "sha256:180521981134943ab2eab9b08ab9ae6e3dadffdca45a471cdd6d63c6830838ca"
       }
     ],
     "operations": []

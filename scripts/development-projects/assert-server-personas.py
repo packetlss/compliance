@@ -133,10 +133,7 @@ def assert_runtime(run_root: Path) -> None:
     forwarding = control_by_instance(
         container_plan, "benchmark.example.linux-server.ip-forwarding-disabled"
     )
-    values = {
-        setting["key"]: setting["value"]
-        for setting in forwarding.get("parameters", {}).get("settings", [])
-    }
+    values = forwarding.get("parameters", {}).get("settings", {})
     if values.get("net.ipv4.ip_forward") != "1":
         fail("container persona lost approved ip_forward=1 deviation")
     if not forwarding.get("derivations") or not any(
