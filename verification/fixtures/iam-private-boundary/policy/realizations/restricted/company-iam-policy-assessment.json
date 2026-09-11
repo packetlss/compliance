@@ -3,13 +3,12 @@
   "kind": "ControlRealization",
   "metadata": {
     "id": "restricted.linux.company-iam-policy-assessment",
-    "revision": 1,
-    "classification": "restricted"
+    "revision": 1
   },
   "spec": {
     "based_on": {
       "realization": "company.linux.central-role-access@1",
-      "digest": "sha256:1afbd8f8773f5776220e5d92a7e26d8f42f9ae13200f09e3e541932bf85e6c66"
+      "digest": "sha256:172fa086f8a970df8294985915a33fb1cc94d5eff1626faa2623625fee240f6c"
     },
     "requirement": {
       "requirement": "company.iam.role-based-access@1",

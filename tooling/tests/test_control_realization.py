@@ -362,6 +362,8 @@ class ControlRealizationTests(unittest.TestCase):
             plan["requirements"][0]["realization"]["reference"],
             "restricted.linux.central-role-access@1",
         )
+        self.assertNotIn("classification", plan["requirements"][0]["realization"])
+        self.assertNotIn("classification", self.realization["metadata"])
         self.assertEqual(
             plan["requirements"][0]["realization"]["based_on"]["realization"],
             "company.linux.central-role-access@1",

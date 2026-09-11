@@ -118,6 +118,15 @@ control-library implementation advances its source identity to
 The verification-policy tree therefore remains
 `sha256:39311689dfae8c3e4d1b2a7104033577350d8aa81184a49715d724eafd43a7aa`.
 
+The bounded #120 pre-freeze cleanup removes realization information
+classification from the reusable schema, maintained realizations, and frozen
+plan projection. The control-library source identity advances to
+`sha256:1a04655a2d5945041995b3bd00fb1938cbc9a5f79ca843cf0d44474be270b67d`
+and this verification-policy tree advances to
+`sha256:acbd7b4f37446aca212ed7ae8b3db758c185ec71bf723405d69525f275745a71`.
+The digest algorithms, realization selection, satisfaction, and private-source
+materialization boundaries are unchanged.
+
 The path-and-byte digest construction is unchanged.
 
 ## Validation

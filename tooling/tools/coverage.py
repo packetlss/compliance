@@ -246,7 +246,6 @@ def _realization(requirement: JsonObject) -> JsonObject | None:
         return None
     return {
         "reference": realization["reference"],
-        "classification": realization["classification"],
     }
 
 
@@ -544,10 +543,7 @@ def format_coverage_explanation(document: JsonObject) -> str:
                     ]
                 )
                 if realization := objective.get("realization"):
-                    lines.append(
-                        f'        Realization: {realization["reference"]} '
-                        f'({realization["classification"]})'
-                    )
+                    lines.append(f'        Realization: {realization["reference"]}')
                 for check in objective["checks"]:
                     _format_check(lines, check, "        ")
             for check in policy["checks"]:

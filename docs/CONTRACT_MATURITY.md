@@ -181,6 +181,18 @@ identity-bearing producer content, but cannot become criterion inputs. This is
 a semantic pre-freeze parameter-contract change, not Stage 7 control
 consolidation or a new selector abstraction.
 
+## Stage 7 control-contract coherence
+
+The bounded pre-freeze cleanup under
+[#120](https://github.com/packetlss/compliance/issues/120) removes
+`ControlRealization.metadata.classification` and the corresponding frozen-plan
+projection. Information classification remains a source/package ownership,
+acquisition, repository-access, deployment, or adopter-annotation concern under
+ADR 0006; it is not a universal runtime enum or an assessment-engine access
+decision. Existing realization selection, adoption, `based_on`, parameter links,
+`satisfaction.allOf`, roll-up, source isolation, and identity algorithms remain
+unchanged. Historical artifacts retain their historical meaning and tooling.
+
 ## Closed-world operation accounting
 
 [ADR 0016](adr/0016-closed-world-policy-assessment.md) is **Experimental,

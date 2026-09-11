@@ -200,6 +200,10 @@ def assert_provenance(plan: dict, result: dict, config: dict, assembly_root: Pat
     realization_document = load(roots["environment-private"] / "realizations/restricted/restricted-linux-role-based-access.json")
     requirement = plan["requirements"][0]
     realization = requirement["realization"]
+    if "classification" in realization:
+        fail("IAM plan retained retired realization information classification")
+    if "classification" in realization_document.get("metadata", {}):
+        fail("private realization retained retired information classification")
     if requirement["digest"] != content_digest(requirement_document):
         fail("IAM requirement objective identity changed")
     if realization["digest"] != content_digest(realization_document):

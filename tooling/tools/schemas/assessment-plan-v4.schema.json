@@ -1272,7 +1272,6 @@
       "required": [
         "reference",
         "digest",
-        "classification",
         "policy_sources"
       ],
       "additionalProperties": false,
@@ -1282,13 +1281,6 @@
         },
         "digest": {
           "$ref": "#/$defs/digest"
-        },
-        "classification": {
-          "enum": [
-            "internal",
-            "confidential",
-            "restricted"
-          ]
         },
         "policy_sources": {
           "type": "array",

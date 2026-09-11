@@ -241,6 +241,17 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ArtifactValidationError, 'frozen realization satisfaction'):
             validate_assessment_plan(plan)
 
+    def test_plan_rejects_retired_realization_classification(self):
+        plan = copy.deepcopy(self.iam_plan)
+        plan["requirements"][0]["realization"]["classification"] = "restricted"
+        plan["id"] = artifact_digest(plan)
+
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            r"classification.*unexpected",
+        ):
+            validate_assessment_plan(plan)
+
     def test_frozen_derivation_records_cannot_be_omitted(self):
         from tools.assessment_provenance import artifact_digest
         plan = copy.deepcopy(self.iam_plan)

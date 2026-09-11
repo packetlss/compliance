@@ -403,9 +403,7 @@ class CoverageOperatorViewTests(unittest.TestCase):
             for check in policy["checks"]
             if check["alignment"] == "tailored"
         )
-        self.assertEqual(
-            set(objective["realization"]), {"reference", "classification"}
-        )
+        self.assertEqual(set(objective["realization"]), {"reference"})
         self.assertEqual(
             set(tailored["deviations"][0]),
             {

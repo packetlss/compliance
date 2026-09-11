@@ -21,6 +21,11 @@ restricted realization and fictitious parameters. The restricted resource has
 no runnable copy in either central policy source and inherits no content from
 the ordinary realization.
 
+The realization carries no semantic information-classification field. Its
+need-to-know boundary is demonstrated by independent physical materialization,
+source ownership, and access/deployment controls rather than an assessment-plan
+label.
+
 Although the source snapshot is co-located, its checked-in `policy/` subtree is
 not an execution input. The focused validation gate exports committed inputs
 into a temporary non-Git assembly, verifies the relocated policy digest against

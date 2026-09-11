@@ -180,7 +180,6 @@ from silently floating to changed central intent.
 A `ControlRealization` pins the exact requirement it claims to realize and
 declares:
 
-- its information classification;
 - applicable subject types;
 - adoption status, assurance method, owner, and approved implementation
   reference;
@@ -190,8 +189,8 @@ declares:
 The ordinary company Linux example is
 [`company-linux-role-based-access.json`](../../policy-sources/verification-policy/policies/realizations/company/company-linux-role-based-access.json).
 It is a complete, directly assessable implementation for ordinary company Linux
-systems. Its `internal` classification illustrates that shared company policy
-is not necessarily public policy.
+systems. Its source ownership and acquisition boundary determine who may access
+it; the realization carries no core information-classification field.
 
 The restricted alternative is
 [`restricted-linux-role-based-access.json`](../../verification/fixtures/iam-private-boundary/policy/realizations/restricted/restricted-linux-role-based-access.json).
@@ -305,6 +304,11 @@ Shared policy distribution is one-way. The central repository does not clone,
 compile, or inspect the private realization. The local environment records the
 actual planning composition, operation/member/bound-plan identities, technical
 results, and full plan-owned realization provenance.
+
+Neither `ControlRealization.metadata` nor the frozen plan's realization projection
+carries an information-classification enum. Confidentiality is enforced by source
+ownership, acquisition/materialization, repository access, and deployment controls;
+the assessment engine does not make access decisions from a semantic label.
 
 If central governance needs framework-level status, the environment may export
 a signed minimal assurance claim containing requirement identity, result,

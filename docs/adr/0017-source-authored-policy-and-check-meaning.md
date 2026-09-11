@@ -325,7 +325,7 @@ Policy: company.identity-access-objectives@1
 Objective: company.iam.role-based-access@1
 Objective digest: sha256:<requirement-content>
 Realization: company.linux.central-role-access@1
-Realization digest/classification: sha256:<realization-content> / internal
+Realization digest and source attribution: sha256:<realization-content> / <policy-source>
 Freshness slot: company.iam.role-based-access/privileged_evidence_max_age = 86400s
 Consumption: slot -> each named realization check dependency observation/max_age
 Check instance: company.linux.rbac.sssd-installed

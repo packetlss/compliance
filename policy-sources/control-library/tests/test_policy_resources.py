@@ -638,6 +638,34 @@ class PolicySourceBoundaryTests(unittest.TestCase):
             with self.subTest(schema=name):
                 self.assertTrue((policy_schemas / name).is_file())
 
+    def test_realization_schema_retires_information_classification(self):
+        schema = read_json(
+            POLICIES / "schemas/policy/control-realization.schema.json"
+        )
+        validator = Draft202012Validator(schema, format_checker=FormatChecker())
+        realization = {
+            "apiVersion": "compliance.example/v1alpha1",
+            "kind": "ControlRealization",
+            "metadata": {"id": "test.realization", "revision": 1},
+            "spec": {
+                "requirement": {
+                    "requirement": "test.requirement@1",
+                    "digest": "sha256:" + "1" * 64,
+                },
+                "applies_to": {"subject_types": ["linux-host"]},
+                "adoption": {
+                    "status": "not_implemented",
+                    "method": "none",
+                    "owner": "test-owner",
+                },
+            },
+        }
+
+        validator.validate(realization)
+        retired_shape = copy.deepcopy(realization)
+        retired_shape["metadata"]["classification"] = "restricted"
+        self.assertFalse(validator.is_valid(retired_shape))
+
     def test_no_adoption_specific_resources_are_authored_in_this_source(self):
         adoption_kinds = {
             "Baseline", "BaselineOverlay", "ControlRequirement", "ControlRealization",
