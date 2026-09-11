@@ -31,6 +31,12 @@ overlays, and realizations cannot override them, and tooling never interprets th
 as executable input. They do not define an in-core
 configuration-generation contract.
 
+`macos.system.minimum_version@1` owns macOS numeric dotted-version semantics:
+policy supplies an explicit three-component minimum, while selected observations
+may use two or three numeric components and an omitted patch compares as zero.
+Malformed observed versions are attributable inconclusiveness, not SemVer or a
+cross-domain version framework.
+
 The provenance-bearing resolved assessment plan is the handoff to separately
 versioned external adapters. Such programs may map stable control IDs, definition
 fingerprints, resolved parameters, and provenance to IaC, PaC, MDM, ticketing, or
