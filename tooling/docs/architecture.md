@@ -1,7 +1,7 @@
 # OPA Compliance Toolset — Architecture
 
 Status: **Working draft (v0.1)**  
-Last updated: **2026-09-06**
+Last updated: **2026-09-11**
 
 This document is a shared design surface, not a finished specification. It
 records our current model, the reasoning behind it, and the questions that
@@ -187,7 +187,7 @@ assessment plan.
 
 | Concept | Meaning |
 |---|---|
-| **Asset** | A resource in scope: repository, cluster, cloud account, workload, identity, etc. |
+| **Subject** | A governed resource in scope: repository, cluster, cloud account, workload, identity, etc. The CLI presents Subjects as assets without renaming this domain or wire identity. |
 | **Inventory projection** | A normalized supplied view of subjects and policy-selecting metadata imported from external authorities; it is not an assessment-wide snapshot identity. |
 | **Evidence document** | A typed JSON observation about a subject, with provenance, collection time, and freshness. |
 | **Control requirement** | A technology-neutral company outcome that may map to an external framework objective. |
@@ -508,6 +508,17 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-11 — Exact-operation Assessment operator views (#105)
+
+Assessment presentation consumes exact frozen-operation accounting, exact retained
+plan/result pairs, and separately derived current qualification. `assessment run`
+reports exact slot accounting; `status`, `status --by group`, `mappings`, and
+`explain` remain anchored to one exact operation. Current policy expectation belongs
+only to Coverage. Missing result slots remain accounting omissions without a
+synthetic historical outcome, and result-only explanation without the exact assessed
+plan remains bounded to result-owned facts. No history service, latest-result lookup,
+persistent Coverage state, new artifact family, or shared view framework is added.
+
 ### 2026-09-09 — Current inventory and coverage operator views (#104)
 
 The operator sequence is `Inventory → Coverage → Assessment`. Inventory
@@ -544,7 +555,7 @@ composition commitment, compact expected membership, and sorted member-plan
 commitments. Catalog-wide inventory/assignment revisions and the predecessor
 plan digest wrappers are removed. Each bound plan ID derives only from operation
 ID and subject ID. Accounting disposition is derived rather than frozen as
-coverage counters. No compatibility alias, inventory snapshot artifact, result
+legacy presentation counters. No compatibility alias, inventory snapshot artifact, result
 redesign, evidence/composition identity change or freeze is introduced.
 
 ### 2026-09-06 — Frozen operation accounting and typed assertions (#78)
@@ -557,8 +568,8 @@ instant applies to all evaluated members. This implements ADR 0016 without anoth
 artifact family, certificate subsystem, common-assurance engine or result graph.
 ADR 0010/0012 and existing explicit N/A, missing realization and waivers are unchanged.
 
-Earlier promotion entries below record their historical stage; #78 is the current
-bounded implementation and #37 remains the escalation route.
+Earlier promotion entries below record their historical stage; #78 is the bounded
+implementation. New architecture or escalation requires a new focused promotion.
 
 
 ### 2026-09-05 — Explicit parameter and freshness implementation (#73)
@@ -598,10 +609,10 @@ conservative roll-up and fail-only waivers. Unassigned is not automatic N/A; exi
 explicit N/A remains distinct. Invalid required resolution cannot become a partial
 valid plan or synthetic evidence unknown.
 
-#73 is complete. #37 next permits narrow read-only exploration of expected run
-accounting, typed external/procedural assurance dependencies and qualification,
-beneficiary attribution and whether common reuse is needed. No runtime/schema/fixture
-change or wire/algorithm freeze is authorized; ADR 0016 owns escalation and examples.
+At that stage, #73 was complete and #37 next permitted narrow read-only exploration
+of expected run accounting, typed external/procedural assurance dependencies and
+qualification, beneficiary attribution, and whether common reuse was needed. This
+paragraph records historical routing; it is not current implementation authority.
 
 ### 2026-09-05 — Explicit policy parameters and policy-owned freshness (#37)
 
@@ -712,7 +723,7 @@ and commands are unsupported, and adaptation is external.
 | 2026-09-05 | Evaluate policy-source generated-directory exclusions only within the explicitly supplied semantic root | Corrected a path-dependent implementation defect without changing the provisional digest algorithm; artifacts carrying the erroneous empty identity require regeneration |
 | 2026-09-05 | Intentionally rename the maintained reusable semantic source to `control-library`, independently of path and distribution, without changing policy bytes or adding an alias | Accepted and implemented under #57 Tranches 0–1; destination [ADR 0009](../../docs/adr/0009-active-compliance-vocabulary.md) owns vocabulary and deferred work |
 | 2026-09-05 | Rename the project-selection schema, loader vocabulary, and diagnostics from `workspace-config` to `project-registry`, preserving selection and isolation without a compatibility alias | Implemented under #57 Tranche 2 and destination ADR 0009; supersedes only the registry terminology in the 2026-08-23 decision, with registry data/location remaining nonsemantic to composition |
-| 2026-09-05 | Promote the common required-evidence status/refusal boundary, clarifying ADRs 0006/0007 and reconciling #32 | System [ADR 0010](../../docs/adr/0010-required-evidence-status-and-assessment-refusal.md) is normative and implemented by #32; #37 retains broader assurance design; #62 owns tied-candidate selection |
+| 2026-09-05 | Promote the common required-evidence status/refusal boundary, clarifying ADRs 0006/0007 and reconciling #32 | Historical promotion state: system [ADR 0010](../../docs/adr/0010-required-evidence-status-and-assessment-refusal.md) is normative and implemented by #32; #37 then retained broader assurance design; #62 owned tied-candidate selection |
 | 2026-09-05 | Implement ADR 0007 actual composition, optional direct/complete enforcement, v1alpha3 configuration and verified local wheel receipts; refuse v1alpha3 assessment generation pending #32 | Accepted under #31; [composition contract](composition.md) defines normalized projections and transitional diagnostics; predecessor readers retained for #33 |
 | 2026-09-05 | Extend ADR 0010 with #62 evidence selection ambiguity: canonical-identical latest duplicates coalesce for selection only; distinct equally latest eligible documents select none and make dependent controls `unknown` without OPA | Implemented by #32. Supersedes predecessor traversal-order selection and the earlier unresolved #62 follow-up; complete snapshot provenance remains preserved |
 | 2026-09-05 | Separate immutable historical assessment outcomes, exact plan alignment, derived evidence timeliness and recorded waiver validity; require minimal factual temporal provenance in v4 (option B, #66) | System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) is normative and implemented for v4 historical operation reporting. #32 owns its factual representation and #80 implements the derived operational view. ADR 0010 retains assessment-time semantics. |

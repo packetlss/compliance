@@ -503,7 +503,7 @@ def _render_selected_plans(args, *, diagnostic=False):
     subjects, groups, assignments = _load_catalog(args)
     if diagnostic and len(args.subject_id) == 1 and not args.group and not args.all_subjects:
         if args.subject_id[0] not in subjects:
-            raise ValueError('unknown subject id: ' + args.subject_id[0])
+            raise ValueError('unknown asset id: ' + args.subject_id[0])
         return [render_plan(subjects[args.subject_id[0]], groups, assignments,
                             _resolved_policy_sources(args), config=args.project_config)]
     return render_operation(subjects, groups, assignments, _resolved_policy_sources(args),
@@ -517,12 +517,11 @@ def _check_operation_outputs(plans, *roots):
         paths = [subject_artifact_path(root, p['subject']['id']) for p in plans]
         all_paths.extend(path.resolve() for path in paths)
     if len(all_paths) != len(set(all_paths)):
-        raise ValueError('operation output paths collide; use distinct per-subject plan/result directories')
+        raise ValueError('operation output paths collide; use distinct per-asset plan/result directories')
 
 
 def _format_plan_summary(plan: dict) -> str:
-    from .operation import plan_coverage
-    coverage = plan_coverage(plan)
+    from .operation import plan_disposition
     resolution = plan.get("resolution", {})
     external_refs = {
         external_ref
@@ -535,10 +534,9 @@ def _format_plan_summary(plan: dict) -> str:
     }
     lines = [
         f"Assessment plan: {plan.get('id', 'unknown')}",
-        f"Subject:         {plan.get('subject', {}).get('id', 'unknown')}",
+        f"Asset:           {plan.get('subject', {}).get('id', 'unknown')}",
         f"Resolution:      {resolution.get('status', 'unknown')}",
-        f"Coverage:        {coverage.get('status', 'unknown')} "
-        f"(assessable={str(bool(coverage.get('assessable'))).lower()})",
+        f"Disposition:     {plan_disposition(plan)}",
         f"Controls:        {len(plan.get('controls', []))} active, "
         f"{len(plan.get('excluded_controls', []))} excluded",
         f"Objectives:      {len(plan.get('requirements', []))}",
@@ -555,14 +553,12 @@ def _format_plan_summary(plan: dict) -> str:
 
 
 def _plan_index_entry(plan: dict, path: Path) -> dict:
-    from .operation import plan_coverage
-    coverage = plan_coverage(plan)
+    from .operation import plan_disposition
     return {
         "subject_id": plan.get("subject", {}).get("id", "unknown"),
         "plan_id": plan.get("id", "unknown"),
         "resolution": plan.get("resolution", {}).get("status", "unknown"),
-        "coverage": coverage.get("status", "unknown"),
-        "assessable": bool(coverage.get("assessable")),
+        "disposition": plan_disposition(plan),
         "active_controls": len(plan.get("controls", [])),
         "excluded_controls": len(plan.get("excluded_controls", [])),
         "objectives": len(plan.get("requirements", [])),
@@ -571,12 +567,12 @@ def _plan_index_entry(plan: dict, path: Path) -> dict:
 
 
 def _format_plan_index(entries: list[dict]) -> str:
-    headers = ("SUBJECT", "PLAN", "RESOLUTION", "COVERAGE", "A/X", "OBJECTIVES")
+    headers = ("ASSET", "PLAN", "RESOLUTION", "DISPOSITION", "A/X", "OBJECTIVES")
     rows = [(
         entry["subject_id"],
         entry["plan_id"][:23],
         entry["resolution"].upper(),
-        entry["coverage"].upper(),
+        entry["disposition"].upper(),
         f'{entry["active_controls"]}/{entry["excluded_controls"]}',
         str(entry["objectives"]),
     ) for entry in entries]
@@ -595,7 +591,7 @@ def _format_plan_index(entries: list[dict]) -> str:
     lines.extend(render(row) for row in rows)
     lines.extend([
         "",
-        "Select one with: compliance plan show SUBJECT",
+        "Select one with: compliance plan show ASSET",
     ])
     return "\n".join(lines)
 
@@ -619,11 +615,11 @@ def _resolve_plan_show_path(
         direct = configured / selector
         if direct.exists():
             return direct
-        subject_path = subject_artifact_path(configured, selector.as_posix())
-        if subject_path.exists():
-            return subject_path
+        asset_path = subject_artifact_path(configured, selector.as_posix())
+        if asset_path.exists():
+            return asset_path
         raise ValueError(
-            f"no {artifact_name} for subject {selector.as_posix()!r} in {configured}"
+            f"no {artifact_name} for asset {selector.as_posix()!r} in {configured}"
         )
     raise ValueError(f"{artifact_name} does not exist: {selector}")
 
@@ -1023,8 +1019,12 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
 
     plan_parser = commands.add_parser("plan", help="render and inspect assessment plans")
     plan_commands = plan_parser.add_subparsers(dest="plan_command", required=True)
-    plan_render = plan_commands.add_parser("render", help="render one subject's effective plan")
-    plan_render.add_argument("subject_id", nargs='*')
+    plan_render = plan_commands.add_parser(
+        "render",
+        help="render effective plans for one or more assets",
+        description="render effective plans for one or more assets",
+    )
+    plan_render.add_argument("subject_id", metavar="ASSET", nargs='*')
     plan_render.add_argument('--group', action='append', default=[])
     plan_render.add_argument('--all', dest='all_subjects', action='store_true')
     _add_policy_sources(plan_render, config)
@@ -1033,7 +1033,7 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
         "--output",
         config,
         "plan",
-        help_text="assessment plan output file, or extensionless per-subject directory",
+        help_text="assessment plan output file, or extensionless per-asset directory",
     )
     _set_handler(plan_render, _run_plan_render)
     plan_show = plan_commands.add_parser("show", help="show or list rendered assessment plans")
@@ -1041,7 +1041,7 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
         "plan",
         nargs="?",
         type=Path,
-        help="assessment plan file or subject ID; omit to use configured plans",
+        help="assessment plan file or asset ID; omit to use configured plans",
     )
     plan_show.add_argument("--format", choices=("table", "json"), default="table")
     _set_handler(plan_show, _run_plan_show)
@@ -1071,14 +1071,14 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
         "--plan-output",
         config,
         "plan",
-        help_text="rendered plan output file, or extensionless per-subject directory",
+        help_text="rendered plan output file, or extensionless per-asset directory",
     )
     _add_path(
         assessment_run,
         "--output",
         config,
         "results",
-        help_text="assessment result output file, or extensionless per-subject directory",
+        help_text="assessment result output file, or extensionless per-asset directory",
     )
     _add_waiver_path(assessment_run, config, required=False)
     assessment_run.add_argument(

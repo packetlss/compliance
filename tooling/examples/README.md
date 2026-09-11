@@ -5,15 +5,11 @@ command and the important component behaviors that span commands. After removal
 of in-core configuration generation and addition of current coverage views it
 contains 21 CLI leaves and 19 domain features.
 
-The complete composed suite is owned by
-the canonical destination scenario root at `verification/scenarios/`.
-That currently separate repository coordinate is transitional integration
-metadata; its scenario-gate ownership and isolated project contracts survive
-source consolidation under workspace
-[ADR 0005](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/adr/0005-content-addressed-development-boundaries.md).
-Its persistent manifest remains on the pre-cutover composition until scenario
-issue #11 selects the final tooling, policy-source, and project revisions
-together. Tooling #67 does not advance that manifest.
+The complete composed suite is owned by the co-located canonical scenario root
+at [`verification/scenarios/`](../../verification/scenarios/) under destination
+[ADR 0005](../../docs/adr/0005-content-addressed-development-boundaries.md).
+Its scenario-gate ownership and isolated project contracts remain distinct from
+focused tooling examples.
 
 [`feature-coverage.json`](feature-coverage.json) records the retained catalog
 and assigns each feature to one primary verification, development, or boundary

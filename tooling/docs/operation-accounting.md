@@ -42,7 +42,7 @@ and label facts, assignment-relevant resolved membership attribution,
 `member_plan_digest`, and compact expected control/requirement/mapping membership.
 It does not repeat assignments, baseline bodies or digests, control bodies/digests,
 requirement document digests, realization/adoption/satisfaction bodies, full
-provenance, inventory acquisition facts or derived coverage counters.
+provenance, inventory acquisition facts or legacy presentation counters.
 
 Assignments appear once per operation as `{id, target_group, baselines}` and only
 when their target resolves for a selected member. Applicability is rederived from
@@ -93,11 +93,11 @@ compliance --no-config assessment status --plan generated/plans/host__A.json \
 `assessment run --format json` emits machine-readable operation accounting; the
 default text output summarizes counts and member states.
 
-Explicit subject IDs and repeated groups select a union; `--all` selects supplied
+Explicit asset IDs and repeated groups select a union; `--all` selects supplied
 inventory. Empty selection fails. Invalid selected policy prevents operation
 execution. Existing single-subject `plan render` may still emit an invalid
 diagnostic plan; it cannot support operation success or assessment execution.
-Multi-subject outputs require distinct per-subject paths. Plans are published
+Multi-asset outputs require distinct per-asset paths. Plans are published
 before member evaluation, preserving the expected denominator if evaluation stops.
 Already trustworthy children remain independently valid if a later member refuses.
 

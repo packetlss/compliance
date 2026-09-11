@@ -1,7 +1,7 @@
 # Verification Scenarios and Assurance Narratives
 
-Status: **Accepted direction; first scenario implemented, broader migration proposed (v0.3)**
-Last updated: **2026-09-04**
+Status: **Accepted and implemented direction (v0.3)**
+Last updated: **2026-09-11**
 
 This document defines how runnable examples should prove implemented behavior
 while remaining recognizable as credible operational situations. It also
@@ -9,10 +9,9 @@ defines how those scenarios explain the path from an external requirement to
 company policy, normal operating practice, technical realization, evidence,
 and a current assessment without overstating the resulting assurance claim.
 
-The verification strategy and first scenario migration are accepted. Current
-repository coordinates are transitional; the final consolidated repository
-name and directory layout are intentionally undecided. No new policy resource
-kind is introduced here.
+The verification strategy is implemented in the co-located canonical
+`verification/scenarios/` root. Repository placement remains nonsemantic and no
+new policy resource kind is introduced here.
 
 ## 1. Separate verification from discovery
 
@@ -43,14 +42,13 @@ released shared-policy library plus verification-only policy containing
 synthetic company baselines, edge cases, and test mappings. A starter workspace
 instead pins the shared-policy library plus a separately released,
 customer-shaped example-company policy. The verification and example policy
-sources never depend on one another. In the current transitional layout,
-`compliance-control-library` owns the released reusable policy and
-`compliance-verification-policy` owns the retained synthetic verification
-resources. Those named sources remain independently identified and digested if
-their non-sensitive development source is later co-located.
+sources never depend on one another. The independently named `control-library`
+source owns reusable policy and `verification-policy` owns retained synthetic
+verification resources. Co-location does not merge their identities or grant
+either source precedence.
 
-The current `compliance-verification-scenarios` integration owner contains the
-first stable project: a deterministic Linux hardening rollout with
+The current `verification/scenarios/` integration owner contains deterministic
+Linux hardening rollout and company IAM policy-assessment projects with
 a complete company access realization, a waiver, missing-evidence outcomes,
 and a persona conflict. The current mock-fleet and server-personas projects
 remain development examples.
@@ -60,11 +58,10 @@ a synthetic need-to-know and multi-source materialization proof; real private
 environment repositories remain separate. These fixtures remain useful while
 dedicated verification scenarios are introduced incrementally.
 
-Current development projects are materialized under the transitional
-`compliance-development-projects` coordinate. A clonable downstream starter and
-example-company policy remain future product work. Their repository names,
-placement, and migration timing are not decided here and do not alter the
-accepted project-isolation and policy-source dependency boundaries.
+Current development projects are materialized under `projects/`. A clonable
+downstream starter and example-company policy remain future product work. Their
+placement does not alter the accepted project-isolation and policy-source
+dependency boundaries.
 
 ## 2. Scenario first, feature mapped
 
@@ -228,21 +225,20 @@ convenience. Any future real host-observation collector and an independently
 versioned restricted policy source should remain separate where combining them
 would stop exercising the boundary they exist to prove.
 
-Development topology is governed by workspace
-[ADR 0005](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/adr/0005-content-addressed-development-boundaries.md).
-The current system [architecture](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/ARCHITECTURE.md)
-and [repository map](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/REPOSITORIES.md)
+Development topology is governed by destination
+[ADR 0005](../../docs/adr/0005-content-addressed-development-boundaries.md).
+The current system [architecture](../../docs/ARCHITECTURE.md)
+and [repository map](../../docs/REPOSITORIES.md)
 distinguish logical integration ownership from repository placement and preserve
 real information-sharing boundaries.
 
 The tooling feature catalog records the retained 21 CLI leaves and 19 domain
-features. Scenario issue #11 owns the final coordinated cutover and must select
-the final producer/consumer revisions without making an adapter a prerequisite
-for assessment.
+features. The co-located canonical scenario gate owns their complete composed
+validation without making an adapter a prerequisite for assessment.
 
-The first migration created `projects/linux-hardening-rollout` inside
-`compliance-verification-scenarios`; the server-personas development input now
-lives in `compliance-development-projects`. The stable project is the primary
+The canonical `verification/scenarios/projects/linux-hardening-rollout` project
+and ordinary `projects/server-personas` project retain separate validation roles.
+The stable scenario is the primary
 path for requirement pass/unknown roll-up, waiver application, invalid persona
 resolution, and joined explanations. Fixed
 collection and evaluation instants make freshness and waiver behavior

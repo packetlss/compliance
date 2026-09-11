@@ -390,6 +390,7 @@ class OperationTests(unittest.TestCase):
             [report], boundary, assessed_plans=plans
         )
         row = at_boundary['members'][0]
+        self.assertNotIn('qualification_summary', at_boundary)
         self.assertEqual(row['historical_outcome'], 'pass')
         self.assertEqual(row['plan_alignment'], 'plan_alignment_unavailable')
         self.assertEqual(row['evidence_timeliness']['timely_selected_dependencies'], 1)

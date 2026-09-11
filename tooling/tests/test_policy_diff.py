@@ -332,6 +332,44 @@ class PolicyDiffTests(unittest.TestCase):
         self.assertIn("test/approval", rendered)
         self.assertIn('"disposition":"excluded"', rendered)
 
+    def test_unproduced_coverage_change_kind_is_rejected(self):
+        before = copy.deepcopy(self.macos_plan)
+        excluded = before["excluded_controls"].pop()
+        template = next(
+            item
+            for item in before["controls"]
+            if item["implementation"] == excluded["implementation"]
+        )
+        active = copy.deepcopy(excluded)
+        active.update({
+            "disposition": "evaluate",
+            "alignment": "unaltered",
+            "derivations": [],
+            "deviations": [],
+            "lineage": [excluded["lineage"][0]],
+            "entrypoint": template["entrypoint"],
+            "severity": template["severity"],
+            "remediation": template["remediation"],
+            "evidence": template["evidence"],
+            "implementation_sources": template["implementation_sources"],
+        })
+        active["policy_inputs"]["definition"] = copy.deepcopy(
+            template["policy_inputs"]["definition"]
+        )
+        active["policy_inputs"]["parameters_schema"] = copy.deepcopy(
+            template["policy_inputs"]["parameters_schema"]
+        )
+        before["controls"].append(active)
+        before["controls"].sort(key=lambda item: item["instance_id"])
+        self.resign(before)
+        document = build_policy_diff(before, self.macos_plan)
+        document["control_changes"][0]["kind"] = "coverage"
+
+        with self.assertRaisesRegex(
+            ValueError, "generated policy diff failed schema validation"
+        ):
+            validate_policy_diff(document)
+
     def test_requirement_revision_is_a_modified_stable_requirement(self):
         after = copy.deepcopy(self.iam_plan)
         requirement = after["requirements"][0]

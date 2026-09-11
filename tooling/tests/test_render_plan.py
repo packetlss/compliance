@@ -30,7 +30,7 @@ from tools.render_plan import (
     validate_rego_entrypoints,
 )
 from tools.policy_sources import PolicySource
-from tools.operation import plan_coverage
+from tools.operation import plan_disposition
 
 
 class InventoryResourceTests(unittest.TestCase):
@@ -892,7 +892,7 @@ class PolicySchemaTests(unittest.TestCase):
             )
 
         self.assertEqual(plan["resolution"]["status"], "invalid")
-        self.assertFalse(plan_coverage(plan)["assessable"])
+        self.assertEqual(plan_disposition(plan), "invalid")
         self.assertEqual(plan["resolution"]["errors"][0]["type"], "baseline-schema-invalid")
         self.assertEqual(plan["resolution"]["errors"][0]["path"], "/spec/controls/0")
 
@@ -915,7 +915,7 @@ class PolicySchemaTests(unittest.TestCase):
             plan = render_plan(subject, groups, assignments, policies)
 
         self.assertEqual(plan["resolution"]["status"], "invalid")
-        self.assertFalse(plan_coverage(plan)["assessable"])
+        self.assertEqual(plan_disposition(plan), "invalid")
         self.assertEqual(
             plan["resolution"]["errors"][0]["type"],
             "control-manifest-schema-invalid",
@@ -997,7 +997,7 @@ class PlanRevisionTests(unittest.TestCase):
                 PolicySource("verification-policy", selection),
             ))
         self.assertEqual(plan["resolution"]["status"], "invalid")
-        self.assertFalse(plan_coverage(plan)["assessable"])
+        self.assertEqual(plan_disposition(plan), "invalid")
         self.assertIn("control-instance-conflict", {
             error["type"] for error in plan["resolution"]["errors"]
         })
@@ -1010,11 +1010,9 @@ class PlanRevisionTests(unittest.TestCase):
             self.policy_sources,
         )
 
-        coverage = plan_coverage(plan)
-        self.assertEqual(coverage["status"], "assigned")
-        self.assertTrue(coverage["assessable"])
-        self.assertEqual(coverage["active_control_count"], 3)
-        self.assertEqual(coverage["excluded_control_count"], 1)
+        self.assertEqual(plan_disposition(plan), "result_required")
+        self.assertEqual(len(plan["controls"]), 3)
+        self.assertEqual(len(plan["excluded_controls"]), 1)
 
     def test_assessment_plan_is_sufficient_external_adapter_handoff(self):
         plan = render_plan(
@@ -1184,10 +1182,7 @@ class PlanRevisionTests(unittest.TestCase):
         )
 
         self.assertEqual(plan["resolution"]["status"], "valid")
-        coverage = plan_coverage(plan)
-        self.assertEqual(coverage["status"], "unassigned")
-        self.assertFalse(coverage["assessable"])
-        self.assertEqual(coverage["reason"], "no-policy-assignment")
+        self.assertEqual(plan_disposition(plan), "unassigned")
 
     def test_retired_subject_is_inactive(self):
         retired = copy.deepcopy(self.subject)
@@ -1200,10 +1195,9 @@ class PlanRevisionTests(unittest.TestCase):
             self.policy_sources,
         )
 
-        self.assertEqual(plan_coverage(plan)["status"], "inactive")
-        self.assertFalse(plan_coverage(plan)["assessable"])
+        self.assertEqual(plan_disposition(plan), "inactive")
 
-    def test_unknown_lifecycle_makes_coverage_invalid(self):
+    def test_unknown_lifecycle_makes_plan_invalid(self):
         unknown = copy.deepcopy(self.subject)
         unknown["status"] = "unknown"
 
@@ -1214,8 +1208,7 @@ class PlanRevisionTests(unittest.TestCase):
             self.policy_sources,
         )
 
-        self.assertEqual(plan_coverage(plan)["status"], "invalid")
-        self.assertFalse(plan_coverage(plan)["assessable"])
+        self.assertEqual(plan_disposition(plan), "invalid")
         self.assertEqual(plan["resolution"]["errors"][0]["type"], "subject-lifecycle-unknown")
 
 

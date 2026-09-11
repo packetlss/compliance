@@ -9,13 +9,13 @@ real SaaS provider:
   **Acme Projects** SaaS application.
 
 It demonstrates that inventory, policy resolution, evidence collection, and
-OPA evaluation use the same contracts for an API-governed object as for the
-local MacBook. No credentials, customer data, or real account identifiers are
+OPA evaluation use the same contracts for API-governed objects as for ordinary
+host assets. No credentials, customer data, or real account identifiers are
 present.
 
 ## Inventory DAG and assignments
 
-Both subjects resolve through more than one branch of the group DAG:
+All three assets resolve through more than one branch of the group DAG:
 
 ```mermaid
 flowchart TD
@@ -166,14 +166,14 @@ same commands work there without `--project mock-fleet`.
 The policy gate validates every reusable control manifest, its local parameter
 schema, and the effective parameters produced by the company overlays.
 
-The extensionless configured `plan` and `results` paths are per-subject
-directories. The CLI writes stable filenames derived from each subject ID, so
-the two runs build a fleet view without output flags. This is the same layout
-used by the single-subject MacBook project and is formalized in
+The extensionless configured `plan` and `results` paths are per-asset
+directories. The CLI writes stable filenames derived from each underlying Subject ID, so
+one `--all` run builds a fleet view without output flags. This is the same layout
+used by single-asset projects and is formalized in
 [`project-layout.md`](../../tooling/docs/project-layout.md).
 
 With multiple generated plans, `plan show` renders a fleet index. Pass a
-subject ID, such as `plan show cloud-account/aws-111122223333`, to inspect one
+stable asset ID, such as `plan show cloud-account/aws-111122223333`, to inspect one
 complete plan; an explicit plan-file path remains supported.
 
 ## Intentional development drift

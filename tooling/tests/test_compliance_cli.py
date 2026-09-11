@@ -298,6 +298,9 @@ class ComplianceCliTests(unittest.TestCase):
             "build_group_report", "build_framework_report",
         ):
             self.assertFalse(hasattr(assessment, removed_symbol))
+        import tools.operation as operation
+        for removed_symbol in ("plan_coverage", "summarize_qualifications"):
+            self.assertFalse(hasattr(operation, removed_symbol))
 
     def test_extensionless_artifact_path_uses_subject_filename(self):
         self.assertEqual(
@@ -323,6 +326,9 @@ class ComplianceCliTests(unittest.TestCase):
                 args.handler(args)
 
         self.assertIn(f'Assessment plan: {document["id"]}', output.getvalue())
+        self.assertIn("Asset:           host/test", output.getvalue())
+        self.assertIn("Disposition:     unassigned", output.getvalue())
+        self.assertNotIn("Coverage:", output.getvalue())
 
     def test_plan_show_lists_configured_plan_directory(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -344,6 +350,44 @@ class ComplianceCliTests(unittest.TestCase):
         self.assertIn("Assessment plans (2)", output.getvalue())
         self.assertIn("host/one", output.getvalue())
         self.assertIn("host/two", output.getvalue())
+        self.assertIn("ASSET", output.getvalue())
+        self.assertIn("DISPOSITION", output.getvalue())
+        self.assertNotIn("COVERAGE", output.getvalue())
+
+    def test_plan_show_json_index_uses_plan_disposition(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            plans = Path(temporary) / "plans"
+            plans.mkdir()
+            for subject_id in ("host/one", "host/two"):
+                subject_artifact_path(plans, subject_id).write_text(
+                    json.dumps(self.plan_document(subject_id)),
+                    encoding="utf-8",
+                )
+            parser = build_parser(ProjectConfig(paths={"plan": plans}))
+            args = parser.parse_args(["plan", "show", "--format", "json"])
+            output = io.StringIO()
+
+            with redirect_stdout(output):
+                args.handler(args)
+
+        document = json.loads(output.getvalue())
+        self.assertEqual(
+            {entry["disposition"] for entry in document["plans"]},
+            {"unassigned"},
+        )
+        self.assertTrue(all("coverage" not in entry for entry in document["plans"]))
+        self.assertTrue(all("assessable" not in entry for entry in document["plans"]))
+
+    def test_plan_render_help_uses_asset_vocabulary(self):
+        parser = build_parser(ProjectConfig())
+        output = io.StringIO()
+        with redirect_stdout(output), self.assertRaises(SystemExit):
+            parser.parse_args(["plan", "render", "--help"])
+
+        rendered = output.getvalue()
+        self.assertIn("ASSET", rendered)
+        self.assertIn("assets", rendered)
+        self.assertNotIn("subject", rendered.lower())
 
     def test_plan_show_selects_subject_from_configured_directory(self):
         with tempfile.TemporaryDirectory() as temporary:

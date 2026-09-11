@@ -296,8 +296,10 @@ filename is not parsed for distribution or version.
 This boundary performs no discovery, download, authentication, caching, lock
 generation, or publication. Future producers own construction and publication
 of their releases while reusing the generic descriptor and archive profile.
-System-level rationale and identity layering are governed by
-[workspace ADR 0004](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/adr/0004-generic-policy-source-release-contract.md).
+System-level identity layering is governed by destination
+[ADR 0005](../../docs/adr/0005-content-addressed-development-boundaries.md);
+the provider-neutral tooling-release decision is retained in the local
+[release ADR](adr/2026-08-30-provider-neutral-tooling-release.md).
 
 ## Successor composition and generated artifacts
 
@@ -337,16 +339,15 @@ project with a local materialized policy tree, shadow `git` with a deliberately
 failing executable, validate the lock, and exercise v4 generated-artifact
 provenance. This is the downstream runtime boundary.
 
-## Workspace integration boundary
+## Composed integration boundary
 
-Component validation is repository-local. The canonical composed scenario gate
-consumes explicit component revisions; an optional workspace remains a leaf
-integration/deployment composition. Repository paths and workspace gitlinks are
-not runtime or artifact identity. Development topology is governed by workspace
-[ADR 0005](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/adr/0005-content-addressed-development-boundaries.md),
-with current ownership in the workspace
-[architecture](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/ARCHITECTURE.md)
-and [repository map](https://github.com/packetlss-labs/compliance-workspace/blob/main/docs/REPOSITORIES.md).
+Component validation and the canonical composed scenario gate run from the same
+committed destination revision. A downstream or private deployment composition
+may remain a leaf integration boundary. Repository paths and Git links are not
+runtime or artifact identity. Development topology is governed by destination
+[ADR 0005](../../docs/adr/0005-content-addressed-development-boundaries.md),
+with current ownership in the local [architecture](../../docs/ARCHITECTURE.md)
+and [repository map](../../docs/REPOSITORIES.md).
 
 ## Identity summary
 

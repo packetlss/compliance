@@ -1,7 +1,7 @@
 # Control Requirements and Environment Realizations
 
 Status: **Implemented initial contract (v0.1)**  
-Last updated: **2026-09-04**
+Last updated: **2026-09-11**
 
 This document defines how a high-level regulatory or company control objective
 can receive a defensible top-level result from environment-private technical
@@ -31,8 +31,8 @@ intent is insufficient. No certificate subsystem, authority engine or direct res
 graph exists. Mappings report supplied company policy only.
 
 ADR 0010/0012, exactly-one realization selection, missing-realization failure,
-explicit N/A and fail-only waivers retain their existing semantics. #37 remains
-open for residual architecture and mandatory escalation.
+explicit N/A and fail-only waivers retain their existing semantics. Any residual
+architecture or escalation requires a new focused promotion.
 
 ## 1. Problem
 
@@ -158,8 +158,8 @@ semantic linkage. [#73](https://github.com/packetlss/compliance/issues/73) imple
 [the parameter contract](policy-parameters.md) defines its concrete fields and identity
 projection. Realizations still declare their complete checks, with explicit symbolic
 links for semantic parameters. Missing realization/coverage behavior,
-`allOf` and provenance-only `based_on` are unchanged; broader #37 assurance and
-external-claim authority remain separate work.
+`allOf` and provenance-only `based_on` are unchanged; broader assurance and
+external-claim authority require separate promoted work.
 
 A `ControlRequirement` is suitable for a signed company-policy release. It has a
 stable ID and revision, a technology-neutral statement, and optional external
@@ -167,7 +167,7 @@ framework mappings. It contains no environment hostnames, IAM domains, group
 names, evidence, or technical parameters.
 
 The synthetic example requirement is
-[`company-role-based-access.json`](https://github.com/packetlss-labs/compliance-verification-policy/blob/main/policies/requirements/company/company-role-based-access.json).
+[`company-role-based-access.json`](../../policy-sources/verification-policy/policies/requirements/company/company-role-based-access.json).
 Its statement requires interactive access to use centrally governed role or
 group membership rather than unmanaged subject-local authorization.
 
@@ -188,13 +188,13 @@ declares:
 - a constrained satisfaction expression over those instances.
 
 The ordinary company Linux example is
-[`company-linux-role-based-access.json`](https://github.com/packetlss-labs/compliance-verification-policy/blob/main/policies/realizations/company/company-linux-role-based-access.json).
+[`company-linux-role-based-access.json`](../../policy-sources/verification-policy/policies/realizations/company/company-linux-role-based-access.json).
 It is a complete, directly assessable implementation for ordinary company Linux
 systems. Its `internal` classification illustrates that shared company policy
 is not necessarily public policy.
 
 The restricted alternative is
-[`restricted-linux-role-based-access.json`](https://github.com/packetlss-labs/compliance-project-iam-realization/blob/main/policy/realizations/restricted/restricted-linux-role-based-access.json).
+[`restricted-linux-role-based-access.json`](../../verification/fixtures/iam-private-boundary/policy/realizations/restricted/restricted-linux-role-based-access.json).
 It contains fictitious values but represents content that could remain visible
 only inside a need-to-know environment.
 

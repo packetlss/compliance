@@ -69,14 +69,14 @@ Current normative architecture is local:
 - `docs/REPOSITORIES.md` — logical ownership/repository boundaries;
 - `docs/DEVELOPMENT_WORKFLOW.md` — engineering lifecycle;
 - `docs/CONTRACT_MATURITY.md` — compatibility/freeze rules;
-- `docs/adr/` — accepted ADRs 0005–0008;
+- `docs/adr/` — accepted ADRs 0005–0012 and 0016–0018;
 - `t3.json` — shared T3 Code worktree setup and validation shortcuts;
 - `docs/history/pre-consolidation.md` — migration/history provenance;
 - `docs/history/retirement-readiness.md` — one-time retirement/cutover evidence.
 
 Historical `packetlss-labs` component repositories and `compliance-workspace` are archived provenance preserving pre-consolidation commits, issues, PRs, and releases. No active development or architecture work remains owned there.
 
-Active future design/implementation work is owned by destination issues #31–#38. Real private environment repositories remain separate. Firewall/network-policy work remains out of scope unless explicitly reopened.
+Current staged work is routed through [roadmap #85](https://github.com/packetlss/compliance/issues/85) and its promoted destination issues. Issues #31–#38 are completed or closed consolidation and architecture history, not active routing. Real private environment repositories remain separate. Firewall/network-policy work remains out of scope unless explicitly reopened.
 
 Normal T3 Code development is:
 

@@ -286,27 +286,6 @@ def plan_disposition(plan):
     return 'result_required'
 
 
-def plan_coverage(plan):
-    """Derive the legacy presentation dimensions; they are not frozen facts."""
-    disposition = plan_disposition(plan)
-    status = ('assigned' if disposition in ('result_required', 'no_assessable_policy')
-              else disposition)
-    reason = {
-        'invalid': 'resolution-errors', 'inactive': 'subject-retired',
-        'unassigned': 'no-policy-assignment', 'no_assessable_policy': 'no-active-controls',
-        'result_required': 'policy-assigned',
-    }[disposition]
-    return {
-        'status': status,
-        'assessable': disposition == 'result_required',
-        'reason': reason,
-        'assignment_count': len(plan['assignments']),
-        'active_control_count': len(plan['controls']),
-        'excluded_control_count': len(plan['excluded_controls']),
-        'requirement_count': len(plan['requirements']),
-    }
-
-
 def freeze_operation(plans, subjects, groups, assignments, selection):
     """Freeze all rows before evaluation; mutate only the generated subject plans."""
     from .assessment_provenance import artifact_digest
@@ -609,40 +588,7 @@ def qualify_operation(
             else _evidence_timeliness(report, assessed_plan, query_instant)
         )
     account['query_instant'] = query_instant.isoformat().replace('+00:00', 'Z')
-    account['qualification_summary'] = summarize_qualifications(account['members'])
     account['all_passed_meaning'] = (
         'all frozen historical member outcomes passed at the selected assessment instant'
     )
     return account
-
-
-def summarize_qualifications(rows):
-    """Aggregate each operational dimension without imposing precedence."""
-    totals = Counter()
-    for row in rows:
-        if row['historical_outcome'] is not None:
-            totals['historical_outcomes.' + row['historical_outcome']] += 1
-        totals['expected_slots.required' if row['accounting_disposition'] == 'result_required'
-               else 'expected_slots.not_required'] += 1
-        if row['accounting_disposition'] == 'result_required':
-            totals['expected_slots.filled' if row['result_present']
-                   else 'expected_slots.missing'] += 1
-        totals['plan_alignment.' + row['plan_alignment']] += 1
-        totals['coverage.' + row['accounting_disposition']] += 1
-        timing = row['evidence_timeliness']
-        if timing.get('qualification') == 'unavailable':
-            totals['subjects.evidence_timeliness_unavailable'] += 1
-        else:
-            if timing['controls_needing_reassessment']:
-                totals['subjects.needing_reassessment'] += 1
-            if timing['controls_with_unavailable_timeliness']:
-                totals['subjects.evidence_timeliness_unavailable'] += 1
-            if timing['controls'] and all(c['within_recorded_age_limits'] for c in timing['controls']):
-                totals['subjects.within_recorded_age_limits'] += 1
-            for key in ('timely_selected_dependencies', 'stale_selected_dependencies',
-                        'unavailable_required_dependencies', 'controls_within_recorded_age_limits',
-                        'controls_needing_reassessment', 'controls_with_unavailable_timeliness'):
-                totals['evidence_timeliness.' + key] += timing[key]
-        for key, value in row['recorded_waiver_qualification']['counts'].items():
-            totals['recorded_waivers.' + key] += value
-    return dict(sorted(totals.items()))
