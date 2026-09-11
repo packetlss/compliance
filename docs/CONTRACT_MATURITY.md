@@ -93,12 +93,12 @@ owns dependency/`max_age` meaning. The exact plan/result pair, not a duplicated 
 supports full historical interpretation. The refinement does not change evidence
 identity algorithms or add a core retention obligation.
 
-The non-anchored current-inventory view retains its predecessor result discovery but
-separately exposes and aggregates immutable historical outcome, exact rendered-plan
-alignment, coverage, and assessment absence. Anchored historical views additionally
-require an explicit query instant and expose selected-evidence timeliness, recorded
-waiver qualification, and frozen accounting independently. ADR 0010's assessment-time
-corrections remain its existing responsibility.
+The predecessor non-anchored current-inventory/latest-result Assessment view is
+removed under #105. Coverage exclusively owns current inventory policy expectation.
+Anchored historical Assessment views require an exact frozen operation and explicit
+query instant, and expose historical outcome, exact plan alignment, selected-evidence
+timeliness, recorded waiver qualification, and frozen accounting independently.
+ADR 0010's assessment-time corrections remain its existing responsibility.
 
 ## Explicit policy parameters and freshness
 
@@ -141,6 +141,19 @@ operation/member, composition, evaluator or waiver identity algorithm changes, a
 no identifier is promoted to `/v1`. ADR 0017 and ADR 0018 were implemented as
 separate bounded tranches. Neither cutover freezes the v4 wire contract or
 provisional result identity algorithm.
+
+### Assessment operator views
+
+Stage 5 Tranche B is **Experimental, implemented** under
+[#105](https://github.com/packetlss/compliance/issues/105). Assessment presentation
+now consumes exact frozen-operation accounting, exact retained plan/result pairs,
+and separately derived current qualification. Its bounded JSON objects are query
+output, not artifact families or assessment inputs. The pre-freeze non-anchored
+current-plan/latest-result presentation path and the `assessment groups` and
+`assessment frameworks` leaves are removed without compatibility aliases;
+`assessment status --by group` and `assessment mappings` are the current grammar.
+No assessment/result status, artifact identity, Coverage responsibility, or trust
+boundary changes.
 
 ## Closed-world operation accounting
 

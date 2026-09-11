@@ -15,17 +15,16 @@ from .artifact_validation import validate_assessment_plan
 from .assessment import (
     HISTORICAL_OUTCOMES,
     PLAN_ALIGNMENTS,
-    build_explanation,
-    build_framework_report,
-    build_group_report,
-    build_status_report,
-    filter_status_report,
+    build_explanation_view,
+    build_mappings_view,
+    build_run_view,
+    build_status_view,
     load_assessment_plans,
     load_result_reports,
-    render_explanation,
-    render_framework_table,
-    render_group_table,
-    render_table,
+    render_explanation_view,
+    render_mappings_view,
+    render_run_view,
+    render_status_view,
 )
 from .evaluate_plan import evaluate_plan_document, write_json
 from .coverage import (
@@ -680,87 +679,8 @@ def _render_subject_plan(args: argparse.Namespace) -> dict:
     )
 
 
-def _assessment_context(args: argparse.Namespace):
-    subjects, groups, assignments = _load_catalog(args)
-    reports = load_result_reports(args.results)
-    known_groups = {group["id"] for group in groups}
-    unknown_groups = sorted(set(args.group) - known_groups)
-    if unknown_groups:
-        raise ValueError("unknown assessment group(s): " + ", ".join(unknown_groups))
-    return subjects, groups, assignments, reports, known_groups
-
-
 def _run_assessment_view(args: argparse.Namespace) -> None:
-    if args.plan:
-        _run_historical_operation_view(args)
-        return
-    if args.as_of or args.comparison_plan or args.assessed_plans:
-        raise ValueError('--as-of, --comparison-plan, and --assessed-plans require --plan')
-    subjects, groups, assignments, reports, known_groups = _assessment_context(args)
-    use_color = not args.no_color and "NO_COLOR" not in os.environ and sys.stdout.isatty()
-
-    if args.assessment_command == "explain":
-        if args.subject_id not in subjects:
-            raise ValueError(f"unknown subject id: {args.subject_id}")
-        plan = render_plan(
-            subjects[args.subject_id],
-            groups,
-            assignments,
-            _resolved_policy_sources(args),
-            config=args.project_config,
-        )
-        explanation = build_explanation(plan, reports)
-        if args.format == "json":
-            print(json.dumps(explanation, indent=2, sort_keys=True))
-        else:
-            print(render_explanation(explanation, color=use_color))
-        return
-
-    if args.assessment_command == "frameworks":
-        framework_report = build_framework_report(
-            subjects,
-            groups,
-            assignments,
-            _resolved_policy_sources(args),
-            reports,
-            group_ids=args.group,
-            outcomes=args.outcome,
-            plan_alignments=args.plan_alignment,
-            external_refs=args.reference,
-            levels=args.level,
-            config=args.project_config,
-        )
-        if args.format == "json":
-            print(json.dumps(framework_report, indent=2, sort_keys=True))
-        else:
-            print(render_framework_table(framework_report))
-        return
-
-    report = build_status_report(
-        subjects,
-        groups,
-        assignments,
-        _resolved_policy_sources(args),
-        reports,
-        config=args.project_config,
-    )
-    if args.assessment_command == "groups":
-        dimension_filtered = filter_status_report(
-            report, [], args.outcome, args.plan_alignment
-        )
-        selected_groups = sorted(set(args.group)) if args.group else sorted(known_groups)
-        group_report = build_group_report(dimension_filtered, selected_groups, args.group)
-        if args.format == "json":
-            print(json.dumps(group_report, indent=2, sort_keys=True))
-        else:
-            print(render_group_table(group_report))
-        return
-
-    report = filter_status_report(report, args.group, args.outcome, args.plan_alignment)
-    if args.format == "json":
-        print(json.dumps(report, indent=2, sort_keys=True))
-    else:
-        print(render_table(report, color=use_color))
+    _run_historical_operation_view(args)
 
 
 def _run_assessment(args: argparse.Namespace) -> None:
@@ -794,19 +714,23 @@ def _run_assessment(args: argparse.Namespace) -> None:
     account = account_operation(
         plans[0], reports, instant.isoformat().replace('+00:00', 'Z'), plans
     )
+    view = build_run_view(account, plans, reports)
     if args.format == 'json':
-        print(json.dumps(account, indent=2, sort_keys=True))
+        print(json.dumps(view, indent=2, sort_keys=True))
     else:
-        print(f"wrote {len(plans)} subject plan(s) and {sum(len(r['results']) for r in reports)} control result(s)")
-        print(f"Accounting complete: {account['accounting_complete']}; all selected subjects passed: {account['all_passed']}")
-        for row in account['members']:
-            print(f"{row['subject_id']}: {row['state']}")
+        print(render_run_view(view))
 
 
 def _run_historical_operation_view(args):
-    from .operation import account_operation, qualify_operation, summarize_qualifications
-    if not args.at or not args.as_of:
-        raise ValueError('historical operation reporting requires --at, --as-of, and --plan')
+    from .operation import (
+        account_operation,
+        frozen_group_memberships,
+        qualify_operation,
+    )
+    if not args.plan or not args.at or not args.as_of:
+        raise ValueError(
+            'assessment reporting requires --plan, --at, and --as-of for one exact frozen operation'
+        )
     anchor = load_json(args.plan)
     validate_assessment_plan(anchor, source=args.plan)
     instant = parse_timestamp(args.at, field='--at').isoformat().replace('+00:00', 'Z')
@@ -822,121 +746,54 @@ def _run_historical_operation_view(args):
         assessed_plans,
     )
     by_id = {r['id']: r for r in reports}
-    selected = [r for r in account['members'] if not args.group or
-                set(args.group) & {g['id'] for g in r['resolved_groups']}]
+    plan_by_id = {plan['id']: plan for plan in assessed_plans}
+    known_groups = set(frozen_group_memberships(account['operation']))
+    unknown_groups = sorted(set(args.group) - known_groups)
+    if unknown_groups:
+        raise ValueError('unknown frozen operation group(s): ' + ', '.join(unknown_groups))
     if args.assessment_command == 'explain':
-        selected = [r for r in selected if r['subject_id'] == args.subject_id]
+        selected = [r for r in account['members'] if r['subject_id'] == args.asset_id]
         if not selected:
-            raise ValueError('subject is absent from frozen operation selection')
-        account['assessment_results'] = [by_id[row['result_id']] for row in selected if row['result_id']]
-    visible_members = [
-        row for row in selected
-        if (not args.outcome or row['historical_outcome'] in args.outcome)
-        and (not args.plan_alignment or row['plan_alignment'] in args.plan_alignment)
-    ]
-    if args.assessment_command == 'frameworks':
-        mappings = []
-        framework_members = [
-            row for row in selected
-            if not args.plan_alignment or row['plan_alignment'] in args.plan_alignment
-        ]
-        for row in framework_members:
-            if (row['result_id'] is not None
-                    and row['historical_interpretation'] != 'validated'):
-                continue
-            report = by_id.get(row['result_id'], {})
-            for kind, key in (('objective', 'requirements'), ('technical', 'controls')):
-                assessments = report.get('requirement_assessments' if kind == 'objective' else 'results', [])
-                statuses = {a['requirement' if kind == 'objective' else 'instance_id']:a['status'] for a in assessments}
-                for item in row['policy'][key]:
-                    identity = item.get('reference', item.get('instance_id'))
-                    historical_outcome = statuses.get(identity, 'no_assessment')
-                    for reference in item['external_refs']:
-                        if ((not args.outcome or historical_outcome in args.outcome)
-                                and (not args.reference or reference in args.reference)
-                                and (not args.level or kind in args.level)):
-                            mappings.append({'subject_id': row['subject_id'], 'external_ref': reference,
-                                'mapping_level': kind, 'policy_object': identity,
-                                'historical_outcome': historical_outcome,
-                                'policy_disposition': item.get('disposition', 'active'),
-                                'plan_id': row['plan_id'], 'result_id': row['result_id'],
-                                'plan_alignment': row['plan_alignment'],
-                                'evidence_timeliness': (
-                                    next((control for control in row['evidence_timeliness'].get('controls', [])
-                                          if control['instance_id'] == item.get('instance_id')), None)
-                                    if kind == 'technical' else None),
-                                'recorded_waiver_qualification': (
-                                    next((waiver for waiver in row['recorded_waiver_qualification']['waivers']
-                                          if waiver['instance_id'] == item.get('instance_id')), None)
-                                    if kind == 'technical' else None)})
-        account['mappings'] = mappings
-    if args.assessment_command == 'groups':
-        group_ids = sorted(set(args.group)) if args.group else sorted({
-            group['id'] for row in account['members'] for group in row['resolved_groups']
-        })
-        account['groups'] = [{
-            'group_id': group_id,
-            'qualification_summary': summarize_qualifications([
-                row for row in visible_members
-                if group_id in {group['id'] for group in row['resolved_groups']}
-            ]),
-        } for group_id in group_ids]
-    account['filtered'] = bool(args.group or args.outcome or args.plan_alignment or
-                               args.assessment_command == 'explain' or
-                               getattr(args, 'reference', []) or getattr(args, 'level', []))
-    account['visible_members'] = visible_members
-    if args.assessment_command == 'explain':
+            raise ValueError('asset is absent from frozen operation selection')
         member = selected[0]
-        plan_by_id = {plan['id']: plan for plan in assessed_plans}
-        explanation_plan = plan_by_id.get(member['plan_id'])
-        if explanation_plan is None:
-            raise ValueError(
-                'exact assessed plan is required for historical explanation'
-            )
-        explanation_reports = (
-            [by_id[member['result_id']]] if member['result_id'] is not None else []
+        explanation = build_explanation_view(
+            account,
+            member,
+            plan_by_id.get(member['plan_id']),
+            by_id.get(member['result_id']),
         )
-        explanation = build_explanation(explanation_plan, explanation_reports)
         if args.format == 'json':
             print(json.dumps(explanation, indent=2, sort_keys=True))
         else:
-            use_color = (
-                not args.no_color
-                and 'NO_COLOR' not in os.environ
-                and sys.stdout.isatty()
-            )
-            print(render_explanation(explanation, color=use_color))
+            print(render_explanation_view(explanation))
         return
+    if args.assessment_command == 'mappings':
+        view = build_mappings_view(
+            account,
+            reports,
+            assessed_plans,
+            group_ids=args.group,
+            outcomes=args.outcome,
+            plan_alignments=args.plan_alignment,
+            external_refs=args.reference,
+            levels=args.level,
+        )
+        if args.format == 'json':
+            print(json.dumps(view, indent=2, sort_keys=True))
+        else:
+            print(render_mappings_view(view))
+        return
+    view = build_status_view(
+        account,
+        group_ids=args.group,
+        outcomes=args.outcome,
+        plan_alignments=args.plan_alignment,
+        by_group=args.by == 'group',
+    )
     if args.format == 'json':
-        print(json.dumps(account, indent=2, sort_keys=True))
+        print(json.dumps(view, indent=2, sort_keys=True))
     else:
-        print(account['claim'])
-        print(f"Accounting complete: {account['accounting_complete']}; historical all passed: {account['all_passed']}")
-        print(f"Qualifications as of {account['query_instant']}")
-        if account['filtered']:
-            print('Filtered view; whole-operation accounting is shown separately.')
-        for row in account['visible_members']:
-            print(f"{row['subject_id']}: historical {row['historical_outcome']} at {instant}")
-            print(f"  Plan: {row['plan_alignment'].replace('_', ' ')}")
-            timing = row['evidence_timeliness']
-            if timing.get('qualification') == 'unavailable':
-                print('  Evidence timeliness unavailable')
-            else:
-                if timing['controls'] and all(
-                    control['within_recorded_age_limits'] for control in timing['controls']
-                ):
-                    print('  Selected evidence within recorded age limits')
-                if timing['controls_needing_reassessment']:
-                    print('  Evidence stale — reassessment due')
-                if timing['controls_with_unavailable_timeliness']:
-                    print('  Evidence timeliness unavailable')
-            for waiver in row['recorded_waiver_qualification']['waivers']:
-                label = waiver['qualification'].replace('_', ' ')
-                print(f"  Recorded waiver {waiver['waiver_id']}: {label}")
-        if args.assessment_command in ('frameworks', 'groups'):
-            detail = (account.get('mappings') if args.assessment_command == 'frameworks' else
-                      account.get('groups'))
-            print(json.dumps(detail, indent=2, sort_keys=True))
+        print(render_status_view(view))
 
 
 def _set_handler(parser: argparse.ArgumentParser, handler: Handler) -> None:
@@ -949,13 +806,12 @@ def _add_assessment_view_options(
     *,
     allow_filters: bool,
 ) -> None:
-    _add_policy_sources(parser, config)
-    # Historical views need only immutable artifacts. Current views validate
-    # their inventory paths in the loader instead of making them parser-wide.
-    for action in parser._actions:
-        if action.dest in ('inventory', 'assignments'):
-            action.required = False
-    parser.add_argument('--plan', type=Path, help='stored plan anchoring an exact historical operation')
+    parser.add_argument(
+        '--plan',
+        type=Path,
+        required=True,
+        help='stored plan anchoring one exact frozen operation',
+    )
     parser.add_argument(
         '--assessed-plans',
         action='append',
@@ -963,8 +819,12 @@ def _add_assessment_view_options(
         default=[],
         help='exact assessed plan file or bounded plan directory; repeatable',
     )
-    parser.add_argument('--at', help='exact recorded operation assessment instant')
-    parser.add_argument('--as-of', help='explicit query instant for historical qualifications')
+    parser.add_argument(
+        '--at', required=True, help='exact recorded operation assessment instant'
+    )
+    parser.add_argument(
+        '--as-of', required=True, help='explicit query instant for current qualifications'
+    )
     parser.add_argument('--comparison-plan', type=Path,
                         help='validated v4 plan anchoring the comparison operation')
     _add_path(
@@ -976,7 +836,6 @@ def _add_assessment_view_options(
         help_text="result file or directory tree",
     )
     parser.add_argument("--format", choices=("table", "json"), default="table")
-    parser.add_argument("--no-color", action="store_true", help="disable ANSI color")
     if allow_filters:
         parser.add_argument(
             "--group",
@@ -1194,9 +1053,9 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
     )
     assessment_run = assessment_commands.add_parser(
         "run",
-        help="render and evaluate one subject's current assessment",
+        help="render and evaluate one or more assets in an exact operation",
     )
-    assessment_run.add_argument("subject_id", nargs='*')
+    assessment_run.add_argument("subject_id", metavar="ASSET", nargs='*')
     assessment_run.add_argument('--group', action='append', default=[])
     assessment_run.add_argument('--all', dest='all_subjects', action='store_true')
     _add_policy_sources(assessment_run, config)
@@ -1230,36 +1089,40 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
     assessment_run.add_argument('--format', choices=('table','json'), default='table')
     _set_handler(assessment_run, _run_assessment)
 
-    assessment_status = assessment_commands.add_parser("status", help="show fleet status")
-    _add_assessment_view_options(assessment_status, config, allow_filters=True)
-    _set_handler(assessment_status, _run_assessment_view)
-    assessment_groups = assessment_commands.add_parser("groups", help="aggregate status by group")
-    _add_assessment_view_options(assessment_groups, config, allow_filters=True)
-    _set_handler(assessment_groups, _run_assessment_view)
-    assessment_frameworks = assessment_commands.add_parser(
-        "frameworks",
-        help="show external-framework objective and technical mappings",
+    assessment_status = assessment_commands.add_parser(
+        "status", help="show one exact frozen operation and current qualification"
     )
-    _add_assessment_view_options(assessment_frameworks, config, allow_filters=True)
-    assessment_frameworks.add_argument(
+    _add_assessment_view_options(assessment_status, config, allow_filters=True)
+    assessment_status.add_argument(
+        "--by",
+        choices=("group",),
+        help="aggregate the exact operation by group",
+    )
+    _set_handler(assessment_status, _run_assessment_view)
+    assessment_mappings = assessment_commands.add_parser(
+        "mappings",
+        help="show attributable objective and technical mappings",
+    )
+    _add_assessment_view_options(assessment_mappings, config, allow_filters=True)
+    assessment_mappings.add_argument(
         "--reference",
         action="append",
         default=[],
         help="filter an exact external reference; repeat for OR semantics",
     )
-    assessment_frameworks.add_argument(
+    assessment_mappings.add_argument(
         "--level",
         action="append",
         choices=("objective", "technical"),
         default=[],
         help="filter mapping level; repeat for OR semantics",
     )
-    _set_handler(assessment_frameworks, _run_assessment_view)
+    _set_handler(assessment_mappings, _run_assessment_view)
     assessment_explain = assessment_commands.add_parser(
         "explain",
-        help="explain one subject's assessment",
+        help="explain one asset's exact assessment slot",
     )
-    assessment_explain.add_argument("subject_id")
+    assessment_explain.add_argument("asset_id", metavar="ASSET")
     _add_assessment_view_options(assessment_explain, config, allow_filters=False)
     _set_handler(assessment_explain, _run_assessment_view)
     return parser

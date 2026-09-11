@@ -146,9 +146,9 @@ current catalog, add revocation authority, or change historical outcomes to fail
 unknown. Validation of the applied waiver in a historical result concerns its
 `evaluated_at`, not the later report timestamp.
 
-The predecessor assessment status view timestamps its report at query time without
-re-evaluating waiver age; the authored-resource `waiver list/explain --at` lifecycle
-above is a separate existing interface. Expiration alone does not mutate the stored
+Assessment requires an explicit `--as-of` instant and qualifies the recorded applied
+waiver without changing its immutable outcome; the authored-resource
+`waiver list/explain --at` lifecycle above is a separate interface. Expiration alone does not mutate the stored
 applied-waiver snapshot; it changes applicability to future evaluations.
 Recorded waiver qualification is independent of historical outcomes, plan alignment,
 evidence timeliness and coverage, and does not recompute historical assurance

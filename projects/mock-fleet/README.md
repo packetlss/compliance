@@ -125,23 +125,25 @@ scripts/dev cli --config projects/mock-fleet/compliance.yaml plan show
 
 uv run --project tooling python tooling/collectors/mock-api/collect.py \
   projects/mock-fleet/fixtures \
-  projects/mock-fleet/generated/evidence
+  projects/mock-fleet/generated/evidence \
+  --collected-at 2026-09-01T00:00:00Z
 
 scripts/dev cli --config projects/mock-fleet/compliance.yaml \
-  assessment run cloud-account/aws-111122223333
-scripts/dev cli --config projects/mock-fleet/compliance.yaml \
-  assessment run cloud-account/aws-444455556666
-scripts/dev cli --config projects/mock-fleet/compliance.yaml \
-  assessment run saas/acme-projects/company
+  assessment run --all --at 2026-09-01T00:00:00Z
 
-scripts/dev cli --config projects/mock-fleet/compliance.yaml assessment status
-scripts/dev cli --config projects/mock-fleet/compliance.yaml assessment frameworks
+scripts/dev cli --config projects/mock-fleet/compliance.yaml assessment status \
+  --plan projects/mock-fleet/generated/plans/cloud-account__aws-111122223333.json \
+  --assessed-plans projects/mock-fleet/generated/plans --at 2026-09-01T00:00:00Z \
+  --as-of 2026-09-01T00:00:00Z
+scripts/dev cli --config projects/mock-fleet/compliance.yaml assessment mappings \
+  --plan projects/mock-fleet/generated/plans/cloud-account__aws-111122223333.json \
+  --assessed-plans projects/mock-fleet/generated/plans --at 2026-09-01T00:00:00Z \
+  --as-of 2026-09-01T00:00:00Z
 scripts/dev cli --config projects/mock-fleet/compliance.yaml \
-  assessment explain cloud-account/aws-111122223333
-scripts/dev cli --config projects/mock-fleet/compliance.yaml \
-  assessment explain cloud-account/aws-444455556666
-scripts/dev cli --config projects/mock-fleet/compliance.yaml \
-  assessment explain saas/acme-projects/company
+  assessment explain cloud-account/aws-111122223333 \
+  --plan projects/mock-fleet/generated/plans/cloud-account__aws-111122223333.json \
+  --assessed-plans projects/mock-fleet/generated/plans --at 2026-09-01T00:00:00Z \
+  --as-of 2026-09-01T00:00:00Z
 ```
 
 ## Assessment-plan handoff
@@ -188,7 +190,7 @@ Changing a fixture and recollecting simulates drift from an external system.
 Changing an upstream profile invalidates stale overlay pins or fingerprints,
 forcing company policy authors to review the rebase.
 
-The framework view shows each CSA CCM reference, subject, technical result,
+The mapping view shows each CSA CCM reference, asset, technical result,
 and alignment. The two local-retention checks appear as `TAILORED`: their pass
 or fail status is against effective company policy and must not be read as
 unaltered CSA CCM conformance.

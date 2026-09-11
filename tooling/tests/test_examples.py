@@ -61,8 +61,7 @@ class ExampleCoverageTests(unittest.TestCase):
         commands = leaf_commands(build_parser(config))
         expected = {
             ("assessment", "explain"),
-            ("assessment", "frameworks"),
-            ("assessment", "groups"),
+            ("assessment", "mappings"),
             ("assessment", "run"),
             ("assessment", "status"),
             ("config", "list"),
@@ -90,7 +89,7 @@ class ExampleCoverageTests(unittest.TestCase):
     def test_domain_examples_cover_retained_special_states(self):
         self.assertEqual(set(DOMAIN_EXAMPLES), {
             "assessment.filters",
-            "assessment.framework-alignment",
+            "assessment.mapping-traceability",
             "collector.mock-api",
             "coverage.current-views",
             "evidence.contracts",
@@ -133,12 +132,12 @@ class ExampleCoverageTests(unittest.TestCase):
                 "outcomes": ["fail"],
                 "plan_alignment": [],
             },
-            "subjects": [{
-                "subject_id": MOCK_FLEET_PRIMARY_AWS_SUBJECT,
+            "assets": [{
+                "asset_id": MOCK_FLEET_PRIMARY_AWS_SUBJECT,
                 "historical_outcome": "fail",
             }],
         }
-        filtered_frameworks = {
+        filtered_mappings = {
             "filters": {
                 "external_refs": ["CSA-CCM-v4.1:LOG-domain"],
                 "groups": ["aws-production-accounts"],
@@ -148,7 +147,7 @@ class ExampleCoverageTests(unittest.TestCase):
             },
             "mappings": [
                 {
-                    "subject_id": subject_id,
+                    "asset_id": subject_id,
                     "external_ref": "CSA-CCM-v4.1:LOG-domain",
                     "mapping_level": "technical",
                 }
@@ -167,31 +166,31 @@ class ExampleCoverageTests(unittest.TestCase):
         self.assertTrue(
             mock_fleet_filter_contract_holds(
                 filtered_status,
-                filtered_frameworks,
+                filtered_mappings,
                 secondary_result,
             )
         )
 
         extra_failure = copy.deepcopy(filtered_status)
-        extra_failure["subjects"].append(
-            {"subject_id": MOCK_FLEET_SECONDARY_AWS_SUBJECT}
+        extra_failure["assets"].append(
+            {"asset_id": MOCK_FLEET_SECONDARY_AWS_SUBJECT}
         )
         self.assertFalse(
             mock_fleet_filter_contract_holds(
                 extra_failure,
-                filtered_frameworks,
+                filtered_mappings,
                 secondary_result,
             )
         )
 
-        missing_secondary_framework = copy.deepcopy(filtered_frameworks)
-        missing_secondary_framework["mappings"] = [
-            missing_secondary_framework["mappings"][0]
+        missing_secondary_mapping = copy.deepcopy(filtered_mappings)
+        missing_secondary_mapping["mappings"] = [
+            missing_secondary_mapping["mappings"][0]
         ]
         self.assertFalse(
             mock_fleet_filter_contract_holds(
                 filtered_status,
-                missing_secondary_framework,
+                missing_secondary_mapping,
                 secondary_result,
             )
         )
@@ -202,7 +201,7 @@ class ExampleCoverageTests(unittest.TestCase):
         self.assertFalse(
             mock_fleet_filter_contract_holds(
                 filtered_status,
-                filtered_frameworks,
+                filtered_mappings,
                 failing_secondary,
             )
         )
@@ -234,7 +233,7 @@ class ExampleCoverageTests(unittest.TestCase):
             "coverage": "build_coverage_list",
             "render_plan": "render_plan",
             "evaluate_plan": "evaluate_plan_document",
-            "assessment": "build_status_report",
+            "assessment": "build_status_view",
             "control_realization": "roll_up_plan_requirements",
         }
         for module_name, symbol in retained_symbols.items():

@@ -85,8 +85,7 @@ scripts/dev cli coverage explain cloud-account/aws-111122223333
 scripts/dev cli policy validate
 scripts/dev cli policy diff before-plan.json after-plan.json
 scripts/dev cli policy diff-set before-plans/ after-plans/
-scripts/dev cli assessment status
-scripts/dev cli assessment frameworks
+scripts/dev cli assessment run --all --at 2026-09-01T00:00:00Z
 ```
 
 Repository development and testing use `scripts/dev cli ...`; an independently
@@ -102,7 +101,7 @@ contract:
 ```sh
 scripts/dev cli config list
 scripts/dev cli --project mock-fleet inventory validate
-scripts/dev cli --project server-personas assessment status
+scripts/dev cli --project server-personas coverage list assets
 scripts/dev cli --project server-personas waiver list
 ```
 
@@ -116,7 +115,7 @@ compliance coverage    list or explain current assessment expectation
 compliance policy      validate policy inputs or diff stored plan artifacts
 compliance waiver      validate or inspect temporary approved exceptions
 compliance plan        render or inspect immutable assessment plans
-compliance assessment  run assessments or inspect fleet, group, and subject status
+compliance assessment  run or explain one exact frozen assessment operation
 ```
 
 Common examples:
@@ -135,10 +134,10 @@ scripts/dev cli --project mock-fleet plan show
 scripts/dev cli --project mock-fleet \
   plan show cloud-account/aws-111122223333
 scripts/dev cli assessment run cloud-account/aws-111122223333
-scripts/dev cli assessment status --group aws-accounts --outcome fail --plan-alignment plan_aligned
-scripts/dev cli assessment groups
-scripts/dev cli assessment frameworks
-scripts/dev cli assessment explain cloud-account/aws-111122223333
+scripts/dev cli assessment status --plan PLAN --assessed-plans PLANS --at RFC3339 --as-of RFC3339
+scripts/dev cli assessment status --by group --plan PLAN --at RFC3339 --as-of RFC3339
+scripts/dev cli assessment mappings --plan PLAN --at RFC3339 --as-of RFC3339
+scripts/dev cli assessment explain ASSET --plan PLAN --at RFC3339 --as-of RFC3339
 ```
 
 Command-line path options override configuration. Use `--project NAME` to
@@ -162,16 +161,16 @@ Assessment does not require an adapter. External output must reference its
 source plan when it records provenance, and is neither proof of execution nor
 compliance evidence.
 
-`assessment frameworks` lists objective and technical `external_refs`
-mappings with their current status and alignment to parent policy. It keeps a
-tailored company-policy pass visibly separate from an unaltered upstream
-framework mapping.
+`assessment mappings` lists objective and technical `external_refs` traceability
+from one exact frozen operation. It keeps immutable outcome, exact plan alignment,
+and policy alignment separate and makes no conformity, certification, audit-opinion,
+or legal-compliance claim.
 
 Select the mock project explicitly to inspect its three-asset fleet:
 
 ```sh
 scripts/dev cli --project mock-fleet inventory graph
-scripts/dev cli --project mock-fleet assessment status
+scripts/dev cli --project mock-fleet assessment run --all --at 2026-09-01T00:00:00Z
 ```
 
 The IAM project requires an independently materialized synthetic private source,

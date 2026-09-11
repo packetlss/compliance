@@ -1,542 +1,567 @@
+"""Purpose-built Assessment operator projections preserve exact-domain ownership."""
+
 import copy
+import tempfile
 import unittest
-from datetime import UTC, datetime
 from pathlib import Path
 
-from contract_fixtures import fixture_root
-
+from assessment_fixture import assessment_plan, evidence_plan
 from tools.assessment import (
-    build_explanation,
-    build_framework_report,
-    build_group_report,
-    build_status_report,
-    filter_status_report,
-    render_explanation,
-    render_framework_table,
-    render_group_table,
-    render_table,
-    status_row,
-    control_implementation_pin,
+    build_explanation_view,
+    build_mappings_view,
+    build_run_view,
+    build_status_view,
+    render_explanation_view,
+    render_mappings_view,
+    render_run_view,
+    render_status_view,
 )
-from tools.artifact_validation import result_outcome
-from tools.assessment_provenance import artifact_digest, digest
-from tools.control_realization import compact_plan_outcomes
-from tools.policy_sources import PolicySource
-from tools.render_plan import load_inventory_inputs, render_plan
-from tools.waivers import load_waivers
+from tools.operation import account_operation, qualify_operation
+from tools.waivers import parse_timestamp
 
 
-class AssessmentStatusTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.root = fixture_root(cls)
-        fixture = Path(__file__).resolve().parent / "fixtures/macos-project"
-        cls.subject, cls.groups, cls.assignments = load_inventory_inputs(
-            fixture / "inventory",
-            fixture / "assignments",
-            "workstation/tooling-macos-fixture",
-            cls.root / "schemas/inventory/resource.schema.json",
-        )
-        cls.policy_sources = (
-            PolicySource(
-                "control-library",
-                cls.root / "shared",
-            ),
-            PolicySource(
-                "verification-policy",
-                cls.root / "selection",
-            ),
-        )
-        cls.plan = render_plan(
-            cls.subject,
-            cls.groups,
-            cls.assignments,
-            cls.policy_sources,
+class AssessmentOperatorViewTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        _, self.plan = evidence_plan(Path(self.temp.name))
+        self.instant = "2026-08-23T12:00:00Z"
+        self.query = "2026-08-24T12:00:01Z"
+        self.account = qualify_operation(
+            account_operation(self.plan, [], self.instant, [self.plan]),
+            [],
+            parse_timestamp(self.query),
+            assessed_plans=[self.plan],
         )
 
-    def test_source_rename_changes_plan_identity_without_changing_controls(self):
-        old_sources = (
-            PolicySource("shared-library", self.root / "shared"),
-            self.policy_sources[1],
-        )
-        old = render_plan(self.subject, self.groups, self.assignments, old_sources)
-        self.assertNotEqual(old["id"], self.plan["id"])
-        old_composition = old['provenance']['planningComposition']
-        new_composition = self.plan['provenance']['planningComposition']
-        self.assertNotEqual(old_composition['compositionDigest'], new_composition['compositionDigest'])
-        self.assertEqual(
-            [source["content"]["digest"] for source in old_composition['actual']['policySources']],
-            [source["content"]["digest"] for source in new_composition['actual']['policySources']],
-        )
-        # Compare domain fields directly; source locators legitimately change.
-        fields = ("implementation", "instance_id", "parameters", "definition_fingerprint")
-        self.assertEqual(
-            [{field: control[field] for field in fields} for control in old["controls"]],
-            [{field: control[field] for field in fields} for control in self.plan["controls"]],
-        )
-        self.assertEqual(old["resolution"], self.plan["resolution"])
-
-    def result_report(self, plan=None, plan_id=None, **summary):
-        plan = plan or self.plan
-        evaluated_at = "2026-08-23T13:03:45Z"
-        statuses = [
-            status
-            for status in ("error", "fail", "unknown", "waived", "pass", "not_applicable")
-            for _ in range(summary.get(status, 0))
-        ]
-        statuses.extend(["pass"] * (len(plan["controls"]) - len(statuses)))
-        results = [{
-            "instance_id": control["instance_id"],
-            "status": statuses[index],
-            "reason": (
-                "Criterion execution failed."
-                if statuses[index] == "error"
-                else f"Synthetic {statuses[index]} outcome."
-            ),
+    def result(self, *, status="pass", disposition=None, error=None, waiver=None):
+        control = {
+            "instance_id": "test.check",
+            "status": status,
+            "reason": "Bounded criterion reason.",
             "expected": {},
             "observed": {},
-            **(
-                {"evaluation_error": {
-                    "stage": "criterion_execution",
-                    "code": "criterion_execution_failed",
-                }}
-                if statuses[index] == "error"
-                else {}
-            ),
-        } for index, control in enumerate(plan["controls"])]
-        requirements, baselines = compact_plan_outcomes(plan, results)
-        documents = []
-        selected_evidence = []
-        for control in plan["controls"]:
-            for dependency in control["evidence"]:
-                evidence_id = f"synthetic:{control['instance_id']}:{dependency['id']}"
-                evidence_digest = digest({"id": evidence_id, "collected_at": evaluated_at})
-                documents.append({"id": evidence_id, "digest": evidence_digest})
-                selected_evidence.append({
-                    "instance_id": control["instance_id"],
-                    "dependency_id": dependency["id"],
-                    "evidence_id": evidence_id,
-                    "evidence_digest": evidence_digest,
-                    "collected_at": evaluated_at,
-                })
-        documents.sort(key=lambda item: (item["id"], item["digest"]))
-        selected_evidence.sort(key=lambda item: (item["instance_id"], item["dependency_id"]))
-        report = {
-            "schema": "compliance.example/assessment-results/v4",
-            "digestAlgorithm": "compliance.example/assessment-results-digest/v1alpha1",
-            "subject_id": plan["subject"]["id"],
-            "plan_id": plan_id or plan["id"],
-            "evaluated_at": evaluated_at,
-            "dependency_dispositions": [],
-            "provenance": {
-                "schema": "compliance.example/assessment-provenance/v1alpha1",
-                "evaluationComposition": copy.deepcopy(plan["provenance"]["planningComposition"]),
-                "evaluator": {"name": "opa", "version": "1.18.2", "executableSha256": "sha256:" + "e" * 64},
-                "evidence": {
-                    "documentDigestAlgorithm": "compliance.example/evidence-document-digest/v1alpha1",
-                    "setDigestAlgorithm": "compliance.example/evidence-set-digest/v1alpha1",
-                    "setDigest": digest(documents),
-                    "documents": documents,
-                },
-                "selectedEvidence": selected_evidence,
-            },
-            "results": results,
-            "requirement_assessments": requirements,
-            "requirement_baseline_assessments": baselines,
         }
-        report["outcome"] = result_outcome(report)
-        report["id"] = artifact_digest(report)
+        if error:
+            control.update(
+                reason={
+                    "criterion_execution_failed": "Criterion execution failed.",
+                    "criterion_decision_invalid": "Criterion decision was unusable.",
+                    "criterion_reported_error": "Criterion reported an evaluation error.",
+                }[error],
+                evaluation_error={
+                    "stage": "criterion_execution" if error == "criterion_execution_failed" else "criterion_decision",
+                    "code": error,
+                },
+            )
+        if waiver:
+            control["waiver"] = waiver
+        report = {
+            "id": "sha256:" + "1" * 64,
+            "plan_id": self.plan["id"],
+            "subject_id": "host/test",
+            "evaluated_at": self.instant,
+            "outcome": status,
+            "results": [control],
+            "requirement_assessments": [],
+            "requirement_baseline_assessments": [],
+            "dependency_dispositions": [],
+            "provenance": {"selectedEvidence": []},
+        }
+        if disposition:
+            fact = {
+                "instance_id": "test.check",
+                "dependency_id": "observation",
+                "disposition": disposition,
+            }
+            if disposition == "stale":
+                fact["latest_candidates"] = [{
+                    "evidence_id": "evidence:stale",
+                    "evidence_digest": "sha256:" + "2" * 64,
+                    "collected_at": "2026-08-20T12:00:00Z",
+                }]
+            if disposition == "invalid":
+                fact["diagnostics"] = [{
+                    "code": "evidence_schema_invalid",
+                    "evidence_id": "evidence:invalid",
+                    "evidence_digest": "sha256:" + "3" * 64,
+                    "schema_path": "/properties/payload/type",
+                    "keyword": "type",
+                }]
+            if disposition == "ambiguous":
+                fact["candidates"] = [
+                    {
+                        "evidence_id": f"evidence:{name}",
+                        "evidence_digest": "sha256:" + digit * 64,
+                        "collected_at": self.instant,
+                    }
+                    for name, digit in (("a", "4"), ("b", "5"))
+                ]
+            report["dependency_dispositions"] = [fact]
+        else:
+            report["provenance"]["selectedEvidence"] = [{
+                "instance_id": "test.check",
+                "dependency_id": "observation",
+                "evidence_id": "evidence:selected",
+                "evidence_digest": "sha256:" + "6" * 64,
+                "collected_at": "2026-08-23T11:00:00Z",
+            }]
         return report
 
-    def test_failing_current_result_is_visible(self):
-        row = status_row(self.plan, [self.result_report(**{"pass": 5, "fail": 1})])
-
-        self.assertEqual(row["historical_outcome"], "fail")
-        self.assertEqual(row["plan_alignment"], "plan_aligned")
-        self.assertTrue(row["matching_plan_result"])
-        self.assertEqual(row["result_summary"]["fail"], 1)
-
-    def test_failed_requirement_baseline_controls_subject_state(self):
-        report = self.result_report(**{"fail": 1})
-
-        row = status_row(self.plan, [report])
-
-        self.assertEqual(row["historical_outcome"], "fail")
-        self.assertEqual(row["plan_alignment"], "plan_aligned")
-        self.assertEqual(row["result_summary"]["fail"], 1)
-
-    def test_orphaned_previous_result_is_not_interpreted_as_current_policy(self):
-        row = status_row(self.plan, [self.result_report(plan_id="sha256:old", **{"pass": 6})])
-
-        self.assertEqual(row["historical_outcome"], "no_assessment")
-        self.assertEqual(row["plan_alignment"], "plan_alignment_unavailable")
-        self.assertFalse(row["matching_plan_result"])
-
-    def test_unassigned_coverage_takes_precedence_over_old_results(self):
-        unassigned = render_plan(
-            self.subject,
-            self.groups,
-            [],
-            self.policy_sources,
+    def account_with_result(self, report, *, plan_available=True):
+        account = copy.deepcopy(self.account)
+        member = account["members"][0]
+        member.update(
+            state=report["outcome"],
+            result_present=True,
+            result_id=report["id"],
+            historical_outcome=report["outcome"],
+            historical_interpretation="validated" if plan_available else "unavailable",
         )
-
-        row = status_row(unassigned, [self.result_report(**{"pass": 6})])
-
-        self.assertEqual(row["historical_outcome"], "no_assessment")
-        self.assertEqual(row["plan_alignment"], "plan_alignment_unavailable")
-        self.assertEqual(row["coverage"]["status"], "unassigned")
-
-    def test_no_assessment_is_independent_of_alignment_and_coverage(self):
-        row = status_row(self.plan, [])
-
-        self.assertEqual(row["historical_outcome"], "no_assessment")
-        self.assertEqual(row["plan_alignment"], "plan_alignment_unavailable")
-        self.assertEqual(row["coverage"]["status"], "assigned")
-
-    def test_overview_sorts_attention_states_first_and_renders_table(self):
-        retired = copy.deepcopy(self.subject)
-        retired["id"] = "workstation/retired"
-        retired["status"] = "retired"
-        subjects = {self.subject["id"]: self.subject, retired["id"]: retired}
-
-        report = build_status_report(
-            subjects,
-            self.groups,
-            self.assignments,
-            self.policy_sources,
-            [self.result_report(**{"pass": 5, "fail": 1})],
-            generated_at=datetime(2026, 8, 23, 14, tzinfo=UTC),
+        account.update(
+            accounting_complete=True,
+            historical_interpretation_complete=plan_available,
+            all_passed=plan_available and report["outcome"] == "pass",
         )
-        table = render_table(report)
+        return account
 
+    def test_run_view_is_bounded_and_keeps_accounting_separate_from_outcome(self):
+        view = build_run_view(self.account, [self.plan], [])
+
+        self.assertFalse(view["summary"]["accounting_complete"])
+        self.assertIsNone(view["assets"][0]["historical_outcome"])
+        self.assertEqual(view["assets"][0]["expected_result_slot"]["present"], False)
+        self.assertNotIn("members", view)
+        self.assertNotIn("controls", view)
+        rendered = render_run_view(view)
+        self.assertIn("Scope: assets host/test", rendered)
+        self.assertIn("ASSET", rendered)
+        self.assertNotIn(view["operation"]["operation_id"], rendered)
+
+    def test_run_summary_counts_result_owned_outcomes(self):
+        report = self.result(status="fail")
+        account = self.account_with_result(report)
+        account["members"][0].pop("historical_outcome")
+
+        view = build_run_view(account, [self.plan], [report])
+
+        self.assertEqual(view["summary"]["historical_outcomes"], {"fail": 1})
+        self.assertEqual(view["assets"][0]["historical_outcome"], "fail")
+
+    def test_status_preserves_missing_slot_and_group_accounting(self):
+        view = build_status_view(self.account)
+        grouped = build_status_view(self.account, by_group=True)
+
+        self.assertIsNone(view["assets"][0]["historical_outcome"])
+        self.assertEqual(view["whole_operation"]["missing_result_slots"], 1)
+        self.assertEqual(grouped["groups"][0]["frozen_accounting"]["missing_result_slots"], 1)
         self.assertEqual(
-            [row["historical_outcome"] for row in report["subjects"]],
-            ["fail", "no_assessment"],
+            grouped["groups"][0]["current_qualification"]["plan_alignment"],
+            {"plan_alignment_unavailable": 1},
         )
-        self.assertEqual(report["summary"]["historical_outcomes"], {
-            "fail": 1, "no_assessment": 1,
-        })
-        self.assertEqual(report["summary"]["plan_alignment"], {
-            "plan_aligned": 1, "plan_alignment_unavailable": 1,
-        })
-        self.assertIn("Assessment overview (2 subjects)", table)
-        self.assertIn("P/F/?/E/W", table)
-        self.assertIn("workstation/tooling-macos-fixture", table)
-
-    def test_filters_by_resolved_group_and_operator_state(self):
-        retired = copy.deepcopy(self.subject)
-        retired["id"] = "workstation/retired"
-        retired["status"] = "retired"
-        report = build_status_report(
-            {self.subject["id"]: self.subject, retired["id"]: retired},
-            self.groups,
-            self.assignments,
-            self.policy_sources,
-            [self.result_report(**{"pass": 5, "fail": 1})],
-            generated_at=datetime(2026, 8, 23, 14, tzinfo=UTC),
+        self.assertIn("whole-operation accounting", render_status_view(view).lower())
+        self.assertIn("CURRENT EVIDENCE", render_status_view(grouped))
+        self.assertIn("Scope: assets host/test", render_status_view(view))
+        self.assertNotIn(
+            view["operation"]["operation_id"], render_status_view(view)
         )
 
-        filtered = filter_status_report(
-            report,
-            ["macos-developer-machines"],
-            ["fail"],
-            ["plan_aligned"],
-        )
-
-        self.assertEqual(filtered["summary"]["total"], 1)
-        self.assertEqual(filtered["subjects"][0]["subject_id"], self.subject["id"])
-        self.assertEqual(
-            filtered["filters"],
-            {"groups": ["macos-developer-machines"], "outcomes": ["fail"],
-             "plan_alignment": ["plan_aligned"]},
-        )
-
-        previous = status_row(self.plan, [self.result_report(plan_id="sha256:" + "0" * 64, **{"pass": 6})])
-        previous_report = {
-            **report,
-            "subjects": [previous],
+    def test_status_retains_empty_group_from_frozen_selection_witness(self):
+        account = copy.deepcopy(self.account)
+        account["operation"]["request"] = {
+            "all": False,
+            "subjects": ["host/test"],
+            "groups": ["empty-requested"],
         }
-        preserved = filter_status_report(
-            previous_report, [], ["no_assessment"], ["plan_alignment_unavailable"]
-        )
-        self.assertEqual(preserved["summary"]["historical_outcomes"], {"no_assessment": 1})
-        self.assertEqual(preserved["summary"]["plan_alignment"], {"plan_alignment_unavailable": 1})
-        self.assertEqual(preserved["subjects"][0]["historical_outcome"], "no_assessment")
-
-    def test_group_report_counts_subject_in_each_resolved_dag_group(self):
-        report = build_status_report(
-            {self.subject["id"]: self.subject},
-            self.groups,
-            self.assignments,
-            self.policy_sources,
-            [self.result_report(**{"pass": 5, "fail": 1})],
-            generated_at=datetime(2026, 8, 23, 14, tzinfo=UTC),
-        )
-
-        group_report = build_group_report(
-            report,
-            ["company-assets", "macos-developer-machines"],
-        )
-        table = render_group_table(group_report)
-
-        self.assertEqual([group["total"] for group in group_report["groups"]], [1, 1])
-        self.assertEqual(group_report["groups"][0]["historical_outcomes"], {"fail": 1})
-        self.assertEqual(group_report["groups"][0]["plan_alignment"], {"plan_aligned": 1})
-        self.assertIn("Subjects are counted in every resolved DAG group", table)
-
-    def test_explanation_connects_result_and_policy_provenance(self):
-        report = self.result_report(**{"pass": 5, "fail": 1})
-        result = next(item for item in report["results"]
-                      if item["instance_id"] == "developer.macos.shellcheck-required")
-        result["status"] = "fail"
-        result["reason"] = "Required Homebrew formulae are missing: shellcheck"
-        report["outcome"] = result_outcome(report)
-        report["id"] = artifact_digest(report)
-
-        explanation = build_explanation(self.plan, [report])
-        rendered = render_explanation(explanation)
-
-        self.assertEqual(explanation["status"]["historical_outcome"], "fail")
-        self.assertEqual(explanation["status"]["plan_alignment"], "plan_aligned")
-        self.assertIn("developer.macos.shellcheck-required", rendered)
-        self.assertIn("Required Homebrew formulae are missing: shellcheck", rendered)
-        self.assertNotIn("Install shellcheck from the approved source.", rendered)
-        self.assertIn("developer-workstation-policy-assignment", rendered)
-        self.assertIn("benchmark.example.macos.audit-formula-required", rendered)
-
-        policy = self.plan["resolved_baselines"][0]
-        check = self.plan["controls"][0]
-        excluded = self.plan["excluded_controls"][0]
-        self.assertIn(f'Asset: {self.plan["subject"]["id"]}', rendered)
-        self.assertIn(f'{policy["title"]} ({policy["reference"]})', rendered)
-        self.assertIn(f'Check: {check["title"]} ({check["instance_id"]})', rendered)
-        self.assertIn(f'Purpose: {check["purpose"]}', rendered)
-        check_implementation = control_implementation_pin(check)
-        self.assertIn(
-            f'implementation: {check_implementation["id"]}@'
-            f'{check_implementation["version"]}',
-            rendered,
-        )
-        self.assertIn(
-            f'implementation fingerprint: {check_implementation["fingerprint"]}',
-            rendered,
-        )
-        self.assertIn(
-            f'instance definition fingerprint: {check["definition_fingerprint"]}',
-            rendered,
-        )
-        self.assertIn("effective parameters:", rendered)
-        self.assertIn("required evidence:", rendered)
-        self.assertIn("freshness:", rendered)
-        self.assertNotIn("Objectives:", rendered)
-        self.assertIn(
-            f'EXCLUDED  Check: {excluded["title"]} ({excluded["instance_id"]})',
-            rendered,
-        )
-        self.assertIn(f'Purpose: {excluded["purpose"]}', rendered)
-        excluded_implementation = control_implementation_pin(excluded)
-        self.assertIn(
-            f'implementation: {excluded_implementation["id"]}@'
-            f'{excluded_implementation["version"]}',
-            rendered,
-        )
-        self.assertIn(
-            'implementation fingerprint: '
-            f'{excluded_implementation["fingerprint"]}',
-            rendered,
-        )
-        self.assertIn("disposition: excluded", rendered)
-        self.assertIn("assessment result: none (excluded policy disposition)", rendered)
-
-    def test_assurance_explanation_keeps_objective_and_checks_distinct(self):
-        subject, groups, assignments = load_inventory_inputs(
-            self.root / "iam/inventory",
-            self.root / "iam/assignments",
-            "host/restricted-linux-01",
-            self.root / "schemas/inventory/resource.schema.json",
-        )
-        plan = render_plan(
-            subject,
-            groups,
-            assignments,
-            (
-                PolicySource("control-library", self.root / "shared"),
-                PolicySource("verification-policy", self.root / "selection"),
-                PolicySource("environment-private", self.root / "iam/policy"),
-            ),
-        )
-        rendered = render_explanation(build_explanation(plan, []))
-        requirement = plan["requirements"][0]
-        check = next(
-            item for item in plan["controls"]
-            if item["instance_id"] in requirement["technical_instance_ids"]
-        )
-
-        self.assertIn(
-            f'Objective: {requirement["title"]} ({requirement["reference"]})',
-            rendered,
-        )
-        self.assertIn(f'Meaning: {requirement["statement"]}', rendered)
-        self.assertIn(f'Check: {check["title"]} ({check["instance_id"]})', rendered)
-        self.assertIn(f'Purpose: {check["purpose"]}', rendered)
-
-    def test_explanation_shows_complete_active_deviation(self):
-        rendered = render_explanation(build_explanation(self.plan, []))
-
-        self.assertIn('effective criteria: {"minimum":"26.0.0"}', rendered)
-        self.assertIn(
-            "lineage: benchmark.example.macos-hardening@2026.1 (defined) "
-            "-> company.macos-policy@1 (tailor)",
-            rendered,
-        )
-        self.assertIn("derivation: tailor by company.macos-policy@1", rendered)
-        self.assertIn(
-            'before: implementation=macos.system.minimum_version, '
-            'disposition=evaluate, criteria={"minimum":"26.6.0"}',
-            rendered,
-        )
-        self.assertIn(
-            'after: implementation=macos.system.minimum_version, '
-            'disposition=evaluate, criteria={"minimum":"26.0.0"}',
-            rendered,
-        )
-        self.assertIn("alignment: tailored", rendered)
-        self.assertIn("deviation DEV-MAC-001 (support-policy)", rendered)
-        self.assertIn(
-            "rationale: Synthetic fixture parameter adjustment.",
-            rendered,
-        )
-        self.assertIn(
-            "approval: test/approval",
-            rendered,
-        )
-        self.assertIn("review after: 2027-01-31", rendered)
-
-    def test_explanation_shows_applied_waiver_and_underlying_failure(self):
-        project = (
-            self.root
-            / "linux"
-        )
-        subject, groups, assignments = load_inventory_inputs(
-            project / "inventory",
-            project / "assignments",
-            "host/configuration-linux-01",
-            self.root / "schemas/inventory/resource.schema.json",
-        )
-        plan = render_plan(
-            subject,
-            groups,
-            assignments,
-            (
-                PolicySource(
-                    "control-library",
-                    self.root / "shared",
-                ),
-                PolicySource(
-                    "verification-policy",
-                    self.root / "selection",
-                ),
-            ),
-        )
-        waivers, _ = load_waivers(project / "waivers")
-        waiver = {**waivers[0], "underlying_status": "fail"}
-        report = self.result_report(plan=plan)
-        report["evaluated_at"] = "2026-08-28T12:00:00Z"
-        for selection in report["provenance"]["selectedEvidence"]:
-            selection["collected_at"] = report["evaluated_at"]
-            selection["evidence_digest"] = digest({
-                "id": selection["evidence_id"],
-                "collected_at": report["evaluated_at"],
-            })
-        documents = [
-            {"id": selection["evidence_id"], "digest": selection["evidence_digest"]}
-            for selection in report["provenance"]["selectedEvidence"]
-        ]
-        documents.sort(key=lambda item: (item["id"], item["digest"]))
-        report["provenance"]["evidence"]["documents"] = documents
-        report["provenance"]["evidence"]["setDigest"] = digest(documents)
-        result = next(item for item in report["results"] if item["instance_id"] == "test.packages.extra")
-        result.update({
-            "status": "waived",
-            "reason": "Required Linux packages are missing: jq",
-            "waiver": waiver,
-        })
-        report["outcome"] = result_outcome(report)
-        report["id"] = artifact_digest(report)
-
-        rendered = render_explanation(build_explanation(plan, [report]))
-
-        self.assertIn(
-            "lineage: test.linux@1 (defined)",
-            rendered,
-        )
-
-        self.assertIn("Historical outcome: ◇ WAIVED", rendered)
-        self.assertIn("waiver: test-package-waiver", rendered)
-        self.assertIn("underlying status: fail", rendered)
-        self.assertIn("approval: test/waiver-approval", rendered)
-
-    def test_framework_view_preserves_result_and_parent_alignment(self):
-        subjects = {self.subject["id"]: self.subject}
-        groups, assignments = self.groups, self.assignments
-        reports = []
-        for subject in subjects.values():
-            plan = render_plan(
-                subject,
-                groups,
-                assignments,
-                self.policy_sources,
-            )
-            reports.append(self.result_report(plan=plan, **{"pass": len(plan["controls"])}))
-
-        report = build_framework_report(
-            subjects,
-            groups,
-            assignments,
-            self.policy_sources,
-            reports,
-        )
-        rendered = render_framework_table(report)
-        log_mappings = [
-            mapping for mapping in report["mappings"]
-            if mapping["external_ref"] == "TEST:retention"
-        ]
-
-        self.assertEqual(len(log_mappings), 1)
-        self.assertEqual({mapping["historical_outcome"] for mapping in log_mappings}, {"pass"})
-        self.assertEqual({mapping["plan_alignment"] for mapping in log_mappings}, {"plan_aligned"})
-        self.assertEqual({mapping["policy_alignment"] for mapping in log_mappings}, {"tailored"})
-        self.assertIn("Technical results do not by themselves", rendered)
-        self.assertIn("TEST:retention", rendered)
-
-    def test_framework_view_does_not_invent_outcome_for_new_plan_mapping(self):
-        previous = {
-            "schema": "compliance.example/assessment-results/v4",
-            "subject_id": self.subject["id"],
-            "plan_id": "sha256:previous",
-            "evaluated_at": "2026-08-22T13:03:45Z",
-            "results": [],
-            "requirement_assessments": [],
+        account["operation"]["selection_witness"] = {
+            "mode": "groups",
+            "groups": [{"id": "empty-requested", "parents": []}],
         }
 
-        report = build_framework_report(
-            {self.subject["id"]: self.subject},
-            self.groups,
-            self.assignments,
-            self.policy_sources,
-            [previous],
-            outcomes=["no_assessment"],
+        view = build_status_view(
+            account,
+            group_ids=["empty-requested"],
+            outcomes=["pass"],
+            by_group=True,
+        )
+
+        self.assertEqual(len(view["groups"]), 1)
+        group = view["groups"][0]
+        self.assertEqual(group["group_id"], "empty-requested")
+        self.assertEqual(group["visible_assets"], 0)
+        self.assertEqual(group["frozen_accounting"]["selected_assets"], 0)
+        self.assertEqual(group["current_qualification"]["assets"], 0)
+
+    def test_dependency_free_operation_makes_no_positive_timeliness_claim(self):
+        account = copy.deepcopy(self.account)
+        account["members"][0]["evidence_timeliness"] = {
+            "dependencies": [],
+            "controls": [],
+            "timely_selected_dependencies": 0,
+            "stale_selected_dependencies": 0,
+            "unavailable_required_dependencies": 0,
+            "controls_within_recorded_age_limits": 0,
+            "controls_needing_reassessment": 0,
+            "controls_with_unavailable_timeliness": 0,
+        }
+
+        view = build_status_view(account)
+
+        self.assertEqual(
+            view["assets"][0]["current_qualification"]["selected_evidence"]["status"],
+            "not_applicable",
+        )
+
+    def test_non_assessable_dispositions_remain_visible_in_status_and_explanation(self):
+        for disposition in ("inactive", "unassigned", "no_assessable_policy"):
+            with self.subTest(disposition=disposition):
+                account = copy.deepcopy(self.account)
+                member = account["members"][0]
+                member.update(
+                    accounting_disposition=disposition,
+                    state=disposition,
+                    result_present=False,
+                    result_id=None,
+                    historical_outcome=None,
+                )
+
+                asset_view = build_status_view(account)
+                group_view = build_status_view(account, by_group=True)
+                explanation = build_explanation_view(account, member, None, None)
+                display = disposition.replace("_", " ").upper()
+
+                self.assertIn(display, render_status_view(asset_view))
+                self.assertEqual(
+                    group_view["groups"][0]["frozen_accounting"][
+                        "accounting_dispositions"
+                    ],
+                    {disposition: 1},
+                )
+                self.assertIn(display, render_status_view(group_view))
+                self.assertEqual(
+                    explanation["expected_result_slot"]["accounting_disposition"],
+                    disposition,
+                )
+                self.assertIn(
+                    disposition.replace("_", " "),
+                    render_explanation_view(explanation),
+                )
+
+    def test_status_filters_do_not_change_whole_operation_accounting(self):
+        report = self.result(status="fail")
+        account = self.account_with_result(report)
+        view = build_status_view(
+            account,
+            group_ids=["test-hosts"],
+            outcomes=["fail"],
             plan_alignments=["plan_alignment_unavailable"],
         )
 
-        self.assertTrue(report["mappings"])
-        self.assertEqual(report["filters"]["outcomes"], ["no_assessment"])
-        self.assertEqual(report["filters"]["plan_alignment"], ["plan_alignment_unavailable"])
+        self.assertEqual(len(view["assets"]), 1)
+        self.assertTrue(view["whole_operation"]["accounting_complete"])
+        self.assertTrue(view["filtered"])
+
+    def test_all_dependency_dispositions_have_deterministic_safe_language(self):
+        expected = {
+            "absent": "No matching routed test.evidence/v1 observation",
+            "stale": "older than the exact assessed freshness limit (86400s)",
+            "invalid": "did not satisfy the exact assessment-time evidence schema",
+            "ambiguous": "Multiple distinct equally latest eligible",
+        }
+        for disposition, text in expected.items():
+            with self.subTest(disposition=disposition):
+                report = self.result(status="unknown", disposition=disposition)
+                account = self.account_with_result(report)
+                view = build_explanation_view(account, account["members"][0], self.plan, report)
+                dependency = view["checks"][0]["required_evidence"][0]
+                self.assertIn(text, dependency["assessment_explanation"])
+                self.assertIn(text, render_explanation_view(view))
+                serialized = str(view)
+                self.assertNotIn("instance_path", serialized)
+                self.assertNotIn("message", serialized)
+
+    def test_criterion_unknown_is_distinct_from_dependency_unknown(self):
+        report = self.result(status="unknown")
+        account = self.account_with_result(report)
+        view = build_explanation_view(account, account["members"][0], self.plan, report)
+
+        explanation = view["checks"][0]["historical_result"]["explanation"]
+        self.assertIn("All required observations were selected", explanation)
+        self.assertIn("criterion returned UNKNOWN", explanation)
+
+    def test_fail_explanation_preserves_reason_and_remediation(self):
+        report = self.result(status="fail")
+        account = self.account_with_result(report)
+        plan = copy.deepcopy(self.plan)
+        plan["controls"][0]["remediation"] = "Restore the expected setting."
+
+        view = build_explanation_view(account, account["members"][0], plan, report)
+        rendered = render_explanation_view(view)
+
+        self.assertIn("The check failed: Bounded criterion reason.", rendered)
+        self.assertIn("Severity:", rendered)
+        self.assertIn("Remediation:", rendered)
+
+    def test_each_closed_error_class_has_deterministic_language(self):
+        expected = {
+            "criterion_execution_failed": "Criterion execution failed",
+            "criterion_decision_invalid": "criterion decision was unusable",
+            "criterion_reported_error": "structurally valid ERROR decision",
+        }
+        for code, text in expected.items():
+            with self.subTest(code=code):
+                report = self.result(status="error", error=code)
+                account = self.account_with_result(report)
+                view = build_explanation_view(account, account["members"][0], self.plan, report)
+                self.assertIn(
+                    text,
+                    view["checks"][0]["historical_result"]["explanation"],
+                )
+
+    def test_technical_only_explanation_has_no_synthetic_objective(self):
+        report = self.result()
+        account = self.account_with_result(report)
+        view = build_explanation_view(account, account["members"][0], self.plan, report)
+
+        self.assertEqual(view["objectives"], [])
+        self.assertEqual(view["applicable_policies"][0]["title"], "Synthetic technical policy")
+        self.assertEqual(view["checks"][0]["check"]["title"], "Synthetic test check")
         self.assertEqual(
-            {mapping["historical_outcome"] for mapping in report["mappings"]},
-            {"no_assessment"},
+            view["checks"][0]["policy_attribution"],
+            [{
+                "policy_reference": "test.baseline@1",
+                "group": "test-hosts",
+                "assignment": "test-policy",
+            }],
+        )
+
+    def test_multi_policy_explanation_retains_every_policy_to_check_path(self):
+        plan = copy.deepcopy(self.plan)
+        second = copy.deepcopy(plan["resolved_baselines"][0])
+        second.update(
+            reference="test.second@1",
+            title="Second synthetic policy",
+            assignment="second-policy",
+        )
+        plan["resolved_baselines"].append(second)
+        plan["controls"][0]["provenance"].append({
+            "group": "test-hosts",
+            "assignment": "second-policy",
+            "baseline": "test.second@1",
+        })
+        report = self.result()
+        account = self.account_with_result(report)
+
+        view = build_explanation_view(account, account["members"][0], plan, report)
+        rendered = render_explanation_view(view)
+
+        self.assertEqual(
+            [item["reference"] for item in view["applicable_policies"]],
+            ["test.baseline@1", "test.second@1"],
         )
         self.assertEqual(
-            {mapping["plan_alignment"] for mapping in report["mappings"]},
-            {"plan_alignment_unavailable"},
+            view["applicable_policies"][1]["paths"],
+            [{"group": "test-hosts", "assignment": "second-policy"}],
         )
+        self.assertEqual(
+            view["applicable_policies"][1]["check_instance_ids"],
+            ["test.check"],
+        )
+        self.assertEqual(len(view["checks"][0]["policy_attribution"]), 2)
+        self.assertIn("Synthetic technical policy (test.baseline@1)", rendered)
+        self.assertIn("Second synthetic policy (test.second@1)", rendered)
+        self.assertIn("test-hosts -> second-policy", rendered)
+
+    def test_objective_retains_bounded_realization_lineage(self):
+        plan = assessment_plan(
+            [{"name": "shared", "digest": "sha256:" + "7" * 64}],
+            with_requirement=True,
+        )
+        plan["requirements"][0]["realization"]["based_on"] = {
+            "realization": "test.parent-realization@1",
+            "digest": "sha256:" + "9" * 64,
+        }
+        report = self.result()
+        account = self.account_with_result(report)
+
+        view = build_explanation_view(account, account["members"][0], plan, report)
+
+        self.assertEqual(
+            view["objectives"][0]["realization_based_on"],
+            "test.parent-realization@1",
+        )
+        self.assertIn("Based on: test.parent-realization@1", render_explanation_view(view))
+
+    def test_objective_renders_frozen_adoption_and_historical_reason(self):
+        plan = assessment_plan(
+            [{"name": "shared", "digest": "sha256:" + "7" * 64}],
+            with_requirement=True,
+        )
+        plan["requirements"][0]["adoption"] = {
+            "status": "not_implemented",
+            "method": "none",
+            "owner": "unassigned",
+        }
+        plan["requirements"][0].pop("realization")
+        report = self.result(status="fail")
+        report["requirement_assessments"] = [{
+            "requirement": "test.requirement@1",
+            "status": "fail",
+            "reason": "The applicable requirement has no implemented realization.",
+        }]
+        account = self.account_with_result(report)
+
+        view = build_explanation_view(account, account["members"][0], plan, report)
+        rendered = render_explanation_view(view)
+
+        self.assertEqual(view["objectives"][0]["adoption"], "not_implemented")
+        self.assertEqual(
+            view["objectives"][0]["historical_reason"],
+            "The applicable requirement has no implemented realization.",
+        )
+        self.assertIn("Frozen adoption: not implemented", rendered)
+        self.assertIn(
+            "Historical reason: The applicable requirement has no implemented realization.",
+            rendered,
+        )
+        self.assertNotIn(view["operation"]["operation_id"], rendered)
+        self.assertNotIn(view["operation"]["plan_id"], rendered)
+
+    def test_no_exact_plan_shows_only_bounded_result_owned_facts(self):
+        report = self.result(status="unknown", disposition="invalid")
+        account = self.account_with_result(report, plan_available=False)
+        view = build_explanation_view(account, account["members"][0], None, report)
+
+        self.assertEqual(view["interpretation"], "limited_without_exact_plan")
+        self.assertNotIn("applicable_policies", view)
+        self.assertNotIn("checks", view)
+        self.assertNotIn("evidence_type", str(view))
+        self.assertNotIn("max_age", str(view))
+        self.assertNotIn("plan", view)
+        self.assertNotIn("result", view)
+        self.assertIn("full policy", render_explanation_view(view))
+
+    def test_no_exact_plan_retains_result_owned_waiver_and_window_qualification(self):
+        waiver = {
+            "id": "test-waiver",
+            "underlying_status": "fail",
+            "valid_from": "2026-08-01T00:00:00Z",
+            "expires_at": "2026-08-24T00:00:00Z",
+            "rationale": "Bounded reason.",
+            "owner": "owner",
+            "approval_ref": "approval/1",
+            "approved_by": "approver",
+            "approved_at": "2026-07-31T00:00:00Z",
+        }
+        report = self.result(status="waived", waiver=waiver)
+        account = qualify_operation(
+            self.account_with_result(report, plan_available=False),
+            [report],
+            parse_timestamp(self.query),
+            assessed_plans=[],
+        )
+        member = account["members"][0]
+
+        view = build_explanation_view(account, member, None, report)
+        rendered = render_explanation_view(view)
+
+        self.assertEqual(
+            member["recorded_waiver_qualification"]["waivers"][0]["qualification"],
+            "expired",
+        )
+        self.assertEqual(view["raw_result_facts"][0]["waiver"]["id"], "test-waiver")
+        self.assertEqual(
+            view["current_qualification"]["recorded_waivers"][0]["qualification"],
+            "expired",
+        )
+        self.assertIn("Recorded waiver test-waiver", rendered)
+        self.assertIn("current qualification expired", rendered)
+        self.assertIn("approval approval/1 by approver", rendered)
+
+    def test_missing_exact_slot_is_not_promoted_to_an_outcome(self):
+        view = build_explanation_view(
+            self.account, self.account["members"][0], self.plan, None
+        )
+
+        self.assertIsNone(view["historical_outcome"])
+        self.assertEqual(view["interpretation"], "exact_result_slot_missing")
+        self.assertIn("No result was synthesized", view["explanation"])
+
+    def test_mappings_are_exact_bounded_traceability(self):
+        plan = copy.deepcopy(self.plan)
+        plan["controls"][0]["external_refs"] = ["EXAMPLE:1"]
+        plan["operation"]["members"][0]["policy"]["controls"][0]["external_refs"] = [
+            "EXAMPLE:1"
+        ]
+        report = self.result(status="pass")
+        account = self.account_with_result(report)
+        account["members"][0]["policy"]["controls"][0]["external_refs"] = ["EXAMPLE:1"]
+        view = build_mappings_view(account, [report], [plan])
+
+        self.assertEqual(view["mappings"][0]["historical_outcome"], "pass")
+        self.assertEqual(view["mappings"][0]["asset_id"], "host/test")
+        self.assertIn("do not establish", view["note"])
+        rendered = render_mappings_view(view)
+        self.assertIn("Assessment mappings", rendered)
+        self.assertNotIn("framework mappings", rendered.lower())
+
+    def test_mapping_order_is_independent_of_external_reference_order(self):
+        plan = copy.deepcopy(self.plan)
+        account = copy.deepcopy(self.account)
+        references = ["EXAMPLE:2", "EXAMPLE:1"]
+        plan["controls"][0]["external_refs"] = references
+        account["members"][0]["policy"]["controls"][0]["external_refs"] = references
+
+        first = build_mappings_view(account, [], [plan])
+        account["members"][0]["policy"]["controls"][0]["external_refs"].reverse()
+        second = build_mappings_view(account, [], [plan])
+
+        self.assertEqual(first, second)
+        self.assertEqual(
+            [item["external_ref"] for item in first["mappings"]],
+            ["EXAMPLE:1", "EXAMPLE:2"],
+        )
+
+    def test_waiver_expiry_qualifies_without_rewriting_historical_waived(self):
+        waiver = {
+            "id": "test-waiver",
+            "underlying_status": "fail",
+            "valid_from": "2026-08-01T00:00:00Z",
+            "expires_at": "2026-08-24T00:00:00Z",
+            "rationale": "Bounded reason.",
+            "owner": "owner",
+            "approval_ref": "approval/1",
+            "approved_by": "approver",
+            "approved_at": "2026-07-31T00:00:00Z",
+        }
+        report = self.result(status="waived", waiver=waiver)
+        account = self.account_with_result(report)
+        account["members"][0]["recorded_waiver_qualification"] = {
+            "waivers": [{
+                "instance_id": "test.check",
+                "waiver_id": "test-waiver",
+                "valid_from": waiver["valid_from"],
+                "expires_at": waiver["expires_at"],
+                "qualification": "expired",
+            }],
+            "counts": {"within_window": 0, "expired": 1, "not_yet_in_window": 0},
+        }
+        view = build_explanation_view(account, account["members"][0], self.plan, report)
+
+        self.assertEqual(view["historical_outcome"], "waived")
+        historical = view["checks"][0]["historical_result"]
+        self.assertEqual(historical["current_waiver_qualification"]["qualification"], "expired")
+        self.assertIn("remains WAIVED", historical["explanation"])
+        self.assertIn(
+            "test-waiver=EXPIRED",
+            render_status_view(build_status_view(account)),
+        )
+        grouped = build_status_view(account, by_group=True)
+        self.assertEqual(
+            grouped["groups"][0]["current_qualification"]["recorded_waivers"],
+            {"expired": 1},
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

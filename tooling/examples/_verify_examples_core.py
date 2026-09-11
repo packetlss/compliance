@@ -72,10 +72,9 @@ CLI_EXAMPLES = {
     ("plan", "render"): "immutable per-subject assessment plan",
     ("plan", "show"): "single-plan detail and multi-plan index",
     ("assessment", "run"): "off-subject OPA evaluation and immutable results",
-    ("assessment", "status"): "fleet coverage and current evaluation state",
-    ("assessment", "groups"): "overlapping resolved-group aggregation",
-    ("assessment", "frameworks"): "objective and technical external mappings",
-    ("assessment", "explain"): "joined policy, result, and waiver explanation",
+    ("assessment", "status"): "exact operation status and current qualification",
+    ("assessment", "mappings"): "bounded objective and technical traceability mappings",
+    ("assessment", "explain"): "exact policy, result, and qualification explanation",
 }
 
 DOMAIN_EXAMPLES = {
@@ -101,7 +100,7 @@ DOMAIN_EXAMPLES = {
     "requirements.missing-evidence": (
         "missing technical evidence keeps objectives unknown"
     ),
-    "assessment.framework-alignment": "tailored mappings remain distinct",
+    "assessment.mapping-traceability": "tailored mappings remain distinct",
     "assessment.filters": (
         "group, outcome, plan-alignment, reference, and level filters are exact"
     ),
@@ -177,17 +176,17 @@ def mock_fleet_inventory_contract_holds(
 
 def mock_fleet_filter_contract_holds(
     filtered_status: dict,
-    filtered_frameworks: dict,
+    filtered_mappings: dict,
     secondary_result: dict,
 ) -> bool:
     """Check exact failing AWS selection and the retained passing AWS case."""
     status_subjects = {
-        subject.get("subject_id")
-        for subject in filtered_status.get("subjects", [])
+        asset.get("asset_id")
+        for asset in filtered_status.get("assets", [])
     }
-    framework_mappings = filtered_frameworks.get("mappings", [])
-    framework_subjects = {
-        mapping.get("subject_id") for mapping in framework_mappings
+    mappings = filtered_mappings.get("mappings", [])
+    mapping_assets = {
+        mapping.get("asset_id") for mapping in mappings
     }
     return (
         filtered_status.get("filters") == {
@@ -198,24 +197,24 @@ def mock_fleet_filter_contract_holds(
         and status_subjects == {MOCK_FLEET_PRIMARY_AWS_SUBJECT}
         and all(
             subject.get("historical_outcome") == "fail"
-            for subject in filtered_status.get("subjects", [])
+            for subject in filtered_status.get("assets", [])
         )
         and secondary_result.get("subject_id") == MOCK_FLEET_SECONDARY_AWS_SUBJECT
         and secondary_result.get("outcome") == "pass"
         and Counter(result.get("status") for result in secondary_result.get("results", []))
         == {"pass": 5}
-        and filtered_frameworks.get("filters") == {
+        and filtered_mappings.get("filters") == {
             "external_refs": ["CSA-CCM-v4.1:LOG-domain"],
             "groups": ["aws-production-accounts"],
             "levels": ["technical"],
             "outcomes": [],
             "plan_alignment": [],
         }
-        and framework_subjects == MOCK_FLEET_AWS_SUBJECTS
+        and mapping_assets == MOCK_FLEET_AWS_SUBJECTS
         and all(
             mapping.get("external_ref") == "CSA-CCM-v4.1:LOG-domain"
             and mapping.get("mapping_level") == "technical"
-            for mapping in framework_mappings
+            for mapping in mappings
         )
     )
 
@@ -868,32 +867,35 @@ class ExampleRunner:
             ),
         )
 
-        for subject_id in (
-            "cloud-account/aws-111122223333",
-            "cloud-account/aws-444455556666",
-            "saas/acme-projects/company",
-        ):
-            self.cli(
-                ("assessment", "run"),
-                [
-                    *mock,
-                    "assessment",
-                    "run",
-                    subject_id,
-                    "--evidence",
-                    str(mock_evidence),
-                    "--plan-output",
-                    str(mock_plans),
-                    "--output",
-                    str(mock_results),
-                    "--at",
-                    EXAMPLE_INSTANT,
-                ],
-                contains=("control result(s)",),
-            )
+        self.cli(
+            ("assessment", "run"),
+            [
+                *mock,
+                "assessment",
+                "run",
+                "--all",
+                "--evidence",
+                str(mock_evidence),
+                "--plan-output",
+                str(mock_plans),
+                "--output",
+                str(mock_results),
+                "--at",
+                EXAMPLE_INSTANT,
+            ],
+            contains=("Assessment run", "Scope: all assets", "ASSET", "RESULT SLOT"),
+        )
+        mock_anchor = mock_plans / "cloud-account__aws-111122223333.json"
+        historical_args = [
+            "--plan", str(mock_anchor),
+            "--assessed-plans", str(mock_plans),
+            "--results", str(mock_results),
+            "--at", EXAMPLE_INSTANT,
+            "--as-of", EXAMPLE_INSTANT,
+        ]
         self.cli(
             ("assessment", "status"),
-            [*mock, "assessment", "status", "--results", str(mock_results)],
+            [*mock, "assessment", "status", *historical_args],
             contains=("cloud-account/aws-111122223333", "saas/acme-projects/company"),
         )
         filtered_status_json = self.cli(
@@ -902,8 +904,7 @@ class ExampleRunner:
                 *mock,
                 "assessment",
                 "status",
-                "--results",
-                str(mock_results),
+                *historical_args,
                 "--group",
                 "aws-production-accounts",
                 "--outcome",
@@ -914,27 +915,26 @@ class ExampleRunner:
         )
         filtered_status = json.loads(filtered_status_json)
         self.cli(
-            ("assessment", "groups"),
-            [*mock, "assessment", "groups", "--results", str(mock_results)],
+            ("assessment", "status"),
+            [*mock, "assessment", "status", "--by", "group", *historical_args],
             contains=("aws-production-accounts",),
         )
-        frameworks = self.cli(
-            ("assessment", "frameworks"),
-            [*mock, "assessment", "frameworks", "--results", str(mock_results)],
+        mappings = self.cli(
+            ("assessment", "mappings"),
+            [*mock, "assessment", "mappings", *historical_args],
             contains=("CSA-CCM-v4.1", "TAILORED"),
         )
         self.domain(
-            "assessment.framework-alignment",
-            "TAILORED" in frameworks and "UNALTERED" in frameworks,
+            "assessment.mapping-traceability",
+            "TAILORED" in mappings and "UNALTERED" in mappings,
         )
-        filtered_frameworks = self.cli(
-            ("assessment", "frameworks"),
+        filtered_mappings = self.cli(
+            ("assessment", "mappings"),
             [
                 *mock,
                 "assessment",
-                "frameworks",
-                "--results",
-                str(mock_results),
+                "mappings",
+                *historical_args,
                 "--group",
                 "aws-production-accounts",
                 "--reference",
@@ -945,7 +945,7 @@ class ExampleRunner:
                 "json",
             ],
         )
-        filtered_framework_document = json.loads(filtered_frameworks)
+        filtered_mapping_document = json.loads(filtered_mappings)
         secondary_result = self._read(
             mock_results / "cloud-account__aws-444455556666.json"
         )
@@ -953,15 +953,15 @@ class ExampleRunner:
             "assessment.filters",
             mock_fleet_filter_contract_holds(
                 filtered_status,
-                filtered_framework_document,
+                filtered_mapping_document,
                 secondary_result,
             ),
         )
         self.domain(
             "output.json-contracts",
-            filtered_status["schema"] == "compliance.example/assessment-status/v1"
-            and filtered_framework_document["schema"]
-            == "compliance.example/framework-mapping-status/v1alpha1",
+            filtered_status["schema"] == "compliance.example/assessment-status-view/v1alpha1"
+            and filtered_mapping_document["schema"]
+            == "compliance.example/assessment-mappings-view/v1alpha1",
         )
         self.cli(
             ("assessment", "explain"),
@@ -970,10 +970,9 @@ class ExampleRunner:
                 "assessment",
                 "explain",
                 "cloud-account/aws-111122223333",
-                "--results",
-                str(mock_results),
+                *historical_args,
             ],
-            contains=("Active controls", "remediation:"),
+            contains=("Checks:", "Historical outcome:"),
         )
 
         iam_plans = self.root / "iam-realization/plans"
@@ -1093,13 +1092,18 @@ class ExampleRunner:
                 "assessment",
                 "explain",
                 "host/standard-app-01",
-                "--results",
-                str(rollout_results),
+                "--plan",
+                str(rollout_plans / "host__standard-app-01.json"),
+                "--assessed-plans",
+                str(rollout_plans),
+                "--results", str(rollout_results),
+                "--at", EXAMPLE_INSTANT,
+                "--as-of", EXAMPLE_INSTANT,
             ],
             contains=(
                 "Objectives:",
                 "company.iam.role-based-access@1",
-                "waiver: standard-app-01-auditd-rollout",
+                "Recorded waiver standard-app-01-auditd-rollout",
             ),
         )
 

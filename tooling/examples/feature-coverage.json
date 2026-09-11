@@ -35,12 +35,11 @@
         "cli.inventory.explain",
         "cli.plan.show",
         "cli.assessment.status",
-        "cli.assessment.groups",
-        "cli.assessment.frameworks",
+        "cli.assessment.mappings",
         "inventory.multi-parent-dag",
         "evidence.contracts",
         "evidence.schema-enforcement",
-        "assessment.framework-alignment",
+        "assessment.mapping-traceability",
         "assessment.filters",
         "output.json-contracts"
       ]

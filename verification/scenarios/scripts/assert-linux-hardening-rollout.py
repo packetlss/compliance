@@ -11,7 +11,6 @@ from datetime import datetime
 from pathlib import Path
 
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
-from tools.assessment import build_explanation, render_explanation
 from tools.assessment_provenance import validate_result_against_plan, validate_selection_snapshot
 from tools.evaluator import opa_evaluator_identity
 from tools.evidence_provenance import evidence_set_provenance
@@ -383,15 +382,17 @@ def main() -> None:
         evidence=container_evidence,
     )
     assert_assessment_plan_handoff(container_plan, actual)
-    explanation = render_explanation(build_explanation(container_plan, [container]))
-    for expected in (
-        "Check: Linux kernel settings match policy",
-        "Purpose: Verify that configured Linux kernel parameters have the values mandated by policy.",
-        'before: implementation=linux.sysctl.required, disposition=evaluate, criteria={"settings":[{"key":"net.ipv4.ip_forward","value":"0"}]}',
-        'after: implementation=linux.sysctl.required, disposition=evaluate, criteria={"settings":[{"key":"net.ipv4.ip_forward","value":"1"}]}',
-        "deviation DEV-LINUX-CONTAINER-001",
-    ):
-        require(expected in explanation, f"container explanation lost {expected!r}")
+    forwarding = next(
+        row for row in container_plan["controls"]
+        if row["instance_id"] == "benchmark.example.linux-server.ip-forwarding-disabled"
+    )
+    require(forwarding["title"] == "Linux kernel settings match policy",
+            "container plan lost Check title")
+    require(forwarding["purpose"] ==
+            "Verify that configured Linux kernel parameters have the values mandated by policy.",
+            "container plan lost Check purpose")
+    require(forwarding["derivations"] and forwarding["deviations"][0]["id"] ==
+            "DEV-LINUX-CONTAINER-001", "container plan lost exact tailoring facts")
 
     waived_result = next(item for item in standard["results"]
                          if item["instance_id"] == "company.linux-server.audit-package")

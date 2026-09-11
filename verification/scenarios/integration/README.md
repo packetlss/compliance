@@ -78,7 +78,7 @@ public CLI and separately materialized private IAM realization; their proof is
 experimental and does not freeze the v4 representation.
 
 The complete feature runner executes once and requires exactly one owner for
-each of the 22 retained CLI leaves and 19 retained domain features. Generated
+each of the 21 retained CLI leaves and 19 retained domain features. Generated
 outputs stay in a temporary run directory and are removed. Before and after
 execution, the assembly is byte-compared with the transformed committed export;
 the destination checkout must remain clean.

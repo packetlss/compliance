@@ -13,9 +13,9 @@ from tools.assessment_provenance import artifact_digest, digest, validate_result
 from tools.evaluator import EvaluatorIdentity
 from tools.evaluate_plan import evaluate_plan_document, control_error_result
 from tools.operation import (
-    account_operation, freeze_operation, freeze_selection_witness, normalize_request,
-    qualify_operation, member_disposition, plan_disposition, select_from_witness,
-    select_subjects,
+    account_operation, freeze_operation, freeze_selection_witness,
+    frozen_group_memberships, normalize_request, qualify_operation,
+    member_disposition, plan_disposition, select_from_witness, select_subjects,
 )
 from tools.policy_diff import build_policy_diff
 from tools.render_plan import resolve_groups
@@ -196,6 +196,25 @@ class OperationTests(unittest.TestCase):
         self.assertEqual(select_from_witness(request, witness), [])
         with self.assertRaisesRegex(ValueError, 'unresolved operation selection'):
             select_subjects(subjects, groups, {'all':False,'subjects':[],'groups':['unknown']})
+
+    def test_frozen_group_memberships_retain_empty_requested_group(self):
+        plan = copy.deepcopy(self.plans(('host/A',))[0])
+        subjects = {'host/A': plan['subject']}
+        groups = [
+            {'id':'test-hosts','parents':[],'members':['host/A']},
+            {'id':'requested-empty','parents':[]},
+        ]
+        assignments = [{'id':'test-policy','target':{'group':'test-hosts'},
+                        'baselines':['test.baseline@1']}]
+        freeze_operation(
+            [plan], subjects, groups, assignments,
+            {'all':False,'subjects':['host/A'],'groups':['requested-empty']},
+        )
+        validate_assessment_plan(plan)
+        self.assertEqual(
+            frozen_group_memberships(plan['operation']),
+            {'requested-empty': [], 'test-hosts': ['host/A']},
+        )
 
     def test_same_denominator_different_request_changes_only_bound_context(self):
         plan = self.plans(('host/A',))[0]
@@ -417,7 +436,7 @@ class OperationTests(unittest.TestCase):
         )
         row = account['members'][0]
         self.assertEqual(row['state'], 'missing')
-        self.assertEqual(row['historical_outcome'], 'no_assessment')
+        self.assertIsNone(row['historical_outcome'])
         self.assertEqual(row['plan_alignment'], 'different_plan')
         self.assertEqual(row['evidence_timeliness'], {'qualification': 'unavailable'})
 

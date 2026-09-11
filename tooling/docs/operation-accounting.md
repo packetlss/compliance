@@ -101,7 +101,8 @@ Multi-subject outputs require distinct per-subject paths. Plans are published
 before member evaluation, preserving the expected denominator if evaluation stops.
 Already trustworthy children remain independently valid if a later member refuses.
 
-Historical `status`, `groups`, `explain` and `frameworks` accept `--plan` and `--at`.
+Historical `status`, `status --by group`, `explain` and `mappings` require `--plan`,
+`--at`, and `--as-of`.
 They use the anchor's frozen denominator and accept only results matching exact
 subject, expected plan and recorded instant. `--assessed-plans` accepts repeatable
 exact plan files or bounded plan directories and indexes them only by validated
@@ -127,9 +128,10 @@ fail-only waivers and independent technical assessment retain their behavior.
 
 Historical mapping filters are visibly filtered. Mapping references and whole-operation
 accounting remain separate, and mappings never produce external conformity. Current
-inventory views without `--plan` retain their legacy operator comparison role.
+inventory policy expectation belongs only to Coverage; Assessment has no non-anchored
+current-plan/latest-result reporting path.
 
-Historical operation views additionally require explicit `--as-of q` and may accept
+Historical operation views require explicit `--as-of q` and may accept
 a validated `--comparison-plan`. They derive, without changing artifacts or accounting,
 exact operation-bound plan alignment, selected required-evidence timeliness, and the
 recorded applied-waiver window. Dependency timeliness uses only frozen successful-use
@@ -140,11 +142,25 @@ control with no required evidence receives no timeliness claim. Comparison membe
 never changes the historical denominator. Historical outcomes and roll-ups remain
 unchanged, and `all_passed` is labeled only as a frozen historical fact.
 
+The default status table reports current recorded-waiver qualification per asset.
+The group table aggregates current plan alignment, evidence timeliness and recorded
+waiver qualification independently from its exact slot accounting. Group identity
+and membership come only from frozen operation facts, including an empty requested
+group retained by the selection witness; no current inventory or Coverage projection
+is consulted. Frozen disposition counts and per-asset/explanation labels preserve the
+distinction among inactive, unassigned, no-assessable-policy, and result-required
+members. Explanation preserves every exact policy-to-check group/assignment path rather
+than collapsing a check shared by multiple applicable policies.
+
 A multi-subject historical view retains one operation-bearing plan as denominator
 anchor, each exact bound plan needed to interpret a retained result, and the results.
 The anchor alone proves missing expected slots; no plan artifact is invented for a
 member whose result is absent. Deleting a historical result plan makes full
 interpretation of that result unavailable without affecting future assessment.
+The bounded explanation then exposes only result-owned outcome, reason, dependency
+disposition, closed error and recorded-waiver facts, plus waiver-window qualification
+derived from the retained waiver timestamps and explicit query instant. It does not reconstruct
+plan-owned Check/dependency meaning or call the Coverage projection.
 
 ## Concrete typed assertion contracts
 

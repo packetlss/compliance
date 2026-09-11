@@ -3,7 +3,7 @@
 The tooling feature catalog covers every retained public `compliance` leaf
 command and the important component behaviors that span commands. After removal
 of in-core configuration generation and addition of current coverage views it
-contains 22 CLI leaves and 19 domain features.
+contains 21 CLI leaves and 19 domain features.
 
 The complete composed suite is owned by
 the canonical destination scenario root at `verification/scenarios/`.
@@ -31,7 +31,7 @@ missing or duplicate catalog entries.
 | `policy diff`, `policy diff-set` | Stored-plan semantic comparison with distinct context changes |
 | `waiver validate`, `waiver list`, `waiver explain` | Bounded approvals, lifecycle, and exact target scope |
 | `plan render`, `plan show` | Immutable provenance-bearing assessment plans |
-| `assessment run`, `assessment status`, `assessment groups`, `assessment frameworks`, `assessment explain` | Evidence-backed technical and objective assessment |
+| `assessment run`, `assessment status [--by group]`, `assessment mappings`, `assessment explain` | Exact-operation technical and objective assessment with separate current qualification |
 
 Configuration planning, showing, explaining, and rendering commands are not
 part of the current CLI.
@@ -47,7 +47,7 @@ The catalog retains:
 - invalid-resolution refusal;
 - requirement/realization roll-up and missing-evidence `unknown`;
 - waiver application and filtering;
-- framework alignment and assessment filtering;
+- mapping traceability, policy alignment, and assessment filtering;
 - policy implementation coverage; and
 - versioned machine-readable output.
 

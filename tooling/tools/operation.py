@@ -178,6 +178,38 @@ def select_from_witness(request, witness):
     return sorted(selected)
 
 
+def frozen_group_memberships(projection):
+    """Return exact group membership available from one frozen operation."""
+    memberships = {
+        group['id']: set()
+        for member in projection['members']
+        for group in member['resolved_groups']
+    }
+    for member in projection['members']:
+        for group in member['resolved_groups']:
+            memberships[group['id']].add(member['subject_id'])
+
+    witness = projection['selection_witness']
+    if witness.get('mode') != 'groups':
+        return {key: sorted(value) for key, value in sorted(memberships.items())}
+
+    from .render_plan import resolve_groups
+    groups = witness['groups']
+    catalog = {group['id']: group for group in groups}
+    memberships.update({group_id: set() for group_id in catalog})
+    labels = {
+        row['subject_id']: row['labels'] for row in witness.get('candidates', [])
+    }
+    for member in projection['members']:
+        subject = {
+            'id': member['subject_id'],
+            'labels': labels.get(member['subject_id'], {}),
+        }
+        for group in resolve_groups(catalog, subject):
+            memberships[group['id']].add(member['subject_id'])
+    return {key: sorted(value) for key, value in sorted(memberships.items())}
+
+
 def _member_resolved_groups(plan):
     """Keep only membership attribution needed to derive applicable assignments."""
     by_id = {group['id']: group for group in plan['resolved_groups']}
@@ -388,7 +420,6 @@ def account_operation(anchor, reports, evaluated_at, assessed_plans=()):
     """Exact-set historical accounting; result discovery never supplies the scope."""
     from .artifact_validation import validate_assessment_plan, validate_assessment_results
     from .assessment_provenance import operation_plan_id
-    from .assessment import result_state
     validate_assessment_plan(anchor)
     plan_by_id = {anchor['id']: anchor}
     for plan in assessed_plans:
@@ -422,11 +453,12 @@ def account_operation(anchor, reports, evaluated_at, assessed_plans=()):
             from .assessment_provenance import validate_result_against_plan
             validate_result_against_plan(result, assessed_plan)
             interpretation = 'validated'
-        state = ((result_state(result) if result else 'missing')
+        state = ((result['outcome'] if result else 'missing')
                  if disposition == 'result_required' else disposition)
         rows.append({**copy.deepcopy(member), 'plan_id': plan_id, 'state': state,
                      'accounting_disposition': disposition,
                      'historical_interpretation': interpretation,
+                     'result_present': result is not None,
                      'result_id': result['id'] if result else None})
     interpretation_complete = all(
         row['accounting_disposition'] != 'result_required'
@@ -561,16 +593,21 @@ def qualify_operation(
                      if assessed_plan is None or comparison_anchor is None or comparison_plan_id is None
                      else 'plan_aligned' if comparison_plan_id == row['plan_id'] else 'different_plan')
         row['plan_alignment'] = alignment
-        row['historical_outcome'] = row['state'] if row['result_id'] else 'no_assessment'
+        # Missing and non-assessable slots are accounting facts, not immutable
+        # historical outcomes.  Only an exact result owns an outcome.
+        row['historical_outcome'] = row['state'] if row['result_id'] else None
         report = reports_by_id.get(row['result_id'])
-        if report is None or assessed_plan is None:
+        if report is None:
             row['evidence_timeliness'] = {'qualification': 'unavailable'}
             row['recorded_waiver_qualification'] = {'waivers': [], 'counts': {
                 'within_window': 0, 'expired': 0, 'not_yet_in_window': 0}}
             continue
-        timeliness = _evidence_timeliness(report, assessed_plan, query_instant)
-        row['evidence_timeliness'] = timeliness
         row['recorded_waiver_qualification'] = _recorded_waiver_qualification(report, query_instant)
+        row['evidence_timeliness'] = (
+            {'qualification': 'unavailable'}
+            if assessed_plan is None
+            else _evidence_timeliness(report, assessed_plan, query_instant)
+        )
     account['query_instant'] = query_instant.isoformat().replace('+00:00', 'Z')
     account['qualification_summary'] = summarize_qualifications(account['members'])
     account['all_passed_meaning'] = (
@@ -583,7 +620,13 @@ def summarize_qualifications(rows):
     """Aggregate each operational dimension without imposing precedence."""
     totals = Counter()
     for row in rows:
-        totals['historical_outcomes.' + row['historical_outcome']] += 1
+        if row['historical_outcome'] is not None:
+            totals['historical_outcomes.' + row['historical_outcome']] += 1
+        totals['expected_slots.required' if row['accounting_disposition'] == 'result_required'
+               else 'expected_slots.not_required'] += 1
+        if row['accounting_disposition'] == 'result_required':
+            totals['expected_slots.filled' if row['result_present']
+                   else 'expected_slots.missing'] += 1
         totals['plan_alignment.' + row['plan_alignment']] += 1
         totals['coverage.' + row['accounting_disposition']] += 1
         timing = row['evidence_timeliness']

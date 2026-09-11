@@ -82,11 +82,19 @@ tooling_run python tooling/collectors/mock-api/collect.py \
   --output "$RUN_ROOT/results" \
   --at "$FIXED_INSTANT"
 "${cli[@]}" assessment status \
-  --results "$RUN_ROOT/results" --format json > "$RUN_ROOT/status.json"
-"${cli[@]}" assessment frameworks \
-  --results "$RUN_ROOT/results" --format json > "$RUN_ROOT/frameworks.json"
+  --plan "$RUN_ROOT/plans/host__restricted-linux-01.json" \
+  --assessed-plans "$RUN_ROOT/plans" --results "$RUN_ROOT/results" \
+  --at "$FIXED_INSTANT" --as-of "$FIXED_INSTANT" \
+  --format json > "$RUN_ROOT/status.json"
+"${cli[@]}" assessment mappings \
+  --plan "$RUN_ROOT/plans/host__restricted-linux-01.json" \
+  --assessed-plans "$RUN_ROOT/plans" --results "$RUN_ROOT/results" \
+  --at "$FIXED_INSTANT" --as-of "$FIXED_INSTANT" \
+  --format json > "$RUN_ROOT/mappings.json"
 "${cli[@]}" assessment explain host/restricted-linux-01 \
-  --results "$RUN_ROOT/results" > "$RUN_ROOT/explain.txt"
+  --plan "$RUN_ROOT/plans/host__restricted-linux-01.json" \
+  --assessed-plans "$RUN_ROOT/plans" --results "$RUN_ROOT/results" \
+  --at "$FIXED_INSTANT" --as-of "$FIXED_INSTANT" > "$RUN_ROOT/explain.txt"
 
 printf '\n== IAM runtime and provenance assertions ==\n'
 tooling_run python "$SCRIPT_ROOT/assert-iam-private-boundary.py" \
