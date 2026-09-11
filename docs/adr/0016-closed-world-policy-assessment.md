@@ -277,8 +277,8 @@ cannot author a passing reality assertion: required evidence must still qualify.
 | Plan/results/provenance/reporting | Immutable resolved scope/policy/evidence attribution, omission detection and bounded company results; no new wire family chosen |
 | Common assurance | Determine whether any explicit reuse mechanism is actually needed; typed evidence may suffice; direct result graphs require separate review |
 
-#37 remains open for residual assurance questions. After this promotion, the next
-step is narrow **read-only repository-grounded implementation exploration** of
+At promotion time, #37 remained open for residual assurance questions. The next
+step was narrow **read-only repository-grounded implementation exploration** of
 closed-world expected assessment/run accounting, typed external/procedural assurance
 dependencies and evidence qualification, exact beneficiary/scope attribution, and
 whether explicit common-assurance reuse is needed. Inspect actual post-#73 code;

@@ -151,7 +151,7 @@ waiver without changing its immutable outcome; the authored-resource
 `waiver list/explain --at` lifecycle above is a separate interface. Expiration alone does not mutate the stored
 applied-waiver snapshot; it changes applicability to future evaluations.
 Recorded waiver qualification is independent of historical outcomes, plan alignment,
-evidence timeliness and coverage, and does not recompute historical assurance
+evidence timeliness and frozen accounting disposition, and does not recompute historical assurance
 roll-ups. Fail-only application remains unchanged and a waiver never proves compliance.
 #32's ADR 0011 addition remains factual evidence provenance only; #80 derives the
 assessment presentation without changing the waiver catalog or result artifact.

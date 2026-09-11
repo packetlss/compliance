@@ -39,12 +39,12 @@ coupling by selecting the pinned child project by repository path. The prototype
 name is therefore superseded before the first actual tooling release and must
 not be used in a new released lock or durable generated artifact.
 
-The current source repository happens to be named `compliance-tooling`, but its
-repository coordinate is transitional metadata rather than contract identity.
-The Python distribution remains `compliance-tooling`, the import package remains
-`tools`, and the operator command remains `compliance`; these are distinct
-package/runtime interfaces and do not require a same-named source repository.
-PyPI or another Python registry is not part of this first contract.
+The current source repository is `packetlss/compliance`; its repository coordinate
+is acquisition/review metadata rather than contract identity. The Python
+distribution remains `compliance-tooling`, the import package remains `tools`, and
+the operator command remains `compliance`; these are distinct package/runtime
+interfaces and do not require a same-named source repository. PyPI or another
+Python registry is not part of this first contract.
 
 ## Tooling release identities
 

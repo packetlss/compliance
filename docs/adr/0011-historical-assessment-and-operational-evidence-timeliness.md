@@ -300,7 +300,7 @@ history, result index, run object, retention service, or artifact-discovery subs
 No evidence collection/scheduling, continuous monitoring, evidence retention/storage,
 findings lifecycle, collector precedence/authority, evidence supersession, payload
 merging/multi-observation semantics, new freshness eligibility, future timestamp or
-evidence `expires_at` behavior, the required-only dependency model, #37 manual/procedural
+evidence `expires_at` behavior, the required-only dependency model, new manual/procedural
 assurance, new logical result states, persisted operational-status artifact, adapter
 execution, release/signing/acquisition, or firewall/network-policy work is authorized.
 
@@ -317,4 +317,5 @@ freshness eligibility; a new result state, persistent artifact family or trust
 boundary; changed logical roll-ups; broader assessment-history selection/supersession;
 an external compatibility freeze/consumer; removal of evaluation enforcement;
 positional dependency identity; a result graph/cross-result dependency; core history,
-retention, latest-result, or discovery services; or material overlap with #37 assurance.
+retention, latest-result, or discovery services; or material overlap with new
+assurance semantics.

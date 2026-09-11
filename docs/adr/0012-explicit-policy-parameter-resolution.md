@@ -2,19 +2,15 @@
 
 - **Status:** Implemented under #73; experimental, not frozen
 - **Date:** 2026-09-05
-- **Parent architecture contract:** [#37](https://github.com/packetlss/compliance/issues/37)
+- **Promotion history:** [#37](https://github.com/packetlss/compliance/issues/37)
 - **Runtime/schema migration:** [#73](https://github.com/packetlss/compliance/issues/73); no runtime change in this promotion
 - **Result ownership alignment:** Implemented under [#90](https://github.com/packetlss/compliance/issues/90); parameter semantics unchanged
 
-Current authority routing: [ADR 0014](0014-attributable-applicability-and-authority-acceptance.md)
-and [ADR 0015](0015-bounded-external-claims-and-assurance-recognition.md) now accept
-the separately deferred narrow applicability-authority and external-claim decisions;
-[ADR 0013](0013-scoped-assurance-and-obligation-instances.md) owns scoped populations
-and obligation instances. They do not extend #73 or change this ADR's parameter
-identity, resolution, direct typed consumption or unresolved-policy boundary.
-Complete #73 independently, then plan their coordinated successor under #37.
-Historical deferrals below describe this ADR's bounded scope, not unsettled
-invariants already decided by ADRs 0013–0015.
+ADRs 0013–0015 were subsequently superseded by ADR 0016. #73 completed this ADR's
+parameter identity, resolution, direct typed consumption and unresolved-policy
+boundary independently; #37 is the completed promotion history that led to the
+bounded #78 successor. Historical deferrals below describe this ADR's original
+scope rather than current work routing.
 
 The initial-current descriptions and migration table below record the pre-#73
 starting point. [The implementation contract](../../tooling/docs/policy-parameters.md)
@@ -22,7 +18,7 @@ specifies the resulting experimental representation.
 
 ## Context and authority
 
-The accepted parameter decision under #37 needs durable authority for a common
+The parameter decision accepted under #37 required durable authority for a common
 resolution model. Current technical baselines already validate literal control
 parameters and use explicit pinned overlays. Current `ControlRequirement` and
 `RequirementBaseline` schemas have no parameter declarations or bindings;
@@ -219,10 +215,10 @@ external declaration: inactivity_period, binding mode = delegated/open to organi
 ```
 
 Whether the external issuer/customer/framework input itself is accepted as
-authoritative is deferred to the later external-assurance/framework-claim
-authority contract under #37. Source identity/content digests prove what input
-was consumed; they do not inherently prove authority. This ADR creates no generic
-authority, IAM or delegation-verification subsystem.
+authoritative was deferred during #37 promotion. ADR 0016 now assigns external
+applicability and sufficiency to governance. Source identity/content digests prove
+what input was consumed; they do not inherently prove authority. This ADR creates
+no generic authority, IAM or delegation-verification subsystem.
 
 For company-owned policy, selected provenance-bearing policy defines desired
 state. Existing governance metadata such as `approval_ref` remains provenance
@@ -406,9 +402,9 @@ review and all four stable exact-head CI contexts green. Runtime/schema tests
 are acceptance obligations of the successor issue, not changes in this PR.
 Human final squash-merge authority remains unchanged.
 
-Defer broader #37 assurance terminology, manual/procedural/external/certification
-dependency semantics, external authority and framework claims, N/A and
-missing-realization redesign, general requirement/realization inheritance,
+The implementation deferred broader assurance terminology, manual/procedural/
+external/certification dependency semantics, external authority and framework
+claims, N/A and missing-realization redesign, general requirement/realization inheritance,
 transformed consumption, technical-parameter ontology, generic IAM/delegation,
 future-timestamp policy, query-time operational views, evidence retention and
 collection. This decision authorizes no new result state, artifact family,

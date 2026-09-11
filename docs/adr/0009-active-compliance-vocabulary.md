@@ -74,11 +74,13 @@ define a development workspace. Its implementation is deferred to Tranche 2,
 not implemented in the Tranches 0–1 PR. Current schemas, fields, selection, and
 CLI remain unchanged here.
 
-Technical control/assurance resource and wire names remain unchanged pending
-#37, including `Control`, `Baseline`, `BaselineOverlay`, `ControlRequirement`,
-`ControlRealization`, `RequirementBaseline`, `implementation`, `instance_id`, and
-`control_id`. Technical assessment and optional objective assurance retain their
-existing semantics; missing or inconclusive required evidence remains `unknown`.
+Technical control/assurance resource and wire names remain unchanged by this
+vocabulary decision, including `Control`, `Baseline`, `BaselineOverlay`,
+`ControlRequirement`, `ControlRealization`, `RequirementBaseline`, `implementation`,
+`instance_id`, and `control_id`. Subsequent #37 promotion history does not change
+these names.
+Technical assessment and optional objective assurance retain their existing
+semantics; missing or inconclusive required evidence remains `unknown`.
 
 ## Sequencing and non-goals
 

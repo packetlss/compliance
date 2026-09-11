@@ -625,11 +625,12 @@ incomplete CI contract. Each directory is one project-scoped release snapshot;
 the comparison does not merge or re-resolve policy catalogs. Direct comparison
 of authored or resolved baseline catalogs remains a separate future scope.
 
-The prototype assessment CLI implements fleet status filtering, resolved-group
-aggregation, and a subject explanation that joins the plan to the current
-result. Group aggregation counts a subject in every resolved group and keeps
-coverage and evaluation-state counts separate; it does not claim that DAG group
-totals are mutually exclusive.
+The operator CLI keeps ephemeral current expectation and exact historical
+interpretation separate. `coverage list/explain` resolves the supplied current
+inventory and policy without persisting a Coverage artifact. `assessment status
+--by group` aggregates exact frozen group membership, accounting disposition, and
+exact retained results from one operation anchor; it does not join a current plan
+to a latest result or claim that DAG group totals are mutually exclusive.
 
 The same operator CLI exposes `plan render` for inspecting the immutable input
 to evaluation and `assessment run` for rendering, persisting, and evaluating a

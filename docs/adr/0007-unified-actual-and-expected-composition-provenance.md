@@ -134,7 +134,10 @@ Evidence is snapshotted before evaluation; the same snapshot is digested and
 consumed. Filesystem paths are not provenance identity. Evaluator-reported evidence
 IDs do not replace orchestration-owned successful selections.
 
-Future typed manual/procedural assurance evidence defined by destination #37 uses the same actual evidence provenance when it becomes an evaluator input; this ADR does not decide which assurance documents qualify or how objective states roll up.
+Typed manual/procedural assurance evidence promoted through #37 and implemented
+under #78 uses the same actual evidence provenance when it becomes an evaluator
+input; this ADR does not decide which assurance documents qualify or how objective
+states roll up.
 
 ### Exact plan/result historical record and validation
 
