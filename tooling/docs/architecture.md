@@ -508,6 +508,16 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-11 — Declared evidence facts at control admission (#113)
+
+The five maintained AWS, SaaS, and Linux field-selecting controls now enumerate
+only the facts declared and typed by their corresponding evidence payload
+schemas. Unsupported extension selectors and selector/type mismatches fail
+policy validation before planning or evaluation. Evidence schemas remain open;
+extensions remain preserved and identity-bearing. This bounded Stage 6 cleanup
+adds no runtime schema introspection, selector framework, evidence type, changed
+outcome semantics, compatibility alias, or cross-domain consolidation.
+
 ### 2026-09-11 — Inventory and evidence producer contracts (#111)
 
 The pre-freeze producer surface retains normalized `Subject` resources for

@@ -7,5 +7,25 @@
     "section": {"type": "string", "minLength": 1},
     "setting": {"type": "string", "minLength": 1},
     "expected": {"type": "boolean"}
-  }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "section": {"const": "authentication"},
+        "setting": {"const": "sso_enforced"}
+      }
+    },
+    {
+      "properties": {
+        "section": {"const": "authentication"},
+        "setting": {"const": "mfa_enforced"}
+      }
+    },
+    {
+      "properties": {
+        "section": {"const": "guest_access"},
+        "setting": {"const": "allowed"}
+      }
+    }
+  ]
 }

@@ -7,5 +7,25 @@
     "section": {"type": "string", "minLength": 1},
     "setting": {"type": "string", "minLength": 1},
     "expected": {"type": "boolean"}
-  }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "section": {"const": "root_user"},
+        "setting": {"const": "mfa_enabled"}
+      }
+    },
+    {
+      "properties": {
+        "section": {"const": "cloudtrail"},
+        "setting": {"const": "multi_region_enabled"}
+      }
+    },
+    {
+      "properties": {
+        "section": {"const": "security_contact"},
+        "setting": {"const": "configured"}
+      }
+    }
+  ]
 }

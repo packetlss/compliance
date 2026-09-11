@@ -9,7 +9,7 @@
   "spec": {
     "based_on": {
       "realization": "company.linux.central-role-access@1",
-      "digest": "sha256:8e3abf0cfed030ee9b7bc43134738d2c5e2f5db137dfd53f31fbbc8f0f5e05fb"
+      "digest": "sha256:1afbd8f8773f5776220e5d92a7e26d8f42f9ae13200f09e3e541932bf85e6c66"
     },
     "requirement": {
       "requirement": "company.iam.role-based-access@1",
@@ -100,7 +100,7 @@
           "implementation": {
             "id": "linux.access.setting_equals",
             "version": 1,
-            "fingerprint": "sha256:98d76093e85e21db39672154d43f616753cc16af13c06b3aea5ae0207c936e60"
+            "fingerprint": "sha256:4dd386bea23c0a2bedaa550ca774bbfaac8c00b3ab6690bca9a8e1ce65640f5c"
           },
           "kind": "freshness",
           "dependency": "observation",
@@ -121,7 +121,7 @@
           "implementation": {
             "id": "linux.access.setting_equals",
             "version": 1,
-            "fingerprint": "sha256:98d76093e85e21db39672154d43f616753cc16af13c06b3aea5ae0207c936e60"
+            "fingerprint": "sha256:4dd386bea23c0a2bedaa550ca774bbfaac8c00b3ab6690bca9a8e1ce65640f5c"
           },
           "kind": "freshness",
           "dependency": "observation",
@@ -142,7 +142,7 @@
           "implementation": {
             "id": "linux.access.setting_equals",
             "version": 1,
-            "fingerprint": "sha256:98d76093e85e21db39672154d43f616753cc16af13c06b3aea5ae0207c936e60"
+            "fingerprint": "sha256:4dd386bea23c0a2bedaa550ca774bbfaac8c00b3ab6690bca9a8e1ce65640f5c"
           },
           "kind": "freshness",
           "dependency": "observation",
@@ -163,7 +163,7 @@
           "implementation": {
             "id": "linux.access.setting_equals",
             "version": 1,
-            "fingerprint": "sha256:98d76093e85e21db39672154d43f616753cc16af13c06b3aea5ae0207c936e60"
+            "fingerprint": "sha256:4dd386bea23c0a2bedaa550ca774bbfaac8c00b3ab6690bca9a8e1ce65640f5c"
           },
           "kind": "freshness",
           "dependency": "observation",

@@ -28,6 +28,8 @@ CONTROL_LIBRARY = Path(os.environ["COMPLIANCE_CONTROL_LIBRARY_ROOT"]) / "policie
 check_source_boundary = runpy.run_path(str(ROOT / "scripts/check-source-boundary.py"))["check_source_boundary"]
 BASELINE = Path("baselines/company/company-linux-server-operations.json")
 REALIZATION = Path("realizations/company/company-linux-role-based-access.json")
+AWS_BASELINE = Path("baselines/upstream/csa-ccm-aws-foundations-profile.json")
+SAAS_BASELINE = Path("baselines/upstream/csa-ccm-saas-foundations-profile.json")
 
 
 def sources(root: Path) -> tuple[PolicySource, ...]:
@@ -370,6 +372,39 @@ class VerificationPolicySourceTests(unittest.TestCase):
 
     def test_invalid_control_parameters_are_rejected(self) -> None:
         self.mutate(BASELINE, lambda item: item["spec"]["controls"][0].update(parameters={"required": "invalid"}))
+        self.assertIn("control-parameters-invalid", self.error_types())
+
+    def test_aws_undeclared_evidence_extension_selector_is_rejected(self) -> None:
+        self.mutate(
+            AWS_BASELINE,
+            lambda item: item["spec"]["controls"][0].update(parameters={
+                "section": "opaque_extension",
+                "setting": "enabled",
+                "expected": True,
+            }),
+        )
+        self.assertIn("control-parameters-invalid", self.error_types())
+
+    def test_saas_undeclared_evidence_extension_selector_is_rejected(self) -> None:
+        self.mutate(
+            SAAS_BASELINE,
+            lambda item: item["spec"]["controls"][0].update(parameters={
+                "section": "opaque_extension",
+                "setting": "enabled",
+                "expected": True,
+            }),
+        )
+        self.assertIn("control-parameters-invalid", self.error_types())
+
+    def test_linux_undeclared_evidence_extension_selector_is_rejected(self) -> None:
+        self.mutate(
+            REALIZATION,
+            lambda item: item["spec"]["checks"][0].update(parameters={
+                "section": "opaque_extension",
+                "setting": "enabled",
+                "expected": True,
+            }),
+        )
         self.assertIn("control-parameters-invalid", self.error_types())
 
     def test_missing_requirement_reference_is_rejected(self) -> None:

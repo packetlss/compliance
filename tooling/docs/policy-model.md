@@ -355,6 +355,10 @@ Evidence schemas define a **minimum compatibility contract**:
 - Undefined extension fields remain complete-document, identity-bearing content,
   but are not supported control inputs until their meaning and type are declared
   by that evidence type's payload schema.
+- Maintained controls that select named payload fields enumerate their supported
+  declared facts in their own parameter schemas. An undeclared section/setting
+  pair or a selector/operator type mismatch fails policy validation before plan
+  construction; controls do not inspect evidence schemas at runtime.
 - Opaque extension fields remain part of the complete document. A field named
   `integrity` gains no product semantics merely because an open schema permits it.
 

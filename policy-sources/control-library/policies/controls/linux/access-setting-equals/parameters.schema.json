@@ -13,5 +13,35 @@
         {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
       ]
     }
-  }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "section": {"const": "packages"},
+        "setting": {"const": "sssd_installed"},
+        "expected": {"type": "boolean"}
+      }
+    },
+    {
+      "properties": {
+        "section": {"const": "sssd"},
+        "setting": {"const": "domain"},
+        "expected": {"type": "string"}
+      }
+    },
+    {
+      "properties": {
+        "section": {"const": "ssh"},
+        "setting": {"const": "allowed_groups"},
+        "expected": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      }
+    },
+    {
+      "properties": {
+        "section": {"const": "accounts"},
+        "setting": {"const": "unmanaged_interactive_accounts"},
+        "expected": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      }
+    }
+  ]
 }
