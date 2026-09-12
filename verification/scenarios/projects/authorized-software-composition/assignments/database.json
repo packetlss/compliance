@@ -1,0 +1,19 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "PolicyAssignment",
+  "metadata": {
+    "name": "database-software"
+  },
+  "spec": {
+    "targetRef": {
+      "kind": "InventoryGroup",
+      "name": "database"
+    },
+    "baselineRefs": [
+      {
+        "name": "company.database-software",
+        "revision": "1"
+      }
+    ]
+  }
+}

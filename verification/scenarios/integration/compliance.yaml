@@ -8,6 +8,8 @@ projects:
     config: verification/scenarios/projects/company-iam-policy-assessment/compliance.yaml
   technical-only-packages:
     config: verification/scenarios/projects/technical-only-packages/compliance.yaml
+  authorized-software-composition:
+    config: verification/scenarios/projects/authorized-software-composition/compliance.yaml
   mock-fleet:
     config: projects/mock-fleet/compliance.yaml
   server-personas:

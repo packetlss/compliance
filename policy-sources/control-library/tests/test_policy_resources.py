@@ -22,6 +22,7 @@ EXPECTED_CONTROL_IDS = {
     "aws.account.setting_equals",
     "aws.s3.account_public_access_block_required",
     "linux.access.setting_equals",
+    "linux.packages.only_allowed",
     "linux.packages.required",
     "linux.sysctl.required",
     "macos.homebrew.formulae_required",

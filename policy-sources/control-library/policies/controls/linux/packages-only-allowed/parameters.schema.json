@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/controls/linux-packages-only-allowed-parameters-v1.schema.json",
+  "type": "object",
+  "required": [
+    "ecosystem",
+    "allowed"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "ecosystem": {
+      "const": "linux-native"
+    },
+    "allowed": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

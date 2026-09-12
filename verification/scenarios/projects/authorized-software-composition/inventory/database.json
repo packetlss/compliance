@@ -1,0 +1,21 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "Subject",
+  "metadata": {
+    "name": "database",
+    "labels": {
+      "profile": "managed-linux",
+      "feature.database": "true"
+    }
+  },
+  "spec": {
+    "id": "host/authorized-database",
+    "type": "linux-host",
+    "lifecycle": "active",
+    "source": {
+      "name": "synthetic-inventory",
+      "externalId": "authorized-database",
+      "observedAt": "2026-09-01T00:00:00Z"
+    }
+  }
+}
