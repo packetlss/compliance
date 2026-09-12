@@ -1,0 +1,36 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "RequirementBaseline",
+  "metadata": {
+    "id": "company.authorized-software-base",
+    "revision": 1
+  },
+  "spec": {
+    "title": "Synthetic base authorized software",
+    "requirements": [
+      {
+        "requirement": "company.authorized-software@1",
+        "digest": "sha256:a2dfdf98145882568603dee2ee2cfedf45f02c7bd631759ceff978e0a535888e",
+        "required": true
+      }
+    ],
+    "parameter_operations": [
+      {
+        "id": "bind-allowed-software",
+        "op": "bind",
+        "target": {
+          "requirement": "company.authorized-software@1",
+          "digest": "sha256:a2dfdf98145882568603dee2ee2cfedf45f02c7bd631759ceff978e0a535888e",
+          "slot": "allowed_software",
+          "declaration_digest": "sha256:3b66bb00dc3a6e0bfd6169fda1b45f974a8674fc9c5c6ec7134b20506abf3366",
+          "schema_digest": "sha256:c434c33e5389616d81fa3602dbad9b13fde68b0e06ad0f83d64c57fd3cc25590"
+        },
+        "expected_parent_fingerprint": "sha256:f5fb5fbf0ab94eb43eb74fb7cb5e5ee45f8c6480e6bd531059bc21bd4f1062d4",
+        "to": [
+          "auditd",
+          "curl"
+        ]
+      }
+    ]
+  }
+}

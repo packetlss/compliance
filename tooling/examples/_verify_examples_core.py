@@ -592,12 +592,12 @@ class ExampleRunner:
         self.cli(
             ("policy", "validate"),
             [*rollout, "policy", "validate"],
-            contains=("4 realization(s)", "13 control manifest(s)"),
+            contains=("5 realization(s)", "14 control manifest(s)"),
         )
         self.cli(
             ("policy", "validate"),
             [*iam, "policy", "validate"],
-            contains=("6 realization(s)", "13 control manifest(s)"),
+            contains=("7 realization(s)", "14 control manifest(s)"),
         )
         self.domain("policy.multi-source-realization", True)
         self.verify_overlay_edges()
@@ -1145,6 +1145,11 @@ class ExampleRunner:
             ("plan", "render"),
             ["--config", str(WORKSPACE_ROOT / "verification/scenarios/projects/company-iam-policy-assessment/compliance.yaml"),
              "plan", "render", "host/A", "--output", str(self.root / "company-iam-plans")],
+        )
+        self.cli(
+            ("plan", "render"),
+            ["--config", str(WORKSPACE_ROOT / "verification/scenarios/projects/authorized-software-composition/compliance.yaml"),
+             "plan", "render", "host/authorized-database", "--output", str(self.root / "authorized-software-plans")],
         )
         focused = self.root / "organization-assertion-plan-input"
         for name in ("inventory", "assignments", "waivers"):

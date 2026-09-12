@@ -183,6 +183,9 @@ tooling_run python "$SCENARIOS_ROOT/scripts/assert-semantic-anchors.py" \
   --integration-root "$INTEGRATION_ROOT" \
   --private-source "$INTEGRATION_ROOT/external-sources/environment-private"
 
+tooling_run python "$SCENARIOS_ROOT/projects/authorized-software-composition/assert-scenario.py" \
+  --integration-root "$INTEGRATION_ROOT"
+
 printf '\n== Feature ownership/completeness integration ==\n'
 tooling_run python "$TOOLING_ROOT"/examples/verify_examples.py --output "$RUN_ROOT/features"
 

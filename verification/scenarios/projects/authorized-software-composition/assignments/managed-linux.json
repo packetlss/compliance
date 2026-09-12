@@ -1,0 +1,19 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "PolicyAssignment",
+  "metadata": {
+    "name": "managed-linux-software"
+  },
+  "spec": {
+    "targetRef": {
+      "kind": "InventoryGroup",
+      "name": "managed-linux"
+    },
+    "baselineRefs": [
+      {
+        "name": "company.authorized-software-base",
+        "revision": "1"
+      }
+    ]
+  }
+}
