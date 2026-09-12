@@ -151,11 +151,11 @@ def doctor(_: argparse.Namespace) -> int:
 
 
 COMMANDS = {
-    "tooling": ["python", "-m", "unittest", "discover", "-s", "tooling/tests", "-v"],
-    "policy": ["python", "-m", "unittest", "discover", "-s", "policy-sources/control-library/tests", "-v"],
-    "projects": ["python", "-m", "unittest", "discover", "-s", "tests/development-projects", "-v"],
-    "iam": ["python", "-m", "unittest", "discover", "-s", "tests/iam-private-boundary", "-v"],
-    "scenarios": ["python", "-m", "unittest", "discover", "-s", "verification/scenarios/scripts", "-p", "test_*.py", "-v"],
+    "tooling": ["python", "-m", "unittest", "discover", "-s", "tooling/tests"],
+    "policy": ["python", "-m", "unittest", "discover", "-s", "policy-sources/control-library/tests"],
+    "projects": ["python", "-m", "unittest", "discover", "-s", "tests/development-projects"],
+    "iam": ["python", "-m", "unittest", "discover", "-s", "tests/iam-private-boundary"],
+    "scenarios": ["python", "-m", "unittest", "discover", "-s", "verification/scenarios/scripts", "-p", "test_*.py"],
 }
 GATES = {"repository": "scripts/validate-repository.sh", "tooling": "tooling/scripts/validate-tooling.sh", "policy": "policy-sources/control-library/scripts/validate-shared-policy.sh", "verification-policy": "policy-sources/verification-policy/scripts/validate-verification-policy.sh", "projects": "scripts/validate-development-projects.sh", "iam": "scripts/validate-iam-private-boundary.sh", "scenarios": "scripts/validate-verification-scenarios.sh", "package": "tooling/scripts/validate-package.sh", "locked-artifacts": "tooling/scripts/validate-locked-artifacts-package.sh", "release-preparation": "tooling/scripts/validate-release-preparation.sh", "policy-release": "tooling/scripts/validate-policy-release-compatibility.sh"}
 
@@ -169,11 +169,16 @@ def check(args: argparse.Namespace) -> int:
     if args.selection:
         if args.area != "tooling": raise SystemExit("named selection is currently supported for tooling tests")
         for pattern in args.selection:
-            command = [*base, "python", "-m", "unittest", "discover", "-s", "tooling/tests", "-p", pattern, "-v"]
+            command = [*base, *COMMANDS[args.area], "-p", pattern]
+            if args.verbose:
+                command.append("-v")
             result = run(command, check=False, env=env).returncode
             if result: return result
         return 0
-    return run([*base, *COMMANDS[args.area]], check=False, env=env).returncode
+    command = [*base, *COMMANDS[args.area]]
+    if args.verbose:
+        command.append("-v")
+    return run(command, check=False, env=env).returncode
 
 
 def gate(args: argparse.Namespace) -> int:
@@ -229,7 +234,7 @@ def main() -> int:
         return cli(sys.argv[2:])
     parser = argparse.ArgumentParser(); sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("setup").set_defaults(func=setup); sub.add_parser("doctor").set_defaults(func=doctor); sub.add_parser("readiness").set_defaults(func=readiness); sub.add_parser("cli", help="run the managed compliance CLI from the repository root")
-    p = sub.add_parser("check"); p.add_argument("area", choices=COMMANDS); p.add_argument("selection", nargs=argparse.REMAINDER); p.set_defaults(func=check)
+    p = sub.add_parser("check"); p.add_argument("--verbose", action="store_true", help="show every test while it runs"); p.add_argument("area", choices=COMMANDS); p.add_argument("selection", nargs=argparse.REMAINDER); p.set_defaults(func=check)
     p = sub.add_parser("gate"); p.add_argument("area", choices=GATES); p.set_defaults(func=gate)
     args = parser.parse_args()
     return args.func(args)
