@@ -235,6 +235,33 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             declaration["schema"]["$id"] = "https://bad.example/wrong"
             declaration["schema_digest"] = parameters.digest(declaration["schema"])
 
+        def add_instance_derivation(plan, mutate):
+            derivation = {
+                "operation": "tailor",
+                "overlay": "test.overlay@1",
+                "parent_fingerprint": "sha256:" + "0" * 64,
+                "inherited_lineage": [{
+                    "baseline": "test.baseline@1",
+                    "operation": "defined",
+                }],
+                "before": {
+                    "implementation": "test.control",
+                    "parameters": {},
+                    "disposition": "evaluate",
+                    "evidence": {"observation": {"max_age": "1d"}},
+                },
+                "after": {
+                    "implementation": "test.control",
+                    "parameters": {},
+                    "disposition": "evaluate",
+                    "evidence": {"observation": {"max_age": "1d"}},
+                },
+            }
+            mutate(derivation)
+            plan["controls"][0]["policy_inputs"]["instance"]["derivations"] = [
+                derivation
+            ]
+
         cases = {
             "control parameter schema": lambda plan: plan["controls"][0][
                 "policy_inputs"
@@ -268,6 +295,57 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             "instance evidence dependency": lambda plan: plan["controls"][0][
                 "policy_inputs"
             ]["instance"].update(evidence={"bad__slot": {"max_age": "1d"}}),
+            "instance lineage": lambda plan: plan["controls"][0][
+                "policy_inputs"
+            ]["instance"].update(lineage=[{
+                "baseline": "bad_baseline@1",
+                "operation": "defined",
+            }]),
+            "instance derivation overlay": lambda plan: add_instance_derivation(
+                plan,
+                lambda derivation: derivation.update(overlay="bad_overlay@1"),
+            ),
+            "instance inherited lineage": lambda plan: add_instance_derivation(
+                plan,
+                lambda derivation: derivation["inherited_lineage"][0].update(
+                    baseline="bad_baseline@1"
+                ),
+            ),
+            "instance before implementation": lambda plan: add_instance_derivation(
+                plan,
+                lambda derivation: derivation["before"].update(
+                    implementation="bad_implementation"
+                ),
+            ),
+            "instance after implementation": lambda plan: add_instance_derivation(
+                plan,
+                lambda derivation: derivation["after"].update(
+                    implementation="bad_implementation"
+                ),
+            ),
+            "instance before evidence dependency": lambda plan: add_instance_derivation(
+                plan,
+                lambda derivation: rename(
+                    derivation["before"]["evidence"],
+                    "observation",
+                    "bad__slot",
+                ),
+            ),
+            "instance after evidence dependency": lambda plan: add_instance_derivation(
+                plan,
+                lambda derivation: rename(
+                    derivation["after"]["evidence"],
+                    "observation",
+                    "bad__slot",
+                ),
+            ),
+            "instance sealing reference": lambda plan: plan["controls"][0][
+                "policy_inputs"
+            ]["instance"].update(overlay_policy={
+                "blocked_operations": ["tailor"],
+                "reason": "synthetic",
+                "sealed_by": "bad_baseline@1",
+            }),
             "binding scope": lambda plan: plan["requirements"][0][
                 "parameter_facts"
             ]["document"]["spec"]["parameters"]["age"].update(

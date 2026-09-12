@@ -739,6 +739,88 @@ def validate_control_instance_identities(instance):
             SLOT,
             'invalid frozen Control evidence dependency reference',
         )
+    validate_control_lineage_identities(instance.get('lineage', []))
+    validate_control_derivation_identities(instance.get('derivations', []))
+    if 'overlay_policy' in instance:
+        validate_control_overlay_policy_identities(instance['overlay_policy'])
+
+
+def validate_control_lineage_identities(lineage):
+    require(isinstance(lineage, list), 'frozen Control lineage must be an array')
+    for entry in lineage:
+        require(
+            isinstance(entry, dict),
+            'frozen Control lineage entry must be an object',
+        )
+        reference_fields = [
+            field for field in ('baseline', 'realization') if field in entry
+        ]
+        require(
+            len(reference_fields) == 1,
+            'frozen Control lineage entry must have one semantic reference',
+        )
+        require_identity(
+            entry[reference_fields[0]],
+            REFERENCE,
+            'invalid frozen Control lineage reference',
+        )
+
+
+def validate_control_criteria_identities(criteria):
+    require(
+        isinstance(criteria, dict),
+        'frozen Control criteria must be an object',
+    )
+    require_identity(
+        criteria.get('implementation'),
+        ID,
+        'invalid frozen Control criteria implementation reference',
+    )
+    evidence = criteria.get('evidence', {})
+    require(
+        isinstance(evidence, dict),
+        'frozen Control criteria evidence must be an object',
+    )
+    for dependency_id in evidence:
+        require_identity(
+            dependency_id,
+            SLOT,
+            'invalid frozen Control criteria evidence dependency reference',
+        )
+
+
+def validate_control_derivation_identities(derivations):
+    require(
+        isinstance(derivations, list),
+        'frozen Control derivations must be an array',
+    )
+    for derivation in derivations:
+        require(
+            isinstance(derivation, dict),
+            'frozen Control derivation must be an object',
+        )
+        require_identity(
+            derivation.get('overlay'),
+            REFERENCE,
+            'invalid frozen Control derivation overlay reference',
+        )
+        validate_control_lineage_identities(
+            derivation.get('inherited_lineage', []),
+        )
+        for snapshot_name in ('before', 'after'):
+            validate_control_criteria_identities(derivation.get(snapshot_name))
+
+
+def validate_control_overlay_policy_identities(overlay_policy):
+    require(
+        isinstance(overlay_policy, dict),
+        'frozen Control overlay policy must be an object',
+    )
+    require_identity(
+        overlay_policy.get('sealed_by'),
+        REFERENCE,
+        'invalid frozen Control sealing reference',
+    )
 
 
 def validate_requirement_declaration_identities(
@@ -1017,15 +1099,10 @@ def validate_frozen_contract_identities(plan):
                 'divergent frozen implementation definitions',
             )
             controls[control['implementation']] = definition
-            for derivation in control.get('derivations', []):
-                for snapshot_name in ('before', 'after'):
-                    evidence = derivation[snapshot_name].get('evidence', {})
-                    for dependency_id in evidence:
-                        require_identity(
-                            dependency_id,
-                            SLOT,
-                            'invalid frozen derivation evidence dependency',
-                        )
+            validate_control_lineage_identities(control.get('lineage', []))
+            validate_control_derivation_identities(control.get('derivations', []))
+            if 'overlay_policy' in control:
+                validate_control_overlay_policy_identities(control['overlay_policy'])
 
     for requirement in plan['requirements']:
         frozen = requirement['parameter_facts']['document']
