@@ -977,8 +977,8 @@ The assembler treats the source list as a set, not an ordered layer stack:
 1. source names are unique and stable;
 2. each tree receives its own content digest and may carry an expected digest
    pin;
-3. schemas are selected across all partial trees and must have one identical,
-   unambiguous definition;
+3. schemas competing for the same existing resolver/catalog role must have one
+   exact, unambiguous definition, including one exact schema per evidence type;
 4. identical resources in the same typed lookup namespace coalesce while retaining
    every source/path locator;
 5. divergent definitions of one identity invalidate the catalog; and
@@ -994,10 +994,12 @@ planning. That admission check and the canonical ID/schema URI migration are acc
 but not yet implemented.
 
 Schema `$id` is an absolute HTTPS schema-contract identifier/base URI, not a policy
-resource key, source authority or exact-content identity. A composition still
-requires one exact schema definition for an identity; exact schema/resource digests
-and provenance commit the content. Schema lookup remains offline and does not use
-network discovery.
+resource key, source authority, exact-content identity or global composition key.
+The resolver/catalog role—not `$id` alone—determines when competing schemas require
+one exact definition. Separately digest-pinned document-local parameter schemas may
+reuse a compatible contract `$id`; exact schema/resource digests and provenance
+commit their content. Schema lookup remains offline and does not use network
+discovery.
 
 `BaselineOverlay` operations and complete alternative `ControlRealization`
 documents remain the only customization semantics. Assembly never performs a

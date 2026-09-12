@@ -183,8 +183,12 @@ policy resource, prove publishing or policy authority, or identify exact bytes.
 Schema and resource digests plus enclosing provenance commit exact content. Schema
 contract version is separate from the owning resource revision: compatible schema
 evolution may retain one `$id` while its exact digest changes; incompatible schema
-evolution mints a new schema-contract version. Within one composition, the existing
-identical-only schema rule still requires one exact definition for an identity.
+evolution mints a new schema-contract version. `$id` alone is not a global catalog
+or composition-admission key. Where an existing resolver selects schemas for one
+catalog role, competing candidates must satisfy that resolver's exact-definition
+rule; in particular, one composition requires one exact schema definition for an
+evidence `TYPE`. Separately digest-pinned, document-local parameter schemas may
+retain the same compatible contract `$id` while their exact content changes.
 
 The URI may be resolvable for publisher convenience, but runtime network discovery
 is not required. Parameter schema references remain document-local and offline
