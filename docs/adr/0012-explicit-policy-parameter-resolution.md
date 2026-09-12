@@ -1,11 +1,11 @@
 # ADR 0012: Explicit policy-parameter resolution and policy-owned evidence freshness
 
-- **Status:** Implemented under #73; additive-set extension accepted under #127 but not implemented; experimental, not frozen
+- **Status:** Implemented under #73; additive-set extension implemented under #129; experimental, not frozen
 - **Date:** 2026-09-05
 - **Promotion history:** [#37](https://github.com/packetlss/compliance/issues/37)
 - **Runtime/schema migration:** [#73](https://github.com/packetlss/compliance/issues/73); no runtime change in this promotion
 - **Result ownership alignment:** Implemented under [#90](https://github.com/packetlss/compliance/issues/90); parameter semantics unchanged
-- **Additive-set extension:** Accepted under [#127](https://github.com/packetlss/compliance/issues/127); documentation tranche only
+- **Additive-set extension:** Accepted under [#127](https://github.com/packetlss/compliance/issues/127), implemented under [#129](https://github.com/packetlss/compliance/issues/129)
 
 ADRs 0013–0015 were subsequently superseded by ADR 0016. #73 completed this ADR's
 parameter identity, resolution, direct typed consumption and unresolved-policy
@@ -15,8 +15,8 @@ scope rather than current work routing.
 
 The initial-current descriptions and migration table below record the pre-#73
 starting point. [The implementation contract](../../tooling/docs/policy-parameters.md)
-specifies the resulting experimental representation and the accepted, not-yet-
-implemented additive-set successor contract.
+specifies the resulting experimental representation and implemented additive-set
+extension.
 
 ## Context and authority
 
@@ -388,7 +388,7 @@ syntax for those behaviors is an authoring failure, not an ignored extension.
 
 A contribution does not import, select or make its target requirement applicable.
 The target declaration and exactly one base must already be made applicable by
-governed current policy. Consequently, the later runtime/schema tranche must allow:
+governed current policy. Consequently, the runtime/schema contract allows:
 
 - a contribution target absent from the contribution-owning baseline's exact
   `spec.requirements` membership;
@@ -498,9 +498,9 @@ is frozen by this summary.
 | Fingerprints, validation, explanation and policy diff | Current literal instance fingerprints and frozen derivations | Include applicable slot/schema/operation/linkage/destination/freshness facts; explain and compare frozen facts without mutable-policy resolution |
 | Maintained policy/projects/fixtures/scenarios | Current literals, pins and Control-owned ages | Explicit synthetic bindings/edges/freshness, coordinated schema and consumer cutover, deliberate changed expectations and regenerated development artifacts |
 
-The additive-set extension accepted under #127 is documentation-only and is not
-part of the current executable contract. Its later coordinated schema/runtime/
-Coverage migration must preserve the table above while adding only the bounded
+The additive-set extension accepted under #127 and implemented under #129 is part
+of the current executable contract. Its coordinated schema/runtime/frozen-plan/
+Coverage cutover preserves the table above while adding only the bounded
 declaration opt-in, contributions, union, attribution and frozen-plan validation
 defined here.
 

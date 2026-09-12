@@ -223,6 +223,87 @@ class PolicyResourceTests(unittest.TestCase):
                     ):
                         self.assertFalse(validator.is_valid(changed))
 
+    def test_additive_set_authoring_contract_is_bounded_and_strict(self):
+        schema_root = POLICIES / "schemas/policy"
+        requirement_validator = Draft202012Validator(
+            read_json(schema_root / "control-requirement.schema.json")
+        )
+        baseline_validator = Draft202012Validator(
+            read_json(schema_root / "requirement-baseline.schema.json")
+        )
+        value_schema = {
+            "$id": "https://example.test/allowed-software",
+            "type": "array",
+            "items": {"type": "string"},
+            "uniqueItems": True,
+        }
+        declaration = {
+            "apiVersion": "compliance.example/v1alpha1",
+            "kind": "ControlRequirement",
+            "metadata": {"id": "company.authorized-software", "revision": 1},
+            "spec": {
+                "title": "Authorized software",
+                "statement": "Only authorized software is installed.",
+                "parameters": {
+                    "allowed_software": {
+                        "required": True,
+                        "binding_mode": "open",
+                        "schema": value_schema,
+                        "schema_digest": "sha256:" + "0" * 64,
+                        "binding_scope": ["company.base"],
+                        "composition": {"kind": "additive-set"},
+                    }
+                },
+            },
+        }
+        contribution_only = {
+            "apiVersion": "compliance.example/v1alpha1",
+            "kind": "RequirementBaseline",
+            "metadata": {"id": "company.database", "revision": 1},
+            "spec": {
+                "title": "Database software",
+                "parameter_contributions": [{
+                    "id": "database-software",
+                    "target": {
+                        "requirement": "company.authorized-software",
+                        "slot": "allowed_software",
+                    },
+                    "members": ["postgresql", "pgbouncer"],
+                }],
+            },
+        }
+        self.assertTrue(requirement_validator.is_valid(declaration))
+        self.assertTrue(baseline_validator.is_valid(contribution_only))
+
+        invalid_declarations = []
+        for mutate in (
+            lambda item: item["spec"]["parameters"]["allowed_software"]["composition"].update(kind="merge"),
+            lambda item: item["spec"]["parameters"]["allowed_software"]["schema"].update(type="object"),
+            lambda item: item["spec"]["parameters"]["allowed_software"]["schema"].update(items={"type": "integer"}),
+            lambda item: item["spec"]["parameters"]["allowed_software"].update(representation="duration"),
+        ):
+            changed = copy.deepcopy(declaration)
+            mutate(changed)
+            invalid_declarations.append(changed)
+        self.assertTrue(all(not requirement_validator.is_valid(item) for item in invalid_declarations))
+
+        invalid_contributions = []
+        for mutate in (
+            lambda item: item["spec"]["parameter_contributions"][0].update(op="remove"),
+            lambda item: item["spec"]["parameter_contributions"][0].update(priority=1),
+            lambda item: item["spec"]["parameter_contributions"][0]["target"].update(digest="sha256:" + "0" * 64),
+            lambda item: item["spec"]["parameter_contributions"][0].update(members=[1]),
+            lambda item: item["spec"]["parameter_contributions"][0].pop("members"),
+        ):
+            changed = copy.deepcopy(contribution_only)
+            mutate(changed)
+            invalid_contributions.append(changed)
+        self.assertTrue(all(not baseline_validator.is_valid(item) for item in invalid_contributions))
+
+        empty = copy.deepcopy(contribution_only)
+        empty["spec"].pop("parameter_contributions")
+        self.assertFalse(baseline_validator.is_valid(empty))
+
     def test_reusable_catalog_and_rego_entrypoints(self):
         source = PolicySource("control-library", POLICIES)
         controls, baselines, errors = load_policy_catalogs(source)

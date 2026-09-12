@@ -546,6 +546,110 @@ class CoverageOperatorViewTests(unittest.TestCase):
             [],
         )
 
+    def test_coverage_projects_current_additive_value_and_applicability(self):
+        base_path = {
+            "group": "group/base",
+            "assignment": "assignment/base",
+            "baseline": "policy.base@1",
+        }
+        contribution_path = {
+            "group": "group/feature",
+            "assignment": "assignment/feature",
+            "baseline": "policy.feature@1",
+        }
+        contribution_identity = {
+            "baseline": "policy.feature@1",
+            "id": "packages",
+            "requirement": "objective",
+            "slot": "allowed",
+        }
+        objective = {
+            "reference": "objective@1",
+            "title": "Authorized software",
+            "statement": "Only authorized software is installed.",
+            "required": True,
+            "adoption": {"status": "implemented"},
+            "provenance": [base_path],
+            "parameter_facts": {
+                "states": {
+                    "allowed": {
+                        "bound": True,
+                        "sealed": False,
+                        "value": ["base", "postgresql"],
+                        "declaration": {"binding_mode": "open"},
+                        "composition": {
+                            "kind": "additive-set",
+                            "base_value": ["base"],
+                            "base_origins": [{
+                                "baseline": "policy.base@1",
+                                "digest": "sha256:" + "1" * 64,
+                                "applicability": base_path,
+                            }],
+                            "contributions": [{
+                                "identity": contribution_identity,
+                                "owner": {
+                                    "reference": "policy.feature@1",
+                                    "digest": "sha256:" + "2" * 64,
+                                    "document": {"private": "frozen plan detail"},
+                                    "policy_sources": [{"policy_source": "test", "path": "feature.json"}],
+                                },
+                                "members": ["postgresql"],
+                                "applicability": [contribution_path],
+                            }],
+                            "member_origins": [
+                                {
+                                    "member": "base",
+                                    "origins": [{
+                                        "kind": "base",
+                                        "baseline": "policy.base@1",
+                                        "digest": "sha256:" + "1" * 64,
+                                        "applicability": base_path,
+                                    }],
+                                },
+                                {
+                                    "member": "postgresql",
+                                    "origins": [{
+                                        "kind": "contribution",
+                                        "identity": contribution_identity,
+                                    }],
+                                },
+                            ],
+                        },
+                    }
+                }
+            },
+        }
+        source = plan(
+            "host/A",
+            assignments=[{
+                "id": "assignment/base",
+                "group": "group/base",
+                "baselines": ["policy.base@1"],
+            }],
+            requirements=[objective],
+        )
+        source["resolved_requirement_baselines"] = [{
+            "assignment": "assignment/base",
+            "group": "group/base",
+            "reference": "policy.base@1",
+            "title": "Base policy",
+        }]
+
+        explanation = build_coverage_explanation(source)
+        parameter = explanation["assignments"][0]["policies"][0]["objectives"][0]["parameters"][0]
+        self.assertEqual(parameter["effective_value"], ["base", "postgresql"])
+        self.assertEqual(
+            parameter["composition"]["contributions"][0]["applicability"],
+            [contribution_path],
+        )
+        projected = json.dumps(parameter)
+        self.assertNotIn("sha256:", projected)
+        self.assertNotIn("policy_sources", projected)
+        self.assertNotIn("frozen plan detail", projected)
+        rendered = format_coverage_explanation(explanation)
+        self.assertIn('Effective parameter allowed: ["base","postgresql"]', rendered)
+        self.assertIn("Contribution: policy.feature@1 #packages via 1 path(s)", rendered)
+
     def test_explanation_orders_domain_meaning_before_stable_ids(self):
         check = {
             "instance_id": "check.id",

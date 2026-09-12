@@ -154,6 +154,193 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         validate_assessment_plan(plan)
         return plan
 
+    @classmethod
+    def additive_plan(cls):
+        """Build a valid plan with one additive contribution and exact consumer."""
+        from tools import policy_parameters as parameters
+
+        plan = cls.parameterized_plan()
+        requirement = plan["requirements"][0]
+        control = plan["controls"][0]
+        base_record = plan["resolved_requirement_baselines"][0]
+        requirement_document = copy.deepcopy(requirement["parameter_facts"]["document"])
+        value_schema = {
+            "$id": "https://example.test/frozen-set",
+            "type": "array",
+            "items": {"type": "string"},
+            "uniqueItems": True,
+        }
+        declaration = {
+            "required": True,
+            "binding_mode": "open",
+            "schema": value_schema,
+            "schema_digest": parameters.digest(value_schema),
+            "binding_scope": ["test.baseline"],
+            "composition": {"kind": "additive-set"},
+        }
+        requirement_document["spec"]["parameters"] = {"allowed": declaration}
+        requirement["digest"] = parameters.digest(requirement_document)
+        initial = parameters.declarations(requirement_document)["allowed"]
+        requirement_pin = {
+            "requirement": requirement["reference"],
+            "digest": requirement["digest"],
+            "required": True,
+        }
+        base_document = {
+            "metadata": {"id": "test.baseline", "revision": 1},
+            "spec": {
+                "title": base_record["title"],
+                "requirements": [requirement_pin],
+                "parameter_operations": [{
+                    "id": "bind-allowed",
+                    "op": "bind",
+                    "target": copy.deepcopy(initial["pin"]),
+                    "expected_parent_fingerprint": parameters.fingerprint(initial),
+                    "to": ["base"],
+                }],
+            },
+        }
+        contribution_document = {
+            "metadata": {"id": "test.feature", "revision": 1},
+            "spec": {
+                "title": "Synthetic contribution",
+                "parameter_contributions": [{
+                    "id": "feature-members",
+                    "target": {"requirement": "test.requirement", "slot": "allowed"},
+                    "members": ["contributed"],
+                }],
+            },
+        }
+        base_source = base_record["policy_sources"]
+        contribution_source = [{
+            "policy_source": "test",
+            "path": "requirement-baselines/feature.json",
+        }]
+        baselines = {
+            "test.baseline@1": {**base_document, "_sources": base_source},
+            "test.feature@1": {**contribution_document, "_sources": contribution_source},
+        }
+        base_states, base_ancestry = parameters.resolve(
+            "test.baseline@1", baselines, {requirement["reference"]: requirement_document}
+        )
+        contribution_states, contribution_ancestry = parameters.resolve(
+            "test.feature@1", baselines, {requirement["reference"]: requirement_document}
+        )
+        resolved = [
+            {
+                "reference": "test.baseline@1",
+                "applicability": {
+                    "group": "test-hosts",
+                    "assignment": "test-policy",
+                    "baseline": "test.baseline@1",
+                },
+                "states": base_states,
+                "ancestry": base_ancestry,
+            },
+            {
+                "reference": "test.feature@1",
+                "applicability": {
+                    "group": "test-hosts",
+                    "assignment": "test-feature",
+                    "baseline": "test.feature@1",
+                },
+                "states": contribution_states,
+                "ancestry": contribution_ancestry,
+            },
+        ]
+        parameters.compose_selected(resolved, baselines)
+
+        definition = copy.deepcopy(control["policy_inputs"]["definition"])
+        definition["spec"]["evidence"] = [{
+            "id": "observation",
+            "type": "test.evidence/v1",
+        }]
+        definition["_parameters_schema"] = {
+            "type": "object",
+            "properties": {
+                "allowed": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["allowed"],
+            "additionalProperties": False,
+        }
+        definition["_implementation_modules"] = []
+        instance = {
+            "instance_id": control["instance_id"],
+            "implementation": control["implementation"],
+            "parameters": {},
+            "evidence": {"observation": {"max_age": "1d"}},
+        }
+        realization = copy.deepcopy(requirement["parameter_facts"]["realization"])
+        realization["spec"]["requirement"] = {
+            "requirement": requirement["reference"],
+            "digest": requirement["digest"],
+        }
+        realization["spec"]["checks"] = [copy.deepcopy(instance)]
+        realization["spec"]["parameter_links"] = [{
+            "id": "allowed",
+            "source": copy.deepcopy(initial["pin"]),
+            "destination": {
+                "instance_id": control["instance_id"],
+                "implementation": parameters.implementation_pin(definition),
+                "kind": "parameters",
+                "path": "/allowed",
+            },
+        }]
+        checks, consumption = parameters.consume(
+            realization,
+            base_states[requirement["reference"]],
+            {control["implementation"]: definition},
+        )
+        instance = checks[0]
+        control["policy_inputs"] = {
+            "instance": copy.deepcopy(instance),
+            "definition": {
+                key: copy.deepcopy(value)
+                for key, value in definition.items()
+                if not key.startswith("_")
+            },
+            "parameters_schema": copy.deepcopy(definition["_parameters_schema"]),
+        }
+        control["parameters"] = copy.deepcopy(instance["parameters"])
+        control["evidence"] = parameters.evidence_for(instance, definition)
+        control["definition_fingerprint"] = parameters.digest(instance)
+        requirement["parameter_facts"] = {
+            "document": requirement_document,
+            "states": base_states[requirement["reference"]],
+            "realization": realization,
+            "consumption": consumption,
+        }
+        requirement["realization"]["digest"] = parameters.digest(realization)
+        base_record["digest"] = parameters.digest(base_document)
+        base_record["requirements"] = [requirement_pin]
+        base_record["parameter_derivation"] = {
+            "states": base_states,
+            "ancestry": base_ancestry,
+        }
+        plan["assignments"].append({
+            "id": "test-feature",
+            "group": "test-hosts",
+            "baselines": ["test.feature@1"],
+        })
+        plan["resolved_requirement_baselines"].append({
+            "assignment": "test-feature",
+            "group": "test-hosts",
+            "baseline": "test.feature@1",
+            "reference": "test.feature@1",
+            "title": contribution_document["spec"]["title"],
+            "digest": parameters.digest(contribution_document),
+            "policy_sources": contribution_source,
+            "requirements": [],
+            "parameter_derivation": {
+                "states": contribution_states,
+                "ancestry": contribution_ancestry,
+            },
+        })
+        refresh_operation(plan)
+        plan["id"] = artifact_digest(plan)
+        validate_assessment_plan(plan)
+        return plan
+
     def test_parameterized_plan_rejects_tampered_frozen_values_and_consumption(self):
         plan = self.parameterized_plan()
         requirement = plan["requirements"][0]
@@ -196,6 +383,27 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 with self.assertRaisesRegex(
                     ArtifactValidationError,
                     expected,
+                ):
+                    validate_assessment_plan(tampered)
+
+    def test_additive_plan_rejects_frozen_composition_and_consumer_tampering(self):
+        plan = self.additive_plan()
+        cases = {
+            "declaration": lambda document: document["requirements"][0]["parameter_facts"]["states"]["allowed"]["declaration"]["composition"].update(kind="atomic"),
+            "contribution": lambda document: document["requirements"][0]["parameter_facts"]["states"]["allowed"]["composition"]["contributions"][0].update(members=["changed"]),
+            "attribution": lambda document: document["requirements"][0]["parameter_facts"]["states"]["allowed"]["composition"]["contributions"][0].update(applicability=[]),
+            "effective value": lambda document: document["requirements"][0]["parameter_facts"]["states"]["allowed"].update(value=["base"]),
+            "member origins": lambda document: document["requirements"][0]["parameter_facts"]["states"]["allowed"]["composition"].update(member_origins=[]),
+            "consumer": lambda document: document["controls"][0]["parameters"].update(allowed=["base"]),
+        }
+        for case, mutate in cases.items():
+            with self.subTest(case=case):
+                tampered = copy.deepcopy(plan)
+                mutate(tampered)
+                tampered["id"] = artifact_digest(tampered)
+                with self.assertRaisesRegex(
+                    ArtifactValidationError,
+                    "invalid frozen policy parameters|frozen technical value mismatch",
                 ):
                     validate_assessment_plan(tampered)
 

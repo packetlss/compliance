@@ -1306,7 +1306,7 @@ def load_requirement_catalogs(
             errors.append({"type": "parameter-declaration-invalid", "requirement": reference, "message": str(error)})
     for baseline_reference, baseline in sorted(requirement_baselines.items()):
         seen = set()
-        for pin in baseline["spec"]["requirements"]:
+        for pin in baseline["spec"].get("requirements", []):
             reference = pin["requirement"]
             if reference in seen:
                 errors.append({
@@ -1823,13 +1823,59 @@ def render_plan(
     resolved_requirement_baselines: list[JsonObject] = []
     resolution_errors: list[JsonObject] = copy.deepcopy(policy_errors)
     baseline_cache: dict[str, JsonObject] = {}
-    selected_parameter_slots = {}
+    parameter_resolutions: dict[tuple[str, str, str], JsonObject] = {}
 
     if subject["status"] == "unknown":
         resolution_errors.append({
             "type": "subject-lifecycle-unknown",
             "subject_id": subject["id"],
         })
+
+    parameter_resolution_failed = False
+    if not policy_errors:
+        for assignment in applicable_assignments:
+            group_id = assignment["target"]["group"]
+            for baseline_reference in assignment["baselines"]:
+                if baseline_reference not in requirement_baselines:
+                    continue
+                baseline_provenance = {
+                    "group": group_id,
+                    "assignment": assignment["id"],
+                    "baseline": baseline_reference,
+                }
+                try:
+                    parameter_states, parameter_ancestry = pp.resolve(
+                        baseline_reference,
+                        requirement_baselines,
+                        requirements,
+                    )
+                    pp.complete(parameter_states)
+                except (ValueError, KeyError) as error:
+                    parameter_resolution_failed = True
+                    resolution_errors.append({
+                        "type": "parameter-resolution-failed",
+                        "message": str(error),
+                        **baseline_provenance,
+                    })
+                    continue
+                parameter_resolutions[(assignment["id"], group_id, baseline_reference)] = {
+                    "reference": baseline_reference,
+                    "applicability": baseline_provenance,
+                    "states": parameter_states,
+                    "ancestry": parameter_ancestry,
+                }
+        if not parameter_resolution_failed:
+            try:
+                pp.compose_selected(
+                    list(parameter_resolutions.values()),
+                    requirement_baselines,
+                )
+            except (ValueError, KeyError) as error:
+                resolution_errors.append({
+                    "type": "parameter-resolution-failed",
+                    "message": str(error),
+                })
+                parameter_resolutions.clear()
 
     for assignment in (applicable_assignments if not policy_errors else []):
         group_id = assignment["target"]["group"]
@@ -1841,13 +1887,13 @@ def render_plan(
                     "assignment": assignment["id"],
                     "baseline": baseline_reference,
                 }
-                try:
-                    parameter_states, parameter_ancestry = pp.resolve(baseline_reference, requirement_baselines, requirements)
-                    pp.complete(parameter_states)
-                    pp.reconcile_selected_slots(parameter_states, selected_parameter_slots)
-                except (ValueError, KeyError) as error:
-                    resolution_errors.append({"type": "parameter-resolution-failed", "message": str(error), **baseline_provenance})
+                parameter_resolution = parameter_resolutions.get(
+                    (assignment["id"], group_id, baseline_reference)
+                )
+                if parameter_resolution is None:
                     continue
+                parameter_states = parameter_resolution["states"]
+                parameter_ancestry = parameter_resolution["ancestry"]
                 resolved_requirement_baselines.append({
                     **baseline_provenance,
                     "reference": baseline_reference,
@@ -1857,10 +1903,10 @@ def render_plan(
                     "parameter_derivation": {"ancestry": parameter_ancestry, "states": parameter_states},
                     "requirements": [
                         copy.deepcopy(pin)
-                        for pin in requirement_baseline["spec"]["requirements"]
+                        for pin in requirement_baseline["spec"].get("requirements", [])
                     ],
                 })
-                for pin in requirement_baseline["spec"]["requirements"]:
+                for pin in requirement_baseline["spec"].get("requirements", []):
                     requirement_reference = pin["requirement"]
                     requirement = requirements[requirement_reference]
                     matching_realizations = [

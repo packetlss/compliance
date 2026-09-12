@@ -249,6 +249,64 @@ def _realization(requirement: JsonObject) -> JsonObject | None:
     }
 
 
+def _objective_parameters(requirement: JsonObject) -> list[JsonObject]:
+    rows = []
+    states = requirement.get("parameter_facts", {}).get("states", {})
+    for slot, state in sorted(states.items()):
+        if not state.get("bound"):
+            continue
+        row: JsonObject = {
+            "slot": slot,
+            "effective_value": copy.deepcopy(state["value"]),
+            "binding_mode": state["declaration"]["binding_mode"],
+            "sealed": state["sealed"],
+        }
+        composition = state.get("composition")
+        if composition is not None:
+            row["composition"] = {
+                "kind": composition["kind"],
+                "base_value": copy.deepcopy(composition["base_value"]),
+                "base_applicability": [
+                    {
+                        "baseline": origin["baseline"],
+                        "applicability": copy.deepcopy(origin["applicability"]),
+                    }
+                    for origin in composition["base_origins"]
+                ],
+                "contributions": [
+                    {
+                        "identity": copy.deepcopy(item["identity"]),
+                        "members": copy.deepcopy(item["members"]),
+                        "applicability": copy.deepcopy(item["applicability"]),
+                    }
+                    for item in composition["contributions"]
+                ],
+                "member_origins": [
+                    {
+                        "member": item["member"],
+                        "origins": [
+                            (
+                                {
+                                    "kind": "base",
+                                    "baseline": origin["baseline"],
+                                    "applicability": copy.deepcopy(origin["applicability"]),
+                                }
+                                if origin["kind"] == "base"
+                                else {
+                                    "kind": "contribution",
+                                    "identity": copy.deepcopy(origin["identity"]),
+                                }
+                            )
+                            for origin in item["origins"]
+                        ],
+                    }
+                    for item in composition["member_origins"]
+                ],
+            }
+        rows.append(row)
+    return rows
+
+
 _FAILURE_CONTEXT_FIELDS = {
     "subject_id": "asset_id",
     "subject_type": "asset_type",
@@ -377,6 +435,7 @@ def _policy_paths(plan: JsonObject) -> list[JsonObject]:
                         "statement": requirement["statement"],
                         "required": requirement["required"],
                         "adoption": copy.deepcopy(requirement["adoption"]),
+                        "parameters": _objective_parameters(requirement),
                         "checks": sorted(
                             checks, key=lambda item: item["instance_id"]
                         ),
@@ -542,6 +601,37 @@ def format_coverage_explanation(document: JsonObject) -> str:
                         f'        Adoption: {objective["adoption"]["status"]}',
                     ]
                 )
+                for parameter in objective["parameters"]:
+                    lines.append(
+                        f'        Effective parameter {parameter["slot"]}: '
+                        + json.dumps(
+                            parameter["effective_value"],
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        )
+                    )
+                    composition = parameter.get("composition")
+                    if composition is not None:
+                        lines.append(
+                            f'          Composition: {composition["kind"]}; base '
+                            + json.dumps(
+                                composition["base_value"],
+                                sort_keys=True,
+                                separators=(",", ":"),
+                            )
+                        )
+                        for contribution in composition["contributions"]:
+                            identity = contribution["identity"]
+                            lines.append(
+                                f'          Contribution: {identity["baseline"]} '
+                                f'#{identity["id"]} via '
+                                f'{len(contribution["applicability"])} path(s): '
+                                + json.dumps(
+                                    contribution["members"],
+                                    sort_keys=True,
+                                    separators=(",", ":"),
+                                )
+                            )
                 if realization := objective.get("realization"):
                     lines.append(f'        Realization: {realization["reference"]}')
                 for check in objective["checks"]:
