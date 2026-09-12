@@ -1136,6 +1136,10 @@ def validate_frozen_contract_identities(plan):
         baseline
         for baseline in plan['resolved_requirement_baselines']
     }
+    requirement_records = {
+        requirement.get('reference'): requirement
+        for requirement in plan['requirements']
+    }
     realization_memberships = set()
     for requirement in plan['requirements']:
         realization = requirement.get('parameter_facts', {}).get('realization')
@@ -1263,7 +1267,24 @@ def validate_frozen_contract_identities(plan):
             technical_lineage = set()
             realization_lineage = set()
             technical_deviations = []
-            for provenance in control.get('provenance', []):
+            provenance_records = control.get('provenance', [])
+            require(
+                all(
+                    ('requirement' in provenance)
+                    == ('realization' in provenance)
+                    for provenance in provenance_records
+                ),
+                'frozen Control provenance kind is incomplete',
+            )
+            require(
+                all(
+                    ('requirement' in provenance)
+                    == (control['alignment'] == 'realization')
+                    for provenance in provenance_records
+                ),
+                'frozen Control provenance kind differs from alignment',
+            )
+            for provenance in provenance_records:
                 if 'requirement' in provenance:
                     key = (
                         provenance.get('assignment'),
@@ -1273,6 +1294,24 @@ def validate_frozen_contract_identities(plan):
                     require(
                         key in requirement_selections,
                         'frozen realization provenance has no selected baseline',
+                    )
+                    requirement_record = requirement_records.get(
+                        provenance.get('requirement')
+                    )
+                    require(
+                        requirement_record is not None
+                        and any(
+                            pin.get('requirement')
+                            == provenance.get('requirement')
+                            and pin.get('digest') == requirement_record.get('digest')
+                            and pin.get('required')
+                            == requirement_record.get('required')
+                            for pin in requirement_selections[key].get(
+                                'requirements',
+                                [],
+                            )
+                        ),
+                        'frozen realization provenance has no matching baseline membership',
                     )
                     require(
                         (
@@ -1593,6 +1632,28 @@ def validate_frozen_contract_identities(plan):
                 for pin in memberships
             ),
             'frozen requirement membership differs from selected baseline',
+        )
+    for requirement in plan['requirements']:
+        expected = [
+            {
+                'group': baseline['group'],
+                'assignment': baseline['assignment'],
+                'baseline': baseline['reference'],
+            }
+            for baseline in plan['resolved_requirement_baselines']
+            if any(
+                pin.get('requirement') == requirement['reference']
+                and pin.get('digest') == requirement['digest']
+                and pin.get('required')
+                for pin in baseline.get('requirements', [])
+            )
+        ]
+        require(
+            equal(
+                sorted(requirement.get('provenance', []), key=canonical_json_bytes),
+                sorted(expected, key=canonical_json_bytes),
+            ),
+            'frozen requirement assignment attribution mismatch',
         )
 
 

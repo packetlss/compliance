@@ -526,6 +526,11 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             mutate(plan)
             return plan
 
+        def additive_policy_plan(mutate):
+            plan = self.additive_plan()
+            mutate(plan)
+            return plan
+
         def invalid_parameterized_plan(mutate):
             plan = self.parameterized_plan("schemas.adopter.example")
             mutate(plan)
@@ -533,6 +538,20 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 "status": "invalid",
                 "errors": [{"type": "synthetic"}],
             }
+            return plan
+
+        def mixed_alignment_provenance_plan():
+            plan = assessment_plan(
+                [{"name": "test", "digest": "sha256:" + "1" * 64}],
+                with_requirement=True,
+            )
+            requirement = plan["requirements"][0]
+            control = plan["controls"][0]
+            control["provenance"].append({
+                **requirement["provenance"][0],
+                "requirement": requirement["reference"],
+                "realization": requirement["realization"]["reference"],
+            })
             return plan
 
         def derived_control(plan):
@@ -715,6 +734,13 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             "realization provenance attribution": lambda: iam_plan(
                 mutate_realization_attribution
             ),
+            "realization provenance baseline membership": lambda: additive_policy_plan(
+                lambda plan: plan["controls"][0]["provenance"][0].update(
+                    assignment="test-feature",
+                    baseline="test.feature@1",
+                )
+            ),
+            "mixed technical and realization provenance": mixed_alignment_provenance_plan,
             "requirement membership required flag": lambda: iam_plan(
                 lambda plan: plan["requirements"][0].update(
                     required=not plan["requirements"][0]["required"]
@@ -739,6 +765,11 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             ),
             "invalid requirement adoption copy": lambda: invalid_parameterized_plan(
                 mutate_requirement_adoption
+            ),
+            "invalid requirement provenance selection": lambda: invalid_parameterized_plan(
+                lambda plan: plan["requirements"][0]["provenance"][0].update(
+                    baseline="test.other@1"
+                )
             ),
             "invalid duplicate realization check": lambda: invalid_parameterized_plan(
                 duplicate_realization_check
