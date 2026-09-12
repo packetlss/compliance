@@ -1146,6 +1146,11 @@ class ExampleRunner:
             ["--config", str(WORKSPACE_ROOT / "verification/scenarios/projects/company-iam-policy-assessment/compliance.yaml"),
              "plan", "render", "host/A", "--output", str(self.root / "company-iam-plans")],
         )
+        self.cli(
+            ("plan", "render"),
+            ["--config", str(WORKSPACE_ROOT / "verification/scenarios/projects/authorized-software-composition/compliance.yaml"),
+             "plan", "render", "host/authorized-database", "--output", str(self.root / "authorized-software-plans")],
+        )
         focused = self.root / "organization-assertion-plan-input"
         for name in ("inventory", "assignments", "waivers"):
             (focused / name).mkdir(parents=True)
