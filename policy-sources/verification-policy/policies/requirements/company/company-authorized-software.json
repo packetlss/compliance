@@ -16,7 +16,7 @@
           "company.authorized-software-base"
         ],
         "schema": {
-          "$id": "https://compliance.example/parameters/authorized-software",
+          "$id": "https://compliance.example/schemas/requirements/company.authorized-software/parameters/allowed_software/v1.schema.json",
           "type": "array",
           "uniqueItems": true,
           "items": {
@@ -24,7 +24,7 @@
             "minLength": 1
           }
         },
-        "schema_digest": "sha256:c434c33e5389616d81fa3602dbad9b13fde68b0e06ad0f83d64c57fd3cc25590",
+        "schema_digest": "sha256:97dc85e04e624b64e9962bc7e9387080bef130447a415c491d05b9370a961f94",
         "composition": {
           "kind": "additive-set"
         }

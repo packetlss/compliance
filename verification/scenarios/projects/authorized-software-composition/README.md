@@ -1,7 +1,7 @@
 # Authorized software composition
 
 This isolated synthetic Stage 8 scenario proves `installed package IDs ⊆ resolved
-allowed_software` through `linux.packages.only_allowed@1`. It composes the independently
+allowed_software` through `linux.packages.only-allowed@1`. It composes the independently
 named `control-library` and source-only `verification-policy` roots through the public CLI.
 
 Two fictitious managed Linux hosts receive `company.authorized-software-base@1`,

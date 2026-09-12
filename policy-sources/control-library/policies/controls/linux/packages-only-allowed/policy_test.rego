@@ -8,7 +8,7 @@ base_input := {
 	"assessment": {"plan_id": "sha256:plan"},
 	"control": {
 		"instance_id": "linux.packages.demo",
-		"implementation": "linux.packages.only_allowed",
+		"implementation": "linux.packages.only-allowed",
 		"parameters": {"ecosystem": "linux-native", "allowed": ["git", "curl"]},
 		"severity": "medium",
 		"remediation": "Remove unexpected packages",

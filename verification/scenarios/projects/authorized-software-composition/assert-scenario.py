@@ -89,7 +89,7 @@ def run(root):
             validate_assessment_plan(plan)
             validate_assessment_results(report)
             check, = plan["controls"]
-            assert check["implementation"] == "linux.packages.only_allowed"
+            assert check["implementation"] == "linux.packages.only-allowed"
             assert check["parameters"] == {"ecosystem": "linux-native", "allowed": allowed}
             assert check["evidence"] == [{"id": "observation", "type": "linux.packages/v1", "max_age": "86400s"}]
             requirement, = plan["requirements"]

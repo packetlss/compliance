@@ -10,7 +10,7 @@
     "requirements": [
       {
         "requirement": "company.authorized-software@1",
-        "digest": "sha256:a2dfdf98145882568603dee2ee2cfedf45f02c7bd631759ceff978e0a535888e",
+        "digest": "sha256:b69d0692d6721011c5b60526c47f15e9fe19ad971ba0cd12150b70f5fff00cbb",
         "required": true
       }
     ],
@@ -20,12 +20,12 @@
         "op": "bind",
         "target": {
           "requirement": "company.authorized-software@1",
-          "digest": "sha256:a2dfdf98145882568603dee2ee2cfedf45f02c7bd631759ceff978e0a535888e",
+          "digest": "sha256:b69d0692d6721011c5b60526c47f15e9fe19ad971ba0cd12150b70f5fff00cbb",
           "slot": "allowed_software",
-          "declaration_digest": "sha256:3b66bb00dc3a6e0bfd6169fda1b45f974a8674fc9c5c6ec7134b20506abf3366",
-          "schema_digest": "sha256:c434c33e5389616d81fa3602dbad9b13fde68b0e06ad0f83d64c57fd3cc25590"
+          "declaration_digest": "sha256:c20565ab79bc904cfe206770f81b8521e9860c667a408fcd6014ab8574dc0875",
+          "schema_digest": "sha256:97dc85e04e624b64e9962bc7e9387080bef130447a415c491d05b9370a961f94"
         },
-        "expected_parent_fingerprint": "sha256:f5fb5fbf0ab94eb43eb74fb7cb5e5ee45f8c6480e6bd531059bc21bd4f1062d4",
+        "expected_parent_fingerprint": "sha256:3a2902c14af0d6c7953bc21d9cd76c96de6a6d9b30f8c4d332fc338d68da817c",
         "to": [
           "auditd",
           "curl"

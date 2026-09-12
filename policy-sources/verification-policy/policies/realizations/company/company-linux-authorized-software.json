@@ -8,7 +8,7 @@
   "spec": {
     "requirement": {
       "requirement": "company.authorized-software@1",
-      "digest": "sha256:a2dfdf98145882568603dee2ee2cfedf45f02c7bd631759ceff978e0a535888e"
+      "digest": "sha256:b69d0692d6721011c5b60526c47f15e9fe19ad971ba0cd12150b70f5fff00cbb"
     },
     "applies_to": {
       "subject_types": [
@@ -24,7 +24,7 @@
     "checks": [
       {
         "instance_id": "company.linux.authorized-software.only-allowed",
-        "implementation": "linux.packages.only_allowed",
+        "implementation": "linux.packages.only-allowed",
         "parameters": {
           "ecosystem": "linux-native"
         },
@@ -45,17 +45,17 @@
         "id": "allowed-software",
         "source": {
           "requirement": "company.authorized-software@1",
-          "digest": "sha256:a2dfdf98145882568603dee2ee2cfedf45f02c7bd631759ceff978e0a535888e",
+          "digest": "sha256:b69d0692d6721011c5b60526c47f15e9fe19ad971ba0cd12150b70f5fff00cbb",
           "slot": "allowed_software",
-          "declaration_digest": "sha256:3b66bb00dc3a6e0bfd6169fda1b45f974a8674fc9c5c6ec7134b20506abf3366",
-          "schema_digest": "sha256:c434c33e5389616d81fa3602dbad9b13fde68b0e06ad0f83d64c57fd3cc25590"
+          "declaration_digest": "sha256:c20565ab79bc904cfe206770f81b8521e9860c667a408fcd6014ab8574dc0875",
+          "schema_digest": "sha256:97dc85e04e624b64e9962bc7e9387080bef130447a415c491d05b9370a961f94"
         },
         "destination": {
           "instance_id": "company.linux.authorized-software.only-allowed",
           "implementation": {
-            "id": "linux.packages.only_allowed",
+            "id": "linux.packages.only-allowed",
             "version": 1,
-            "fingerprint": "sha256:1b6a6f296744686e247f43e11804d8c8461d3edbd0cf0ea4d8b6d678900043b1"
+            "fingerprint": "sha256:c6060f3edba379e20a3e6bdc9ea690215bedd408b985f64fa96fa2cab5531acb"
           },
           "kind": "parameters",
           "path": "/allowed"
