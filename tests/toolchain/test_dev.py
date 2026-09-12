@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import itertools
 import json
 import os
 import shutil
@@ -8,7 +9,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
+from unittest import mock
 
 SOURCE = Path(__file__).resolve().parents[2] / "toolchain/dev.py"
 SPEC = importlib.util.spec_from_file_location("compliance_dev", SOURCE)
@@ -153,6 +156,49 @@ class CliAdapterTests(unittest.TestCase):
             self.assertIn("run scripts/dev setup", result.stderr)
             self.assertFalse((root / ".dev").exists())
             self.assertFalse(cache.exists())
+
+
+class CheckCommandTests(unittest.TestCase):
+    def check(self, *, area: str, verbose: bool = False, selection: list[str] | None = None, returncodes: list[int] | None = None):
+        calls = []
+        results = iter(returncodes) if returncodes is not None else itertools.repeat(0)
+
+        def record(command, **kwargs):
+            calls.append((command, kwargs))
+            return SimpleNamespace(returncode=next(results))
+
+        with mock.patch.object(dev, "selected", return_value=(Path("/managed/uv"), Path("/managed/opa"))), mock.patch.object(dev, "run", side_effect=record):
+            result = dev.check(SimpleNamespace(area=area, verbose=verbose, selection=selection or []))
+        return result, calls
+
+    def test_default_checks_use_compact_unittest_output(self):
+        for area, command in dev.COMMANDS.items():
+            with self.subTest(area=area):
+                result, calls = self.check(area=area)
+                self.assertEqual(result, 0)
+                self.assertEqual(calls[0][0], ["/managed/uv", "run", "--project", "tooling", "--frozen", *command])
+                self.assertNotIn("-v", calls[0][0])
+
+    def test_verbose_checks_request_per_test_output(self):
+        result, calls = self.check(area="policy", verbose=True)
+        self.assertEqual(result, 0)
+        self.assertEqual(calls[0][0][-1], "-v")
+
+    def test_named_tooling_selection_is_preserved(self):
+        result, calls = self.check(area="tooling", selection=["test_canonical_json.py", "test_schemas.py"])
+        self.assertEqual(result, 0)
+        self.assertEqual([call[0][-2:] for call in calls], [["-p", "test_canonical_json.py"], ["-p", "test_schemas.py"]])
+        self.assertTrue(all("-v" not in call[0] for call in calls))
+
+    def test_named_tooling_selection_supports_verbose_output(self):
+        result, calls = self.check(area="tooling", verbose=True, selection=["test_canonical_json.py"])
+        self.assertEqual(result, 0)
+        self.assertEqual(calls[0][0][-3:], ["-p", "test_canonical_json.py", "-v"])
+
+    def test_failing_check_status_is_propagated(self):
+        result, calls = self.check(area="tooling", selection=["test_canonical_json.py", "test_schemas.py"], returncodes=[1])
+        self.assertEqual(result, 1)
+        self.assertEqual(len(calls), 1)
 
 
 if __name__ == "__main__":
