@@ -138,6 +138,27 @@ remains experimental and is not frozen.
 
 Requirement slots have stable technology-neutral identity with exact declaration/revision/type-schema pins. Realizations retain explicit typed links into required dependency inputs; plans materialize every linked value with immutable provenance, and evaluation does not resolve parameters again. Technical destinations belong to an exact resolved implementation/interface, including after substitution. Selected derivation permits explicit tailoring; independently assigning divergent ancestor and descendant policies is a conflict.
 
+[#127](https://github.com/packetlss/compliance/issues/127) accepts one bounded,
+not-yet-implemented exception to atomic complete-value composition. A requirement
+parameter may explicitly declare string-only additive-set semantics. Resolution
+then requires exactly one compatible current declaration and exactly one applicable
+base after ordinary valid base tailoring, accumulates every independently applicable
+contribution, and produces a deterministic canonical union. Duplicate members
+coalesce while every origin and applicability path remains attributable. Fixed or
+sealed slots reject contributions. Ordinary arrays, objects, scalars, direct
+technical-baseline values and declarations without the explicit opt-in remain
+atomic.
+
+Contributions target only stable `(ControlRequirement ID, slot name)` identity;
+current resolution binds them to the exact supplied declaration and base. A
+contribution neither imports nor selects its requirement, does not mutate or tailor
+the base, and carries no exact-version or parent-state coupling. Source/file/
+assignment/traversal order grants no precedence. Removal, denial, suppression,
+override, subtraction, non-string members, generic merge/reducer behavior, direct
+technical-Baseline composition and fixed-base-but-contribution-open semantics remain
+outside the accepted model. The later runtime tranche must fail closed on absent,
+ambiguous, incompatible, fixed/sealed, invalid or unconsumable resolution.
+
 Effective evidence `max_age` belongs to policy/baseline/requirement intent. Controls retain evidence dependency contracts and optional capability restrictions; realizations link semantic freshness slots where applicable. Maintained baselines bind effective ages explicitly; objective realizations consume pinned semantic freshness slots. Controls no longer provide effective-age defaults. ADR 0010 still owns assessment-time evidence semantics and ADR 0011 immutable historical selection attribution; the future-timestamp question is unchanged.
 
 Policy resolution determines company intent; assessment tests evidence against that
@@ -149,6 +170,14 @@ do not authenticate issuer authority. Missing realization adoption remains disti
 from unresolved parameters and missing evidence. Ordinary named private policy sources
 need no new resource family or precedence. ADR 0012 extends the existing provenance-bearing
 plan, not the adapter or authorization artifact surface.
+
+The frozen plan must retain the exact resolved requirement/declaration/schema/base,
+all contributions and applicability paths, canonical effective set, member origins,
+and exact materialized realization consumers. This extends existing plan-owned
+parameter provenance without a new artifact, resource, cache, digest family or
+identity family. Coverage owns only an ephemeral deterministic projection of current
+effective values and derivation through the existing resolver; historical assessment
+explanation uses the exact retained plan/result pair and never current re-resolution.
 
 ## Closed-world policy assessment
 

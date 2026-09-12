@@ -80,6 +80,10 @@ The toolset should answer four different questions without conflating them:
   planning, adoption, and disposition owners. Assessment remains the historical
   result concern. Coverage has no resource, persistence, identity, cache,
   artifact, or alternate resolution algorithm.
+  Under the accepted but not-yet-implemented #127 additive-set successor,
+  Coverage also owns the ephemeral projection of current effective parameter
+  values and derivation through that same resolver; historical explanation remains
+  anchored only to the exact retained plan/result pair.
 - **Assessment reporting is exact-operation-first.** `assessment run`, `status`,
   `status --by group`, `mappings`, and `explain` project the frozen operation,
   exact bound plans/results, and separately derived current qualification. They do
@@ -517,6 +521,20 @@ and [`waivers.md`](waivers.md).
   verification boundaries.
 
 ## 11. Decision log
+
+### 2026-09-12 — Explicit additive-set parameter architecture (#127)
+
+ADR 0012 now accepts one bounded, documentation-only exception to atomic parameter
+composition. A string-array requirement slot must opt in explicitly; current
+resolution requires exactly one compatible declaration and base, accumulates every
+independently applicable contribution without precedence, and freezes a canonical
+union with complete member-origin and applicability-path attribution. Contributions
+target stable requirement-slot identity, do not import their target or mutate the
+base, and remain distinct from bind/tailor/seal operations and deviations. Fixed or
+sealed slots reject contributions. Coverage owns only current ephemeral projection;
+historical explanation uses the exact frozen plan/result. Schema/runtime behavior is
+deferred to a dedicated successor issue, with no new artifact, resource, cache,
+digest/identity family, trust rule, compatibility path or contract freeze.
 
 ### 2026-09-12 — Governed inventory and realization terminology (#124)
 
