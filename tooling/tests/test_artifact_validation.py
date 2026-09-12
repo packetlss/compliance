@@ -177,6 +177,20 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         control["parameters"] = copy.deepcopy(instance["parameters"])
         control["evidence"] = parameters.evidence_for(instance, definition)
         control["definition_fingerprint"] = parameters.digest(instance)
+        realization_reference = (
+            f"{realization['metadata']['id']}@{realization['metadata']['revision']}"
+        )
+        control["provenance"] = [{
+            **control["provenance"][0],
+            "requirement": requirement["reference"],
+            "realization": realization_reference,
+        }]
+        control["lineage"] = [{
+            "realization": realization_reference,
+            "operation": "defined",
+        }]
+        control["derivations"] = []
+        control.pop("overlay_policy", None)
 
         requirement["parameter_facts"] = {
             "document": requirement_document,
@@ -499,6 +513,204 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         with self.assertRaises(ArtifactValidationError):
             validate_assessment_plan(plan)
 
+    def test_rejects_canonical_but_divergent_retained_contract_copies(self):
+        from tools import policy_parameters as parameters
+
+        def macos_plan(mutate):
+            plan = copy.deepcopy(self.plan)
+            mutate(plan)
+            return plan
+
+        def iam_plan(mutate):
+            plan = copy.deepcopy(self.iam_plan)
+            mutate(plan)
+            return plan
+
+        def invalid_parameterized_plan(mutate):
+            plan = self.parameterized_plan("schemas.adopter.example")
+            mutate(plan)
+            plan["resolution"] = {
+                "status": "invalid",
+                "errors": [{"type": "synthetic"}],
+            }
+            return plan
+
+        def derived_control(plan):
+            return next(control for control in plan["controls"] if control["derivations"])
+
+        def mutate_outer_and_nested_lineage(plan):
+            control = derived_control(plan)
+            control["lineage"][-1]["baseline"] = "test.other@1"
+            control["policy_inputs"]["instance"]["lineage"][-1][
+                "baseline"
+            ] = "test.other@1"
+
+        def mutate_state_declaration(plan):
+            state = plan["requirements"][0]["parameter_facts"]["states"]["age"]
+            state["declaration"]["schema"]["maxLength"] = 10
+            state["declaration"]["schema_digest"] = parameters.digest(
+                state["declaration"]["schema"]
+            )
+            state["pin"]["schema_digest"] = state["declaration"]["schema_digest"]
+            state["pin"]["declaration_digest"] = parameters.digest(
+                state["declaration"]
+            )
+
+        def mutate_realization_requirement_digest(plan):
+            realization = plan["requirements"][0]["parameter_facts"]["realization"]
+            realization["spec"]["requirement"]["digest"] = "sha256:" + "0" * 64
+            plan["requirements"][0]["realization"]["digest"] = parameters.digest(
+                realization
+            )
+
+        cases = {
+            "technical baseline record digest": lambda: macos_plan(
+                lambda plan: plan["resolved_baselines"][0].update(
+                    digest="sha256:" + "0" * 64
+                )
+            ),
+            "technical baseline terminal reference": lambda: macos_plan(
+                lambda plan: plan["resolved_baselines"][0]["lineage"][-1].update(
+                    reference="test.other@1"
+                )
+            ),
+            "technical baseline terminal digest": lambda: macos_plan(
+                lambda plan: plan["resolved_baselines"][0]["lineage"][-1].update(
+                    digest="sha256:" + "0" * 64
+                )
+            ),
+            "technical provenance selection": lambda: macos_plan(
+                lambda plan: plan["controls"][0]["provenance"][0].update(
+                    baseline="test.other@1"
+                )
+            ),
+            "outer and nested lineage attribution": lambda: macos_plan(
+                mutate_outer_and_nested_lineage
+            ),
+            "nested lineage copy": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "lineage"
+                ][-1].update(baseline="test.other@1")
+            ),
+            "nested derivation overlay": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "derivations"
+                ][0].update(overlay="test.other@1")
+            ),
+            "nested inherited lineage": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "derivations"
+                ][0]["inherited_lineage"][-1].update(baseline="test.other@1")
+            ),
+            "nested snapshot implementation": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "derivations"
+                ][0]["before"].update(implementation="test.other")
+            ),
+            "nested after snapshot implementation": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "derivations"
+                ][0]["after"].update(implementation="test.other")
+            ),
+            "nested snapshot evidence slot": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "derivations"
+                ][0]["before"].update(evidence={"other": {}})
+            ),
+            "nested after snapshot evidence slot": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "derivations"
+                ][0]["after"].update(evidence={"other": {}})
+            ),
+            "nested alignment": lambda: macos_plan(
+                lambda plan: plan["controls"][0]["policy_inputs"]["instance"].update(
+                    alignment="annotated"
+                )
+            ),
+            "nested fingerprint": lambda: macos_plan(
+                lambda plan: plan["controls"][0]["policy_inputs"]["instance"].update(
+                    definition_fingerprint="sha256:" + "0" * 64
+                )
+            ),
+            "nested deviation": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "deviations"
+                ][0].update(id="OTHER")
+            ),
+            "nested disposition": lambda: macos_plan(
+                lambda plan: plan["controls"][0]["policy_inputs"]["instance"].update(
+                    disposition="excluded"
+                )
+            ),
+            "nested-only overlay policy": lambda: macos_plan(
+                lambda plan: plan["controls"][0]["policy_inputs"]["instance"].update(
+                    overlay_policy={
+                        "blocked_operations": ["tailor"],
+                        "reason": "synthetic",
+                        "sealed_by": "company.developer-workstation@1",
+                    }
+                )
+            ),
+            "requirement baseline selection copy": lambda: iam_plan(
+                lambda plan: plan["resolved_requirement_baselines"][0].update(
+                    baseline="test.other@1"
+                )
+            ),
+            "realization parent copy": lambda: iam_plan(
+                lambda plan: plan["requirements"][0]["realization"].update(
+                    based_on={
+                        "realization": "test.other@1",
+                        "digest": "sha256:" + "0" * 64,
+                    }
+                )
+            ),
+            "invalid evidence TYPE copy": lambda: invalid_parameterized_plan(
+                lambda plan: plan["controls"][0]["evidence"][0].update(
+                    type="test.other/v1"
+                )
+            ),
+            "invalid requirement explanation copy": lambda: invalid_parameterized_plan(
+                lambda plan: plan["requirements"][0].update(title="Different title")
+            ),
+            "invalid requirement declaration copy": lambda: invalid_parameterized_plan(
+                mutate_state_declaration
+            ),
+            "invalid realization requirement pin": lambda: invalid_parameterized_plan(
+                mutate_realization_requirement_digest
+            ),
+            "invalid realization source pin": lambda: invalid_parameterized_plan(
+                lambda plan: plan["requirements"][0]["parameter_facts"][
+                    "realization"
+                ]["spec"]["parameter_links"][0]["source"].update(
+                    requirement="test.other@1"
+                )
+            ),
+            "invalid realization destination": lambda: invalid_parameterized_plan(
+                lambda plan: plan["requirements"][0]["parameter_facts"][
+                    "realization"
+                ]["spec"]["parameter_links"][0]["destination"].update(
+                    instance_id="test.other"
+                )
+            ),
+            "invalid requirement baseline digest": lambda: invalid_parameterized_plan(
+                lambda plan: plan["resolved_requirement_baselines"][0].update(
+                    digest="sha256:" + "0" * 64
+                )
+            ),
+            "invalid requirement baseline membership": lambda: invalid_parameterized_plan(
+                lambda plan: plan["resolved_requirement_baselines"][0].update(
+                    requirements=[]
+                )
+            ),
+        }
+        for case, build in cases.items():
+            with self.subTest(case=case):
+                plan = build()
+                refresh_operation(plan)
+                plan["id"] = artifact_digest(plan)
+                with self.assertRaises(ArtifactValidationError):
+                    validate_assessment_plan(plan)
+
     @classmethod
     def additive_plan(cls):
         """Build a valid plan with one additive contribution and exact consumer."""
@@ -699,7 +911,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 lambda document: document["requirements"][0]["parameter_facts"][
                     "states"
                 ]["age"].update(value="7200s"),
-                "frozen derivation inconsistent",
+                "frozen consumption records mismatch",
             ),
             "materialized freshness": (
                 lambda document: document["controls"][0]["evidence"][0].update(
@@ -719,7 +931,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 lambda document: document["requirements"][0]["parameter_facts"][
                     "consumption"
                 ][0]["link"]["destination"]["implementation"].update(version=99),
-                "stale frozen implementation destination",
+                "frozen consumption records mismatch",
             ),
         }
         for case, (mutate, expected) in cases.items():
@@ -1071,7 +1283,10 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         plan = copy.deepcopy(self.iam_plan)
         plan['resolved_requirement_baselines'] = []
         plan['id'] = artifact_digest(plan)
-        with self.assertRaisesRegex(ArtifactValidationError, 'derivation coverage'):
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            'selected baseline|derivation coverage',
+        ):
             validate_assessment_plan(plan)
 
     @classmethod

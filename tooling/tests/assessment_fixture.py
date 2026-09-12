@@ -287,6 +287,10 @@ def freeze_policy_inputs(plan):
                 'requirement': {'requirement': record['reference'], 'digest': record['digest']},
                 'adoption': copy.deepcopy(record['adoption']), 'satisfaction': copy.deepcopy(record['satisfaction']),
                 'checks': [copy.deepcopy(c['policy_inputs']['instance']) for c in plan['controls'] if c['instance_id'] in record['technical_instance_ids']]}}
+            if 'based_on' in record['realization']:
+                realization['spec']['based_on'] = copy.deepcopy(
+                    record['realization']['based_on']
+                )
             record['realization']['digest'] = pp.digest(realization)
             facts.update(realization=realization, consumption=[])
         record['parameter_facts'] = facts

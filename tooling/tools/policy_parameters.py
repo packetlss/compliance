@@ -1072,6 +1072,49 @@ def validate_requirement_baseline_document_identities(document):
 
 def validate_frozen_contract_identities(plan):
     """Validate retained semantic/schema contracts independently of resolution."""
+    technical_selections = {}
+    for baseline in plan['resolved_baselines']:
+        reference = baseline.get('reference')
+        require_identity(
+            reference,
+            REFERENCE,
+            'invalid frozen technical baseline reference',
+        )
+        lineage = baseline.get('lineage')
+        require(
+            isinstance(lineage, list) and bool(lineage),
+            'frozen technical baseline lineage must be a non-empty array',
+        )
+        for ancestor in lineage:
+            require(
+                isinstance(ancestor, dict),
+                'frozen technical baseline ancestor must be an object',
+            )
+            require_identity(
+                ancestor.get('reference'),
+                REFERENCE,
+                'invalid frozen technical baseline ancestor reference',
+            )
+        require(
+            lineage[-1].get('reference') == reference,
+            'frozen technical baseline terminal reference mismatch',
+        )
+        require(
+            lineage[-1].get('digest') == baseline.get('digest'),
+            'frozen technical baseline terminal digest mismatch',
+        )
+        key = (baseline.get('assignment'), baseline.get('group'), reference)
+        require(
+            key not in technical_selections,
+            'duplicate frozen technical baseline selection',
+        )
+        technical_selections[key] = baseline
+
+    requirement_selections = {
+        (baseline.get('assignment'), baseline.get('group'), baseline.get('reference')):
+        baseline
+        for baseline in plan['resolved_requirement_baselines']
+    }
     controls = {}
     for collection_name in ('controls', 'excluded_controls'):
         for control in plan[collection_name]:
@@ -1093,6 +1136,30 @@ def validate_frozen_contract_identities(plan):
                 and facts['instance']['implementation'] == control['implementation'],
                 'frozen technical input identity mismatch',
             )
+            from .render_plan import control_definition_fingerprint
+            instance = facts['instance']
+            instance_fingerprint = (
+                digest(instance)
+                if control['alignment'] == 'realization'
+                else control_definition_fingerprint(instance)
+            )
+            require(
+                instance_fingerprint == control['definition_fingerprint'],
+                'frozen policy instance fingerprint mismatch',
+            )
+            require(
+                equal(instance.get('parameters', {}), control['parameters']),
+                'frozen technical value mismatch',
+            )
+            if collection_name == 'controls':
+                require(
+                    equal(evidence_for(instance, definition), control['evidence']),
+                    'frozen policy freshness mismatch',
+                )
+                require(
+                    definition['spec']['entrypoint'] == control['entrypoint'],
+                    'frozen implementation entrypoint mismatch',
+                )
             previous = controls.get(control['implementation'])
             require(
                 previous is None or equal(previous, definition),
@@ -1103,6 +1170,135 @@ def validate_frozen_contract_identities(plan):
             validate_control_derivation_identities(control.get('derivations', []))
             if 'overlay_policy' in control:
                 validate_control_overlay_policy_identities(control['overlay_policy'])
+            if control['alignment'] == 'realization':
+                require(
+                    all(
+                        field not in instance
+                        for field in (
+                            'alignment',
+                            'definition_fingerprint',
+                            'derivations',
+                            'deviations',
+                            'disposition',
+                            'lineage',
+                            'overlay_policy',
+                        )
+                    ),
+                    'frozen realization check contains technical derivation facts',
+                )
+            else:
+                for field in ('alignment', 'definition_fingerprint', 'disposition'):
+                    if field in instance:
+                        require(
+                            equal(instance[field], control.get(field)),
+                            f'frozen technical {field} differs from retained instance',
+                        )
+                require(
+                    all(
+                        item in control.get('lineage', [])
+                        for item in instance.get('lineage', [])
+                    ),
+                    'frozen technical lineage differs from retained instance',
+                )
+                require(
+                    all(
+                        item in control.get('derivations', [])
+                        for item in instance.get('derivations', [])
+                    ),
+                    'frozen technical derivations differ from retained instance',
+                )
+                require(
+                    all(
+                        item in control.get('deviations', [])
+                        for item in instance.get('deviations', [])
+                    ),
+                    'frozen technical deviations differ from retained instance',
+                )
+                require(
+                    equal(
+                        instance.get('overlay_policy'),
+                        control.get('overlay_policy'),
+                    ),
+                    'frozen technical overlay policy differs from retained instance',
+                )
+
+            technical_lineage = set()
+            realization_lineage = set()
+            technical_deviations = []
+            for provenance in control.get('provenance', []):
+                if 'requirement' in provenance:
+                    key = (
+                        provenance.get('assignment'),
+                        provenance.get('group'),
+                        provenance.get('baseline'),
+                    )
+                    require(
+                        key in requirement_selections,
+                        'frozen realization provenance has no selected baseline',
+                    )
+                    realization_lineage.add(provenance.get('realization'))
+                else:
+                    key = (
+                        provenance.get('assignment'),
+                        provenance.get('group'),
+                        provenance.get('baseline'),
+                    )
+                    selected = technical_selections.get(key)
+                    if selected is None:
+                        selected = requirement_selections.get(key)
+                    require(
+                        selected is not None,
+                        'frozen Control provenance has no selected baseline',
+                    )
+                    if 'lineage' in selected:
+                        technical_lineage.update(
+                            ancestor['reference']
+                            for ancestor in selected['lineage']
+                        )
+                    else:
+                        technical_lineage.update(
+                            ancestor['reference']
+                            for ancestor in selected['parameter_derivation'][
+                                'ancestry'
+                            ]
+                        )
+                    for deviation in selected.get('deviations', []):
+                        if deviation not in technical_deviations:
+                            technical_deviations.append(deviation)
+            for lineage_entry in control.get('lineage', []):
+                if 'baseline' in lineage_entry:
+                    require(
+                        lineage_entry['baseline'] in technical_lineage,
+                        'frozen Control lineage has no selected baseline ancestry',
+                    )
+                else:
+                    require(
+                        lineage_entry['realization'] in realization_lineage,
+                        'frozen Control lineage has no selected realization',
+                    )
+            for derivation in control.get('derivations', []):
+                require(
+                    derivation['overlay'] in technical_lineage,
+                    'frozen Control derivation has no selected baseline ancestry',
+                )
+                for lineage_entry in derivation['inherited_lineage']:
+                    if 'baseline' in lineage_entry:
+                        require(
+                            lineage_entry['baseline'] in technical_lineage,
+                            'frozen inherited lineage has no selected baseline ancestry',
+                        )
+            if 'overlay_policy' in control:
+                require(
+                    control['overlay_policy']['sealed_by'] in technical_lineage,
+                    'frozen Control seal has no selected baseline ancestry',
+                )
+            require(
+                all(
+                    deviation in technical_deviations
+                    for deviation in control.get('deviations', [])
+                ),
+                'frozen Control deviation has no selected baseline attribution',
+            )
 
     for requirement in plan['requirements']:
         frozen = requirement['parameter_facts']['document']
@@ -1129,6 +1325,11 @@ def validate_frozen_contract_identities(plan):
             'frozen requirement digest mismatch',
         )
         require(isinstance(spec, dict), 'frozen requirement spec must be an object')
+        for field in ('title', 'statement', 'external_refs'):
+            require(
+                equal(requirement.get(field), spec.get(field, [])),
+                'frozen requirement explanation mismatch',
+            )
         parameters = spec.get('parameters', {})
         require(isinstance(parameters, dict), 'frozen requirement parameters must be an object')
         for slot, declaration in parameters.items():
@@ -1151,12 +1352,28 @@ def validate_frozen_contract_identities(plan):
                 slot,
                 requirement['digest'],
             )
+            require(
+                slot in parameters
+                and equal(state.get('declaration'), parameters[slot]),
+                'frozen parameter declaration differs from requirement',
+            )
         realization = requirement['parameter_facts'].get('realization')
+        require(
+            ('realization' in requirement) == (realization is not None),
+            'frozen realization record presence mismatch',
+        )
         if realization is not None:
             validate_realization_contract_identities(
                 realization,
                 requirement_reference,
                 controls,
+            )
+            require(
+                realization['spec'].get('requirement') == {
+                    'requirement': requirement_reference,
+                    'digest': requirement['digest'],
+                },
+                'frozen realization requirement pin mismatch',
             )
             if 'realization' in requirement:
                 realization_reference = (
@@ -1171,6 +1388,49 @@ def validate_frozen_contract_identities(plan):
                     requirement['realization'].get('digest') == digest(realization),
                     'frozen realization digest mismatch',
                 )
+                require(
+                    equal(
+                        requirement['realization'].get('based_on'),
+                        realization['spec'].get('based_on'),
+                    ),
+                    'frozen realization parent mismatch',
+                )
+            satisfaction = realization['spec'].get('satisfaction', {'allOf': []})
+            require(
+                equal(requirement.get('satisfaction'), satisfaction)
+                and equal(
+                    requirement.get('technical_instance_ids'),
+                    satisfaction['allOf'],
+                ),
+                'frozen realization satisfaction mismatch',
+            )
+            checks, consumption = consume(realization, states, controls)
+            require(
+                equal(
+                    consumption,
+                    requirement['parameter_facts'].get('consumption', []),
+                ),
+                'frozen consumption records mismatch',
+            )
+            planned = {
+                control['instance_id']: control
+                for control in plan['controls']
+            }
+            for check in checks:
+                require(
+                    check['instance_id'] in planned
+                    and equal(
+                        check,
+                        planned[check['instance_id']]['policy_inputs']['instance'],
+                    ),
+                    'frozen materialized destination mismatch',
+                )
+        else:
+            require(
+                requirement.get('satisfaction') == {'allOf': []}
+                and requirement.get('technical_instance_ids') == [],
+                'missing-realization record differs from frozen coverage',
+            )
         for consumption in requirement['parameter_facts'].get('consumption', []):
             require(isinstance(consumption, dict), 'frozen consumption must be an object')
             validate_parameter_link_identities(consumption.get('link'), controls)
@@ -1179,7 +1439,17 @@ def validate_frozen_contract_identities(plan):
         requirement['reference']: requirement['digest']
         for requirement in plan['requirements']
     }
+    requirement_parameters = {
+        requirement['reference']: requirement['parameter_facts']['document'][
+            'spec'
+        ].get('parameters', {})
+        for requirement in plan['requirements']
+    }
     for baseline in plan['resolved_requirement_baselines']:
+        require(
+            baseline.get('baseline') == baseline.get('reference'),
+            'frozen requirement baseline selection reference mismatch',
+        )
         derivation = baseline.get('parameter_derivation', {})
         states = derivation.get('states', {})
         require(isinstance(states, dict), 'frozen derivation states must be an object')
@@ -1194,6 +1464,15 @@ def validate_frozen_contract_identities(plan):
                     slot,
                     requirement_digests.get(reference),
                 )
+                if reference in requirement_parameters:
+                    require(
+                        slot in requirement_parameters[reference]
+                        and equal(
+                            state.get('declaration'),
+                            requirement_parameters[reference][slot],
+                        ),
+                        'frozen derivation declaration differs from requirement',
+                    )
         for ancestor in derivation.get('ancestry', []):
             require(isinstance(ancestor, dict), 'frozen derivation ancestor must be an object')
             require_identity(
@@ -1215,6 +1494,27 @@ def validate_frozen_contract_identities(plan):
                 ancestor.get('digest') == digest(ancestor_document),
                 'frozen parent document digest mismatch',
             )
+        ancestry = derivation.get('ancestry', [])
+        require(
+            isinstance(ancestry, list) and bool(ancestry),
+            'frozen requirement baseline ancestry must be a non-empty array',
+        )
+        selected = ancestry[-1]
+        require(
+            selected.get('reference') == baseline.get('reference'),
+            'frozen requirement baseline terminal reference mismatch',
+        )
+        require(
+            selected.get('digest') == baseline.get('digest'),
+            'frozen requirement baseline terminal digest mismatch',
+        )
+        require(
+            equal(
+                baseline.get('requirements'),
+                selected['document']['spec'].get('requirements', []),
+            ),
+            'frozen baseline membership differs from selected policy',
+        )
 
 
 def validate_frozen(plan):

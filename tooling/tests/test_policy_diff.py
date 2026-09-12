@@ -141,6 +141,9 @@ class PolicyDiffTests(unittest.TestCase):
         control["parameters"] = {"required": ["shellcheck", "shfmt"]}
         control["policy_inputs"]["instance"]["parameters"] = copy.deepcopy(control["parameters"])
         control["definition_fingerprint"] = control_definition_fingerprint(control["policy_inputs"]["instance"])
+        control["policy_inputs"]["instance"]["definition_fingerprint"] = control[
+            "definition_fingerprint"
+        ]
         self.resign(after)
 
         document = build_policy_diff(self.macos_plan, after)
@@ -311,6 +314,18 @@ class PolicyDiffTests(unittest.TestCase):
         })
         active["policy_inputs"]["definition"] = copy.deepcopy(template["policy_inputs"]["definition"])
         active["policy_inputs"]["parameters_schema"] = copy.deepcopy(template["policy_inputs"]["parameters_schema"])
+        active["policy_inputs"]["instance"].update({
+            field: copy.deepcopy(active[field])
+            for field in (
+                "alignment",
+                "definition_fingerprint",
+                "derivations",
+                "deviations",
+                "disposition",
+                "lineage",
+            )
+        })
+        active["policy_inputs"]["instance"].pop("overlay_policy", None)
         before["controls"].append(active)
         before["controls"].sort(key=lambda item: item["instance_id"])
         self.resign(before)
@@ -359,6 +374,18 @@ class PolicyDiffTests(unittest.TestCase):
         active["policy_inputs"]["parameters_schema"] = copy.deepcopy(
             template["policy_inputs"]["parameters_schema"]
         )
+        active["policy_inputs"]["instance"].update({
+            field: copy.deepcopy(active[field])
+            for field in (
+                "alignment",
+                "definition_fingerprint",
+                "derivations",
+                "deviations",
+                "disposition",
+                "lineage",
+            )
+        })
+        active["policy_inputs"]["instance"].pop("overlay_policy", None)
         before["controls"].append(active)
         before["controls"].sort(key=lambda item: item["instance_id"])
         self.resign(before)
