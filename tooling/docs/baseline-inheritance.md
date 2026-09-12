@@ -259,8 +259,8 @@ the leaf baseline selected for its persona. Assigning both the base and its
 tailored child would create two definitions of the same stable instance and is
 not an override mechanism.
 
-This avoids using waivers as a long-lived policy-selection system and prevents
-a governed subject from self-declaring a weaker persona. The synthetic
+This avoids using waivers as a long-lived policy-selection system and keeps
+persona-label sourcing and approval in the governed inventory path. The synthetic
 `host/persona-conflict-01` selects both sibling groups: their definitions
 accumulate without order precedence and the effective plan is inspectably
 invalid. The initial exact subject/control waiver contract validates bounded

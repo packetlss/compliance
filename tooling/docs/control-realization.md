@@ -1,7 +1,7 @@
 # Control Requirements and Environment Realizations
 
 Status: **Implemented initial contract (v0.1)**  
-Last updated: **2026-09-11**
+Last updated: **2026-09-12**
 
 This document defines how a high-level regulatory or company control objective
 can receive a defensible top-level result from environment-private technical
@@ -274,15 +274,27 @@ groups, assignments, and requirement baselines:
 3. require exactly one complete effective realization with no ordering
    precedence;
 4. treat no matching realization as `not_implemented`, never as not applicable;
-5. treat multiple unresolved realizations as a plan error; and
+5. treat multiple applicable realizations as a plan error; and
 6. expand the selected realization's technical instances into the subject plan.
 
+A subject with no applicable assignment has Coverage `unassigned` and creates no
+expected result.
+Once a requirement is assigned, zero applicable realizations retains
+`not_implemented` adoption and a failing requirement; exactly one expands and is
+assessed as the complete `satisfaction.allOf` recipe; multiple applicable
+realizations make policy resolution ambiguous and planning fails. Evidence never
+selects policy or a realization.
+
 The production planner and selection helper exercise these rules. The ordinary
-and restricted Linux realizations require mutually exclusive trusted
-`iam-profile` labels. No matching label reports the requirement as not
-implemented for that subject; overlapping selectors are an error. Applicability
-selects the realization before its `allOf` rule is evaluated, so the roll-up
-expression cannot hide a failed or missing implementation branch.
+and restricted Linux example intentionally uses different values of the single
+`iam-profile` label so its two realization selectors are disjoint. That example
+does not require classifications or groups generally to form mutually exclusive
+partitions: stable governed persona, access-profile, deployment-model, environment,
+lifecycle and factual-membership inputs may overlap. When that overlap makes more
+than one realization applicable to the same assigned requirement, the existing
+ambiguity failure applies without order or specificity precedence. Applicability
+selects the realization before its complete `allOf` rule is evaluated, so the
+roll-up expression cannot hide a failed or missing implementation branch.
 
 ## 8. Need-to-know compilation boundary
 
