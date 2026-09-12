@@ -1250,6 +1250,7 @@ class PlanRevisionTests(unittest.TestCase):
                 "type": "array",
                 "items": {"type": "string"},
                 "uniqueItems": True,
+                "maxItems": 3,
             }
             requirement = {
                 "apiVersion": "compliance.example/v1",
@@ -1395,9 +1396,52 @@ class PlanRevisionTests(unittest.TestCase):
                     PolicySource("control-library", shared),
                 ),
             )
+            base["spec"]["parameter_operations"][0]["to"].reverse()
+            contributor["spec"]["parameter_contributions"][0]["members"].reverse()
+            (selection / "requirement-baselines/test/base.json").write_text(
+                json.dumps(base), encoding="utf-8"
+            )
+            (selection / "requirement-baselines/test/contributor.json").write_text(
+                json.dumps(contributor), encoding="utf-8"
+            )
+            authored_reordered = render_plan(
+                self.subject,
+                self.groups,
+                assignments,
+                (
+                    PolicySource("control-library", shared),
+                    PolicySource("verification-policy", selection),
+                ),
+            )
+            contributor["spec"]["parameter_contributions"][0]["members"].append("extra")
+            (selection / "requirement-baselines/test/contributor.json").write_text(
+                json.dumps(contributor), encoding="utf-8"
+            )
+            invalid = render_plan(
+                self.subject,
+                self.groups,
+                assignments,
+                (
+                    PolicySource("control-library", shared),
+                    PolicySource("verification-policy", selection),
+                ),
+            )
 
         self.assertEqual(plan["resolution"], {"status": "valid", "errors": []})
         self.assertEqual(plan["id"], reordered["id"])
+        self.assertEqual(
+            plan["operation"]["members"][0]["member_plan_digest"],
+            authored_reordered["operation"]["members"][0]["member_plan_digest"],
+        )
+        self.assertEqual(
+            plan["resolved_requirement_baselines"],
+            authored_reordered["resolved_requirement_baselines"],
+        )
+        self.assertEqual(invalid["resolution"]["status"], "invalid")
+        self.assertEqual(
+            invalid["resolution"]["errors"][0]["type"],
+            "parameter-resolution-failed",
+        )
         validate_assessment_plan(plan)
         self.assertEqual(
             plan["controls"][0]["parameters"]["required"],

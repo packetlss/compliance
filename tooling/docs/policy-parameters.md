@@ -65,6 +65,15 @@ arrays retain value order. Acquisition paths and Git metadata add no parameter
 authority. Independently assigned divergent slot states conflict; equality of
 copied literals cannot erase declaration or linkage differences.
 
+The additive-set contract supplies its own narrow semantic normalization before
+those existing JCS digests are calculated: fixed additive values, additive
+`bind`/`tailor` `from` and `to` members, contribution members, and contribution
+entries are canonicalized by their defined set/identity order. Frozen requirement
+and baseline documents retain that normalized semantic document and its existing
+resource digest; named policy-source content identity still records the acquired
+source bytes. Atomic values and unrelated resource fields are not normalized by
+this rule, and no second digest algorithm or identity family is introduced.
+
 `policy_inputs` contains the resolved authored instance, Control manifest, parameter
 schema and sorted content digests of implementation-local non-test Rego modules.
 The exact plan separately projects the Control-owned title and purpose for both

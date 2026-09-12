@@ -1185,6 +1185,7 @@ def _load_requirement_policy_kind(
     directory_name: str,
     schema_filename: str,
     schema_path: Path | None = None,
+    requirements: dict[str, JsonObject] | None = None,
 ) -> tuple[dict[str, JsonObject], list[JsonObject]]:
     root = policies_root / directory_name
     if not root.exists():
@@ -1235,6 +1236,7 @@ def _load_requirement_policy_kind(
                 })
             continue
         assert reference is not None
+        document = pp.normalized_resource_document(document, requirements)
         if reference in catalog:
             errors.append({
                 "type": "duplicate-requirement-policy-reference",
@@ -1282,6 +1284,7 @@ def load_requirement_catalogs(
                     directory,
                     schema_filename,
                     schema_path,
+                    loaded.get("ControlRequirement", ({}, []))[0],
                 )
                 _qualify_catalog(incoming, source)
                 kind_errors.extend(incoming_errors)
@@ -1869,6 +1872,7 @@ def render_plan(
                 pp.compose_selected(
                     list(parameter_resolutions.values()),
                     requirement_baselines,
+                    requirements,
                 )
             except (ValueError, KeyError) as error:
                 resolution_errors.append({

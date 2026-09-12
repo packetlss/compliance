@@ -380,7 +380,7 @@ class PolicyParameterTests(unittest.TestCase):
             'missing declaration and base': {'include_base': False},
         }
         for name, kwargs in cases.items():
-            with self.subTest(name=name), self.assertRaises((p.ParameterResolutionError, ValidationError)):
+            with self.subTest(name=name), self.assertRaises(p.ParameterResolutionError):
                 resolve_with(**kwargs)
 
         _, requirements, baselines = self.additive_inputs()
@@ -553,3 +553,38 @@ class PolicyParameterTests(unittest.TestCase):
         first_state = next(item for item in first if item['reference'] == 'base@1')['states']
         second_state = next(item for item in second if item['reference'] == 'base@1')['states']
         self.assertEqual(first_state, second_state)
+
+    def test_additive_set_authored_member_and_contribution_order_is_nonsemantic(self):
+        _, requirements, first_catalog = self.additive_inputs(base=['zeta', 'base', 'zeta'])
+        first_catalog['contributor@1'] = self.contribution_baseline(['beta', 'alpha', 'beta'])
+        first_catalog['contributor@1']['spec']['parameter_contributions'].append({
+            'id': 'more-packages',
+            'target': {'requirement': 'objective', 'slot': 'allowed'},
+            'members': ['delta', 'charlie'],
+        })
+        second_catalog = copy.deepcopy(first_catalog)
+        second_catalog['base@1']['spec']['parameter_operations'][0]['to'].reverse()
+        second_catalog['contributor@1']['spec']['parameter_contributions'].reverse()
+        for contribution in second_catalog['contributor@1']['spec']['parameter_contributions']:
+            contribution['members'].reverse()
+
+        first = [
+            self.selected('base@1', first_catalog, requirements, 'base'),
+            self.selected('contributor@1', first_catalog, requirements, 'feature'),
+        ]
+        second = [
+            self.selected('base@1', second_catalog, requirements, 'base'),
+            self.selected('contributor@1', second_catalog, requirements, 'feature'),
+        ]
+        p.compose_selected(first, first_catalog, requirements)
+        p.compose_selected(second, second_catalog, requirements)
+
+        self.assertEqual(first, second)
+        self.assertEqual(
+            p.resource_digest(first_catalog['base@1'], requirements),
+            p.resource_digest(second_catalog['base@1'], requirements),
+        )
+        self.assertEqual(
+            p.resource_digest(first_catalog['contributor@1'], requirements),
+            p.resource_digest(second_catalog['contributor@1'], requirements),
+        )

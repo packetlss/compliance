@@ -466,6 +466,12 @@ justify discarding their distinct semantic linkage/derivation facts. Preserve
 contract-specific normalization followed by JCS where specified and the existing
 separation of semantic content from acquisition/location and expected-enforcement
 metadata. Digests retain evidence of inputs, not proof of external authority.
+For additive-set resources, that contract-specific projection canonicalizes fixed
+additive values, additive bind/tailor member arrays, contribution member arrays,
+and contribution entries before the existing resource digest and frozen document
+are produced. Named policy-source content identity continues to preserve the
+acquired input bytes; atomic arrays and unrelated fields retain their existing
+meaning.
 
 The assessment plan remains the sole external-adapter handoff and retains the
 complete resolved parameter/linkage/freshness facts. Attributable results reference

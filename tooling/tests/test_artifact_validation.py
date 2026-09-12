@@ -407,6 +407,63 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 ):
                     validate_assessment_plan(tampered)
 
+    def test_additive_plan_binds_contribution_owner_reference_to_document(self):
+        from tools import policy_parameters as parameters
+
+        tampered = copy.deepcopy(self.additive_plan())
+        contributor = next(
+            item for item in tampered["resolved_requirement_baselines"]
+            if item["reference"] == "test.feature@1"
+        )
+        ancestor = contributor["parameter_derivation"]["ancestry"][-1]
+        ancestor["document"]["metadata"]["revision"] = 99
+        ancestor["digest"] = parameters.digest(ancestor["document"])
+        contributor["digest"] = ancestor["digest"]
+        for baseline in tampered["resolved_requirement_baselines"]:
+            for slots in baseline["parameter_derivation"]["states"].values():
+                for state in slots.values():
+                    for contribution in state.get("composition", {}).get("contributions", []):
+                        contribution["owner"]["document"]["metadata"]["revision"] = 99
+                        contribution["owner"]["digest"] = parameters.digest(
+                            contribution["owner"]["document"]
+                        )
+        for requirement in tampered["requirements"]:
+            for state in requirement["parameter_facts"]["states"].values():
+                for contribution in state.get("composition", {}).get("contributions", []):
+                    contribution["owner"]["document"]["metadata"]["revision"] = 99
+                    contribution["owner"]["digest"] = parameters.digest(
+                        contribution["owner"]["document"]
+                    )
+        refresh_operation(tampered)
+        tampered["id"] = artifact_digest(tampered)
+
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "frozen requirement baseline reference mismatch",
+        ):
+            validate_assessment_plan(tampered)
+
+    def test_additive_plan_rejects_structurally_empty_frozen_baseline(self):
+        from tools import policy_parameters as parameters
+
+        tampered = copy.deepcopy(self.additive_plan())
+        contributor = next(
+            item for item in tampered["resolved_requirement_baselines"]
+            if item["reference"] == "test.feature@1"
+        )
+        ancestor = contributor["parameter_derivation"]["ancestry"][-1]
+        ancestor["document"]["spec"].pop("parameter_contributions")
+        ancestor["digest"] = parameters.digest(ancestor["document"])
+        contributor["digest"] = ancestor["digest"]
+        refresh_operation(tampered)
+        tampered["id"] = artifact_digest(tampered)
+
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "requires a requirement or parameter contribution",
+        ):
+            validate_assessment_plan(tampered)
+
     def test_result_outcome_uses_fail_first_logical_precedence(self):
         self.assertEqual(result_outcome({
             "results": [{"status": "error"}, {"status": "fail"}],
