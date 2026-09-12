@@ -1044,14 +1044,35 @@ def validate_realization_contract_identities(
     )
     satisfaction = spec.get('satisfaction', {})
     require(isinstance(satisfaction, dict), 'frozen realization satisfaction must be an object')
-    for instance_id in satisfaction.get('allOf', []):
+    required_ids = satisfaction.get('allOf', [])
+    require(
+        isinstance(required_ids, list),
+        'frozen realization satisfaction allOf must be an array',
+    )
+    for instance_id in required_ids:
         require_identity(
             instance_id,
             ID,
             'invalid frozen realization satisfaction identity',
         )
-    for check in spec.get('checks', []):
+    require(
+        len(required_ids) == len(set(required_ids)),
+        'duplicate frozen realization satisfaction identity',
+    )
+    checks = spec.get('checks', [])
+    require(isinstance(checks, list), 'frozen realization checks must be an array')
+    check_ids = []
+    for check in checks:
         validate_control_instance_identities(check)
+        check_ids.append(check['instance_id'])
+    require(
+        len(check_ids) == len(set(check_ids)),
+        'duplicate frozen realization check identity',
+    )
+    require(
+        set(check_ids) == set(required_ids),
+        'frozen realization checks differ from satisfaction',
+    )
     for link in spec.get('parameter_links', []):
         validate_parameter_link_identities(link, controls)
 
@@ -1115,6 +1136,22 @@ def validate_frozen_contract_identities(plan):
         baseline
         for baseline in plan['resolved_requirement_baselines']
     }
+    realization_memberships = set()
+    for requirement in plan['requirements']:
+        realization = requirement.get('parameter_facts', {}).get('realization')
+        if not isinstance(realization, dict):
+            continue
+        metadata = realization.get('metadata', {})
+        realization_reference = (
+            f"{metadata.get('id')}@{metadata.get('revision')}"
+        )
+        satisfaction = realization.get('spec', {}).get('satisfaction', {})
+        instance_ids = satisfaction.get('allOf', [])
+        if isinstance(instance_ids, list):
+            realization_memberships.update(
+                (requirement.get('reference'), realization_reference, instance_id)
+                for instance_id in instance_ids
+            )
     controls = {}
     for collection_name in ('controls', 'excluded_controls'):
         for control in plan[collection_name]:
@@ -1151,9 +1188,10 @@ def validate_frozen_contract_identities(plan):
                 equal(instance.get('parameters', {}), control['parameters']),
                 'frozen technical value mismatch',
             )
+            resolved_evidence = evidence_for(instance, definition)
             if collection_name == 'controls':
                 require(
-                    equal(evidence_for(instance, definition), control['evidence']),
+                    equal(resolved_evidence, control['evidence']),
                     'frozen policy freshness mismatch',
                 )
                 require(
@@ -1235,6 +1273,14 @@ def validate_frozen_contract_identities(plan):
                     require(
                         key in requirement_selections,
                         'frozen realization provenance has no selected baseline',
+                    )
+                    require(
+                        (
+                            provenance.get('requirement'),
+                            provenance.get('realization'),
+                            control['instance_id'],
+                        ) in realization_memberships,
+                        'frozen realization provenance differs from requirement coverage',
                     )
                     realization_lineage.add(provenance.get('realization'))
                 else:
@@ -1344,6 +1390,10 @@ def validate_frozen_contract_identities(plan):
             )
         states = requirement['parameter_facts'].get('states', {})
         require(isinstance(states, dict), 'frozen requirement parameter states must be an object')
+        require(
+            set(states) == set(parameters),
+            'frozen requirement parameter state coverage mismatch',
+        )
         for slot, state in states.items():
             require_identity(slot, SLOT, 'invalid frozen requirement parameter state slot')
             validate_parameter_state_identities(
@@ -1397,12 +1447,16 @@ def validate_frozen_contract_identities(plan):
                 )
             satisfaction = realization['spec'].get('satisfaction', {'allOf': []})
             require(
-                equal(requirement.get('satisfaction'), satisfaction)
+                equal(
+                    requirement.get('adoption'),
+                    realization['spec'].get('adoption'),
+                )
+                and equal(requirement.get('satisfaction'), satisfaction)
                 and equal(
                     requirement.get('technical_instance_ids'),
                     satisfaction['allOf'],
                 ),
-                'frozen realization satisfaction mismatch',
+                'frozen realization satisfaction or adoption mismatch',
             )
             checks, consumption = consume(realization, states, controls)
             require(
@@ -1427,7 +1481,12 @@ def validate_frozen_contract_identities(plan):
                 )
         else:
             require(
-                requirement.get('satisfaction') == {'allOf': []}
+                requirement.get('adoption') == {
+                    'status': 'not_implemented',
+                    'method': 'none',
+                    'owner': 'unassigned',
+                }
+                and requirement.get('satisfaction') == {'allOf': []}
                 and requirement.get('technical_instance_ids') == [],
                 'missing-realization record differs from frozen coverage',
             )
@@ -1445,6 +1504,7 @@ def validate_frozen_contract_identities(plan):
         ].get('parameters', {})
         for requirement in plan['requirements']
     }
+    requirement_memberships = {}
     for baseline in plan['resolved_requirement_baselines']:
         require(
             baseline.get('baseline') == baseline.get('reference'),
@@ -1456,6 +1516,11 @@ def validate_frozen_contract_identities(plan):
         for reference, slots in states.items():
             require_identity(reference, REFERENCE, 'invalid frozen derivation requirement reference')
             require(isinstance(slots, dict), 'frozen derivation requirement states must be an object')
+            if reference in requirement_parameters:
+                require(
+                    set(slots) == set(requirement_parameters[reference]),
+                    'frozen derivation parameter state coverage mismatch',
+                )
             for slot, state in slots.items():
                 require_identity(slot, SLOT, 'invalid frozen derivation parameter slot')
                 validate_parameter_state_identities(
@@ -1514,6 +1579,20 @@ def validate_frozen_contract_identities(plan):
                 selected['document']['spec'].get('requirements', []),
             ),
             'frozen baseline membership differs from selected policy',
+        )
+        for pin in baseline.get('requirements', []):
+            requirement_memberships.setdefault(pin.get('requirement'), []).append(pin)
+
+    for requirement in plan['requirements']:
+        memberships = requirement_memberships.get(requirement['reference'], [])
+        require(
+            bool(memberships)
+            and all(
+                pin.get('digest') == requirement['digest']
+                and pin.get('required') == requirement.get('required')
+                for pin in memberships
+            ),
+            'frozen requirement membership differs from selected baseline',
         )
 
 

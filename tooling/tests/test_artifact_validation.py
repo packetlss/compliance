@@ -563,6 +563,54 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 realization
             )
 
+        def remove_parameter_state_coverage(plan):
+            plan["requirements"][0]["parameter_facts"]["states"].pop("age")
+            plan["resolved_requirement_baselines"][0]["parameter_derivation"][
+                "states"
+            ]["test.requirement@1"].pop("age", None)
+
+        def duplicate_realization_check(plan):
+            realization = plan["requirements"][0]["parameter_facts"]["realization"]
+            realization["spec"]["checks"].append(
+                copy.deepcopy(realization["spec"]["checks"][0])
+            )
+            plan["requirements"][0]["realization"]["digest"] = parameters.digest(
+                realization
+            )
+
+        def mutate_excluded_evidence_slot(plan):
+            from tools.render_plan import control_definition_fingerprint
+
+            control = plan["excluded_controls"][0]
+            instance = control["policy_inputs"]["instance"]
+            instance["evidence"]["other-slot"] = instance["evidence"].pop(
+                "observation"
+            )
+            for derivations in (instance["derivations"], control["derivations"]):
+                for derivation in derivations:
+                    for snapshot in (derivation["before"], derivation["after"]):
+                        snapshot["evidence"]["other-slot"] = snapshot[
+                            "evidence"
+                        ].pop("observation")
+            fingerprint = control_definition_fingerprint(instance)
+            instance["definition_fingerprint"] = fingerprint
+            control["definition_fingerprint"] = fingerprint
+
+        def mutate_realization_attribution(plan):
+            control = next(
+                item for item in plan["controls"]
+                if item["alignment"] == "realization"
+            )
+            for provenance in control["provenance"]:
+                if "realization" in provenance:
+                    provenance["realization"] = "test.other@1"
+            for lineage in control["lineage"]:
+                if "realization" in lineage:
+                    lineage["realization"] = "test.other@1"
+
+        def mutate_requirement_adoption(plan):
+            plan["requirements"][0]["adoption"]["owner"] = "forged-owner"
+
         cases = {
             "technical baseline record digest": lambda: macos_plan(
                 lambda plan: plan["resolved_baselines"][0].update(
@@ -664,6 +712,14 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                     }
                 )
             ),
+            "realization provenance attribution": lambda: iam_plan(
+                mutate_realization_attribution
+            ),
+            "requirement membership required flag": lambda: iam_plan(
+                lambda plan: plan["requirements"][0].update(
+                    required=not plan["requirements"][0]["required"]
+                )
+            ),
             "invalid evidence TYPE copy": lambda: invalid_parameterized_plan(
                 lambda plan: plan["controls"][0]["evidence"][0].update(
                     type="test.other/v1"
@@ -675,8 +731,20 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             "invalid requirement declaration copy": lambda: invalid_parameterized_plan(
                 mutate_state_declaration
             ),
+            "invalid requirement state coverage": lambda: invalid_parameterized_plan(
+                remove_parameter_state_coverage
+            ),
             "invalid realization requirement pin": lambda: invalid_parameterized_plan(
                 mutate_realization_requirement_digest
+            ),
+            "invalid requirement adoption copy": lambda: invalid_parameterized_plan(
+                mutate_requirement_adoption
+            ),
+            "invalid duplicate realization check": lambda: invalid_parameterized_plan(
+                duplicate_realization_check
+            ),
+            "invalid excluded evidence dependency": lambda: macos_plan(
+                mutate_excluded_evidence_slot
             ),
             "invalid realization source pin": lambda: invalid_parameterized_plan(
                 lambda plan: plan["requirements"][0]["parameter_facts"][

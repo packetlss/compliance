@@ -400,8 +400,13 @@ class PolicyDiffTests(unittest.TestCase):
     def test_requirement_revision_is_a_modified_stable_requirement(self):
         after = copy.deepcopy(self.iam_plan)
         requirement = after["requirements"][0]
+        previous_reference = requirement["reference"]
         requirement["reference"] = "company.iam.role-based-access@2"
         requirement["title"] = "Centrally governed interactive access"
+        for control in after["controls"]:
+            for provenance in control["provenance"]:
+                if provenance.get("requirement") == previous_reference:
+                    provenance["requirement"] = requirement["reference"]
         for baseline in after['resolved_requirement_baselines']:
             for pin in baseline['requirements']:
                 pin['requirement'] = requirement['reference']
