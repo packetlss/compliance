@@ -205,7 +205,7 @@ The coordinated pre-freeze migration implemented under #136 renamed maintained
 authored identities to the canonical grammar without aliases or compatibility
 readers:
 
-| Current | Canonical |
+| Pre-migration | Canonical |
 | --- | --- |
 | `aws.account.number_at_least` | `aws.account.number-at-least` |
 | `aws.account.setting_equals` | `aws.account.setting-equals` |

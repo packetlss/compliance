@@ -12,6 +12,7 @@ from ._canonical_json import canonical_json_bytes
 from .identifiers import (
     EVIDENCE_TYPE,
     ID,
+    REFERENCE,
     REVISION,
     SLOT,
     canonical_control_evidence_inputs_schema_id,
@@ -66,6 +67,16 @@ def resource_digest(value, requirements=None):
 def validate_baseline_structure(value):
     """Re-enforce the bounded RequirementBaseline wire needed by frozen resolution."""
     clean = document(value)
+    metadata = clean.get('metadata')
+    require(isinstance(metadata, dict), 'requirement baseline metadata must be an object')
+    require(
+        isinstance(metadata.get('id'), str) and bool(re.fullmatch(ID, metadata['id'])),
+        'invalid frozen requirement baseline identity',
+    )
+    require(
+        valid_revision(metadata.get('revision')),
+        'invalid frozen requirement baseline revision',
+    )
     spec = clean.get('spec')
     require(isinstance(spec, dict), 'requirement baseline spec must be an object')
     require(set(spec).issubset({
@@ -74,6 +85,15 @@ def validate_baseline_structure(value):
     if 'requirements' in spec:
         require(isinstance(spec['requirements'], list) and bool(spec['requirements']),
                 'requirement baseline requirements must be nonempty when present')
+    if 'extends' in spec:
+        parent = spec['extends']
+        require(
+            isinstance(parent, dict)
+            and set(parent) == {'baseline', 'digest'}
+            and isinstance(parent.get('baseline'), str)
+            and bool(re.fullmatch(REFERENCE, parent['baseline'])),
+            'invalid frozen requirement baseline parent reference',
+        )
     if 'parameter_contributions' in spec:
         items = spec['parameter_contributions']
         require(isinstance(items, list) and bool(items),
@@ -107,6 +127,17 @@ def require(condition, message):
 
 def equal(left, right):
     return canonical_json_bytes(left) == canonical_json_bytes(right)
+
+
+def valid_revision(value):
+    return (
+        isinstance(value, int)
+        and not isinstance(value, bool)
+        and value >= 1
+    ) or (
+        isinstance(value, str)
+        and bool(re.fullmatch(REVISION, value))
+    )
 
 
 def duration(value):
@@ -524,11 +555,7 @@ def validate_control_contract_identity(definition):
         'invalid frozen Control identity',
     )
     version = metadata.get('version')
-    require(
-        (isinstance(version, int) and not isinstance(version, bool) and version >= 1)
-        or (isinstance(version, str) and bool(re.fullmatch(REVISION, version))),
-        'invalid frozen Control version',
-    )
+    require(valid_revision(version), 'invalid frozen Control version')
     validate_schema(
         definition.get('_parameters_schema'),
         identity_pattern=canonical_control_parameter_schema_id(control_id),
@@ -609,6 +636,31 @@ def consume(realization, slots, controls):
         Draft202012Validator(definition['_parameters_schema'], format_checker=FormatChecker()).validate(check.get('parameters', {}))
         evidence_for(check, definition)
     return checks, records
+
+
+def validate_realization_reference_identity(realization):
+    """Re-enforce semantic identities retained in an opaque frozen realization."""
+    metadata = realization.get('metadata')
+    spec = realization.get('spec')
+    require(isinstance(metadata, dict), 'frozen realization metadata must be an object')
+    require(
+        isinstance(metadata.get('id'), str) and bool(re.fullmatch(ID, metadata['id'])),
+        'invalid frozen realization identity',
+    )
+    require(
+        valid_revision(metadata.get('revision')),
+        'invalid frozen realization revision',
+    )
+    require(isinstance(spec, dict), 'frozen realization spec must be an object')
+    based_on = spec.get('based_on')
+    if based_on is not None:
+        require(
+            isinstance(based_on, dict)
+            and set(based_on) == {'realization', 'digest'}
+            and isinstance(based_on.get('realization'), str)
+            and bool(re.fullmatch(REFERENCE, based_on['realization'])),
+            'invalid frozen realization parent reference',
+        )
 
 
 def validate_frozen(plan):
@@ -709,6 +761,7 @@ def validate_frozen(plan):
                         and 'realization' not in record, 'missing-realization record differs from frozen coverage')
                 continue
             realization = frozen['realization']
+            validate_realization_reference_identity(realization)
             require(digest(realization) == record['realization']['digest'], 'frozen realization digest mismatch')
             require(record['realization']['reference'] == f"{realization['metadata']['id']}@{realization['metadata']['revision']}",
                     'frozen realization reference mismatch')

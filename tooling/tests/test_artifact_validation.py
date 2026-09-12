@@ -490,6 +490,79 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 with self.assertRaisesRegex(ArtifactValidationError, expected):
                     validate_assessment_plan(tampered)
 
+    def test_plan_rejects_noncanonical_refs_in_opaque_frozen_policy(self):
+        from tools import policy_parameters as parameters
+
+        baseline_plan = copy.deepcopy(self.parameterized_plan())
+        requirement = baseline_plan["requirements"][0]
+        baseline = baseline_plan["resolved_requirement_baselines"][0]
+        original_ancestor = baseline["parameter_derivation"]["ancestry"][-1]
+        child_document = copy.deepcopy(original_ancestor["document"])
+        parent_document = {
+            "metadata": {"id": "test.parent", "revision": 1},
+            "spec": {
+                "title": "Synthetic parent requirement policy",
+                "requirements": copy.deepcopy(child_document["spec"]["requirements"]),
+            },
+        }
+        child_document["spec"]["extends"] = {
+            "baseline": "test.parent@1",
+            "digest": parameters.digest(parent_document),
+        }
+        sources = original_ancestor["policy_sources"]
+        catalog = {
+            "test.parent@1": {**parent_document, "_sources": sources},
+            baseline["reference"]: {**child_document, "_sources": sources},
+        }
+        states, ancestry = parameters.resolve(
+            baseline["reference"],
+            catalog,
+            {requirement["reference"]: requirement["parameter_facts"]["document"]},
+        )
+        parameters.complete(states)
+        ancestry[0]["reference"] = "bad__parent@1"
+        ancestry[0]["document"]["metadata"]["id"] = "bad__parent"
+        ancestry[0]["digest"] = parameters.digest(ancestry[0]["document"])
+        ancestry[1]["document"]["spec"]["extends"] = {
+            "baseline": "bad__parent@1",
+            "digest": ancestry[0]["digest"],
+        }
+        ancestry[1]["digest"] = parameters.digest(ancestry[1]["document"])
+        baseline["parameter_derivation"] = {
+            "states": states,
+            "ancestry": ancestry,
+        }
+        baseline["digest"] = ancestry[-1]["digest"]
+        requirement["parameter_facts"]["states"] = states[requirement["reference"]]
+        refresh_operation(baseline_plan)
+        baseline_plan["id"] = artifact_digest(baseline_plan)
+
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "invalid frozen requirement baseline parent reference",
+        ):
+            validate_assessment_plan(baseline_plan)
+
+        realization_plan = copy.deepcopy(self.iam_plan)
+        realization_requirement = next(
+            item
+            for item in realization_plan["requirements"]
+            if item.get("parameter_facts", {}).get("realization", {}).get("spec", {}).get(
+                "based_on"
+            )
+        )
+        realization = realization_requirement["parameter_facts"]["realization"]
+        realization["spec"]["based_on"]["realization"] = "bad__base@1"
+        realization_requirement["realization"]["digest"] = parameters.digest(realization)
+        refresh_operation(realization_plan)
+        realization_plan["id"] = artifact_digest(realization_plan)
+
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "invalid frozen realization parent reference",
+        ):
+            validate_assessment_plan(realization_plan)
+
     def test_additive_plan_rejects_frozen_composition_and_consumer_tampering(self):
         plan = self.additive_plan()
         cases = {
