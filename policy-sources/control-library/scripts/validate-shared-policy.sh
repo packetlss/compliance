@@ -58,7 +58,7 @@ python_actual="$(tooling_run python -c 'import platform; print(platform.python_v
 [[ "$python_actual" == "$PYTHON_VERSION" ]] || fail "Python $PYTHON_VERSION is required; resolved $python_actual"
 
 printf '\n== Library resources, schemas, references and source boundary ==\n'
-tooling_run python -m unittest discover -s "$POLICY_ROOT/tests" -p 'test_policy_resources.py' -v
+tooling_run python -m unittest discover -s "$POLICY_ROOT/tests" -p 'test_policy_resources.py'
 
 printf '\n== Generic control-library source/release/archive contract ==\n'
 COMPLIANCE_CONTROL_LIBRARY_SHA="$repository_actual" \
@@ -67,7 +67,7 @@ COMPLIANCE_CONTROL_LIBRARY_SHA="$repository_actual" \
 printf '\n== Control-library Rego formatting ==\n'
 opa fmt --diff --fail "$POLICY_ROOT/policies/controls"
 printf '\n== Control-library Rego tests ==\n'
-opa test "$POLICY_ROOT/policies/controls" --verbose
+opa test "$POLICY_ROOT/policies/controls"
 
 [[ "$(git -C "$REPOSITORY_ROOT" rev-parse HEAD)" == "$repository_actual" ]] \
   || fail "destination revision changed during validation"

@@ -18,7 +18,7 @@ fail() {
 
 export PYTHONDONTWRITEBYTECODE=1
 PYTHONPATH="$SCRIPT_ROOT" "${COMPLIANCE_PYTHON:-python3}" -m unittest discover \
-  -s "$SOURCE_ROOT/tests/iam-private-boundary" -p 'test_*.py' -v
+  -s "$SOURCE_ROOT/tests/iam-private-boundary" -p 'test_*.py'
 
 "${COMPLIANCE_PYTHON:-python3}" "$SCRIPT_ROOT/validation_inputs.py" assemble --root "$ASSEMBLY_ROOT"
 

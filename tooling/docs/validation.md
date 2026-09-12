@@ -23,8 +23,12 @@ For an edit/test cycle before committing, run:
 
 ```sh
 uv sync --frozen --python 3.13.15
-uv run --frozen python -m unittest discover -s tests -v
+uv run --frozen python -m unittest discover -s tests
 ```
+
+Append `-v` to the native `unittest` command for per-test debugging. The
+canonical gate likewise keeps successful runner output compact while preserving
+native diagnostics on failure.
 
 ## Component fixtures and retained contracts
 

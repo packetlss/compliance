@@ -53,7 +53,7 @@ chmod +x "$temporary/no-git-bin/git"
 release_path="$temporary/no-git-bin:$PATH"
 
 printf '== Generic release/archive unit tests ==\n'
-python -m unittest discover -s "$POLICY_ROOT/tests" -p 'test_policy_release.py' -v
+python -m unittest discover -s "$POLICY_ROOT/tests" -p 'test_policy_release.py'
 
 printf '\n== Descriptor-only preparation without Git metadata ==\n'
 PATH="$release_path" python "$POLICY_ROOT/scripts/policy-release.py" prepare \

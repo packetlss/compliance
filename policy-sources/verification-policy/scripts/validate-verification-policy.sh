@@ -106,7 +106,7 @@ printf '\n== All resources, schemas, references, and Rego entrypoints ==\n'
   --policy-source "control-library=$COMPLIANCE_CONTROL_LIBRARY_ROOT/policies" \
   --policy-source "verification-policy=$materialized_policy_root" --format json)
 printf '\n== Repository-owned source and negative contract tests ==\n'
-tooling_run python -m unittest discover -s "$POLICY_ROOT/tests" -p 'test_verification_policy_source.py' -v
+tooling_run python -m unittest discover -s "$POLICY_ROOT/tests" -p 'test_verification_policy_source.py'
 
 printf '\n== Post-validation source and cleanliness ==\n'
 tooling_run python "$POLICY_ROOT/scripts/check-source-boundary.py" "$POLICY_ROOT/policies"

@@ -26,7 +26,7 @@ if [[ -n "${COMPLIANCE_VERIFICATION_SCENARIOS_SHA:-}" ]]; then
 fi
 
 export PYTHONDONTWRITEBYTECODE=1
-"${COMPLIANCE_PYTHON:-python3}" -m unittest discover -s "$SCENARIO_ROOT/scripts" -p 'test_*.py' -v
+"${COMPLIANCE_PYTHON:-python3}" -m unittest discover -s "$SCENARIO_ROOT/scripts" -p 'test_*.py'
 "${COMPLIANCE_PYTHON:-python3}" "$SCENARIO_ROOT/scripts/integration.py" assemble --root "$ASSEMBLY_ROOT"
 bash "$SCENARIO_ROOT/scripts/validate-scenarios.sh" \
   --integration-root "$ASSEMBLY_ROOT"

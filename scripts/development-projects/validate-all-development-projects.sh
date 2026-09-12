@@ -35,7 +35,7 @@ fi
 }
 
 PYTHONPATH="$SCRIPT_ROOT" "${COMPLIANCE_PYTHON:-python3}" -m unittest discover \
-  -s "$source_root/tests/development-projects" -p 'test_*.py' -v
+  -s "$source_root/tests/development-projects" -p 'test_*.py'
 if [[ "$#" == 2 && "$1" == --assembly-root ]]; then
   ASSEMBLY_ROOT="$2"
 elif [[ "$#" == 0 ]]; then
