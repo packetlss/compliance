@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import hashlib
 import itertools
 import json
 import os
@@ -8,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from types import SimpleNamespace
 from pathlib import Path
@@ -34,6 +37,13 @@ def run_dev(*arguments: str, cwd: Path | None = None, env=None):
     )
 
 
+def isolated_environment(cache: Path):
+    environment = os.environ.copy()
+    environment.pop(dev.LOCK_HELD_ENV, None)
+    environment["COMPLIANCE_DEV_CACHE"] = str(cache)
+    return environment
+
+
 def temporary_dev_repository(root: Path, *, initialized: bool) -> tuple[Path, Path]:
     (root / "scripts").mkdir()
     (root / "toolchain").mkdir()
@@ -43,26 +53,62 @@ def temporary_dev_repository(root: Path, *, initialized: bool) -> tuple[Path, Pa
         REPOSITORY_ROOT / "toolchain/versions.env",
         root / "toolchain/versions.env",
     )
+    (root / "tooling").mkdir()
+    shutil.copy2(REPOSITORY_ROOT / "tooling/pyproject.toml", root / "tooling/pyproject.toml")
+    shutil.copy2(REPOSITORY_ROOT / "tooling/uv.lock", root / "tooling/uv.lock")
     cache = root / "cache"
-    if initialized:
-        bin_directory = root / ".dev/venv/bin"
-        bin_directory.mkdir(parents=True)
-        (bin_directory / "python").symlink_to(sys.executable)
-        entrypoint = bin_directory / "compliance"
-        entrypoint.write_text(
-            f"#!{sys.executable}\n"
-            "import json, os, sys\n"
-            "print(json.dumps({'arguments': sys.argv[1:], "
-            "'cwd': os.getcwd(), 'path': os.environ['PATH'].split(os.pathsep)}))\n"
+    pins = dev.pins()
+    os_name, arch, checksum_key, _ = dev.target()
+    uv = cache / f"uv-{pins['UV_VERSION']}" / "uv"
+    uv.parent.mkdir(parents=True)
+    uv.write_text(
+        f"#!{sys.executable}\n"
+        "import os, pathlib, sys, time\n"
+        f"VERSION = {pins['UV_VERSION']!r}\n"
+        "if sys.argv[1:] == ['--version']:\n"
+        "    print(f'uv {VERSION} test')\n"
+        "    raise SystemExit(0)\n"
+        "if len(sys.argv) > 1 and sys.argv[1] == 'sync':\n"
+        "    log = os.environ.get('FAKE_SYNC_LOG')\n"
+        "    if log: pathlib.Path(log).parent.mkdir(parents=True, exist_ok=True); pathlib.Path(log).open('a').write('sync\\n')\n"
+        "    started = os.environ.get('FAKE_SYNC_STARTED')\n"
+        "    if started: pathlib.Path(started).write_text('started')\n"
+        "    release = os.environ.get('FAKE_SYNC_RELEASE')\n"
+        "    if release:\n"
+        "        while not pathlib.Path(release).exists(): time.sleep(0.01)\n"
+        "    if os.environ.get('FAKE_SYNC_FAIL'):\n"
+        "        raise SystemExit(int(os.environ['FAKE_SYNC_FAIL']))\n"
+        "    bin_directory = pathlib.Path(os.environ['UV_PROJECT_ENVIRONMENT']) / 'bin'\n"
+        "    bin_directory.mkdir(parents=True, exist_ok=True)\n"
+        "    python = bin_directory / 'python'; python.unlink(missing_ok=True)\n"
+        f"    python.write_text(\"#!{sys.executable}\\nimport os, sys\\nif sys.argv[1:] == ['-c', 'import platform; print(platform.python_version())']: print({pins['PYTHON_VERSION']!r})\\nelse: os.execv({sys.executable!r}, [{sys.executable!r}, *sys.argv[1:]])\\n\")\n"
+        "    python.chmod(0o755)\n"
+        "    entrypoint = bin_directory / 'compliance'\n"
+        f"    entrypoint.write_text(\"#!{sys.executable}\\nimport json, os, pathlib, sys, time\\nstarted = os.environ.get('FAKE_CLI_STARTED')\\nif started: pathlib.Path(started).write_text('started')\\nrelease = os.environ.get('FAKE_CLI_RELEASE')\\nif release:\\n    while not pathlib.Path(release).exists(): time.sleep(0.01)\\nprint(json.dumps({{'arguments': sys.argv[1:], 'cwd': os.getcwd(), 'path': os.environ['PATH'].split(os.pathsep)}}))\\n\")\n"
+        "    entrypoint.chmod(0o755)\n"
+        "    raise SystemExit(0)\n"
+        "raise SystemExit(2)\n"
+    )
+    uv.chmod(0o755)
+    opa = cache / f"opa-{pins['OPA_VERSION']}" / f"{os_name}-{arch}" / "opa"
+    opa.parent.mkdir(parents=True)
+    opa_contents = f"#!{sys.executable}\nprint('Version: {pins['OPA_VERSION']}')\n".encode()
+    opa.write_bytes(opa_contents)
+    opa.chmod(0o755)
+    versions = root / "toolchain/versions.env"
+    versions.write_text(
+        versions.read_text().replace(
+            f"{checksum_key}={pins[checksum_key]}",
+            f"{checksum_key}={hashlib.sha256(opa_contents).hexdigest()}",
         )
-        entrypoint.chmod(0o755)
-        pins = dev.pins()
-        os_name, arch, _, _ = dev.target()
-        opa = cache / f"opa-{pins['OPA_VERSION']}" / f"{os_name}-{arch}" / "opa"
-        opa.parent.mkdir(parents=True)
-        opa.write_text("fake pinned OPA")
-        opa.chmod(0o755)
-    return root / "scripts/dev", cache
+    )
+    script = root / "scripts/dev"
+    if initialized:
+        environment = isolated_environment(cache)
+        result = subprocess.run([str(script), "setup"], cwd=root, env=environment, text=True, capture_output=True)
+        if result.returncode:
+            raise AssertionError(result.stderr)
+    return script, cache
 
 
 class PortabilityTests(unittest.TestCase):
@@ -87,8 +133,7 @@ class CliAdapterTests(unittest.TestCase):
             script, cache = temporary_dev_repository(root, initialized=True)
             invocation_directory = root / "nested/caller"
             invocation_directory.mkdir(parents=True)
-            environment = os.environ.copy()
-            environment["COMPLIANCE_DEV_CACHE"] = str(cache)
+            environment = isolated_environment(cache)
             arguments = ("--literal=one", "value with spaces", "--", "-x", "")
 
             result = subprocess.run(
@@ -137,12 +182,11 @@ class CliAdapterTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("invalid choice", result.stderr)
 
-    def test_missing_environment_fails_without_implicit_setup_or_install(self):
+    def test_missing_environment_is_repaired_before_cli_runs(self):
         with tempfile.TemporaryDirectory(prefix="compliance dev missing ") as temporary:
             root = Path(temporary)
             script, cache = temporary_dev_repository(root, initialized=False)
-            environment = os.environ.copy()
-            environment["COMPLIANCE_DEV_CACHE"] = str(cache)
+            environment = isolated_environment(cache)
 
             result = subprocess.run(
                 [str(script), "cli", "config", "list"],
@@ -152,10 +196,117 @@ class CliAdapterTests(unittest.TestCase):
                 capture_output=True,
             )
 
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue((root / ".dev/setup-readiness.json").is_file())
+            self.assertTrue((root / ".dev/venv/bin/compliance").is_file())
+            self.assertTrue(cache.exists())
+
+    def test_doctor_reports_missing_state_without_creating_it(self):
+        with tempfile.TemporaryDirectory(prefix="compliance dev doctor ") as temporary:
+            root = Path(temporary)
+            script, cache = temporary_dev_repository(root, initialized=False)
+            environment = isolated_environment(cache)
+
+            result = subprocess.run([str(script), "doctor"], cwd=root, env=environment, text=True, capture_output=True)
+
             self.assertEqual(result.returncode, 1)
-            self.assertIn("run scripts/dev setup", result.stderr)
+            self.assertIn("missing or stale", result.stderr)
             self.assertFalse((root / ".dev").exists())
-            self.assertFalse(cache.exists())
+
+    def test_stale_readiness_metadata_causes_a_frozen_resync(self):
+        with tempfile.TemporaryDirectory(prefix="compliance dev stale ") as temporary:
+            root = Path(temporary)
+            script, cache = temporary_dev_repository(root, initialized=True)
+            (root / "tooling/pyproject.toml").write_text(
+                (root / "tooling/pyproject.toml").read_text() + "\n"
+            )
+            log = root / "sync.log"
+            environment = isolated_environment(cache)
+            environment.update(COMPLIANCE_DEV_CACHE=str(cache), FAKE_SYNC_LOG=str(log))
+
+            result = subprocess.run([str(script), "cli", "config", "list"], cwd=root, env=environment, text=True, capture_output=True)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(log.read_text().splitlines(), ["sync"])
+
+    def test_failed_setup_prevents_the_requested_cli_from_running(self):
+        with tempfile.TemporaryDirectory(prefix="compliance dev failed setup ") as temporary:
+            root = Path(temporary)
+            script, cache = temporary_dev_repository(root, initialized=False)
+            environment = isolated_environment(cache)
+            environment.update(COMPLIANCE_DEV_CACHE=str(cache), FAKE_SYNC_FAIL="17")
+
+            result = subprocess.run([str(script), "cli", "config", "list"], cwd=root, env=environment, text=True, capture_output=True)
+
+            self.assertEqual(result.returncode, 17)
+            self.assertIn("managed setup failed", result.stderr)
+            self.assertFalse((root / ".dev/setup-readiness.json").exists())
+            self.assertFalse((root / ".dev/venv/bin/compliance").exists())
+
+    def test_concurrent_cli_callers_wait_for_one_successful_setup(self):
+        with tempfile.TemporaryDirectory(prefix="compliance dev concurrent ") as temporary:
+            root = Path(temporary)
+            script, cache = temporary_dev_repository(root, initialized=False)
+            started, release, log = root / "started", root / "release", root / "sync.log"
+            environment = isolated_environment(cache)
+            environment.update(
+                COMPLIANCE_DEV_CACHE=str(cache),
+                FAKE_SYNC_STARTED=str(started),
+                FAKE_SYNC_RELEASE=str(release),
+                FAKE_SYNC_LOG=str(log),
+            )
+            first = subprocess.Popen([str(script), "cli", "config", "list"], cwd=root, env=environment, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            for _ in range(100):
+                if started.exists():
+                    break
+                time.sleep(0.01)
+            self.assertTrue(started.exists(), "first setup did not start")
+            second = subprocess.Popen([str(script), "cli", "config", "list"], cwd=root, env=environment, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            time.sleep(0.05)
+            self.assertIsNone(second.poll(), "second caller did not wait for setup")
+            release.write_text("release")
+            first_stdout, first_stderr = first.communicate(timeout=10)
+            second_stdout, second_stderr = second.communicate(timeout=10)
+
+            self.assertEqual(first.returncode, 0, first_stderr)
+            self.assertEqual(second.returncode, 0, second_stderr)
+            self.assertEqual(log.read_text().splitlines(), ["sync"])
+            self.assertTrue(first_stdout)
+            self.assertTrue(second_stdout)
+
+    def test_explicit_setup_waits_until_a_managed_cli_exits(self):
+        with tempfile.TemporaryDirectory(prefix="compliance dev setup waits ") as temporary:
+            root = Path(temporary)
+            script, cache = temporary_dev_repository(root, initialized=True)
+            started, release, log = root / "cli-started", root / "cli-release", root / "sync.log"
+            environment = isolated_environment(cache)
+            environment.update(
+                COMPLIANCE_DEV_CACHE=str(cache),
+                FAKE_CLI_STARTED=str(started),
+                FAKE_CLI_RELEASE=str(release),
+                FAKE_SYNC_LOG=str(log),
+            )
+            cli = subprocess.Popen([str(script), "cli", "config", "list"], cwd=root, env=environment, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            for _ in range(100):
+                if started.exists():
+                    break
+                time.sleep(0.01)
+            self.assertTrue(started.exists(), "managed CLI did not start")
+            (root / "tooling/pyproject.toml").write_text(
+                (root / "tooling/pyproject.toml").read_text() + "\n"
+            )
+            setup = subprocess.Popen([str(script), "setup"], cwd=root, env=environment, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            time.sleep(0.05)
+            self.assertIsNone(setup.poll(), "setup did not wait for the managed CLI")
+            release.write_text("release")
+            cli_stdout, cli_stderr = cli.communicate(timeout=10)
+            setup_stdout, setup_stderr = setup.communicate(timeout=10)
+
+            self.assertEqual(cli.returncode, 0, cli_stderr)
+            self.assertEqual(setup.returncode, 0, setup_stderr)
+            self.assertEqual(log.read_text().splitlines(), ["sync"])
+            self.assertTrue(cli_stdout)
+            self.assertEqual(setup_stdout, "")
 
 
 class CheckCommandTests(unittest.TestCase):
@@ -167,7 +318,12 @@ class CheckCommandTests(unittest.TestCase):
             calls.append((command, kwargs))
             return SimpleNamespace(returncode=next(results))
 
-        with mock.patch.object(dev, "selected", return_value=(Path("/managed/uv"), Path("/managed/opa"))), mock.patch.object(dev, "run", side_effect=record):
+        with (
+            mock.patch.object(dev, "managed_command_lock", return_value=contextlib.nullcontext()),
+            mock.patch.object(dev, "ensure_ready_under_lock", return_value=0),
+            mock.patch.object(dev, "selected", return_value=(Path("/managed/uv"), Path("/managed/opa"))),
+            mock.patch.object(dev, "run", side_effect=record),
+        ):
             result = dev.check(SimpleNamespace(area=area, verbose=verbose, selection=selection or []))
         return result, calls
 
@@ -199,6 +355,34 @@ class CheckCommandTests(unittest.TestCase):
         result, calls = self.check(area="tooling", selection=["test_canonical_json.py", "test_schemas.py"], returncodes=[1])
         self.assertEqual(result, 1)
         self.assertEqual(len(calls), 1)
+
+    def test_check_waits_for_readiness_before_constructing_its_compact_command(self):
+        events = []
+
+        @contextlib.contextmanager
+        def lock():
+            events.append("lock")
+            yield
+
+        def ready():
+            events.append("ready")
+            return 0
+
+        def selected():
+            events.append("selected")
+            return Path("/managed/uv"), Path("/managed/opa")
+
+        with (
+            mock.patch.object(dev, "managed_command_lock", side_effect=lock),
+            mock.patch.object(dev, "ensure_ready_under_lock", side_effect=ready),
+            mock.patch.object(dev, "selected", side_effect=selected),
+            mock.patch.object(dev, "run", return_value=SimpleNamespace(returncode=0)) as run,
+        ):
+            result = dev.check(SimpleNamespace(area="tooling", verbose=False, selection=[]))
+
+        self.assertEqual(result, 0)
+        self.assertEqual(events, ["lock", "ready", "selected"])
+        self.assertNotIn("-v", run.call_args.args[0])
 
 
 if __name__ == "__main__":
