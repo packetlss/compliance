@@ -718,7 +718,7 @@ and commands are unsupported, and adaptation is external.
 | 2026-08-23 | Target assignments at stable groups; use singleton groups for one asset | Proposed |
 | 2026-08-23 | Version inventory, assignments, and policy independently in each plan | Proposed |
 | 2026-08-23 | Treat policy-selecting inventory labels as authoritative resolution input when supplied through the governed projection | Accepted and implemented |
-| 2026-08-23 | Treat subject inventory as a read-only projection, not a source of truth | Accepted |
+| 2026-08-23 | Treat subject inventory as a read-only projection; upstream systems or reviewed configuration retain fact-authoring/sourcing authority | Accepted; clarified by #124 |
 | 2026-08-23 | Use Kubernetes resource conventions for canonical inventory authoring | Accepted |
 | 2026-08-23 | Use one-resource-per-file for Git collaboration and multi-document YAML for importer streams | Accepted |
 | 2026-08-23 | Model resolution, assessment coverage, and evaluation outcome as separate dimensions | Accepted |
