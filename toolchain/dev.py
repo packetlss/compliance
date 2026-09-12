@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import fcntl
 import hashlib
 import json
 import os
@@ -19,6 +21,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CACHE = Path(os.environ.get("COMPLIANCE_DEV_CACHE", Path.home() / ".cache/compliance-dev"))
 ENV = ROOT / ".dev" / "venv"
+SETUP_LOCK = ROOT / ".dev" / "setup.lock"
+READINESS_STAMP = ROOT / ".dev" / "setup-readiness.json"
+LOCK_HELD_ENV = "COMPLIANCE_DEV_SETUP_LOCK_HELD"
+READINESS_INPUTS = (
+    ROOT / "toolchain/versions.env",
+    ROOT / "tooling/pyproject.toml",
+    ROOT / "tooling/uv.lock",
+)
 
 
 def pins() -> dict[str, str]:
@@ -79,6 +89,88 @@ def selected() -> tuple[Path, Path]:
     return uv, opa
 
 
+def readiness_metadata() -> dict[str, object]:
+    """Return the inputs that make this worktree's managed environment valid."""
+    return {
+        "version": 1,
+        "inputs": {
+            path.relative_to(ROOT).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in READINESS_INPUTS
+        },
+    }
+
+
+def read_readiness_stamp() -> dict[str, object] | None:
+    try:
+        value = json.loads(READINESS_STAMP.read_text())
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def readiness_errors(*, require_stamp: bool = True) -> list[str]:
+    """Check managed-tool readiness without creating or changing any state."""
+    p = pins()
+    try:
+        _, _, _, _ = target()
+    except SystemExit as error:
+        return [str(error)]
+    uv, opa = selected()
+    python = ENV / "bin/python"
+    entrypoint = ENV / "bin/compliance"
+    checks = (
+        ("uv", uv, version([str(uv), "--version"]), f"uv {p['UV_VERSION']}"),
+        ("OPA", opa, version([str(opa), "version"]), f"Version: {p['OPA_VERSION']}"),
+        ("Python", python, version([str(python), "-c", "import platform; print(platform.python_version())"]), p["PYTHON_VERSION"]),
+    )
+    errors = [
+        f"{name} {expected} is not selected; run scripts/dev setup"
+        for name, _, actual, expected in checks
+        if actual is None or expected not in actual
+    ]
+    if not entrypoint.is_file() or not os.access(entrypoint, os.X_OK):
+        errors.append("managed compliance entry point is missing; run scripts/dev setup")
+    if require_stamp and read_readiness_stamp() != readiness_metadata():
+        errors.append("managed environment is missing or stale for current inputs; run scripts/dev setup")
+    return errors
+
+
+@contextlib.contextmanager
+def setup_lock():
+    """Serialize setup and setup-aware commands within one worktree."""
+    SETUP_LOCK.parent.mkdir(parents=True, exist_ok=True)
+    with SETUP_LOCK.open("a+") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        try:
+            yield lock
+        finally:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+
+
+@contextlib.contextmanager
+def managed_command_lock():
+    """Hold setup protection, while permitting nested managed commands to run."""
+    if os.environ.get(LOCK_HELD_ENV) == "1":
+        yield None
+        return
+    with setup_lock() as lock:
+        yield lock
+
+
+def write_readiness_stamp() -> None:
+    """Atomically publish readiness only after a successful setup validation."""
+    temporary = READINESS_STAMP.with_suffix(".tmp")
+    temporary.write_text(json.dumps(readiness_metadata(), sort_keys=True) + "\n")
+    temporary.replace(READINESS_STAMP)
+
+
+def portability_errors() -> list[str]:
+    return [
+        f"case/Unicode-normalized filename collision: {first} and {second}"
+        for first, second in portability_collisions(ROOT)
+    ]
+
+
 def fetch(url: str, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     partial = destination.with_suffix(".download")
@@ -124,13 +216,43 @@ def install_opa(p: dict[str, str], opa: Path, os_name: str, arch: str, checksum_
     opa.chmod(0o755)
 
 
-def setup(_: argparse.Namespace) -> int:
+def setup_under_lock() -> int:
+    """Prepare the environment while the caller holds ``setup_lock``."""
+    if not readiness_errors():
+        return 0
+    # A stamp must never describe an environment while it is being changed.
+    READINESS_STAMP.unlink(missing_ok=True)
     p = pins(); os_name, arch, checksum_key, triple = target(); uv, opa = selected()
-    install_uv(p, uv, triple)
-    install_opa(p, opa, os_name, arch, checksum_key)
-    env = os.environ.copy(); env["UV_PROJECT_ENVIRONMENT"] = str(ENV)
-    run([str(uv), "sync", "--project", "tooling", "--frozen", "--python", p["PYTHON_VERSION"]], env=env)
-    return doctor(argparse.Namespace())
+    try:
+        install_uv(p, uv, triple)
+        install_opa(p, opa, os_name, arch, checksum_key)
+        env = os.environ.copy(); env["UV_PROJECT_ENVIRONMENT"] = str(ENV)
+        run([str(uv), "sync", "--project", "tooling", "--frozen", "--python", p["PYTHON_VERSION"]], env=env)
+    except subprocess.CalledProcessError as error:
+        print(
+            f"ERROR: managed setup failed (exit {error.returncode}); "
+            "the requested command was not run",
+            file=sys.stderr,
+        )
+        return error.returncode or 1
+    if errors := readiness_errors(require_stamp=False):
+        print("ERROR: managed setup did not produce a ready environment:", file=sys.stderr)
+        for error in errors:
+            print(f"ERROR: {error}", file=sys.stderr)
+        return 1
+    if errors := portability_errors():
+        print("ERROR: managed setup did not pass repository portability checks:", file=sys.stderr)
+        for error in errors:
+            print(f"ERROR: {error}", file=sys.stderr)
+        return 1
+    write_readiness_stamp()
+    return 0
+
+
+def setup(_: argparse.Namespace) -> int:
+    """Prepare this worktree's environment, serializing all mutable setup work."""
+    with setup_lock():
+        return setup_under_lock()
 
 
 def doctor(_: argparse.Namespace) -> int:
@@ -144,62 +266,93 @@ def doctor(_: argparse.Namespace) -> int:
         print(f"{name}: {path} [{actual or 'missing'}]")
         if actual is None or expected not in actual:
             errors.append(f"{name} {expected} is not selected; run scripts/dev setup")
-    for first, second in portability_collisions(ROOT):
-        errors.append(f"case/Unicode-normalized filename collision: {first} and {second}")
+    entrypoint = ENV / "bin/compliance"
+    print(f"compliance: {entrypoint} [{'ready' if entrypoint.is_file() and os.access(entrypoint, os.X_OK) else 'missing'}]")
+    if not entrypoint.is_file() or not os.access(entrypoint, os.X_OK):
+        errors.append("managed compliance entry point is missing; run scripts/dev setup")
+    if read_readiness_stamp() != readiness_metadata():
+        errors.append("managed environment is missing or stale for current inputs; run scripts/dev setup")
+    errors.extend(portability_errors())
     for error in errors: print(f"ERROR: {error}", file=sys.stderr)
     return 1 if errors else 0
 
 
+def ensure_ready_under_lock() -> int:
+    """Repair this worktree only after the caller has acquired ``setup_lock``."""
+    if not readiness_errors():
+        return 0
+    return setup_under_lock()
+
+
 COMMANDS = {
-    "tooling": ["python", "-m", "unittest", "discover", "-s", "tooling/tests", "-v"],
-    "policy": ["python", "-m", "unittest", "discover", "-s", "policy-sources/control-library/tests", "-v"],
-    "projects": ["python", "-m", "unittest", "discover", "-s", "tests/development-projects", "-v"],
-    "iam": ["python", "-m", "unittest", "discover", "-s", "tests/iam-private-boundary", "-v"],
-    "scenarios": ["python", "-m", "unittest", "discover", "-s", "verification/scenarios/scripts", "-p", "test_*.py", "-v"],
+    "tooling": ["python", "-m", "unittest", "discover", "-s", "tooling/tests"],
+    "policy": ["python", "-m", "unittest", "discover", "-s", "policy-sources/control-library/tests"],
+    "projects": ["python", "-m", "unittest", "discover", "-s", "tests/development-projects"],
+    "iam": ["python", "-m", "unittest", "discover", "-s", "tests/iam-private-boundary"],
+    "scenarios": ["python", "-m", "unittest", "discover", "-s", "verification/scenarios/scripts", "-p", "test_*.py"],
 }
 GATES = {"repository": "scripts/validate-repository.sh", "tooling": "tooling/scripts/validate-tooling.sh", "policy": "policy-sources/control-library/scripts/validate-shared-policy.sh", "verification-policy": "policy-sources/verification-policy/scripts/validate-verification-policy.sh", "projects": "scripts/validate-development-projects.sh", "iam": "scripts/validate-iam-private-boundary.sh", "scenarios": "scripts/validate-verification-scenarios.sh", "package": "tooling/scripts/validate-package.sh", "locked-artifacts": "tooling/scripts/validate-locked-artifacts-package.sh", "release-preparation": "tooling/scripts/validate-release-preparation.sh", "policy-release": "tooling/scripts/validate-policy-release-compatibility.sh"}
 
 
 def check(args: argparse.Namespace) -> int:
-    uv, opa = selected(); env = os.environ.copy(); env.update(UV_PROJECT_ENVIRONMENT=str(ENV), PATH=f"{opa.parent}:{env['PATH']}", PYTHONDONTWRITEBYTECODE="1")
-    python_paths = {"projects": ROOT / "scripts/development-projects", "iam": ROOT / "scripts/iam-private-boundary", "scenarios": ROOT / "verification/scenarios/scripts"}
-    if args.area in python_paths:
-        env["PYTHONPATH"] = str(python_paths[args.area])
-    base = [str(uv), "run", "--project", "tooling", "--frozen"]
-    if args.selection:
-        if args.area != "tooling": raise SystemExit("named selection is currently supported for tooling tests")
-        for pattern in args.selection:
-            command = [*base, "python", "-m", "unittest", "discover", "-s", "tooling/tests", "-p", pattern, "-v"]
-            result = run(command, check=False, env=env).returncode
-            if result: return result
-        return 0
-    return run([*base, *COMMANDS[args.area]], check=False, env=env).returncode
+    with managed_command_lock():
+        if result := ensure_ready_under_lock():
+            return result
+        uv, opa = selected(); env = os.environ.copy(); env.update(UV_PROJECT_ENVIRONMENT=str(ENV), PATH=f"{opa.parent}:{env['PATH']}", PYTHONDONTWRITEBYTECODE="1", **{LOCK_HELD_ENV: "1"})
+        python_paths = {"projects": ROOT / "scripts/development-projects", "iam": ROOT / "scripts/iam-private-boundary", "scenarios": ROOT / "verification/scenarios/scripts"}
+        if args.area in python_paths:
+            env["PYTHONPATH"] = str(python_paths[args.area])
+        base = [str(uv), "run", "--project", "tooling", "--frozen"]
+        if args.selection:
+            if args.area != "tooling": raise SystemExit("named selection is currently supported for tooling tests")
+            for pattern in args.selection:
+                command = [*base, *COMMANDS[args.area], "-p", pattern]
+                if args.verbose:
+                    command.append("-v")
+                result = run(command, check=False, env=env).returncode
+                if result: return result
+            return 0
+        command = [*base, *COMMANDS[args.area]]
+        if args.verbose:
+            command.append("-v")
+        return run(command, check=False, env=env).returncode
 
 
 def gate(args: argparse.Namespace) -> int:
-    uv, opa = selected(); env = os.environ.copy(); env.update(UV_PROJECT_ENVIRONMENT=str(ENV), PATH=f"{ROOT / 'toolchain/bin'}:{ENV / 'bin'}:{uv.parent}:{opa.parent}:{env['PATH']}", COMPLIANCE_PYTHON=str(ENV / "bin/python"))
-    return run(["bash", GATES[args.area]], check=False, env=env).returncode
+    with managed_command_lock():
+        if result := ensure_ready_under_lock():
+            return result
+        uv, opa = selected(); env = os.environ.copy(); env.update(UV_PROJECT_ENVIRONMENT=str(ENV), PATH=f"{ROOT / 'toolchain/bin'}:{ENV / 'bin'}:{uv.parent}:{opa.parent}:{env['PATH']}", COMPLIANCE_PYTHON=str(ENV / "bin/python"), **{LOCK_HELD_ENV: "1"})
+        return run(["bash", GATES[args.area]], check=False, env=env).returncode
 
 
 def cli(arguments: list[str]) -> int:
     """Replace this process with the managed product CLI from the repository root."""
-    _, opa = selected()
-    python = ENV / "bin/python"
-    entrypoint = ENV / "bin/compliance"
-    required = (python, entrypoint, opa)
-    if any(not path.is_file() or not os.access(path, os.X_OK) for path in required):
-        print(
-            "ERROR: managed development environment is unavailable; "
-            "run scripts/dev setup",
-            file=sys.stderr,
+    with managed_command_lock() as lock:
+        if result := ensure_ready_under_lock():
+            return result
+        _, opa = selected()
+        python = ENV / "bin/python"
+        entrypoint = ENV / "bin/compliance"
+        required = (python, entrypoint, opa)
+        if any(not path.is_file() or not os.access(path, os.X_OK) for path in required):
+            print(
+                "ERROR: managed development environment is unavailable; "
+                "run scripts/dev setup",
+                file=sys.stderr,
+            )
+            return 1
+        env = os.environ.copy()
+        env["PATH"] = os.pathsep.join(
+            (str(opa.parent), str(ENV / "bin"), env.get("PATH", ""))
         )
-        return 1
-    env = os.environ.copy()
-    env["PATH"] = os.pathsep.join(
-        (str(opa.parent), str(ENV / "bin"), env.get("PATH", ""))
-    )
-    os.chdir(ROOT)
-    os.execve(str(entrypoint), [str(entrypoint), *arguments], env)
+        env[LOCK_HELD_ENV] = "1"
+        # execve bypasses the context manager's cleanup, so keep the advisory
+        # lock open in the product process until the managed command exits.
+        if lock is not None:
+            os.set_inheritable(lock.fileno(), True)
+        os.chdir(ROOT)
+        os.execve(str(entrypoint), [str(entrypoint), *arguments], env)
     raise AssertionError("execve returned unexpectedly")
 
 
@@ -229,7 +382,7 @@ def main() -> int:
         return cli(sys.argv[2:])
     parser = argparse.ArgumentParser(); sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("setup").set_defaults(func=setup); sub.add_parser("doctor").set_defaults(func=doctor); sub.add_parser("readiness").set_defaults(func=readiness); sub.add_parser("cli", help="run the managed compliance CLI from the repository root")
-    p = sub.add_parser("check"); p.add_argument("area", choices=COMMANDS); p.add_argument("selection", nargs=argparse.REMAINDER); p.set_defaults(func=check)
+    p = sub.add_parser("check"); p.add_argument("--verbose", action="store_true", help="show every test while it runs"); p.add_argument("area", choices=COMMANDS); p.add_argument("selection", nargs=argparse.REMAINDER); p.set_defaults(func=check)
     p = sub.add_parser("gate"); p.add_argument("area", choices=GATES); p.set_defaults(func=gate)
     args = parser.parse_args()
     return args.func(args)

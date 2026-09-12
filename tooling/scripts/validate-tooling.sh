@@ -44,7 +44,7 @@ python_actual="$(uv run --project "$TOOLING_ROOT" --frozen python -c 'import pla
 [[ "$python_actual" == "$PYTHON_VERSION" ]] || fail "Python $PYTHON_VERSION is required; resolved $python_actual"
 
 printf '\n== Tooling unit and contract suite ==\n'
-uv run --project "$TOOLING_ROOT" --frozen python -m unittest discover -s tests -v
+uv run --project "$TOOLING_ROOT" --frozen python -m unittest discover -s tests
 
 [[ "$(git -C "$TOOLING_ROOT" rev-parse HEAD)" == "$tooling_actual" ]] \
   || fail "tooling revision changed during validation"

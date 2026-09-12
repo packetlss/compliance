@@ -92,7 +92,7 @@ require_file scripts/validate-verification-scenarios.sh
 
 "${COMPLIANCE_PYTHON:-python3}" -m json.tool t3.json >/dev/null \
   || fail "t3.json is not valid JSON"
-"${COMPLIANCE_PYTHON:-python3}" -m unittest discover -s tests/toolchain -v
+"${COMPLIANCE_PYTHON:-python3}" -m unittest discover -s tests/toolchain
 
 if grep -nE 'COMPLIANCE_CI_|PERSONAL_ACCESS_TOKEN|GH_PAT|GH_TOKEN|packetlss-labs/compliance-' t3.json; then
   fail "T3 project configuration must not contain historical acquisition or credentials"

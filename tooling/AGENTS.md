@@ -20,8 +20,11 @@ For a working-tree inner loop, run:
 
 ```sh
 cd tooling
-uv run --frozen python -m unittest discover -s tests -v
+uv run --frozen python -m unittest discover -s tests
 ```
+
+Append `-v` to the native `unittest` command when per-test progress is useful
+for debugging; the normal path is intentionally compact.
 
 After committing the candidate revision and ensuring the outer checkout is clean, run from the repository root:
 
