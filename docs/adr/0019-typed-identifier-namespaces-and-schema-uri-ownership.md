@@ -51,6 +51,8 @@ SEGMENT = [a-z0-9]+(?:-[a-z0-9]+)*
 ID      = SEGMENT(?:\.SEGMENT)*
 SLOT    = [a-z][a-z0-9]*(?:_[a-z0-9]+)*
 REV     = [a-z0-9]+(?:[.-][a-z0-9]+)*
+N       = [1-9][0-9]*
+WIRE    = v[1-9][0-9]*(?:(?:alpha|beta)[1-9][0-9]*)?
 REF     = ID "@" REV
 TYPE    = ID "/v" [1-9][0-9]*
 DIGEST  = sha256:[0-9a-f]{64}
@@ -174,9 +176,8 @@ https://H/schemas/controls/{ID}/evidence/{SLOT}/inputs/v{N}.schema.json
 https://H/schemas/requirements/{ID}/parameters/{SLOT}/v{N}.schema.json
 ```
 
-Here `{kind-kebab}` is the policy resource kind rendered in kebab-case, `{family}`
-is a platform-owned schema family, `{WIRE}` is that schema contract's explicit wire
-version token, and `{ID}`, `{SLOT}` and `{N}` follow the grammar above.
+Here `{kind-kebab}` matches `SEGMENT`; `{family}` matches `SEGMENT`; `{ID}` matches
+`ID`; `{SLOT}` matches `SLOT`; `{N}` matches `N`; and `{WIRE}` matches `WIRE`.
 
 `$id` identifies a schema contract and supplies a URI base. It does not identify a
 policy resource, prove publishing or policy authority, or identify exact bytes.
