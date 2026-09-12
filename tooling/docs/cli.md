@@ -94,6 +94,15 @@ resource digests, policy-source locators, or raw planner diagnostics. Exact
 provenance remains available from the immutable plan and its advanced artifact
 surfaces.
 
+For the accepted but not-yet-implemented additive-set successor in
+[#127](https://github.com/packetlss/compliance/issues/127), Coverage owns any
+ephemeral deterministic projection of **current** effective parameter values and
+their derivation through the same planner/resolver. This responsibility boundary
+does not freeze CLI spelling or output shape, require ordinary views to expose full
+plan provenance, or add a second resolver, persistent Coverage state or cache.
+Historical `assessment` explanation continues to use only the exact retained,
+relationally validated plan/result pair and never re-resolves current policy.
+
 `assessment run` is the normal local end-to-end operation. It resolves and
 persists the subject's immutable assessment plan, selects evidence, evaluates
 each active control with OPA, and persists an immutable result envelope.

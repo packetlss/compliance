@@ -106,6 +106,16 @@ ADR 0010's assessment-time corrections remain its existing responsibility.
 
 Current requirement/realization schemas support explicit pinned slots and direct typed consumption. Policy bindings own effective `max_age`; Control manifests provide dependency contracts. The experimental frozen records are specified in [policy parameters](../tooling/docs/policy-parameters.md). Successor schema, fingerprint, validation, explanation and policy-diff obligations are in ADR 0012's migration table. Development artifacts may need regeneration; historical artifacts retain their original identity and meaning. ADR 0016 below supersedes ADRs 0013–0015 and narrows core responsibility; ADR 0012 semantics remain unchanged.
 
+The string-only additive-set extension accepted under
+[#127](https://github.com/packetlss/compliance/issues/127) is **Accepted design,
+not yet implemented**. It is the sole accepted exception to atomic complete-value
+composition and requires explicit declaration opt-in, exactly one current compatible
+declaration and base, order-independent canonical union, complete contribution/path/
+member attribution, and frozen-plan validation. Fixed/sealed closure and the atomic
+default remain intact. The documentation tranche changes no schema, runtime, artifact
+version or identity algorithm; a dedicated successor issue must coordinate the later
+schema/runtime/Coverage cutover. It introduces no compatibility reader or freeze.
+
 ## Stage 5 explanation architecture
 
 ### Source-authored policy and check meaning

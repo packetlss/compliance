@@ -1,10 +1,11 @@
 # ADR 0012: Explicit policy-parameter resolution and policy-owned evidence freshness
 
-- **Status:** Implemented under #73; experimental, not frozen
+- **Status:** Implemented under #73; additive-set extension accepted under #127 but not implemented; experimental, not frozen
 - **Date:** 2026-09-05
 - **Promotion history:** [#37](https://github.com/packetlss/compliance/issues/37)
 - **Runtime/schema migration:** [#73](https://github.com/packetlss/compliance/issues/73); no runtime change in this promotion
 - **Result ownership alignment:** Implemented under [#90](https://github.com/packetlss/compliance/issues/90); parameter semantics unchanged
+- **Additive-set extension:** Accepted under [#127](https://github.com/packetlss/compliance/issues/127); documentation tranche only
 
 ADRs 0013–0015 were subsequently superseded by ADR 0016. #73 completed this ADR's
 parameter identity, resolution, direct typed consumption and unresolved-policy
@@ -14,7 +15,8 @@ scope rather than current work routing.
 
 The initial-current descriptions and migration table below record the pre-#73
 starting point. [The implementation contract](../../tooling/docs/policy-parameters.md)
-specifies the resulting experimental representation.
+specifies the resulting experimental representation and the accepted, not-yet-
+implemented additive-set successor contract.
 
 ## Context and authority
 
@@ -262,7 +264,8 @@ model, or query-time views.
 ### Value contract
 
 Values are typed JSON validated against explicit pinned constraints. Arrays and
-objects are assigned atomically, with no implicit list union or object merge.
+objects are assigned atomically, with no implicit list union or object merge. The
+only accepted exception is the explicitly declared additive-set contract below.
 Durations use fixed `s`, `m`, `h`, `d`; one `d` is exactly 24 hours. Exact fixed
 duration normalization to seconds may be used for semantic comparison/identity
 where specified; retain authored representation in provenance where useful.
@@ -272,6 +275,135 @@ The migration must specify its normalization projection and conformance vectors.
 There are no calendar durations, coercion, rounding, interpolation,
 environment-variable substitution or expression evaluation. A constraint does
 not create an absent binding, and default annotations do not change that rule.
+
+### Explicit additive-set exception
+
+ADR 0012's complete-value semantics remain the default. Scalars, objects,
+ordinary arrays and direct technical `Baseline` / `BaselineOverlay` values remain
+atomic. `uniqueItems: true` alone does not enable composition. Only a technology-
+neutral requirement parameter whose current declaration explicitly opts in may
+use bounded additive-set composition, conceptually:
+
+```yaml
+composition:
+  kind: additive-set
+```
+
+For such a slot:
+
+```text
+exactly one compatible applicable base binding after valid base tailoring
+    + zero or more independently applicable additive contributions
+    -> canonical effective set
+```
+
+The initial member domain is strings only. Member equality is exact JSON-string
+value equality, with no case folding, normalization, coercion or transformation.
+After duplicate elimination, the semantic array representation is ordered by the
+lexicographic order of each member's UTF-8 bytes. Authored base, contribution,
+source, file, group, assignment, feature and traversal order are nonsemantic.
+The canonical effective array is then validated against the complete current
+parameter contract; canonicalization never drops an invalid member to make the
+set valid.
+
+An additive contribution is ordinary policy composition. It is not a `bind`,
+`tailor` or `seal` `parameter_operation`; it is not a deviation, overlay mutation,
+inheritance edge, precedence rule or parent-state mutation. Conceptually:
+
+```yaml
+parameter_contributions:
+  - id: database-software
+    target:
+      requirement: company.authorized-software
+      slot: allowed_software
+    members:
+      - postgresql
+      - pgbouncer
+```
+
+Its authored target is only the stable semantic slot identity:
+
+```text
+(ControlRequirement metadata.id, slot name)
+```
+
+The contribution carries no requirement revision or document digest, declaration
+or schema digest, base `RequirementBaseline` identity/revision/digest, base-state
+fingerprint, `from` value or deviation metadata. Current-policy resolution binds
+that stable target to the exact current governed declaration supplied for the
+operation. This bounded loose coupling allows an unrelated requirement revision,
+requirement-text change, compatible declaration change or base-member addition to
+proceed without reauthoring the contribution. It does not weaken the exact pins
+used where correctness depends on prior state or interface, including existing
+bind/tailor/seal derivation and realization consumption.
+
+### Additive-set resolution and failure boundary
+
+For each stable semantic slot, resolution must:
+
+1. resolve the current inventory, groups and applicable assignments using existing
+   semantics;
+2. collect every current applicable requirement declaration and additive
+   contribution;
+3. resolve each contribution target against `(requirement ID, slot name)`;
+4. require exactly one compatible current semantic declaration, without using
+   source order, revision recency, specificity or another precedence rule;
+5. require that declaration to opt explicitly into additive-set composition;
+6. validate every string member against the current declaration's item contract
+   without coercion or transformation;
+7. require exactly one compatible base binding under existing ADR 0012 rules,
+   whether fixed or produced by ordinary bind/tailor derivation;
+8. reject every independently applicable contribution when the whole slot is fixed
+   or sealed;
+9. form the canonical set union of the selected base after any valid base tailoring
+   and every independently applicable contribution;
+10. coalesce duplicate members while retaining every base/contribution origin and
+    every applicability path;
+11. validate the complete canonical union against the current parameter contract;
+12. materialize that value through the existing exact realization-consumption
+    edges; and
+13. fail closed before an assessable plan for any missing, ambiguous, atomic,
+    incompatible, fixed, sealed, invalid-member, invalid-final-set or consumer-
+    resolution state.
+
+The same authored contribution reached through several membership or assignment
+paths is one semantic contribution with every path retained. Its stable identity is
+`(owning RequirementBaseline identity, local contribution ID, target requirement
+ID, target slot)`. Separate contributions remain separately attributable even when
+they supply equal members.
+
+Tailoring continues to operate only on the selected base:
+
+```text
+effective set = tailored base ∪ independently applicable contributions
+```
+
+Tailoring cannot suppress, remove or override a contribution. Removal, denial,
+suppression, exclusion, priority, override, subtraction, fixed-base-but-
+contribution-open behavior, structured/keyed/numeric/mixed members, generic merge,
+reducer or expression behavior require new architecture review. Unsupported author
+syntax for those behaviors is an authoring failure, not an ignored extension.
+
+### RequirementBaseline and inventory authority
+
+A contribution does not import, select or make its target requirement applicable.
+The target declaration and exactly one base must already be made applicable by
+governed current policy. Consequently, the later runtime/schema tranche must allow:
+
+- a contribution target absent from the contribution-owning baseline's exact
+  `spec.requirements` membership;
+- attachment only to a unique declaration/base made applicable by other governed
+  policy;
+- a contribution-only `RequirementBaseline` without fake exact requirement
+  membership; and
+- structural validity when a baseline owns at least one genuine requirement or at
+  least one contribution.
+
+Inventory remains authoritative for supplied governed facts and applicability,
+such as `feature.database = "true"`. Policy owns the implication that such a fact
+causes members to be contributed to technical intent. Inventory must not carry
+policy-resource IDs, contribution operations or parameter members. Overlapping
+factual classifications and assignments continue to accumulate without precedence.
 
 ### Company policy and external conformity answer different questions
 
@@ -309,12 +441,20 @@ root, not a reason to acquire real private policy or create a merged policy tree
 A valid resolved plan must explain each effective value without reopening mutable
 policy. Preserve at minimum, as applicable:
 
-- stable semantic slot identity, exact declaration/revision/schema pins and
-  concrete typed effective value;
-- binding mode/origin and selected derivation;
+- stable semantic slot identity and the exact resolved `ControlRequirement`
+  revision, complete document and digest;
+- exact declaration/composition/schema documents and digests;
+- exact base binding, binding mode/origin, selected derivation, existing parent-
+  state operations/tailoring and fixed/sealed state;
 - parent pins, explicit tailoring operations, before/after values, expected
   fingerprints, restrictions/seals and governance/deviation provenance;
-- subject/scope, assignment provenance and named policy-source content identities;
+- for every contribution, the exact owning resource revision/document/digest,
+  authored members and identity `(owning RequirementBaseline identity, local
+  contribution ID, target requirement ID, target slot)`;
+- subject/scope, every group/assignment/policy applicability path and named policy-
+  source content identity;
+- canonical effective set and deterministic member-to-base/contribution
+  attribution;
 - selected realization dependency and exact technical/evidence destination;
 - authored consumption edge and materialized destination value; and
 - resolved evidence dependency and effective `max_age`.
@@ -334,6 +474,13 @@ adapter-input artifact or separate authorization artifact. Evaluation still
 verifies applicable composition and plan integrity; consuming resolved values
 does not bypass ADR 0007's actual-versus-expected checks.
 
+These additive-set facts extend the existing plan-owned parameter records and
+their provisional identity projections. They introduce no new resource, artifact,
+cache, digest family or identity family. Persisted validation must detect tampering
+with the frozen declaration, contribution, applicability/attribution, effective
+value or exact consumer. Historical explanation consumes only the exact retained,
+relationally validated plan/result pair; it never re-resolves current policy.
+
 ## Implemented migration summary
 
 These changes are implemented under #73 and #90. No artifact version or algorithm
@@ -350,6 +497,12 @@ is frozen by this summary.
 | Assessment plan/results/provenance | Exact plan retains resolved parameter/linkage/freshness records | Result references `plan_id` and retains only evaluation-owned facts, with mandatory relational validation |
 | Fingerprints, validation, explanation and policy diff | Current literal instance fingerprints and frozen derivations | Include applicable slot/schema/operation/linkage/destination/freshness facts; explain and compare frozen facts without mutable-policy resolution |
 | Maintained policy/projects/fixtures/scenarios | Current literals, pins and Control-owned ages | Explicit synthetic bindings/edges/freshness, coordinated schema and consumer cutover, deliberate changed expectations and regenerated development artifacts |
+
+The additive-set extension accepted under #127 is documentation-only and is not
+part of the current executable contract. Its later coordinated schema/runtime/
+Coverage migration must preserve the table above while adding only the bounded
+declaration opt-in, contributions, union, attribution and frozen-plan validation
+defined here.
 
 The checked current sources include the policy schemas under
 [`policy-sources/control-library/policies/schemas/policy/`](../../policy-sources/control-library/policies/schemas/policy/),
@@ -386,6 +539,24 @@ not restored. See [contract maturity](../CONTRACT_MATURITY.md).
 | Resolution successful, required evidence missing/stale/invalid/inconclusive | ADR 0010 `unknown`, preserving its refusal prerequisites |
 | Company `45m`, external condition `<= 30m` | Internally valid company assessment possible; external condition false; no framework claim from company pass |
 | Historical result after effective policy/freshness changes | Preserve exact assessed values and evidence-selection attribution; no historical rewrite |
+| One additive-set base and no contributions | Canonical effective value equals the base |
+| One or several independently applicable contributions | Canonical union of the base and all contribution members |
+| A member appears in the base and/or several contributions | One effective member; retain every base/contribution origin |
+| The same authored contribution is reached through several paths | One semantic contribution; retain every applicability path |
+| Unrelated requirement text/revision changes with a compatible stable slot | Existing contribution continues without reauthoring and resolves against the exact current declaration |
+| Unrelated base member is added | Existing contributions continue and union with the changed base |
+| Current declaration changes but still admits a member | Contribution applies under the exact current contract |
+| Current declaration rejects a contributed member | Resolution failure; do not drop or transform the member |
+| Slot is removed, renamed or becomes atomic | Resolution failure |
+| Several applicable requirement revisions own the same stable slot | Ambiguity/conflict; no newest-revision selection |
+| Contribution has no applicable declaration or base | Resolution failure; it does not import policy |
+| Fixed or sealed slot has an applicable contribution | Resolution failure; closure applies to the whole slot |
+| Valid base tailoring plus contribution | Canonical union of the tailored base and contribution |
+| Tailoring attempts to suppress a contribution | Authoring/resolution failure; contribution remains independently applicable |
+| Combined set violates the complete schema | Resolution failure without dropping members |
+| Source/file/assignment/traversal order changes | Identical semantic result and attribution set |
+| Removal/deny/priority/reducer or other unsupported syntax | Authoring failure |
+| Frozen declaration/contribution/attribution/effective value/consumer is altered | Persisted-plan validation failure |
 
 ## Consequences, validation and deferred work
 
@@ -396,7 +567,13 @@ cannot preserve. Resolution failures are visible before assessment, while missin
 evidence remains a separate epistemic outcome. Moving freshness ownership requires
 an atomic maintained-consumer migration rather than a reusable-control fallback.
 
-Promotion requires a documentation-only diff, coherent links and routing,
+For the accepted additive-set successor, Coverage owns the ephemeral deterministic
+projection of **current** effective parameter values and derivation through the
+existing resolver. Coverage adds no second resolver, persistence layer or cache and
+this decision does not freeze CLI spelling or output shape. Historical assessment
+explanation continues to consume only the exact frozen plan/result pair.
+
+The #127 promotion requires a documentation-only diff, coherent links and routing,
 `git diff --check`, repository validation, fresh-context exact-head independent
 review and all four stable exact-head CI contexts green. Runtime/schema tests
 are acceptance obligations of the successor issue, not changes in this PR.
