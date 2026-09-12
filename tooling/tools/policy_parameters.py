@@ -677,8 +677,61 @@ def validate_realization_reference_identity(realization):
         )
 
 
+def validate_frozen_contract_identities(plan):
+    """Validate retained semantic/schema contracts independently of resolution."""
+    for collection_name in ('controls', 'excluded_controls'):
+        for control in plan[collection_name]:
+            facts = control['policy_inputs']
+            definition = copy.deepcopy(facts['definition'])
+            definition['_parameters_schema'] = facts['parameters_schema']
+            validate_control_contract_identity(definition)
+
+    for requirement in plan['requirements']:
+        frozen = requirement['parameter_facts']['document']
+        metadata = frozen.get('metadata')
+        spec = frozen.get('spec')
+        require(isinstance(metadata, dict), 'frozen requirement metadata must be an object')
+        requirement_id = metadata.get('id')
+        require(
+            isinstance(requirement_id, str) and bool(re.fullmatch(ID, requirement_id)),
+            'invalid frozen requirement identity',
+        )
+        require(
+            valid_revision(metadata.get('revision')),
+            'invalid frozen requirement revision',
+        )
+        require(isinstance(spec, dict), 'frozen requirement spec must be an object')
+        parameters = spec.get('parameters', {})
+        require(isinstance(parameters, dict), 'frozen requirement parameters must be an object')
+        for slot, declaration in parameters.items():
+            require(
+                isinstance(slot, str) and bool(re.fullmatch(SLOT, slot)),
+                'invalid requirement parameter slot',
+            )
+            require(
+                isinstance(declaration, dict),
+                'frozen requirement parameter declaration must be an object',
+            )
+            schema = declaration.get('schema')
+            validate_schema(
+                schema,
+                identity_validator=lambda schema_id: (
+                    is_canonical_requirement_parameter_schema_id(
+                        schema_id,
+                        requirement_id,
+                        slot,
+                    )
+                ),
+            )
+            require(
+                declaration.get('schema_digest') == digest(schema),
+                'stale parameter schema digest',
+            )
+
+
 def validate_frozen(plan):
     """Check stored derivations and destinations without reopening policy sources."""
+    validate_frozen_contract_identities(plan)
     if plan['resolution']['status'] != 'valid':
         return
     assignments = {item['id']: item for item in plan['assignments']}
@@ -697,7 +750,6 @@ def validate_frozen(plan):
             definition['_parameters_schema'] = facts['parameters_schema']
             definition['_implementation_modules'] = facts.get('implementation_modules', [])
             instance = facts['instance']
-            validate_control_contract_identity(definition)
             from .render_plan import control_definition_fingerprint
             instance_fingerprint = digest(instance) if control['alignment'] == 'realization' else control_definition_fingerprint(instance)
             require(instance_fingerprint == control['definition_fingerprint'], 'frozen policy instance fingerprint mismatch')

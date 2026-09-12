@@ -450,6 +450,34 @@ class VerificationPolicySourceTests(unittest.TestCase):
         )
         self.assertIn("semantic owner", error["message"])
 
+    def test_requirement_parameter_schema_identities_remain_first_party(self) -> None:
+        expected = {
+            "company-authorized-software.json": {
+                "allowed_software": (
+                    "https://compliance.example/schemas/requirements/"
+                    "company.authorized-software/parameters/allowed_software/"
+                    "v1.schema.json"
+                ),
+            },
+            "company-role-based-access.json": {
+                "privileged_evidence_max_age": (
+                    "https://compliance.example/schemas/requirements/"
+                    "company.iam.role-based-access/parameters/"
+                    "privileged_evidence_max_age/v1.schema.json"
+                ),
+            },
+        }
+        for filename, parameters in expected.items():
+            document = json.loads(
+                (ROOT / "policies/requirements/company" / filename).read_text()
+            )
+            actual = {
+                slot: declaration["schema"]["$id"]
+                for slot, declaration in document["spec"]["parameters"].items()
+            }
+            with self.subTest(filename=filename):
+                self.assertEqual(actual, parameters)
+
     @staticmethod
     def mutate_private(path: Path, change) -> None:
         document = json.loads(path.read_text())

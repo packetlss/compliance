@@ -217,6 +217,61 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         ]["$id"].startswith("https://schemas.adopter.example/"))
         validate_assessment_plan(plan)
 
+    def test_invalid_plan_still_rejects_retained_contract_tampering(self):
+        from tools import policy_parameters as parameters
+
+        cases = {
+            "control parameter schema": lambda plan: plan["controls"][0][
+                "policy_inputs"
+            ]["parameters_schema"].update({"$id": "https://bad.example/wrong"}),
+            "evidence input schema": lambda plan: plan["controls"][0][
+                "policy_inputs"
+            ]["definition"]["spec"]["evidence"][0]["inputs_schema"].update(
+                {"$id": "https://bad.example/wrong"}
+            ),
+            "requirement parameter schema": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["document"]["spec"]["parameters"]["age"].update({
+                "schema": {
+                    **plan["requirements"][0]["parameter_facts"]["document"][
+                        "spec"
+                    ]["parameters"]["age"]["schema"],
+                    "$id": "https://bad.example/wrong",
+                },
+            }),
+            "requirement schema digest": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["document"]["spec"]["parameters"]["age"].update(
+                schema_digest="sha256:" + "0" * 64
+            ),
+            "control version": lambda plan: plan["controls"][0]["policy_inputs"][
+                "definition"
+            ]["metadata"].update(version="bad__version"),
+            "evidence type": lambda plan: plan["controls"][0]["policy_inputs"][
+                "definition"
+            ]["spec"]["evidence"][0].update(type="bad_type/v1"),
+        }
+        for case, mutate in cases.items():
+            with self.subTest(case=case):
+                plan = self.parameterized_plan("schemas.adopter.example")
+                mutate(plan)
+                if case == "requirement parameter schema":
+                    declaration = plan["requirements"][0]["parameter_facts"][
+                        "document"
+                    ]["spec"]["parameters"]["age"]
+                    declaration["schema_digest"] = parameters.digest(
+                        declaration["schema"]
+                    )
+                plan["resolution"] = {
+                    "status": "invalid",
+                    "errors": [{"type": "synthetic"}],
+                }
+                refresh_operation(plan)
+                plan["id"] = artifact_digest(plan)
+
+                with self.assertRaises(ArtifactValidationError):
+                    validate_assessment_plan(plan)
+
     @classmethod
     def additive_plan(cls):
         """Build a valid plan with one additive contribution and exact consumer."""
