@@ -116,6 +116,20 @@ def assessment_plan(policy_sources, *, with_requirement=False):
                 "required": True,
             }],
         }]
+        plan["controls"][0].update({
+            "alignment": "realization",
+            "lineage": [{
+                "realization": "test.realization@1",
+                "operation": "defined",
+            }],
+            "provenance": [{
+                "group": "test-hosts",
+                "assignment": "test-policy",
+                "baseline": "test.baseline@1",
+                "requirement": "test.requirement@1",
+                "realization": "test.realization@1",
+            }],
+        })
     plan.update(planning_fields(policy_sources))
     freeze_policy_inputs(plan)
     plan["id"] = artifact_digest(plan)
@@ -232,7 +246,7 @@ def control_result(plan, status):
         "observed": {},
         "remediation": "",
         "external_refs": [],
-        "alignment": "unaltered",
+        "alignment": plan["controls"][0]["alignment"],
     }
 
 

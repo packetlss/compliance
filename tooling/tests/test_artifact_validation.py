@@ -545,12 +545,11 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 [{"name": "test", "digest": "sha256:" + "1" * 64}],
                 with_requirement=True,
             )
-            requirement = plan["requirements"][0]
             control = plan["controls"][0]
             control["provenance"].append({
-                **requirement["provenance"][0],
-                "requirement": requirement["reference"],
-                "realization": requirement["realization"]["reference"],
+                "group": "test-hosts",
+                "assignment": "test-policy",
+                "baseline": "test.baseline@1",
             })
             return plan
 
@@ -629,6 +628,76 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
 
         def mutate_requirement_adoption(plan):
             plan["requirements"][0]["adoption"]["owner"] = "forged-owner"
+
+        def mutate_technical_provenance_to_requirement_baseline(plan):
+            from tools.render_plan import control_definition_fingerprint
+
+            baseline = plan["resolved_requirement_baselines"][0]
+            group = baseline["group"]
+            policy_source = plan["provenance"]["planningComposition"]["actual"][
+                "policySources"
+            ][0]["name"]
+            template = plan["controls"][0]
+            control = copy.deepcopy(template)
+            control["instance_id"] = "test.technical-check"
+            control["alignment"] = "unaltered"
+            control["lineage"] = [{
+                "baseline": "test.technical@1",
+                "operation": "defined",
+            }]
+            control["provenance"] = [{
+                "assignment": "test-technical-policy",
+                "group": group,
+                "baseline": "test.technical@1",
+            }]
+            instance = control["policy_inputs"]["instance"]
+            instance.update({
+                "instance_id": control["instance_id"],
+                "alignment": control["alignment"],
+                "derivations": [],
+                "deviations": [],
+                "disposition": control["disposition"],
+                "lineage": copy.deepcopy(control["lineage"]),
+            })
+            fingerprint = control_definition_fingerprint(instance)
+            instance["definition_fingerprint"] = fingerprint
+            control["definition_fingerprint"] = fingerprint
+            plan["controls"].append(control)
+            plan["controls"].sort(key=lambda item: item["instance_id"])
+            plan["assignments"].append({
+                "id": "test-technical-policy",
+                "group": group,
+                "baselines": ["test.technical@1"],
+            })
+            technical_digest = parameters.digest({"reference": "test.technical@1"})
+            plan["resolved_baselines"].append({
+                "assignment": "test-technical-policy",
+                "group": group,
+                "reference": "test.technical@1",
+                "title": "Synthetic technical policy",
+                "digest": technical_digest,
+                "lineage": [{
+                    "reference": "test.technical@1",
+                    "digest": technical_digest,
+                }],
+                "deviations": [],
+                "policy_sources": [{
+                    "policy_source": policy_source,
+                    "path": "baselines/test-technical.json",
+                }],
+            })
+            control["provenance"][0].update({
+                "assignment": baseline["assignment"],
+                "group": baseline["group"],
+                "baseline": baseline["reference"],
+            })
+            for lineage_records in (
+                control["lineage"],
+                control["policy_inputs"]["instance"]["lineage"],
+            ):
+                for lineage in lineage_records:
+                    if "baseline" in lineage:
+                        lineage["baseline"] = baseline["reference"]
 
         cases = {
             "technical baseline record digest": lambda: macos_plan(
@@ -741,6 +810,9 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 )
             ),
             "mixed technical and realization provenance": mixed_alignment_provenance_plan,
+            "technical provenance on requirement baseline": lambda: iam_plan(
+                mutate_technical_provenance_to_requirement_baseline
+            ),
             "requirement membership required flag": lambda: iam_plan(
                 lambda plan: plan["requirements"][0].update(
                     required=not plan["requirements"][0]["required"]

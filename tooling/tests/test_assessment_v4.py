@@ -590,8 +590,19 @@ class AssessmentV4Tests(unittest.TestCase):
         sources = [{'name': item['name'], 'digest': item['content']['digest']}
                    for item in self.plan['provenance']['planningComposition']['actual']['policySources']]
         shell = assessment_plan(sources, with_requirement=True)
-        for key in ('requirements','resolved_requirement_baselines','resolved_baselines'):
+        from tools import policy_parameters as parameters
+        requirement_baseline = shell['resolved_requirement_baselines'][0]
+        requirement_baseline['baseline'] = 'test.requirements@1'
+        requirement_baseline['reference'] = 'test.requirements@1'
+        selected = requirement_baseline['parameter_derivation']['ancestry'][-1]
+        selected['reference'] = 'test.requirements@1'
+        selected['document']['metadata']['id'] = 'test.requirements'
+        selected['digest'] = parameters.digest(selected['document'])
+        requirement_baseline['digest'] = selected['digest']
+        shell['requirements'][0]['provenance'][0]['baseline'] = 'test.requirements@1'
+        for key in ('requirements', 'resolved_requirement_baselines'):
             self.plan[key] = shell[key]
+        self.plan['assignments'][0]['baselines'].append('test.requirements@1')
         self.sign_plan()
         for status in ('pass','fail','unknown','error'):
             report, _ = self.run_assessment([self.document()], status=status)

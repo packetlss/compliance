@@ -1329,11 +1329,9 @@ def validate_frozen_contract_identities(plan):
                         provenance.get('baseline'),
                     )
                     selected = technical_selections.get(key)
-                    if selected is None:
-                        selected = requirement_selections.get(key)
                     require(
                         selected is not None,
-                        'frozen Control provenance has no selected baseline',
+                        'frozen technical Control provenance has no selected technical baseline',
                     )
                     if 'lineage' in selected:
                         technical_lineage.update(
