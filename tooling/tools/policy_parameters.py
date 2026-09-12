@@ -180,6 +180,10 @@ def declarations(requirement):
     reference = f"{clean['metadata']['id']}@{clean['metadata']['revision']}"
     states = {}
     for name, declaration in sorted(clean['spec'].get('parameters', {}).items()):
+        require(
+            isinstance(name, str) and bool(re.fullmatch(SLOT, name)),
+            'invalid requirement parameter slot',
+        )
         require(declaration['schema_digest'] == digest(declaration['schema']), 'stale parameter schema digest')
         validate_schema(
             declaration['schema'],

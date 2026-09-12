@@ -44,6 +44,22 @@ class PolicyParameterTests(unittest.TestCase):
         return {'id': op + '-age', 'op': op, 'target': copy.deepcopy(state['pin']),
                 'expected_parent_fingerprint': p.fingerprint(state), **values}
 
+    def test_declarations_reject_noncanonical_slot_at_frozen_boundary(self):
+        requirement = copy.deepcopy(self.requirement)
+        declaration = requirement['spec']['parameters'].pop('age')
+        declaration['schema']['$id'] = (
+            'https://compliance.example/schemas/requirements/objective/'
+            'parameters/bad__slot/v1.schema.json'
+        )
+        declaration['schema_digest'] = p.digest(declaration['schema'])
+        requirement['spec']['parameters']['bad__slot'] = declaration
+
+        with self.assertRaisesRegex(
+            p.ParameterResolutionError,
+            'invalid requirement parameter slot',
+        ):
+            p.declarations(requirement)
+
     def states(self, reference='company@1'):
         states, _ = p.resolve(reference, self.catalog, self.requirements)
         p.complete(states)
