@@ -32,7 +32,7 @@ Stable destination CI contexts are:
 
 `verification-scenarios` is the real canonical composed gate and owns all 21 retained public CLI leaves and 19 retained domain features. Normal validation uses one repository checkout and no historical sibling-repository App/PAT acquisition path.
 
-From the repository root, `scripts/dev setup` creates this worktree's isolated environment and installs the repository-pinned Python, uv, and OPA without sudo or global package-manager changes. Downloads are cached outside semantic roots. Use `scripts/dev doctor` for read-only diagnosis.
+From the repository root, `scripts/dev setup` creates this worktree's isolated environment and installs the repository-pinned Python, uv, and OPA without sudo or global package-manager changes. Downloads are cached outside semantic roots. T3 currently requires the checked-in **Setup worktree** action to be imported into the project before its `runOnWorktreeCreate` setting can run it. Repository-managed `check`, `gate`, and `cli` commands wait for that setup if it is in progress, or safely repair a missing or stale environment themselves. Use `scripts/dev doctor` for read-only diagnosis; it never repairs state.
 
 Repository development and manual testing use the managed CLI adapter, which
 runs the installed product entry point from the repository root with the pinned
