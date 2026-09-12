@@ -138,8 +138,9 @@ remains experimental and is not frozen.
 
 Requirement slots have stable technology-neutral identity with exact declaration/revision/type-schema pins. Realizations retain explicit typed links into required dependency inputs; plans materialize every linked value with immutable provenance, and evaluation does not resolve parameters again. Technical destinations belong to an exact resolved implementation/interface, including after substitution. Selected derivation permits explicit tailoring; independently assigning divergent ancestor and descendant policies is a conflict.
 
-[#127](https://github.com/packetlss/compliance/issues/127) accepts one bounded,
-not-yet-implemented exception to atomic complete-value composition. A requirement
+[#127](https://github.com/packetlss/compliance/issues/127) accepts one bounded
+exception to atomic complete-value composition, implemented under
+[#129](https://github.com/packetlss/compliance/issues/129). A requirement
 parameter may explicitly declare string-only additive-set semantics. Resolution
 then requires exactly one compatible current declaration and exactly one applicable
 base after ordinary valid base tailoring, accumulates every independently applicable
@@ -156,7 +157,7 @@ the base, and carries no exact-version or parent-state coupling. Source/file/
 assignment/traversal order grants no precedence. Removal, denial, suppression,
 override, subtraction, non-string members, generic merge/reducer behavior, direct
 technical-Baseline composition and fixed-base-but-contribution-open semantics remain
-outside the accepted model. The later runtime tranche must fail closed on absent,
+outside the accepted model. The runtime fails closed on absent,
 ambiguous, incompatible, fixed/sealed, invalid or unconsumable resolution.
 
 Effective evidence `max_age` belongs to policy/baseline/requirement intent. Controls retain evidence dependency contracts and optional capability restrictions; realizations link semantic freshness slots where applicable. Maintained baselines bind effective ages explicitly; objective realizations consume pinned semantic freshness slots. Controls no longer provide effective-age defaults. ADR 0010 still owns assessment-time evidence semantics and ADR 0011 immutable historical selection attribution; the future-timestamp question is unchanged.

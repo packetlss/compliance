@@ -80,7 +80,7 @@ The toolset should answer four different questions without conflating them:
   planning, adoption, and disposition owners. Assessment remains the historical
   result concern. Coverage has no resource, persistence, identity, cache,
   artifact, or alternate resolution algorithm.
-  Under the accepted but not-yet-implemented #127 additive-set successor,
+  Under the #127 additive-set design implemented by #129,
   Coverage also owns the ephemeral projection of current effective parameter
   values and derivation through that same resolver; historical explanation remains
   anchored only to the exact retained plan/result pair.
@@ -535,6 +535,18 @@ sealed slots reject contributions. Coverage owns only current ephemeral projecti
 historical explanation uses the exact frozen plan/result. Schema/runtime behavior is
 deferred to a dedicated successor issue, with no new artifact, resource, cache,
 digest/identity family, trust rule, compatibility path or contract freeze.
+
+### 2026-09-12 — Explicit additive-set parameter implementation (#129)
+
+The coordinated pre-freeze cutover adds the accepted `composition.kind:
+additive-set` string-array declaration, stable-target RequirementBaseline
+contributions, canonical union and complete origin/path attribution to the existing
+parameter resolver and planner. Existing exact realization links materialize the
+completed value. The current v4 plan extends `parameter_facts` and
+`parameter_derivation`; persisted validation recomputes those frozen facts without
+live policy. Coverage projects the current value and bounded derivation from that
+same plan. Atomic defaults, artifact/resource/version/identity families, realization
+selection, compatibility and trust boundaries are unchanged.
 
 ### 2026-09-12 — Governed inventory and realization terminology (#124)
 

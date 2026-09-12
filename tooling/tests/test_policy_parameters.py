@@ -52,6 +52,82 @@ class PolicyParameterTests(unittest.TestCase):
         self.catalog['enclave@1'] = child
         return child
 
+    def additive_inputs(self, *, base=None, schema_update=None, declaration_update=None):
+        value_schema = {
+            '$id': 'https://example.test/allowed',
+            'type': 'array',
+            'items': {'type': 'string'},
+            'uniqueItems': True,
+        }
+        value_schema.update(schema_update or {})
+        declaration = {
+            'required': True,
+            'binding_mode': 'open',
+            'schema': value_schema,
+            'schema_digest': p.digest(value_schema),
+            'binding_scope': ['base', 'tailored'],
+            'composition': {'kind': 'additive-set'},
+        }
+        declaration.update(declaration_update or {})
+        requirement = {
+            'metadata': {'id': 'objective', 'revision': 1},
+            'spec': {'parameters': {'allowed': declaration}},
+        }
+        pin = {
+            'requirement': 'objective@1',
+            'digest': p.digest(requirement),
+            'required': True,
+        }
+        initial = p.declarations(requirement)['allowed']
+        baseline = {
+            'metadata': {'id': 'base', 'revision': 1},
+            'spec': {
+                'requirements': [pin],
+                'parameter_operations': [
+                    {
+                        'id': 'bind-allowed',
+                        'op': 'bind',
+                        'target': copy.deepcopy(initial['pin']),
+                        'expected_parent_fingerprint': p.fingerprint(initial),
+                        'to': ['base', 'shared'] if base is None else base,
+                    }
+                ],
+            },
+            '_sources': [{'policy_source': 'test', 'path': 'base.json'}],
+        }
+        requirements = {'objective@1': requirement}
+        baselines = {'base@1': baseline}
+        return requirement, requirements, baselines
+
+    @staticmethod
+    def contribution_baseline(members, *, revision=1):
+        return {
+            'metadata': {'id': 'contributor', 'revision': revision},
+            'spec': {
+                'parameter_contributions': [{
+                    'id': 'packages',
+                    'target': {'requirement': 'objective', 'slot': 'allowed'},
+                    'members': members,
+                }],
+            },
+            '_sources': [{'policy_source': 'test', 'path': 'contributor.json'}],
+        }
+
+    @staticmethod
+    def selected(reference, baselines, requirements, assignment):
+        states, ancestry = p.resolve(reference, baselines, requirements)
+        p.complete(states)
+        return {
+            'reference': reference,
+            'applicability': {
+                'group': f'group/{assignment}',
+                'assignment': assignment,
+                'baseline': reference,
+            },
+            'states': states,
+            'ancestry': ancestry,
+        }
+
     def test_default_does_not_bind_selected_policy(self):
         self.baseline['spec']['parameter_operations'] = []
         with self.assertRaisesRegex(p.ParameterResolutionError, 'unresolved'): self.states()
@@ -171,3 +247,344 @@ class PolicyParameterTests(unittest.TestCase):
         checks, _ = p.consume(self.realization, self.states(), self.controls)
         self.assertEqual(checks[0]['parameters'], {'settings': {'age': '2592000s'}})
         Draft202012Validator(schema).validate(checks[0]['parameters'])
+
+    def test_additive_set_canonical_union_and_complete_origin_attribution(self):
+        _, requirements, baselines = self.additive_inputs(base=['shared', 'base', 'shared'])
+        base_only = self.selected('base@1', baselines, requirements, 'base')
+        p.compose_selected([base_only], baselines)
+        self.assertEqual(base_only['states']['objective@1']['allowed']['value'], ['base', 'shared'])
+
+        baselines['contributor@1'] = self.contribution_baseline(['zeta', 'shared', 'alpha'])
+        selected = [
+            self.selected('base@1', baselines, requirements, 'base'),
+            self.selected('contributor@1', baselines, requirements, 'feature-a'),
+            self.selected('contributor@1', baselines, requirements, 'feature-b'),
+        ]
+        p.compose_selected(selected, baselines)
+        state = selected[0]['states']['objective@1']['allowed']
+        self.assertEqual(state['value'], ['alpha', 'base', 'shared', 'zeta'])
+        contribution = state['composition']['contributions'][0]
+        self.assertEqual(len(contribution['applicability']), 2)
+        shared = next(item for item in state['composition']['member_origins'] if item['member'] == 'shared')
+        self.assertEqual([origin['kind'] for origin in shared['origins']], ['base', 'contribution'])
+        self.assertEqual(
+            selected[1]['states'],
+            {},
+            'a contribution-only baseline must not import its target requirement',
+        )
+
+    def test_additive_set_tracks_separate_contributors_and_survives_compatible_changes(self):
+        _, requirements, baselines = self.additive_inputs(base=['base'])
+        baselines['contributor@1'] = self.contribution_baseline(['shared'])
+        second = self.contribution_baseline(['shared', 'second'], revision=2)
+        second['metadata']['id'] = 'other-contributor'
+        baselines['other-contributor@2'] = second
+        resolutions = [
+            self.selected('base@1', baselines, requirements, 'base'),
+            self.selected('contributor@1', baselines, requirements, 'one'),
+            self.selected('other-contributor@2', baselines, requirements, 'two'),
+        ]
+        p.compose_selected(resolutions, baselines)
+        state = resolutions[0]['states']['objective@1']['allowed']
+        shared = next(item for item in state['composition']['member_origins'] if item['member'] == 'shared')
+        self.assertEqual(len(shared['origins']), 2)
+
+        changed_requirement = copy.deepcopy(requirements['objective@1'])
+        changed_requirement['metadata']['revision'] = 2
+        changed_requirement['spec']['statement'] = 'Unrelated text change.'
+        changed_requirement['spec']['parameters']['allowed']['schema']['maxItems'] = 8
+        schema = changed_requirement['spec']['parameters']['allowed']['schema']
+        changed_requirement['spec']['parameters']['allowed']['schema_digest'] = p.digest(schema)
+        changed_requirements = {'objective@2': changed_requirement}
+        initial = p.declarations(changed_requirement)['allowed']
+        changed_base = copy.deepcopy(baselines['base@1'])
+        changed_base['metadata']['revision'] = 2
+        changed_base['spec']['requirements'] = [{
+            'requirement': 'objective@2',
+            'digest': p.digest(changed_requirement),
+            'required': True,
+        }]
+        changed_base['spec']['parameter_operations'][0].update({
+            'target': copy.deepcopy(initial['pin']),
+            'expected_parent_fingerprint': p.fingerprint(initial),
+            'to': ['new-base', 'base'],
+        })
+        changed_baselines = {
+            'base@2': changed_base,
+            'contributor@1': baselines['contributor@1'],
+        }
+        changed = [
+            self.selected('base@2', changed_baselines, changed_requirements, 'base'),
+            self.selected('contributor@1', changed_baselines, changed_requirements, 'one'),
+        ]
+        p.compose_selected(changed, changed_baselines)
+        self.assertEqual(
+            changed[0]['states']['objective@2']['allowed']['value'],
+            ['base', 'new-base', 'shared'],
+        )
+
+    def test_additive_set_tailoring_cannot_suppress_contributions(self):
+        _, requirements, baselines = self.additive_inputs(base=['base'])
+        parent_state = self.selected('base@1', baselines, requirements, 'base')['states']['objective@1']['allowed']
+        child = {
+            'metadata': {'id': 'tailored', 'revision': 1},
+            'spec': {
+                'requirements': copy.deepcopy(baselines['base@1']['spec']['requirements']),
+                'extends': {'baseline': 'base@1', 'digest': p.digest(p.document(baselines['base@1']))},
+                'parameter_operations': [{
+                    'id': 'tailor-allowed',
+                    'op': 'tailor',
+                    'target': copy.deepcopy(parent_state['pin']),
+                    'expected_parent_fingerprint': p.fingerprint(parent_state),
+                    'from': ['base'],
+                    'to': [],
+                    'deviation': {
+                        'id': 'DEV-SET',
+                        'classification': 'specialization',
+                        'rationale': 'Tailor only the base.',
+                        'approval_ref': 'reviewed',
+                        'review_after': '2027-01-01',
+                    },
+                }],
+            },
+            '_sources': [{'policy_source': 'test', 'path': 'tailored.json'}],
+        }
+        baselines['tailored@1'] = child
+        baselines['contributor@1'] = self.contribution_baseline(['contributed'])
+        resolutions = [
+            self.selected('tailored@1', baselines, requirements, 'tailored'),
+            self.selected('contributor@1', baselines, requirements, 'feature'),
+        ]
+        p.compose_selected(resolutions, baselines)
+        state = resolutions[0]['states']['objective@1']['allowed']
+        self.assertEqual(state['composition']['base_value'], [])
+        self.assertEqual(state['value'], ['contributed'])
+
+    def test_additive_set_refuses_incompatible_current_policy(self):
+        def resolve_with(*, schema_update=None, declaration_update=None, members=None, include_base=True):
+            _, requirements, baselines = self.additive_inputs(
+                schema_update=schema_update,
+                declaration_update=declaration_update,
+            )
+            baselines['contributor@1'] = self.contribution_baseline(['member'] if members is None else members)
+            resolutions = [self.selected('contributor@1', baselines, requirements, 'feature')]
+            if include_base:
+                resolutions.insert(0, self.selected('base@1', baselines, requirements, 'base'))
+            p.compose_selected(resolutions, baselines)
+
+        cases = {
+            'member rejected by current item contract': {
+                'schema_update': {'items': {'type': 'string', 'pattern': '^allowed$'}},
+            },
+            'completed union rejected': {'schema_update': {'maxItems': 2}},
+            'missing declaration and base': {'include_base': False},
+        }
+        for name, kwargs in cases.items():
+            with self.subTest(name=name), self.assertRaises(p.ParameterResolutionError):
+                resolve_with(**kwargs)
+
+        _, requirements, baselines = self.additive_inputs()
+        atomic = copy.deepcopy(requirements['objective@1'])
+        atomic['spec']['parameters']['allowed'].pop('composition')
+        atomic['spec']['parameters']['allowed']['schema_digest'] = p.digest(
+            atomic['spec']['parameters']['allowed']['schema']
+        )
+        atomic_requirements = {'objective@1': atomic}
+        initial = p.declarations(atomic)['allowed']
+        baselines['base@1']['spec']['requirements'][0]['digest'] = p.digest(atomic)
+        baselines['base@1']['spec']['parameter_operations'][0].update(
+            target=copy.deepcopy(initial['pin']),
+            expected_parent_fingerprint=p.fingerprint(initial),
+        )
+        baselines['contributor@1'] = self.contribution_baseline(['member'])
+        with self.assertRaisesRegex(p.ParameterResolutionError, 'atomic'):
+            p.compose_selected([
+                self.selected('base@1', baselines, atomic_requirements, 'base'),
+                self.selected('contributor@1', baselines, atomic_requirements, 'feature'),
+            ], baselines)
+
+    def test_additive_set_refuses_fixed_sealed_and_ambiguous_bases(self):
+        requirement, requirements, baselines = self.additive_inputs()
+        baselines['contributor@1'] = self.contribution_baseline(['member'])
+        initial = p.declarations(requirement)['allowed']
+        sealed_state = self.selected('base@1', baselines, requirements, 'base')['states']['objective@1']['allowed']
+        sealed_base = {
+            'metadata': {'id': 'base', 'revision': 2},
+            'spec': {
+                'requirements': copy.deepcopy(baselines['base@1']['spec']['requirements']),
+                'extends': {
+                    'baseline': 'base@1',
+                    'digest': p.digest(p.document(baselines['base@1'])),
+                },
+                'parameter_operations': [{
+                    'id': 'seal-allowed',
+                    'op': 'seal',
+                    'target': copy.deepcopy(initial['pin']),
+                    'expected_parent_fingerprint': p.fingerprint(sealed_state),
+                }],
+            },
+            '_sources': [{'policy_source': 'test', 'path': 'sealed.json'}],
+        }
+        baselines['base@2'] = sealed_base
+        with self.assertRaisesRegex(p.ParameterResolutionError, 'sealed'):
+            p.compose_selected([
+                self.selected('base@2', baselines, requirements, 'base'),
+                self.selected('contributor@1', baselines, requirements, 'feature'),
+            ], baselines)
+
+        fixed = copy.deepcopy(requirement)
+        fixed_declaration = fixed['spec']['parameters']['allowed']
+        fixed_declaration.update(binding_mode='fixed', value=['fixed'])
+        fixed_declaration.pop('binding_scope')
+        fixed_requirements = {'objective@1': fixed}
+        fixed_base = {
+            'metadata': {'id': 'fixed-policy', 'revision': 1},
+            'spec': {'requirements': [{
+                'requirement': 'objective@1',
+                'digest': p.digest(fixed),
+                'required': True,
+            }]},
+            '_sources': [{'policy_source': 'test', 'path': 'fixed.json'}],
+        }
+        fixed_baselines = {
+            'fixed-policy@1': fixed_base,
+            'contributor@1': self.contribution_baseline(['member']),
+        }
+        with self.assertRaisesRegex(p.ParameterResolutionError, 'fixed or sealed'):
+            p.compose_selected([
+                self.selected('fixed-policy@1', fixed_baselines, fixed_requirements, 'fixed'),
+                self.selected('contributor@1', fixed_baselines, fixed_requirements, 'feature'),
+            ], fixed_baselines)
+
+        _, requirements, baselines = self.additive_inputs()
+        duplicate = copy.deepcopy(baselines['base@1'])
+        duplicate['metadata']['id'] = 'other-base'
+        duplicate['spec']['parameter_operations'][0]['id'] = 'other-bind'
+        duplicate['spec']['parameter_operations'][0]['to'] = ['different']
+        requirements['objective@1']['spec']['parameters']['allowed']['binding_scope'].append('other-base')
+        declaration = requirements['objective@1']['spec']['parameters']['allowed']
+        pin = {
+            'requirement': 'objective@1',
+            'digest': p.digest(requirements['objective@1']),
+            'required': True,
+        }
+        initial = p.declarations(requirements['objective@1'])['allowed']
+        for baseline in (baselines['base@1'], duplicate):
+            baseline['spec']['requirements'] = [copy.deepcopy(pin)]
+            baseline['spec']['parameter_operations'][0].update(
+                target=copy.deepcopy(initial['pin']),
+                expected_parent_fingerprint=p.fingerprint(initial),
+            )
+        baselines['other-base@1'] = duplicate
+        with self.assertRaisesRegex(p.ParameterResolutionError, 'conflict'):
+            p.compose_selected([
+                self.selected('base@1', baselines, requirements, 'base'),
+                self.selected('other-base@1', baselines, requirements, 'other'),
+            ], baselines)
+
+    def test_additive_set_refuses_concurrent_requirement_revisions_and_renamed_slot(self):
+        requirement, requirements, baselines = self.additive_inputs()
+        newer = copy.deepcopy(requirement)
+        newer['metadata']['revision'] = 2
+        newer['spec']['statement'] = 'A different current revision.'
+        newer_declaration = newer['spec']['parameters']['allowed']
+        newer_declaration['binding_scope'] = ['other-base']
+        newer['spec']['parameters']['allowed']['schema_digest'] = p.digest(
+            newer['spec']['parameters']['allowed']['schema']
+        )
+        requirements['objective@2'] = newer
+        initial = p.declarations(newer)['allowed']
+        other = {
+            'metadata': {'id': 'other-base', 'revision': 1},
+            'spec': {
+                'requirements': [{
+                    'requirement': 'objective@2',
+                    'digest': p.digest(newer),
+                    'required': True,
+                }],
+                'parameter_operations': [{
+                    'id': 'bind-other',
+                    'op': 'bind',
+                    'target': copy.deepcopy(initial['pin']),
+                    'expected_parent_fingerprint': p.fingerprint(initial),
+                    'to': ['base'],
+                }],
+            },
+            '_sources': [{'policy_source': 'test', 'path': 'other.json'}],
+        }
+        baselines['other-base@1'] = other
+        with self.assertRaisesRegex(p.ParameterResolutionError, 'conflict'):
+            p.compose_selected([
+                self.selected('base@1', baselines, requirements, 'base'),
+                self.selected('other-base@1', baselines, requirements, 'other'),
+            ], baselines)
+
+        renamed = copy.deepcopy(requirement)
+        renamed['spec']['parameters']['renamed'] = renamed['spec']['parameters'].pop('allowed')
+        renamed_requirements = {'objective@1': renamed}
+        renamed_initial = p.declarations(renamed)['renamed']
+        renamed_base = copy.deepcopy(baselines['base@1'])
+        renamed_base['spec']['requirements'][0]['digest'] = p.digest(renamed)
+        renamed_base['spec']['parameter_operations'][0].update(
+            target=copy.deepcopy(renamed_initial['pin']),
+            expected_parent_fingerprint=p.fingerprint(renamed_initial),
+        )
+        renamed_baselines = {
+            'base@1': renamed_base,
+            'contributor@1': self.contribution_baseline(['member']),
+        }
+        with self.assertRaisesRegex(p.ParameterResolutionError, 'no applicable'):
+            p.compose_selected([
+                self.selected('base@1', renamed_baselines, renamed_requirements, 'base'),
+                self.selected('contributor@1', renamed_baselines, renamed_requirements, 'feature'),
+            ], renamed_baselines)
+
+    def test_additive_set_selection_order_is_nonsemantic(self):
+        _, requirements, baselines = self.additive_inputs(base=['zeta', 'base'])
+        baselines['contributor@1'] = self.contribution_baseline(['beta', 'alpha'])
+        first = [
+            self.selected('base@1', baselines, requirements, 'base'),
+            self.selected('contributor@1', baselines, requirements, 'feature-b'),
+            self.selected('contributor@1', baselines, requirements, 'feature-a'),
+        ]
+        second = copy.deepcopy(list(reversed(first)))
+        p.compose_selected(first, baselines)
+        p.compose_selected(second, baselines)
+        first_state = next(item for item in first if item['reference'] == 'base@1')['states']
+        second_state = next(item for item in second if item['reference'] == 'base@1')['states']
+        self.assertEqual(first_state, second_state)
+
+    def test_additive_set_authored_member_and_contribution_order_is_nonsemantic(self):
+        _, requirements, first_catalog = self.additive_inputs(base=['zeta', 'base', 'zeta'])
+        first_catalog['contributor@1'] = self.contribution_baseline(['beta', 'alpha', 'beta'])
+        first_catalog['contributor@1']['spec']['parameter_contributions'].append({
+            'id': 'more-packages',
+            'target': {'requirement': 'objective', 'slot': 'allowed'},
+            'members': ['delta', 'charlie'],
+        })
+        second_catalog = copy.deepcopy(first_catalog)
+        second_catalog['base@1']['spec']['parameter_operations'][0]['to'].reverse()
+        second_catalog['contributor@1']['spec']['parameter_contributions'].reverse()
+        for contribution in second_catalog['contributor@1']['spec']['parameter_contributions']:
+            contribution['members'].reverse()
+
+        first = [
+            self.selected('base@1', first_catalog, requirements, 'base'),
+            self.selected('contributor@1', first_catalog, requirements, 'feature'),
+        ]
+        second = [
+            self.selected('base@1', second_catalog, requirements, 'base'),
+            self.selected('contributor@1', second_catalog, requirements, 'feature'),
+        ]
+        p.compose_selected(first, first_catalog, requirements)
+        p.compose_selected(second, second_catalog, requirements)
+
+        self.assertEqual(first, second)
+        self.assertEqual(
+            p.resource_digest(first_catalog['base@1'], requirements),
+            p.resource_digest(second_catalog['base@1'], requirements),
+        )
+        self.assertEqual(
+            p.resource_digest(first_catalog['contributor@1'], requirements),
+            p.resource_digest(second_catalog['contributor@1'], requirements),
+        )

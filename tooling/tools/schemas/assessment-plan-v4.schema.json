@@ -1183,7 +1183,6 @@
         },
         "requirements": {
           "type": "array",
-          "minItems": 1,
           "uniqueItems": true,
           "items": {
             "$ref": "#/$defs/requirementPin"

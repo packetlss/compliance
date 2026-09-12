@@ -1230,6 +1230,245 @@ class PlanRevisionTests(unittest.TestCase):
                 control["policy_inputs"]["definition"]["spec"]["purpose"],
             )
 
+    def test_planner_applies_contribution_only_policy_through_existing_consumption(self):
+        from tools import policy_parameters as parameters
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            shared = root / "shared"
+            selection = root / "selection"
+            shutil.copytree(self.root / "shared", shared)
+            shutil.copytree(self.root / "selection", selection)
+
+            baseline_schema_path = shared / "schemas/policy/requirement-baseline.schema.json"
+            baseline_schema = load_json(baseline_schema_path)
+            baseline_schema["properties"]["spec"]["required"] = ["title"]
+            baseline_schema_path.write_text(json.dumps(baseline_schema), encoding="utf-8")
+
+            value_schema = {
+                "$id": "https://example.test/allowed-packages",
+                "type": "array",
+                "items": {"type": "string"},
+                "uniqueItems": True,
+                "maxItems": 3,
+            }
+            requirement = {
+                "apiVersion": "compliance.example/v1",
+                "kind": "ControlRequirement",
+                "metadata": {"id": "test.allowed-packages", "revision": 1},
+                "spec": {
+                    "title": "Allowed packages",
+                    "statement": "Only the effective package set is allowed.",
+                    "parameters": {
+                        "allowed": {
+                            "required": True,
+                            "binding_mode": "open",
+                            "binding_scope": ["test.package-base"],
+                            "schema": value_schema,
+                            "schema_digest": parameters.digest(value_schema),
+                            "composition": {"kind": "additive-set"},
+                        }
+                    },
+                },
+            }
+            requirement_path = selection / "requirements/test/additive.json"
+            requirement_path.parent.mkdir(parents=True, exist_ok=True)
+            requirement_path.write_text(json.dumps(requirement), encoding="utf-8")
+            initial = parameters.declarations(requirement)["allowed"]
+            requirement_pin = {
+                "requirement": "test.allowed-packages@1",
+                "digest": parameters.digest(requirement),
+                "required": True,
+            }
+            base = {
+                "apiVersion": "compliance.example/v1",
+                "kind": "RequirementBaseline",
+                "metadata": {"id": "test.package-base", "revision": 1},
+                "spec": {
+                    "title": "Base package policy",
+                    "requirements": [requirement_pin],
+                    "parameter_operations": [{
+                        "id": "bind-packages",
+                        "op": "bind",
+                        "target": initial["pin"],
+                        "expected_parent_fingerprint": parameters.fingerprint(initial),
+                        "to": ["zsh", "curl"],
+                    }],
+                },
+            }
+            contributor = {
+                "apiVersion": "compliance.example/v1",
+                "kind": "RequirementBaseline",
+                "metadata": {"id": "test.database-feature", "revision": 1},
+                "spec": {
+                    "title": "Database package contribution",
+                    "parameter_contributions": [{
+                        "id": "database-packages",
+                        "target": {
+                            "requirement": "test.allowed-packages",
+                            "slot": "allowed",
+                        },
+                        "members": ["postgresql", "curl"],
+                    }],
+                },
+            }
+            for name, document in (("base.json", base), ("contributor.json", contributor)):
+                target = selection / "requirement-baselines/test" / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(json.dumps(document), encoding="utf-8")
+
+            controls, _, errors = load_policy_catalogs((
+                PolicySource("control-library", shared),
+                PolicySource("verification-policy", selection),
+            ))
+            self.assertEqual(errors, [])
+            realization = {
+                "apiVersion": "compliance.example/v1",
+                "kind": "ControlRealization",
+                "metadata": {"id": "test.allowed-packages.macos", "revision": 1},
+                "spec": {
+                    "requirement": {
+                        "requirement": requirement_pin["requirement"],
+                        "digest": requirement_pin["digest"],
+                    },
+                    "applies_to": {"subject_types": ["macos-workstation"]},
+                    "adoption": {
+                        "status": "implemented",
+                        "method": "automated",
+                        "owner": "test",
+                    },
+                    "checks": [{
+                        "instance_id": "test.allowed-packages",
+                        "implementation": "macos.packages.required",
+                        "parameters": {},
+                        "evidence": {"observation": {"max_age": "1d"}},
+                    }],
+                    "satisfaction": {"allOf": ["test.allowed-packages"]},
+                    "parameter_links": [{
+                        "id": "allowed-packages",
+                        "source": initial["pin"],
+                        "destination": {
+                            "instance_id": "test.allowed-packages",
+                            "implementation": parameters.implementation_pin(
+                                controls["macos.packages.required"]
+                            ),
+                            "kind": "parameters",
+                            "path": "/required",
+                        },
+                    }],
+                },
+            }
+            realization_path = selection / "realizations/test/additive.json"
+            realization_path.parent.mkdir(parents=True, exist_ok=True)
+            realization_path.write_text(json.dumps(realization), encoding="utf-8")
+            assignments = [
+                {
+                    "id": "base",
+                    "target": {"group": "managed-workstations"},
+                    "baselines": ["test.package-base@1"],
+                },
+                {
+                    "id": "feature-a",
+                    "target": {"group": "macos-devices"},
+                    "baselines": ["test.database-feature@1"],
+                },
+                {
+                    "id": "feature-b",
+                    "target": {"group": "macos-developer-machines"},
+                    "baselines": ["test.database-feature@1"],
+                },
+            ]
+            plan = render_plan(
+                self.subject,
+                self.groups,
+                assignments,
+                (
+                    PolicySource("control-library", shared),
+                    PolicySource("verification-policy", selection),
+                ),
+            )
+            reordered = render_plan(
+                self.subject,
+                list(reversed(self.groups)),
+                list(reversed(assignments)),
+                (
+                    PolicySource("verification-policy", selection),
+                    PolicySource("control-library", shared),
+                ),
+            )
+            base["spec"]["parameter_operations"][0]["to"].reverse()
+            contributor["spec"]["parameter_contributions"][0]["members"].reverse()
+            (selection / "requirement-baselines/test/base.json").write_text(
+                json.dumps(base), encoding="utf-8"
+            )
+            (selection / "requirement-baselines/test/contributor.json").write_text(
+                json.dumps(contributor), encoding="utf-8"
+            )
+            authored_reordered = render_plan(
+                self.subject,
+                self.groups,
+                assignments,
+                (
+                    PolicySource("control-library", shared),
+                    PolicySource("verification-policy", selection),
+                ),
+            )
+            contributor["spec"]["parameter_contributions"][0]["members"].append("extra")
+            (selection / "requirement-baselines/test/contributor.json").write_text(
+                json.dumps(contributor), encoding="utf-8"
+            )
+            invalid = render_plan(
+                self.subject,
+                self.groups,
+                assignments,
+                (
+                    PolicySource("control-library", shared),
+                    PolicySource("verification-policy", selection),
+                ),
+            )
+
+        self.assertEqual(plan["resolution"], {"status": "valid", "errors": []})
+        self.assertEqual(plan["id"], reordered["id"])
+        self.assertEqual(
+            plan["operation"]["members"][0]["member_plan_digest"],
+            authored_reordered["operation"]["members"][0]["member_plan_digest"],
+        )
+        self.assertEqual(
+            plan["resolved_requirement_baselines"],
+            authored_reordered["resolved_requirement_baselines"],
+        )
+        self.assertEqual(invalid["resolution"]["status"], "invalid")
+        self.assertEqual(
+            invalid["resolution"]["errors"][0]["type"],
+            "parameter-resolution-failed",
+        )
+        validate_assessment_plan(plan)
+        self.assertEqual(
+            plan["controls"][0]["parameters"]["required"],
+            ["curl", "postgresql", "zsh"],
+        )
+        state = plan["requirements"][0]["parameter_facts"]["states"]["allowed"]
+        self.assertEqual(len(state["composition"]["contributions"]), 1)
+        self.assertEqual(
+            len(state["composition"]["contributions"][0]["applicability"]),
+            2,
+        )
+        contributor = next(
+            item
+            for item in plan["resolved_requirement_baselines"]
+            if item["reference"] == "test.database-feature@1"
+        )
+        self.assertEqual(contributor["requirements"], [])
+        self.assertEqual(contributor["parameter_derivation"]["states"], {})
+        self.assertEqual(
+            plan["requirements"][0]["provenance"],
+            [{
+                "group": "managed-workstations",
+                "assignment": "base",
+                "baseline": "test.package-base@1",
+            }],
+        )
+
     def test_active_subject_without_assignment_is_unassigned(self):
         plan = render_plan(
             self.subject,

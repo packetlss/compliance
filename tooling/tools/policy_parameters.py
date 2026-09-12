@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import re
 
-from jsonschema import Draft202012Validator, FormatChecker
+from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 from referencing import Registry
 
 from .assessment_provenance import digest
@@ -17,6 +17,78 @@ class ParameterResolutionError(ValueError):
 
 def document(value):
     return {k: copy.deepcopy(v) for k, v in value.items() if not k.startswith('_')}
+
+
+def normalized_resource_document(value, requirements=None):
+    """Project parameter resources into their contract-defined semantic order."""
+    clean = document(value)
+    spec = clean.get('spec', {})
+    for declaration in spec.get('parameters', {}).values():
+        if declaration.get('composition') == {'kind': 'additive-set'} and 'value' in declaration:
+            if isinstance(declaration['value'], list) and all(isinstance(item, str) for item in declaration['value']):
+                declaration['value'] = canonical_additive_set(declaration['value'])
+    if 'parameter_contributions' in spec:
+        for contribution in spec['parameter_contributions']:
+            contribution['members'] = canonical_additive_set(contribution['members'])
+        spec['parameter_contributions'].sort(key=lambda item: canonical_json_bytes({
+            'id': item['id'],
+            'target': item['target'],
+        }))
+    if 'parameter_operations' in spec:
+        requirement_catalog = requirements or {}
+        for operation in spec['parameter_operations']:
+            target = operation.get('target', {})
+            requirement = requirement_catalog.get(target.get('requirement'))
+            declaration = (requirement or {}).get('spec', {}).get('parameters', {}).get(target.get('slot'))
+            if declaration and declaration.get('composition') == {'kind': 'additive-set'}:
+                for field in ('from', 'to'):
+                    if field in operation:
+                        authored = operation[field]
+                        if isinstance(authored, list) and all(isinstance(item, str) for item in authored):
+                            operation[field] = canonical_additive_set(authored)
+        spec['parameter_operations'].sort(key=lambda item: item['id'])
+    return clean
+
+
+def resource_digest(value, requirements=None):
+    return digest(normalized_resource_document(value, requirements))
+
+
+def validate_baseline_structure(value):
+    """Re-enforce the bounded RequirementBaseline wire needed by frozen resolution."""
+    clean = document(value)
+    spec = clean.get('spec')
+    require(isinstance(spec, dict), 'requirement baseline spec must be an object')
+    require(set(spec).issubset({
+        'title', 'requirements', 'extends', 'parameter_operations', 'parameter_contributions',
+    }), 'unsupported requirement baseline syntax')
+    if 'requirements' in spec:
+        require(isinstance(spec['requirements'], list) and bool(spec['requirements']),
+                'requirement baseline requirements must be nonempty when present')
+    if 'parameter_contributions' in spec:
+        items = spec['parameter_contributions']
+        require(isinstance(items, list) and bool(items),
+                'parameter contributions must be nonempty when present')
+        for contribution in items:
+            require(isinstance(contribution, dict)
+                    and set(contribution) == {'id', 'target', 'members'},
+                    'unsupported additive contribution syntax')
+            target = contribution.get('target')
+            require(isinstance(contribution.get('id'), str) and bool(contribution['id']),
+                    'additive contribution id must be nonempty')
+            require(isinstance(target, dict) and set(target) == {'requirement', 'slot'},
+                    'unsupported additive contribution target syntax')
+            require(isinstance(target.get('requirement'), str)
+                    and bool(re.fullmatch(r'[a-z0-9][a-z0-9._-]*', target['requirement'])),
+                    'invalid additive contribution requirement target')
+            require(isinstance(target.get('slot'), str)
+                    and bool(re.fullmatch(r'[a-z][a-z0-9_]*', target['slot'])),
+                    'invalid additive contribution slot target')
+            members = contribution.get('members')
+            require(isinstance(members, list) and all(isinstance(member, str) for member in members),
+                    'additive contribution members must be JSON strings')
+    require(bool(spec.get('requirements')) or bool(spec.get('parameter_contributions')),
+            'requirement baseline requires a requirement or parameter contribution')
 
 
 def require(condition, message):
@@ -56,19 +128,51 @@ def validate_schema(schema):
     return validator
 
 
+def validate_composition(declaration):
+    composition = declaration.get('composition')
+    if composition is None:
+        return None
+    require(composition == {'kind': 'additive-set'}, 'unsupported parameter composition')
+    schema = declaration.get('schema', {})
+    require(schema.get('type') == 'array'
+            and isinstance(schema.get('items'), dict)
+            and schema['items'].get('type') == 'string',
+            'additive-set requires a direct string-array parameter schema')
+    require('representation' not in declaration,
+            'additive-set does not support a transformed representation')
+    return composition['kind']
+
+
+def canonical_additive_set(value):
+    require(isinstance(value, list) and all(isinstance(member, str) for member in value),
+            'additive-set values contain JSON strings only')
+    return sorted(set(value), key=lambda member: member.encode('utf-8'))
+
+
 def value_for(declaration, value):
-    validate_schema(declaration['schema']).validate(value)
+    validator = validate_schema(declaration['schema'])
     canonical_json_bytes(value)  # Reject non-JSON numbers and ambiguous numeric identity.
+    if validate_composition(declaration) == 'additive-set':
+        canonical = canonical_additive_set(value)
+        try:
+            validator.validate(canonical)
+        except ValidationError as error:
+            raise ParameterResolutionError(
+                f'additive-set value violates the current declaration schema: {error.message}'
+            ) from error
+        return canonical
+    validator.validate(value)
     return duration(value) if declaration.get('representation') == 'duration' else copy.deepcopy(value)
 
 
 def declarations(requirement):
-    clean = document(requirement)
+    clean = normalized_resource_document(requirement)
     reference = f"{clean['metadata']['id']}@{clean['metadata']['revision']}"
     states = {}
     for name, declaration in sorted(clean['spec'].get('parameters', {}).items()):
         require(declaration['schema_digest'] == digest(declaration['schema']), 'stale parameter schema digest')
         validate_schema(declaration['schema'])
+        validate_composition(declaration)
         fixed = declaration['binding_mode'] == 'fixed'
         require(fixed == ('value' in declaration), 'only fixed declarations contain values')
         require(fixed or bool(declaration.get('binding_scope')), 'open declaration requires structural binding scope')
@@ -91,20 +195,23 @@ def resolve(reference, baselines, requirements, stack=()):
     require(reference not in stack, 'parameter derivation cycle')
     require(reference in baselines, 'missing parameter baseline')
     baseline = baselines[reference]
-    spec = baseline['spec']
+    validate_baseline_structure(baseline)
+    clean_baseline = normalized_resource_document(baseline, requirements)
+    spec = clean_baseline['spec']
     states, ancestry = {}, []
-    for pin in spec['requirements']:
+    for pin in spec.get('requirements', []):
         requirement = requirements.get(pin['requirement'])
-        require(requirement is not None and digest(document(requirement)) == pin['digest'],
+        require(requirement is not None and resource_digest(requirement) == pin['digest'],
                 'stale requirement pin')
         require(pin['requirement'] not in states, 'duplicate requirement membership')
         states[pin['requirement']] = declarations(requirement)
     if 'extends' in spec:
         parent_pin = spec['extends']
         parent = baselines.get(parent_pin['baseline'])
-        require(parent is not None and digest(document(parent)) == parent_pin['digest'], 'stale parent policy pin')
-        require(equal(sorted(spec['requirements'], key=lambda p: p['requirement']),
-                      sorted(parent['spec']['requirements'], key=lambda p: p['requirement'])),
+        require(parent is not None and resource_digest(parent, requirements) == parent_pin['digest'],
+                'stale parent policy pin')
+        require(equal(sorted(spec.get('requirements', []), key=lambda p: p['requirement']),
+                      sorted(parent['spec'].get('requirements', []), key=lambda p: p['requirement'])),
                 'parameter derivation cannot change requirement membership')
         states, ancestry = resolve(parent_pin['baseline'], baselines, requirements, (*stack, reference))
     seen_ids, seen_targets = set(), set()
@@ -119,7 +226,7 @@ def resolve(reference, baselines, requirements, stack=()):
         require(equal(target, state['pin']), 'stale declaration/schema pin')
         require(operation['expected_parent_fingerprint'] == fingerprint(state), 'stale parameter parent fingerprint')
         require(not state['sealed'], 'fixed or sealed parameter cannot change')
-        require(baseline['metadata']['id'] in state['declaration']['binding_scope'], 'parameter operation outside structural scope')
+        require(clean_baseline['metadata']['id'] in state['declaration']['binding_scope'], 'parameter operation outside structural scope')
         before = fingerprint(state)
         op = operation['op']
         if op == 'bind':
@@ -140,8 +247,8 @@ def resolve(reference, baselines, requirements, stack=()):
             raise ParameterResolutionError('unsupported parameter operation')
         state['history'].append({'baseline': reference, 'operation': copy.deepcopy(operation),
                                  'before_fingerprint': before, 'after_fingerprint': fingerprint(state)})
-    ancestry.append({'reference': reference, 'digest': digest(document(baseline)),
-                     'document': document(baseline), 'policy_sources': copy.deepcopy(baseline.get('_sources', []))})
+    ancestry.append({'reference': reference, 'digest': digest(clean_baseline),
+                     'document': clean_baseline, 'policy_sources': copy.deepcopy(baseline.get('_sources', []))})
     return states, ancestry
 
 
@@ -162,6 +269,137 @@ def reconcile_selected_slots(states, selected):
                     'independently selected stable parameter identity conflict')
             candidate[identity] = value
     selected.update(candidate)
+
+
+def compose_selected(resolutions, baselines, requirements=None):
+    """Apply independently applicable additive contributions to resolved base states."""
+    ordered = sorted(
+        resolutions,
+        key=lambda item: canonical_json_bytes({
+            'reference': item['reference'],
+            'applicability': item['applicability'],
+        }),
+    )
+    selected = {}
+    occurrences = {}
+    for resolved in ordered:
+        reconcile_selected_slots(resolved['states'], selected)
+        for slots in resolved['states'].values():
+            for state in slots.values():
+                identity = (state['identity']['requirement'], state['identity']['slot'])
+                occurrences.setdefault(identity, []).append((resolved, state))
+
+    contributions = {}
+    for resolved in ordered:
+        reference = resolved['reference']
+        baseline = baselines[reference]
+        clean = normalized_resource_document(baseline, requirements)
+        owner = {
+            'reference': reference,
+            'digest': digest(clean),
+            'document': clean,
+            'policy_sources': copy.deepcopy(baseline.get('_sources', [])),
+        }
+        seen = set()
+        for contribution in baseline['spec'].get('parameter_contributions', []):
+            target = contribution['target']
+            identity = {
+                'baseline': reference,
+                'id': contribution['id'],
+                'requirement': target['requirement'],
+                'slot': target['slot'],
+            }
+            key = tuple(identity.values())
+            require(key not in seen, 'duplicate additive contribution identity')
+            seen.add(key)
+            record = contributions.get(key)
+            canonical_members = canonical_additive_set(contribution['members'])
+            if record is None:
+                record = {
+                    'identity': identity,
+                    'owner': owner,
+                    'members': canonical_members,
+                    'applicability': [],
+                }
+                contributions[key] = record
+            else:
+                require(equal(record['owner'], owner)
+                        and equal(record['members'], canonical_members),
+                        'divergent additive contribution identity')
+            path = copy.deepcopy(resolved['applicability'])
+            if path not in record['applicability']:
+                record['applicability'].append(path)
+
+    contributions_by_slot = {}
+    for record in contributions.values():
+        identity = (record['identity']['requirement'], record['identity']['slot'])
+        require(identity in occurrences, 'additive contribution has no applicable declaration or base')
+        representative = occurrences[identity][0][1]
+        require(validate_composition(representative['declaration']) == 'additive-set',
+                'additive contribution targets an atomic or incompatible slot')
+        require(representative['bound'], 'additive contribution has no applicable declaration or base')
+        require(not representative['sealed'], 'fixed or sealed parameter rejects additive contributions')
+        record['applicability'].sort(key=canonical_json_bytes)
+        contributions_by_slot.setdefault(identity, []).append(record)
+
+    for identity, slot_occurrences in occurrences.items():
+        representative = slot_occurrences[0][1]
+        if validate_composition(representative['declaration']) != 'additive-set':
+            continue
+        require(representative['bound'], 'additive-set requires an applicable base value')
+        base_value = canonical_additive_set(representative['value'])
+        base_origins = []
+        for resolved, _ in slot_occurrences:
+            ancestry = next(
+                item for item in reversed(resolved['ancestry'])
+                if item['reference'] == resolved['reference']
+            )
+            origin = {
+                'baseline': resolved['reference'],
+                'digest': ancestry['digest'],
+                'applicability': copy.deepcopy(resolved['applicability']),
+            }
+            if origin not in base_origins:
+                base_origins.append(origin)
+        base_origins.sort(key=canonical_json_bytes)
+        slot_contributions = sorted(
+            contributions_by_slot.get(identity, []),
+            key=lambda item: canonical_json_bytes(item['identity']),
+        )
+        effective = canonical_additive_set([
+            *base_value,
+            *(member for item in slot_contributions for member in item['members']),
+        ])
+        effective = value_for(representative['declaration'], effective)
+        member_origins = []
+        for member in effective:
+            origins = [
+                {'kind': 'base', **copy.deepcopy(origin)}
+                for origin in base_origins
+                if member in base_value
+            ]
+            origins.extend(
+                {
+                    'kind': 'contribution',
+                    'identity': copy.deepcopy(item['identity']),
+                }
+                for item in slot_contributions
+                if member in item['members']
+            )
+            member_origins.append({
+                'member': member,
+                'origins': sorted(origins, key=canonical_json_bytes),
+            })
+        composition = {
+            'kind': 'additive-set',
+            'base_value': base_value,
+            'base_origins': base_origins,
+            'contributions': copy.deepcopy(slot_contributions),
+            'member_origins': member_origins,
+        }
+        for _, state in slot_occurrences:
+            state['value'] = copy.deepcopy(effective)
+            state['composition'] = copy.deepcopy(composition)
 
 
 def implementation_pin(definition):
@@ -306,20 +544,49 @@ def validate_frozen(plan):
         controls[control['implementation']] = definition
     requirements = {r['reference']: r['parameter_facts']['document'] for r in plan['requirements']}
     by_reference = {r['reference']: r for r in plan['requirements']}
-    selected_slots = {}
+    frozen_catalog = {}
+    frozen_resolutions = []
     for baseline in plan['resolved_requirement_baselines']:
         facts = baseline['parameter_derivation']
         catalog = {}
         for ancestor in facts['ancestry']:
             require(ancestor['digest'] == digest(ancestor['document']), 'frozen parent document digest mismatch')
+            ancestor_document = ancestor['document']
+            require(
+                ancestor['reference'] == (
+                    f"{ancestor_document['metadata']['id']}@{ancestor_document['metadata']['revision']}"
+                ),
+                'frozen requirement baseline reference mismatch',
+            )
             require(ancestor['reference'] not in catalog, 'duplicate frozen derivation ancestor')
             catalog[ancestor['reference']] = {**ancestor['document'], '_sources': ancestor['policy_sources']}
+            existing = frozen_catalog.get(ancestor['reference'])
+            require(existing is None or equal(existing, catalog[ancestor['reference']]),
+                    'divergent frozen derivation ancestor')
+            frozen_catalog[ancestor['reference']] = catalog[ancestor['reference']]
         states, ancestry = resolve(baseline['reference'], catalog, requirements)
         complete(states)
-        reconcile_selected_slots(states, selected_slots)
+        frozen_resolutions.append({
+            'reference': baseline['reference'],
+            'applicability': {
+                'group': baseline['group'],
+                'assignment': baseline['assignment'],
+                'baseline': baseline['reference'],
+            },
+            'states': states,
+            'ancestry': ancestry,
+            'frozen': facts,
+            'baseline_record': baseline,
+        })
+    compose_selected(frozen_resolutions, frozen_catalog, requirements)
+    for resolved in frozen_resolutions:
+        baseline = resolved['baseline_record']
+        facts = resolved['frozen']
+        states = resolved['states']
+        ancestry = resolved['ancestry']
         require(equal(states, facts['states']) and equal(ancestry, facts['ancestry']), 'frozen derivation inconsistent')
         require(baseline['digest'] == ancestry[-1]['digest'], 'selected baseline digest mismatch')
-        require(equal(baseline['requirements'], ancestry[-1]['document']['spec']['requirements']),
+        require(equal(baseline['requirements'], ancestry[-1]['document']['spec'].get('requirements', [])),
                 'frozen baseline membership differs from selected policy')
         for reference, slots in states.items():
             record = by_reference[reference]

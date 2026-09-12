@@ -54,8 +54,7 @@
     "spec": {
       "type": "object",
       "required": [
-        "title",
-        "requirements"
+        "title"
       ],
       "additionalProperties": false,
       "properties": {
@@ -261,8 +260,62 @@
               }
             ]
           }
+        },
+        "parameter_contributions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "target",
+              "members"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "target": {
+                "type": "object",
+                "required": [
+                  "requirement",
+                  "slot"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "requirement": {
+                    "$ref": "#/$defs/identifier"
+                  },
+                  "slot": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*$"
+                  }
+                }
+              },
+              "members": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
         }
-      }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "requirements"
+          ]
+        },
+        {
+          "required": [
+            "parameter_contributions"
+          ]
+        }
+      ]
     }
   },
   "$defs": {
