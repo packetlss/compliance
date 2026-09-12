@@ -75,7 +75,7 @@
           "properties": {
             "baseline": {
               "type": "string",
-              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
             },
             "digest": {
               "type": "string",
@@ -110,7 +110,7 @@
                 "properties": {
                   "requirement": {
                     "type": "string",
-                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
                   },
                   "digest": {
                     "type": "string",
@@ -118,7 +118,7 @@
                   },
                   "slot": {
                     "type": "string",
-                    "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+                    "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
                   },
                   "declaration_digest": {
                     "type": "string",
@@ -290,7 +290,7 @@
                   },
                   "slot": {
                     "type": "string",
-                    "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+                    "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
                   }
                 }
               },
@@ -322,7 +322,7 @@
     "identifier": {
       "type": "string",
       "minLength": 1,
-      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
     },
     "revision": {
       "oneOf": [
@@ -333,7 +333,7 @@
         {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
         }
       ]
     },
@@ -353,7 +353,7 @@
         "requirement": {
           "type": "string",
           "minLength": 3,
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
         },
         "digest": {
           "$ref": "#/$defs/digest"

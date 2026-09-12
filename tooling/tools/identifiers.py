@@ -41,6 +41,11 @@ def _is_stable_dns_host(host: str | None) -> bool:
 
 
 def _is_canonical_https_schema_uri(value: str, path_pattern: str) -> bool:
+    if not isinstance(value, str) or any(
+        character.isspace() or ord(character) < 0x20 or ord(character) == 0x7f
+        for character in value
+    ):
+        return False
     try:
         parsed = urlsplit(value)
         port = parsed.port
@@ -51,6 +56,7 @@ def _is_canonical_https_schema_uri(value: str, path_pattern: str) -> bool:
         and parsed.username is None
         and parsed.password is None
         and port is None
+        and parsed.netloc == parsed.hostname
         and _is_stable_dns_host(parsed.hostname)
         and not parsed.query
         and not parsed.fragment

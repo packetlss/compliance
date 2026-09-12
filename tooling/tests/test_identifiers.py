@@ -85,9 +85,14 @@ class SchemaIdentityTests(unittest.TestCase):
             "//schemas.adopter.example" + path,
             "https://user@schemas.adopter.example" + path,
             "https://schemas.adopter.example:443" + path,
+            "https://schemas.adopter.example:" + path,
             "https://192.0.2.1" + path,
             "https://schemas.adopter.example" + path + "?revision=1",
             "https://schemas.adopter.example" + path + "#schema",
+            "https://schemas.\nadopter.example" + path,
+            "https://schemas.\tadopter.example" + path,
+            " https://schemas.adopter.example" + path,
+            "https://schemas.adopter.example" + path + "\r",
         )
         for value in invalid:
             with self.subTest(uri=value):

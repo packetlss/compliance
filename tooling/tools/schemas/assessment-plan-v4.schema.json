@@ -694,7 +694,7 @@
                       "properties": {
                         "instance_id": {
                           "type": "string",
-                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
                         },
                         "disposition": {
                           "enum": [
@@ -771,7 +771,7 @@
     "reference": {
       "type": "string",
       "minLength": 3,
-      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
     },
     "nonEmptyString": {
       "type": "string",
@@ -956,7 +956,7 @@
               "uniqueItems": true,
               "items": {
                 "type": "string",
-                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
               }
             }
           }
@@ -1400,7 +1400,7 @@
           "uniqueItems": true,
           "items": {
             "type": "string",
-            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
           }
         },
         "provenance": {
@@ -1430,7 +1430,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*/v[1-9][0-9]*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*/v[1-9][0-9]*$(?![\\s\\S])"
         },
         "max_age": {
           "type": "string",
@@ -1438,7 +1438,7 @@
         },
         "id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+          "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
         },
         "inputs": {
           "type": "object"
@@ -1500,7 +1500,7 @@
       "properties": {
         "implementation": {
           "type": "string",
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
         },
         "parameters": {
           "type": "object",
@@ -1666,11 +1666,11 @@
       "properties": {
         "instance_id": {
           "type": "string",
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
         },
         "implementation": {
           "type": "string",
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
         },
         "title": {
           "$ref": "#/$defs/nonEmptyString"
@@ -1796,11 +1796,11 @@
       "properties": {
         "instance_id": {
           "type": "string",
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
         },
         "implementation": {
           "type": "string",
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
         },
         "title": {
           "$ref": "#/$defs/nonEmptyString"

@@ -51,7 +51,7 @@
         {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
         }
       ]
     },
@@ -65,7 +65,7 @@
         "id": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
         },
         "version": {
           "$ref": "#/$defs/revision"
@@ -144,12 +144,12 @@
         "instance_id": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
         },
         "implementation": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
         },
         "parameters": {
           "type": "object",
@@ -167,7 +167,7 @@
         "evidence": {
           "type": "object",
           "propertyNames": {
-            "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+            "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
           },
           "additionalProperties": {
             "type": "object",

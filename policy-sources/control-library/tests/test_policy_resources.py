@@ -150,6 +150,44 @@ class PolicyResourceTests(unittest.TestCase):
             with self.subTest(path=path.relative_to(ROOT)):
                 Draft202012Validator.check_schema(read_json(path))
 
+    def test_semantic_identifier_patterns_reject_terminal_newlines(self):
+        schema = read_json(POLICIES / "schemas/policy/baseline.schema.json")
+        validator = Draft202012Validator(schema)
+        document = {
+            "apiVersion": "compliance.example/v1",
+            "kind": "Baseline",
+            "metadata": {"id": "test.baseline", "version": 1},
+            "spec": {
+                "title": "Technical policy",
+                "controls": [{
+                    "instance_id": "test.instance",
+                    "implementation": "test.control",
+                    "evidence": {"observation": {"max_age": "1d"}},
+                }],
+            },
+        }
+        self.assertTrue(validator.is_valid(document))
+
+        paths = (
+            ("metadata", "id"),
+            ("spec", "controls", 0, "instance_id"),
+            ("spec", "controls", 0, "implementation"),
+        )
+        for path in paths:
+            changed = copy.deepcopy(document)
+            target = changed
+            for component in path[:-1]:
+                target = target[component]
+            target[path[-1]] += "\n"
+            with self.subTest(path=path):
+                self.assertFalse(validator.is_valid(changed))
+
+        changed = copy.deepcopy(document)
+        changed["spec"]["controls"][0]["evidence"] = {
+            "observation\n": {"max_age": "1d"}
+        }
+        self.assertFalse(validator.is_valid(changed))
+
     def test_authored_policy_and_check_meaning_is_required_non_whitespace(self):
         digest = "sha256:" + "0" * 64
         cases = {

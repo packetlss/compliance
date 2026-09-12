@@ -119,7 +119,7 @@
                 "uniqueItems": true,
                 "items": {
                   "type": "string",
-                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
                 }
               },
               "value": {},
@@ -208,7 +208,7 @@
           },
           "propertyNames": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+            "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
           }
         }
       }
@@ -218,7 +218,7 @@
     "identifier": {
       "type": "string",
       "minLength": 1,
-      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
     },
     "revision": {
       "oneOf": [
@@ -229,7 +229,7 @@
         {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
         }
       ]
     }

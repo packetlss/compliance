@@ -60,7 +60,7 @@
         {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
         }
       ]
     },
@@ -75,7 +75,7 @@
         "id": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
         },
         "revision": {
           "$ref": "#/$defs/revision"
@@ -97,7 +97,7 @@
         "baseline": {
           "type": "string",
           "minLength": 3,
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
         },
         "digest": {
           "$ref": "#/$defs/digest"
@@ -133,12 +133,12 @@
         "instance_id": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
         },
         "implementation": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
         },
         "parameters": {
           "type": "object",
@@ -156,7 +156,7 @@
         "evidence": {
           "type": "object",
           "propertyNames": {
-            "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+            "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
           },
           "additionalProperties": {
             "type": "object",
@@ -210,7 +210,7 @@
     },
     "target": {
       "type": "string",
-      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
     },
     "tailorOperation": {
       "type": "object",
@@ -304,7 +304,7 @@
         },
         "implementation": {
           "type": "string",
-          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
         },
         "parameters": {
           "type": "object",

@@ -20,9 +20,9 @@
   },
   "$defs": {
     "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-    "semanticId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"},
-    "slot": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"},
-    "reference": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$"},
+    "semanticId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"},
+    "slot": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"},
+    "reference": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"},
     "subjectId": {"type": "string", "minLength": 3, "pattern": "^[^/]+/.+$"},
     "status": {"enum": ["pass", "fail", "unknown", "not_applicable", "error", "waived"]},
     "overallStatus": {"enum": ["pass", "fail", "unknown", "not_applicable", "error", "waived", "no_controls"]},
