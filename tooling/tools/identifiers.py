@@ -41,9 +41,16 @@ def _is_stable_dns_host(host: str | None) -> bool:
 
 
 def _is_canonical_https_schema_uri(value: str, path_pattern: str) -> bool:
-    if not isinstance(value, str) or any(
-        character.isspace() or ord(character) < 0x20 or ord(character) == 0x7f
-        for character in value
+    if (
+        not isinstance(value, str)
+        or "?" in value
+        or "#" in value
+        or any(
+            character.isspace()
+            or ord(character) < 0x20
+            or ord(character) == 0x7f
+            for character in value
+        )
     ):
         return False
     try:

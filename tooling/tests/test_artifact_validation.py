@@ -527,6 +527,17 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 }),
                 "parameter schema identity does not match its semantic owner",
             ),
+            "empty query delimiter in parameter schema URI": (
+                lambda document: document["excluded_controls"][0]["policy_inputs"][
+                    "parameters_schema"
+                ].update({
+                    "$id": (
+                        "https://schemas.adopter.example/schemas/controls/"
+                        "test.setting-equals/parameters/v1.schema.json?"
+                    )
+                }),
+                "parameter schema identity does not match its semantic owner",
+            ),
         }
         for case, (mutate, expected) in cases.items():
             with self.subTest(case=case):
