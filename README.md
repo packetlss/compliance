@@ -58,7 +58,7 @@ scripts/dev check iam
 scripts/dev check scenarios
 ```
 
-Optional tooling test names may follow `scripts/dev check tooling`. Fast checks show a compact summary by default; use `scripts/dev check --verbose <area>` to show every test while debugging (for example, `scripts/dev check --verbose tooling test_canonical_json.py`). Canonical committed-input gates are explicit, for example `scripts/dev gate tooling`, `scripts/dev gate policy`, and `scripts/dev gate scenarios`. They refuse a dirty checkout and are selected by change impact or reproduction need. `scripts/dev readiness` reports current integration, exact-head review, and required CI evidence without mutating GitHub.
+Optional tooling test names may follow `scripts/dev check tooling`. Fast checks show a compact summary by default; use `scripts/dev check --verbose <area>` to show every test while debugging (for example, `scripts/dev check --verbose tooling test_canonical_json.py`). Canonical committed-input gates also use compact native runner output; rerun an underlying `unittest` command with `-v` or an OPA test with `--verbose` for detailed progress while debugging. Canonical committed-input gates are explicit, for example `scripts/dev gate tooling`, `scripts/dev gate policy`, and `scripts/dev gate scenarios`. They refuse a dirty checkout and are selected by change impact or reproduction need. `scripts/dev readiness` reports current integration, exact-head review, and required CI evidence without mutating GitHub.
 
 ## Architecture and workflow
 
