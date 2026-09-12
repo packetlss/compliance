@@ -1,7 +1,7 @@
 # OPA Compliance Toolset — Architecture
 
 Status: **Working draft (v0.1)**  
-Last updated: **2026-09-11**
+Last updated: **2026-09-12**
 
 This document is a shared design surface, not a finished specification. It
 records our current model, the reasoning behind it, and the questions that
@@ -36,10 +36,11 @@ The toolset should answer four different questions without conflating them:
   dependencies, evaluator version, and evaluation time.
 - **Observations are separated from conclusions.** Collectors produce typed
   evidence; policies produce decisions; the platform turns decisions into findings.
-- **Inventory is a projection, not a source of truth.** External systems retain
-  authority for governed-subject identity, lifecycle, ownership, and source
-  metadata. The compliance platform normalizes and revisions imported views
-  only to calculate policy scope and explain assessments.
+- **Inventory separates authoring authority from resolution authority.** External
+  systems or reviewed configuration remain authoritative editors and sources for
+  governed-subject facts. The exact normalized projection supplied to an operation
+  is nevertheless authoritative input to its deterministic closed-world resolution;
+  the core does not reconstruct or heuristically repair upstream facts.
 - **Canonical inventory resources use Kubernetes conventions.** Versioned,
   typed YAML/JSON objects use `apiVersion`, `kind`, `metadata`, labels,
   annotations, selectors, and explicit references. This convention does not
@@ -133,6 +134,15 @@ calculates group membership for policy resolution. It is a read-only consumer:
 the upstream systems remain authoritative, and inventory ingestion does not
 write lifecycle, ownership, labels, or configuration back to them.
 
+For each operation, the supplied normalized projection is the authoritative input
+to resolution. Governed persona, access-profile, deployment-model, environment,
+lifecycle and factual-membership classifications may legitimately drive applicable
+groups, policy and realizations. Classifications and groups may overlap; all
+assignments accumulate without order or specificity precedence. Inventory should
+not directly name policy-resource or realization IDs/digests because policy owns the
+mapping from domain classifications to implementation semantics. This ownership
+guidance is not a new schema prohibition.
+
 An eventual immutable source snapshot is a separate ingestion/provenance concern,
 not a current assessment identity or artifact. Historical assessment reproduction
 uses the operation's mode-sensitive frozen selection and resolution facts. The
@@ -188,7 +198,7 @@ assessment plan.
 | Concept | Meaning |
 |---|---|
 | **Subject** | A governed resource in scope: repository, cluster, cloud account, workload, identity, etc. The CLI presents Subjects as assets without renaming this domain or wire identity. |
-| **Inventory projection** | A normalized supplied view of subjects and policy-selecting metadata imported from external authorities; it is not an assessment-wide snapshot identity. |
+| **Inventory projection** | A normalized supplied view of subjects and governed applicability facts. Upstream systems/reviewed configuration own fact authoring; the exact projection is authoritative to closed-world resolution for that operation. It is not an assessment-wide snapshot identity. |
 | **Evidence document** | A typed JSON observation about a subject, with provenance, collection time, and freshness. |
 | **Control requirement** | A technology-neutral company outcome that may map to an external framework objective. |
 | **Control implementation** | Reusable Rego that evaluates one technical condition against a particular evidence contract. |
@@ -508,6 +518,17 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-12 — Governed inventory and realization terminology (#124)
+
+Upstream systems or reviewed configuration retain subject-fact authoring authority,
+while the exact normalized inventory supplied to an operation is authoritative to
+closed-world resolution. Stable governed classifications may select policy and
+realizations without requiring mutually exclusive groups; assignments accumulate
+and divergence fails closed. Policy owns the mapping from classifications to
+implementation semantics. Existing zero/one/multiple realization behavior,
+complete `satisfaction.allOf`, evidence/result boundaries and content-addressed
+identity are unchanged.
+
 ### 2026-09-11 — Declared evidence facts at control admission (#113)
 
 The five maintained AWS, SaaS, and Linux field-selecting controls now enumerate
@@ -621,7 +642,10 @@ The core assesses supplied company policy, not external inventory exhaustiveness
 external obligation-universe completeness, legal applicability authority, recognition
 or independent external conformity. Governance owns those judgments. Mappings are
 attributable policy/reporting content; results must remain bounded to supplied and
-resolved company targets. Provenance identifies inputs, not their truth or authority.
+resolved company targets. Provenance deterministically attributes exact inputs and
+supports reproducibility, integrity/tamper detection and evidence qualification; it
+does not authenticate upstream truth or establish legal correctness or governance
+sufficiency.
 
 Required assurance dependencies identify evidence contracts. Certificate fields are
 contract-specific, never universal. Common assurance needs an explicit named beneficiary
@@ -693,7 +717,7 @@ and commands are unsupported, and adaptation is external.
 | 2026-08-23 | Keep company compliance separate from parent benchmark alignment | Accepted and exposed in bounded assessment mapping views |
 | 2026-08-23 | Target assignments at stable groups; use singleton groups for one asset | Proposed |
 | 2026-08-23 | Version inventory, assignments, and policy independently in each plan | Proposed |
-| 2026-08-23 | Treat policy-selecting inventory labels as authoritative data | Proposed |
+| 2026-08-23 | Treat policy-selecting inventory labels as authoritative resolution input when supplied through the governed projection | Accepted and implemented |
 | 2026-08-23 | Treat subject inventory as a read-only projection, not a source of truth | Accepted |
 | 2026-08-23 | Use Kubernetes resource conventions for canonical inventory authoring | Accepted |
 | 2026-08-23 | Use one-resource-per-file for Git collaboration and multi-document YAML for importer streams | Accepted |

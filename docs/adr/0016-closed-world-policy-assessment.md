@@ -2,6 +2,7 @@
 
 - **Status:** Implemented under #78; experimental, not frozen
 - **Date:** 2026-09-06
+- **Amended:** 2026-09-12 by [#124](https://github.com/packetlss/compliance/issues/124) to clarify governed inventory authority and existing realization terminology
 - **Promotion history:** [#37](https://github.com/packetlss/compliance/issues/37)
 - **Supersedes:** [ADR 0013](0013-scoped-assurance-and-obligation-instances.md), [ADR 0014](0014-attributable-applicability-and-authority-acceptance.md), [ADR 0015](0015-bounded-external-claims-and-assurance-recognition.md)
 - **Clarifies:** [ADR 0006](0006-regulatory-assurance-and-external-adapter-boundary.md)
@@ -44,6 +45,14 @@ remains intact. #73 is implemented; this promotion changes documentation only.
 > every externally applicable obligation, or chose a legally/regulatorily sufficient
 > demonstration.
 
+Upstream systems or reviewed configuration remain the authoritative editors and
+sources of subject facts. For a particular closed-world operation, however, the
+exact supplied normalized inventory projection is authoritative resolution input:
+the core resolves that projection as supplied and does not independently reconstruct
+or heuristically correct upstream facts. A wrong governed projection can therefore
+resolve wrong intent; that is an upstream governance or configuration defect, not a
+different core resolution mode.
+
 The strongest generic assertion is:
 
 > Given these exact supplied inventory, scope, assignments, policy, evidence and
@@ -53,12 +62,10 @@ The strongest generic assertion is:
 ### Closed-world scope and frozen accounting
 
 ```text
-supplied inventory
-    -> deterministic groups
-    -> applicable assignments
-    -> exact resolved policy/requirement instances
-    -> expected assessment set
-    -> attributable results
+Governed Inventory + Governed Policy
+          -> deterministic resolved technical intent
+          -> Evidence
+          -> Assessment
 ```
 
 Use the existing `Subject`, `InventoryGroup` and `PolicyAssignment` foundation.
@@ -67,6 +74,16 @@ Overlapping membership uses set union while preserving **all** applicable member
 and assignment paths. Coalescing exact-identical same-identity definitions must not
 lose an independently applicable assignment or hide divergent policy. Source/file,
 traversal and assignment order grant no precedence; conflicts fail deterministically.
+
+Stable governed classifications such as persona, access profile, deployment model,
+environment, lifecycle and factual membership may legitimately determine group,
+policy and realization applicability. Such facts need not form mutually exclusive
+partitions: overlapping groups and assignments accumulate, exact-identical
+same-identity contributions may coalesce, and genuine divergence fails closed.
+Inventory should describe governed domain facts rather than directly name
+policy-resource identities or realization IDs/digests. Policy owns the mapping from
+those classifications to concrete implementation semantics. This is an authoring
+and ownership boundary, not a new inventory schema prohibition.
 
 Resolve exact company requirement revisions, parameters, governed subjects and
 quantification. A per-host requirement creates instances for its applicable hosts;
@@ -95,6 +112,7 @@ completeness gates are required.
 
 | Responsibility | Owner and meaning |
 | --- | --- |
+| Which supplied subject facts resolution consumes | Exact normalized inventory projection for the operation; upstream systems or reviewed configuration own authoring and sourcing |
 | What the organization requires and what demonstration it accepts | Authored company policy |
 | Why that policy is appropriate, externally applicable or legally sufficient | Governance and policy authoring |
 | Observable or assurance facts about reality | Typed attributable evidence |
@@ -105,12 +123,18 @@ Authored policy must never manufacture reality. For example, policy saying
 until attributable evidence satisfying that dependency's evidence contract exists.
 An authored `adopted`, `implemented`, issuer name, approval reference, framework
 mapping, signature reference or content digest alone does not establish satisfaction.
-Content-addressed provenance preserves which decisions, references and bytes were
-used; it does not endorse correctness, truth, authority or legal sufficiency.
+Content-addressed provenance provides deterministic attribution, reproducibility,
+integrity/tamper detection and supports qualification of the exact evidence
+consumed. It does not authenticate the truth of upstream facts, establish legal
+correctness, or prove that sourcing, policy and governance choices are sufficient.
 
 Preserve independent technical `Baseline` / `BaselineOverlay` assessment and
 optional company requirement/realization assurance. Realizations remain design-time
-demonstration designs with exactly-one deterministic selection. Preserve ADR 0012
+demonstration designs. An assigned requirement with zero applicable realizations
+retains `not_implemented` adoption and a failing requirement; exactly one applicable
+realization is selected and its complete `satisfaction.allOf` proof recipe is
+assessed; multiple applicable realizations make policy resolution ambiguous and the
+plan fails. Evidence never chooses policy or a realization. Preserve ADR 0012
 resolved parameters and direct typed dependency consumption, policy-owned freshness,
 independently attributable technical results, conservative roll-up and fail-only
 waivers. Neither adoption nor a waiver manufactures a passing observation.
@@ -193,7 +217,9 @@ accept invalid dependency targets or tolerate tampering/integrity failures.
 | Invalid group/identity/assignment/policy/dependency resolution | Affected required resolution is invalid; no partial valid plan or success synthesized from omitted inputs |
 | Required ADR 0012 parameter unresolved | Non-assessable policy; not an evidence `unknown` substitute |
 | No policy assignment | Unassigned/outside supplied assessment scope, not automatically N/A |
-| No matching realization for an assigned objective | Existing separate `not_implemented` coverage and failing requirement behavior, not evidence `unknown` or external N/A |
+| No matching realization for an assigned objective | Existing `not_implemented` realization/adoption state and failing requirement behavior, not Coverage, evidence `unknown`, or external N/A |
+| Exactly one applicable realization for an assigned objective | Select it and assess its complete `satisfaction.allOf` recipe; evidence cannot choose another policy path |
+| Multiple applicable realizations for an assigned objective | Invalid/ambiguous policy resolution and plan failure; no ordering, specificity or assessment-time fallback |
 | Missing/stale/schema-invalid/ambiguous/inconclusive required evidence after valid dependency resolution | ADR 0010 `unknown`, never pass |
 | Admissible conclusive negative evidence | Normal `fail` |
 | Trustworthy attributable execution failure | ADR 0010 `error` |
@@ -236,7 +262,9 @@ conceptual obligations, not executable future-behavior fixtures or new schemas.
 | All mapped company checks pass, including mappings labelled complete | Exact company result only; neither framework satisfaction nor certification/legal conformity is manufactured |
 | Company policy allows 45m, external condition says 30m, evidence satisfies resolved company policy | Company result remains valid; generic core does not establish external conformity or change ADR 0012 bindings |
 | Required ADR 0012 parameter has no concrete value | Non-assessable policy; do not evaluate a partial plan or invent evidence `unknown` |
-| Assigned company objective has no matching realization | Existing `not_implemented` coverage and failing requirement behavior remain |
+| Assigned company objective has no matching realization | Existing `not_implemented` realization/adoption state and failing requirement behavior remain; Coverage still records the applicable assignment |
+| Assigned company objective has exactly one applicable realization | Assess every check in its complete `satisfaction.allOf` recipe; evidence does not select the realization |
+| Assigned company objective has multiple applicable realizations | Policy resolution is ambiguous and planning fails without order or specificity precedence |
 | Valid dependency lacks evidence, evidence is stale/schema-invalid/inconclusive, or newest tied candidates diverge under ADR 0010 | Required result is `unknown`; existing evidence-selection semantics remain unchanged |
 | Evaluator fails but trustworthy execution/result attribution exists | Attributable `error` under ADR 0010 |
 | Shared plan or snapshot integrity is tampered so trustworthy publication is impossible | Assessment-wide refusal under ADR 0010 |

@@ -141,10 +141,11 @@ Requirement slots have stable technology-neutral identity with exact declaration
 Effective evidence `max_age` belongs to policy/baseline/requirement intent. Controls retain evidence dependency contracts and optional capability restrictions; realizations link semantic freshness slots where applicable. Maintained baselines bind effective ages explicitly; objective realizations consume pinned semantic freshness slots. Controls no longer provide effective-age defaults. ADR 0010 still owns assessment-time evidence semantics and ADR 0011 immutable historical selection attribution; the future-timestamp question is unchanged.
 
 Policy resolution determines company intent; assessment tests evidence against that
-intent. Passing company policy does not establish external conformity. ADR 0016
+intent and never selects policy or a realization. Passing company policy does not
+establish external conformity. ADR 0016
 places external comparison outside the generic core unless a future explicit company
 policy dependency models a concrete condition. Fixed/open external binding restrictions
-do not authenticate issuer authority. Missing realization/coverage gaps remain distinct
+do not authenticate issuer authority. Missing realization adoption remains distinct
 from unresolved parameters and missing evidence. Ordinary named private policy sources
 need no new resource family or precedence. ADR 0012 extends the existing provenance-bearing
 plan, not the adapter or authorization artifact surface.
@@ -159,13 +160,23 @@ chosen policy and demonstration. Optional company objective assurance remains co
 under ADR 0006; engine-established external conformity/certification does not.
 
 ```text
-supplied inventory -> deterministic groups -> applicable assignments
-    -> exact resolved policy/requirement instances
-    -> expected assessment set -> attributable results
+Governed Inventory + Governed Policy
+          -> deterministic resolved technical intent
+          -> Evidence
+          -> Assessment
 ```
 
 Preserve Subject identity, InventoryGroup DAG semantics, PolicyAssignment resolution,
 all membership/assignment paths, deterministic conflicts and exact governed subjects.
+Upstream systems or reviewed configuration own authoring and sourcing of subject
+facts; the exact normalized inventory projection supplied to an operation is
+authoritative to its deterministic closed-world resolution. Stable governed persona,
+access-profile, deployment-model, environment, lifecycle and factual-membership
+classifications may drive applicability. They may overlap: assignments accumulate
+without order or specificity precedence. Inventory should not directly encode
+policy-resource or realization IDs/digests; policy owns the mapping from governed
+domain classifications to implementation semantics. This is guidance, not a new
+schema prohibition.
 Host/entity/system requirements retain their quantification; do not form a Cartesian
 product. The core accounts for the exact expected assessment set of the
 supplied operation and detect omitted results. A/B passing supports exact A/B target
@@ -178,8 +189,9 @@ Policy determines requirements and accepted demonstration; governance owns why
 those choices are appropriate; evidence asserts facts about reality; the core tests
 admissible evidence against resolved policy. Authored adoption, implementation,
 issuer/approval/signature references, mappings or digests cannot manufacture pass.
-Content-addressed provenance identifies inputs without endorsing their truth,
-authority or legal sufficiency.
+Content-addressed provenance provides deterministic attribution, reproducibility,
+integrity/tamper detection and supports evidence qualification. It does not
+authenticate upstream truth or establish legal correctness or governance sufficiency.
 
 A required dependency identifies its evidence contract; only attributable evidence
 satisfying it may determine the dependency. Certificate/assurance fields are required
@@ -208,8 +220,13 @@ fail closed. Required unresolved policy is non-assessable, not evidence `unknown
 After valid dependency resolution, missing/stale/invalid/inconclusive evidence is
 ADR 0010 `unknown`, attributable execution failures are `error`, and shared integrity
 preventing trustworthy publication requires refusal. Preserve design-time realizations,
-exactly-one selection, separate missing-realization coverage/failure behavior,
-conservative roll-up, fail-only waivers and immutable result attribution.
+complete `satisfaction.allOf` recipes, conservative roll-up, fail-only waivers and
+immutable result attribution. A subject with no applicable assignment has Coverage
+`unassigned` and no expected result. For an assigned requirement, zero applicable
+realizations retains `not_implemented` adoption and a failing requirement; exactly
+one is selected and assessed completely; multiple applicable realizations make
+resolution ambiguous and planning fails. Evidence never chooses among policy or
+realization alternatives.
 
 No assignment is unassigned/outside supplied assessment scope, not automatic N/A.
 Existing explicit N/A remains distinct pending separate architecture review. Never

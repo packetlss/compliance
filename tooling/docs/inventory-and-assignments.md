@@ -1,7 +1,7 @@
 # Inventory, Groups, and Policy Assignments
 
 Status: **Working proposal with prototype (v0.1)**  
-Last updated: **2026-09-11**
+Last updated: **2026-09-12**
 
 This document defines how governed assets enter the inventory, how they become
 members of a group DAG, and how group-level policy assignments resolve to
@@ -55,17 +55,23 @@ For example:
   host.
 - Evidence: the host currently has the required package and access settings.
 
-Collectors may discover subjects or suggest inventory attributes, but a
-governed subject must not be able to assign itself trusted labels that weaken
-its policy. Environment, ownership, criticality, and management-state labels
-should come from authoritative inventory integrations or reviewed configuration.
+Collectors may discover subjects or suggest inventory attributes. Labels that
+affect applicability require governed sourcing and stable meaning; environment,
+ownership, criticality, management state, persona, access profile, deployment
+model and lifecycle may come from authoritative inventory integrations or reviewed
+configuration.
 
-### 2.1 Inventory is also not a source of truth
+### 2.1 Upstream authoring and core resolution authority
 
 The inventory in this platform is a **read-only projection** used to determine
 which policy applies. Systems such as Ansible inventory, a CMDB, NetBox, a
 service catalog, cloud APIs, or reviewed static files remain authoritative for
-the subject data they supply.
+authoring and sourcing the subject data they supply. Once normalized inventory is
+supplied for an operation, that exact projection is authoritative input to
+deterministic closed-world resolution. The core does not independently rediscover
+facts or choose a different policy because it considers an upstream value mistaken.
+A wrong governed projection may therefore resolve wrong intent and must be corrected
+through its upstream governance or configuration path.
 
 The projection layer may:
 
@@ -87,6 +93,12 @@ It must not:
 The compliance platform remains authoritative for its own objects: group
 definitions and selectors, policy assignments, baseline releases, rendered
 assessment plans, decisions, findings, and waivers.
+
+Stable governed classifications may legitimately determine group, policy and
+realization applicability. Inventory should express domain facts rather than name
+policy-resource identities or realization IDs/digests directly; policy owns the
+mapping from those facts to concrete implementation semantics. Direct identity
+coupling is undesirable authoring practice, not a new schema prohibition.
 
 The source-snapshot concern above is ingestion provenance, not another current
 inventory resource or producer contract. The implemented producer surface remains
@@ -249,6 +261,10 @@ Membership rules are:
 6. Group IDs are stable. Renaming a display label must not silently retarget an
    assignment.
 
+Groups and classifications need not be mutually exclusive. Overlapping factual
+membership preserves every path, and every applicable assignment accumulates.
+Neither group depth, specificity nor ordering chooses a winner.
+
 Selectors belong to group definitions. Policy assignments should not introduce
 a second selector language; they target stable group IDs.
 
@@ -334,7 +350,7 @@ stored in the plan.
 
 For one subject and one point in time, the planner performs:
 
-1. Validate subject identity, type, lifecycle, and authoritative labels.
+1. Validate subject identity, type, lifecycle, and governed labels.
 2. Match explicit membership and group selectors.
 3. Calculate the complete ancestor closure in the group DAG.
 4. Select every assignment whose target group is resolved.
@@ -371,7 +387,7 @@ The current proposed ownership is:
 | Object | Authority | Initial storage |
 |---|---|---|
 | Subject identity and lifecycle | External system designated for the subject domain | Local projection store; local YAML projection in prototype |
-| Trusted subject labels | External authority per label namespace | Local projection store with source provenance |
+| Governed subject labels | External authority or reviewed configuration per label namespace | Local projection store with source provenance; authoritative resolution input when supplied |
 | Group definitions and selectors | Platform/security policy owners | Git-backed policy repository |
 | Explicit group membership | External inventory source or reviewed configuration | Projection store or Git, with provenance |
 | Policy assignments | Platform/security policy owners | Git-backed policy repository |
@@ -523,7 +539,8 @@ queried separately through `coverage`.
 - `Subject`, `InventoryGroup`, and `PolicyAssignment` are validated against
   `schemas/inventory/resource.schema.json` before normalization.
 - Only exact label matching and explicit members are currently modeled.
-- Inventory label authority is documented but not cryptographically enforced.
+- Inventory governance and source attribution are documented; content addressing
+  does not authenticate the real-world truth of supplied labels.
 - `Subject.spec.source` is required, but full-snapshot, delta, pagination,
   atomic activation, stale-source, and source-conflict semantics are not yet
   implemented.
