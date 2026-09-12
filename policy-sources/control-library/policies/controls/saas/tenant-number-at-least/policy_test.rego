@@ -8,7 +8,7 @@ assessment_input(observed) := {
 	"subject": {"id": "saas/test"},
 	"control": {
 		"instance_id": "test.minimum",
-		"implementation": "saas.tenant.number_at_least",
+		"implementation": "saas.tenant.number-at-least",
 		"severity": "medium",
 		"remediation": "Fix it",
 		"parameters": {"section": "audit_log", "setting": "retention_days", "minimum": 90},

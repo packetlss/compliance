@@ -120,27 +120,25 @@ compatibility reader or freeze.
 ## Typed identifier namespaces and schema URI ownership
 
 [ADR 0019](adr/0019-typed-identifier-namespaces-and-schema-uri-ownership.md) is
-**Accepted design, not yet implemented**, promoted under
-[#134](https://github.com/packetlss/compliance/issues/134) from exploration #132.
+**Experimental, implemented under [#136](https://github.com/packetlss/compliance/issues/136)**,
+after promotion under [#134](https://github.com/packetlss/compliance/issues/134)
+from exploration #132.
 It accepts typed lookup namespaces, dot-separated kebab-case semantic policy IDs,
 owner-local snake_case parameter identity, evidence `/vN` dispatch identity and
 predictable absolute HTTPS schema-contract `$id` values. It rejects mandatory
 authority/source qualification while preserving separate platform, policy-source,
 release, Rego/filesystem and exact digest/fingerprint identities.
 
-This documentation tranche changes no resource, schema, validator, runtime, fixture,
-test or generated artifact. Current underscore-bearing IDs and schema URIs therefore
-remain executable current source until a coordinated pre-freeze migration. The
-accepted fail-closed collision admission rule for technical and RequirementBaseline
-definitions sharing an assignment `id@revision` is also not implemented yet. PR #133
-must be amended before merge only as specified by ADR 0019; the existing maintained
-catalog and collision rule belong to a later migration issue. No alias or
-compatibility reader is planned.
+The coordinated #136 migration applies that grammar and schema-URI ownership to the
+maintained catalog, validators, references, pins, fixtures and release vectors. It
+also implements fail-closed admission when technical and RequirementBaseline
+definitions share an assignment `id@revision`. There is no alias, normalization,
+source qualification, precedence, compatibility reader, or network schema lookup.
 
 The current Control catalog remains keyed by stable ID with version/fingerprint as
 exact interface metadata. That current behavior is neither a multi-version redesign
 nor a permanent ban on one; any future parallel-version lookup semantics require
-their own exploration and promotion. Nothing in this accepted pre-freeze design is
+their own exploration and promotion. Nothing in this implemented pre-freeze design is
 frozen merely by its grammar or version-like spellings.
 
 ## Stage 5 explanation architecture

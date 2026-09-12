@@ -322,6 +322,7 @@ class AssessmentV4Tests(unittest.TestCase):
         schema_path = self.source.path/'schemas/evidence/second.json'
         schema = evidence_schema()
         schema['properties']['type']['const'] = 'second/v1'
+        schema['$id'] = 'https://compliance.example/schemas/evidence/second/v1.schema.json'
         schema_path.write_text(json.dumps(schema))
         independent = copy.deepcopy(self.plan['controls'][0])
         independent['instance_id'] = 'independent'
@@ -329,7 +330,7 @@ class AssessmentV4Tests(unittest.TestCase):
         independent['evidence'] = []
         self.plan['controls'].append(independent)
         self.plan['controls'][0]['evidence'].append({
-            'id': 'second-observation',
+            'id': 'second_observation',
             'type': 'second/v1',
             'max_age': '24h',
         })
@@ -589,8 +590,19 @@ class AssessmentV4Tests(unittest.TestCase):
         sources = [{'name': item['name'], 'digest': item['content']['digest']}
                    for item in self.plan['provenance']['planningComposition']['actual']['policySources']]
         shell = assessment_plan(sources, with_requirement=True)
-        for key in ('requirements','resolved_requirement_baselines','resolved_baselines'):
+        from tools import policy_parameters as parameters
+        requirement_baseline = shell['resolved_requirement_baselines'][0]
+        requirement_baseline['baseline'] = 'test.requirements@1'
+        requirement_baseline['reference'] = 'test.requirements@1'
+        selected = requirement_baseline['parameter_derivation']['ancestry'][-1]
+        selected['reference'] = 'test.requirements@1'
+        selected['document']['metadata']['id'] = 'test.requirements'
+        selected['digest'] = parameters.digest(selected['document'])
+        requirement_baseline['digest'] = selected['digest']
+        shell['requirements'][0]['provenance'][0]['baseline'] = 'test.requirements@1'
+        for key in ('requirements', 'resolved_requirement_baselines'):
             self.plan[key] = shell[key]
+        self.plan['assignments'][0]['baselines'].append('test.requirements@1')
         self.sign_plan()
         for status in ('pass','fail','unknown','error'):
             report, _ = self.run_assessment([self.document()], status=status)
@@ -770,7 +782,7 @@ class AssessmentV4Tests(unittest.TestCase):
     def test_same_document_selected_for_two_requirements_retains_attributable_error(self):
         requirement = copy.deepcopy(self.plan['controls'][0]['evidence'][0])
         requirement['max_age'] = '48h'
-        requirement['id'] = 'second-observation'
+        requirement['id'] = 'second_observation'
         self.plan['controls'][0]['evidence'].append(requirement)
         self.sign_plan()
         for effect in (RuntimeError('scoped'), lambda *args: None):
@@ -779,7 +791,7 @@ class AssessmentV4Tests(unittest.TestCase):
             self.assertNotIn('evidence_ids', report['results'][0])
             self.assertEqual(
                 [use['dependency_id'] for use in report['provenance']['selectedEvidence']],
-                ['observation', 'second-observation'],
+                ['observation', 'second_observation'],
             )
             self.assertEqual(opa.call_count,1)
 

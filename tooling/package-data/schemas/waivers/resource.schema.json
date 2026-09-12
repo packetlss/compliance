@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://compliance.example/schemas/waivers/resource-v1alpha1.schema.json",
+  "$id": "https://compliance.example/schemas/platform/waivers/v1alpha1.schema.json",
   "title": "Compliance waiver resource",
   "type": "object",
   "required": ["apiVersion", "kind", "metadata", "spec"],
@@ -45,7 +45,7 @@
           "required": ["instanceId"],
           "additionalProperties": false,
           "properties": {
-            "instanceId": {"type": "string", "minLength": 1}
+            "instanceId": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"}
           }
         },
         "validFrom": {"type": "string", "format": "date-time"},

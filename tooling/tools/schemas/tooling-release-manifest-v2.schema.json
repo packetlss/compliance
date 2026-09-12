@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://compliance.example/schemas/releases/tooling-release-manifest-v2.schema.json",
+  "$id": "https://compliance.example/schemas/platform/tooling-release-manifest/v2.schema.json",
   "title": "Compliance tooling content-addressed release manifest",
   "type": "object",
   "required": [

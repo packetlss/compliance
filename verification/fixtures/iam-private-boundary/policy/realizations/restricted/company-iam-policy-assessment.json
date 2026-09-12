@@ -8,11 +8,11 @@
   "spec": {
     "based_on": {
       "realization": "company.linux.central-role-access@1",
-      "digest": "sha256:172fa086f8a970df8294985915a33fb1cc94d5eff1626faa2623625fee240f6c"
+      "digest": "sha256:7d684322c0c6d86255c806c34b11efbbfb72aebe12a1a52f4b3e09c213a59fdc"
     },
     "requirement": {
       "requirement": "company.iam.role-based-access@1",
-      "digest": "sha256:f24f8515efe6172e659f75c912f986c61f09697d2f6c28a78fff77fad5d24ad5"
+      "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7"
     },
     "applies_to": {
       "subject_types": [
@@ -31,7 +31,7 @@
     "checks": [
       {
         "instance_id": "restricted.linux.rbac.sssd-installed",
-        "implementation": "linux.access.setting_equals",
+        "implementation": "linux.access.setting-equals",
         "severity": "high",
         "remediation": "Install SSSD using the environment-approved package source.",
         "parameters": {
@@ -42,7 +42,7 @@
       },
       {
         "instance_id": "restricted.linux.rbac.sssd-domain-configured",
-        "implementation": "linux.access.setting_equals",
+        "implementation": "linux.access.setting-equals",
         "severity": "critical",
         "remediation": "Connect SSSD to the approved central IAM domain using the restricted environment procedure.",
         "parameters": {
@@ -53,7 +53,7 @@
       },
       {
         "instance_id": "restricted.linux.rbac.ssh-central-group-required",
-        "implementation": "linux.access.setting_equals",
+        "implementation": "linux.access.setting-equals",
         "severity": "critical",
         "remediation": "Restrict interactive SSH access to the approved central IAM group.",
         "parameters": {
@@ -66,7 +66,7 @@
       },
       {
         "instance_id": "restricted.linux.rbac.unmanaged-local-login-absent",
-        "implementation": "linux.access.setting_equals",
+        "implementation": "linux.access.setting-equals",
         "severity": "critical",
         "remediation": "Remove interactive authorization from unmanaged local accounts or enroll the identity in central IAM.",
         "parameters": {
@@ -106,17 +106,17 @@
         "id": "restricted.linux.rbac.sssd-installed.freshness",
         "source": {
           "requirement": "company.iam.role-based-access@1",
-          "digest": "sha256:f24f8515efe6172e659f75c912f986c61f09697d2f6c28a78fff77fad5d24ad5",
+          "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7",
           "slot": "privileged_evidence_max_age",
-          "declaration_digest": "sha256:57fa48cd1e1049f9697338e6ed012af5002b6ca6d811c8e8738040ff88bfe85c",
-          "schema_digest": "sha256:d5007f641ce737cd2a3851392c60a2a4c7fdd9b62e5fd1b4f47521a6dd4b7b08"
+          "declaration_digest": "sha256:35ed20fc37f7aa59c704626924711a1f156e6ce70dde22c93b507fb1b4df0115",
+          "schema_digest": "sha256:c4b547904c80c90e4d9ff5e335f672c55b77072a86049f1f748bd408baf49e5c"
         },
         "destination": {
           "instance_id": "restricted.linux.rbac.sssd-installed",
           "implementation": {
-            "id": "linux.access.setting_equals",
+            "id": "linux.access.setting-equals",
             "version": 1,
-            "fingerprint": "sha256:4dd386bea23c0a2bedaa550ca774bbfaac8c00b3ab6690bca9a8e1ce65640f5c"
+            "fingerprint": "sha256:30a48a37139b1d60da9dae5f96f83d3d4725ea90549096ff06d71d828b58ff55"
           },
           "kind": "freshness",
           "dependency": "observation",
@@ -127,17 +127,17 @@
         "id": "restricted.linux.rbac.sssd-domain-configured.freshness",
         "source": {
           "requirement": "company.iam.role-based-access@1",
-          "digest": "sha256:f24f8515efe6172e659f75c912f986c61f09697d2f6c28a78fff77fad5d24ad5",
+          "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7",
           "slot": "privileged_evidence_max_age",
-          "declaration_digest": "sha256:57fa48cd1e1049f9697338e6ed012af5002b6ca6d811c8e8738040ff88bfe85c",
-          "schema_digest": "sha256:d5007f641ce737cd2a3851392c60a2a4c7fdd9b62e5fd1b4f47521a6dd4b7b08"
+          "declaration_digest": "sha256:35ed20fc37f7aa59c704626924711a1f156e6ce70dde22c93b507fb1b4df0115",
+          "schema_digest": "sha256:c4b547904c80c90e4d9ff5e335f672c55b77072a86049f1f748bd408baf49e5c"
         },
         "destination": {
           "instance_id": "restricted.linux.rbac.sssd-domain-configured",
           "implementation": {
-            "id": "linux.access.setting_equals",
+            "id": "linux.access.setting-equals",
             "version": 1,
-            "fingerprint": "sha256:4dd386bea23c0a2bedaa550ca774bbfaac8c00b3ab6690bca9a8e1ce65640f5c"
+            "fingerprint": "sha256:30a48a37139b1d60da9dae5f96f83d3d4725ea90549096ff06d71d828b58ff55"
           },
           "kind": "freshness",
           "dependency": "observation",
@@ -148,17 +148,17 @@
         "id": "restricted.linux.rbac.ssh-central-group-required.freshness",
         "source": {
           "requirement": "company.iam.role-based-access@1",
-          "digest": "sha256:f24f8515efe6172e659f75c912f986c61f09697d2f6c28a78fff77fad5d24ad5",
+          "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7",
           "slot": "privileged_evidence_max_age",
-          "declaration_digest": "sha256:57fa48cd1e1049f9697338e6ed012af5002b6ca6d811c8e8738040ff88bfe85c",
-          "schema_digest": "sha256:d5007f641ce737cd2a3851392c60a2a4c7fdd9b62e5fd1b4f47521a6dd4b7b08"
+          "declaration_digest": "sha256:35ed20fc37f7aa59c704626924711a1f156e6ce70dde22c93b507fb1b4df0115",
+          "schema_digest": "sha256:c4b547904c80c90e4d9ff5e335f672c55b77072a86049f1f748bd408baf49e5c"
         },
         "destination": {
           "instance_id": "restricted.linux.rbac.ssh-central-group-required",
           "implementation": {
-            "id": "linux.access.setting_equals",
+            "id": "linux.access.setting-equals",
             "version": 1,
-            "fingerprint": "sha256:4dd386bea23c0a2bedaa550ca774bbfaac8c00b3ab6690bca9a8e1ce65640f5c"
+            "fingerprint": "sha256:30a48a37139b1d60da9dae5f96f83d3d4725ea90549096ff06d71d828b58ff55"
           },
           "kind": "freshness",
           "dependency": "observation",
@@ -169,17 +169,17 @@
         "id": "restricted.linux.rbac.unmanaged-local-login-absent.freshness",
         "source": {
           "requirement": "company.iam.role-based-access@1",
-          "digest": "sha256:f24f8515efe6172e659f75c912f986c61f09697d2f6c28a78fff77fad5d24ad5",
+          "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7",
           "slot": "privileged_evidence_max_age",
-          "declaration_digest": "sha256:57fa48cd1e1049f9697338e6ed012af5002b6ca6d811c8e8738040ff88bfe85c",
-          "schema_digest": "sha256:d5007f641ce737cd2a3851392c60a2a4c7fdd9b62e5fd1b4f47521a6dd4b7b08"
+          "declaration_digest": "sha256:35ed20fc37f7aa59c704626924711a1f156e6ce70dde22c93b507fb1b4df0115",
+          "schema_digest": "sha256:c4b547904c80c90e4d9ff5e335f672c55b77072a86049f1f748bd408baf49e5c"
         },
         "destination": {
           "instance_id": "restricted.linux.rbac.unmanaged-local-login-absent",
           "implementation": {
-            "id": "linux.access.setting_equals",
+            "id": "linux.access.setting-equals",
             "version": 1,
-            "fingerprint": "sha256:4dd386bea23c0a2bedaa550ca774bbfaac8c00b3ab6690bca9a8e1ce65640f5c"
+            "fingerprint": "sha256:30a48a37139b1d60da9dae5f96f83d3d4725ea90549096ff06d71d828b58ff55"
           },
           "kind": "freshness",
           "dependency": "observation",
@@ -190,17 +190,17 @@
         "id": "restricted.linux.rbac.company-iam-service.freshness",
         "source": {
           "requirement": "company.iam.role-based-access@1",
-          "digest": "sha256:f24f8515efe6172e659f75c912f986c61f09697d2f6c28a78fff77fad5d24ad5",
+          "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7",
           "slot": "privileged_evidence_max_age",
-          "declaration_digest": "sha256:57fa48cd1e1049f9697338e6ed012af5002b6ca6d811c8e8738040ff88bfe85c",
-          "schema_digest": "sha256:d5007f641ce737cd2a3851392c60a2a4c7fdd9b62e5fd1b4f47521a6dd4b7b08"
+          "declaration_digest": "sha256:35ed20fc37f7aa59c704626924711a1f156e6ce70dde22c93b507fb1b4df0115",
+          "schema_digest": "sha256:c4b547904c80c90e4d9ff5e335f672c55b77072a86049f1f748bd408baf49e5c"
         },
         "destination": {
           "instance_id": "restricted.linux.rbac.company-iam-integration",
           "implementation": {
             "id": "iam.integration.required",
             "version": 1,
-            "fingerprint": "sha256:3822e3ac6bdd0bbd22f3838f0c570f2a79ba11db74ed32c4a06b2eaf908712fa"
+            "fingerprint": "sha256:4e30a5c17a93878279f9866e581714aee725edf63f3c8fd36273d63e00d814d5"
           },
           "kind": "freshness",
           "dependency": "service",
@@ -211,17 +211,17 @@
         "id": "restricted.linux.rbac.company-iam-relationship.freshness",
         "source": {
           "requirement": "company.iam.role-based-access@1",
-          "digest": "sha256:f24f8515efe6172e659f75c912f986c61f09697d2f6c28a78fff77fad5d24ad5",
+          "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7",
           "slot": "privileged_evidence_max_age",
-          "declaration_digest": "sha256:57fa48cd1e1049f9697338e6ed012af5002b6ca6d811c8e8738040ff88bfe85c",
-          "schema_digest": "sha256:d5007f641ce737cd2a3851392c60a2a4c7fdd9b62e5fd1b4f47521a6dd4b7b08"
+          "declaration_digest": "sha256:35ed20fc37f7aa59c704626924711a1f156e6ce70dde22c93b507fb1b4df0115",
+          "schema_digest": "sha256:c4b547904c80c90e4d9ff5e335f672c55b77072a86049f1f748bd408baf49e5c"
         },
         "destination": {
           "instance_id": "restricted.linux.rbac.company-iam-integration",
           "implementation": {
             "id": "iam.integration.required",
             "version": 1,
-            "fingerprint": "sha256:3822e3ac6bdd0bbd22f3838f0c570f2a79ba11db74ed32c4a06b2eaf908712fa"
+            "fingerprint": "sha256:4e30a5c17a93878279f9866e581714aee725edf63f3c8fd36273d63e00d814d5"
           },
           "kind": "freshness",
           "dependency": "relationship",

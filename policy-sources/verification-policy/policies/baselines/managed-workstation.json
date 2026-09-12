@@ -10,7 +10,7 @@
     "controls": [
       {
         "instance_id": "workstation.homebrew.required-formulae",
-        "implementation": "macos.homebrew.formulae_required",
+        "implementation": "macos.homebrew.formulae-required",
         "parameters": {
           "required": [
             "git"
@@ -24,7 +24,7 @@
       },
       {
         "instance_id": "workstation.macos.sip-enabled",
-        "implementation": "macos.security.setting_equals",
+        "implementation": "macos.security.setting-equals",
         "parameters": {
           "setting": "sip",
           "expected": "enabled"

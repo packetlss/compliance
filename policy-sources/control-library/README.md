@@ -34,13 +34,11 @@ configuration-generation contract.
 [ADR 0019](../../docs/adr/0019-typed-identifier-namespaces-and-schema-uri-ownership.md)
 separates the Control lookup namespace from policy-source, distribution, schema,
 evidence, Rego and filesystem identities. Its dot-separated kebab-case semantic ID
-grammar and canonical schema `$id` layouts are accepted but not migrated in this
-documentation tranche. Current source remains byte-for-byte authoritative until the
-coordinated pre-freeze migration; authority-looking ID prefixes confer no trust or
-source precedence, and no compatibility alias is planned.
+grammar and canonical schema `$id` layouts are implemented under #136.
+Authority-looking ID prefixes confer no trust or source precedence, and no
+compatibility alias exists.
 
-Current `macos.system.minimum_version@1`—whose canonical migration target is
-`macos.system.minimum-version@1`—owns macOS numeric dotted-version semantics:
+`macos.system.minimum-version@1` owns macOS numeric dotted-version semantics:
 policy supplies an explicit three-component minimum, while selected observations
 may use two or three numeric components and an omitted patch compares as zero.
 Malformed observed versions are attributable inconclusiveness, not SemVer or a

@@ -16,7 +16,7 @@
     "controls": [
       {
         "instance_id": "csa-ccm.aws.root-mfa-enabled",
-        "implementation": "aws.account.setting_equals",
+        "implementation": "aws.account.setting-equals",
         "external_refs": [
           "CSA-CCM-v4.1:IAM-domain"
         ],
@@ -33,7 +33,7 @@
       },
       {
         "instance_id": "csa-ccm.aws.multi-region-audit-trail",
-        "implementation": "aws.account.setting_equals",
+        "implementation": "aws.account.setting-equals",
         "external_refs": [
           "CSA-CCM-v4.1:LOG-03"
         ],
@@ -50,7 +50,7 @@
       },
       {
         "instance_id": "csa-ccm.aws.audit-log-retention",
-        "implementation": "aws.account.number_at_least",
+        "implementation": "aws.account.number-at-least",
         "external_refs": [
           "CSA-CCM-v4.1:LOG-domain"
         ],

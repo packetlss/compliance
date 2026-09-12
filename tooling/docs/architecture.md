@@ -522,6 +522,16 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-12 — Implement canonical identifier and schema URI migration (#136)
+
+ADR 0019's grammar and role/owner-derived schema `$id` layouts are implemented
+across maintained policy, tooling contracts, references, pins, fixtures, and release
+vectors. A technical Baseline/BaselineOverlay and RequirementBaseline sharing one
+kindless assignment `id@revision` now fail admission before planning independently
+of source order. No alias, normalization, source qualification, precedence, network
+schema discovery, Control multi-version redesign, or ADR 0012 semantic change is
+introduced.
+
 ### 2026-09-12 — Typed identifier namespaces and schema URI ownership (#134)
 
 System ADR 0019 accepts typed lookup namespaces with canonical dot-separated

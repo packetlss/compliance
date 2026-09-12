@@ -8,7 +8,7 @@ assessment_input(observed) := {
 	"subject": {"id": "cloud-account/test"},
 	"control": {
 		"instance_id": "test.minimum",
-		"implementation": "aws.account.number_at_least",
+		"implementation": "aws.account.number-at-least",
 		"severity": "medium",
 		"remediation": "Fix it",
 		"parameters": {"section": "cloudtrail", "setting": "retention_days", "minimum": 90},

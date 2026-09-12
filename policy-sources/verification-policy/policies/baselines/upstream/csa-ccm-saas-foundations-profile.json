@@ -16,7 +16,7 @@
     "controls": [
       {
         "instance_id": "csa-ccm.saas.sso-enforced",
-        "implementation": "saas.tenant.setting_equals",
+        "implementation": "saas.tenant.setting-equals",
         "external_refs": [
           "CSA-CCM-v4.1:IAM-domain"
         ],
@@ -33,7 +33,7 @@
       },
       {
         "instance_id": "csa-ccm.saas.mfa-enforced",
-        "implementation": "saas.tenant.setting_equals",
+        "implementation": "saas.tenant.setting-equals",
         "external_refs": [
           "CSA-CCM-v4.1:IAM-domain"
         ],
@@ -50,7 +50,7 @@
       },
       {
         "instance_id": "csa-ccm.saas.audit-log-retention",
-        "implementation": "saas.tenant.number_at_least",
+        "implementation": "saas.tenant.number-at-least",
         "external_refs": [
           "CSA-CCM-v4.1:LOG-domain"
         ],

@@ -28,7 +28,7 @@
               "minLength": 1
             }
           },
-          "$id": "https://compliance.example/inputs/organization.assertion.required/assertion"
+          "$id": "https://compliance.example/schemas/controls/organization.assertion.required/evidence/assertion/inputs/v1.schema.json"
         }
       }
     ],

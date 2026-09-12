@@ -36,7 +36,10 @@ class ControlRealizationTests(unittest.TestCase):
             for revision, value in ((1, '30d'), (2, '15d')):
                 requirement = copy.deepcopy(self.requirement)
                 requirement['metadata'].update(id='review.same-objective', revision=revision)
-                schema = {'$id': 'https://example.test/revision-age', 'type': 'string'}
+                schema = {
+                    '$id': 'https://compliance.example/schemas/requirements/review.same-objective/parameters/privileged_evidence_max_age/v1.schema.json',
+                    'type': 'string',
+                }
                 requirement['spec']['parameters'] = {'privileged_evidence_max_age': {
                     'required': True, 'binding_mode': 'fixed', 'value': value,
                     'representation': 'duration', 'schema': schema, 'schema_digest': pp.digest(schema)}}

@@ -8,7 +8,7 @@ assessment_input(observed) := {
 	"subject": {"id": "saas/test"},
 	"control": {
 		"instance_id": "test.setting",
-		"implementation": "saas.tenant.setting_equals",
+		"implementation": "saas.tenant.setting-equals",
 		"severity": "high",
 		"remediation": "Fix it",
 		"parameters": {"section": "authentication", "setting": "sso_enforced", "expected": true},
@@ -37,7 +37,7 @@ test_missing_optional_guest_access_is_unknown if {
 		"subject": {"id": "saas/test"},
 		"control": {
 			"instance_id": "test.guest-access",
-			"implementation": "saas.tenant.setting_equals",
+			"implementation": "saas.tenant.setting-equals",
 			"severity": "high",
 			"remediation": "Fix it",
 			"parameters": {"section": "guest_access", "setting": "allowed", "expected": false},

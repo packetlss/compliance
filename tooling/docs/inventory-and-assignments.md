@@ -295,8 +295,7 @@ The wire reference is kindless. Under
 a supplied composition must therefore reject the same `name@revision` appearing in
 both the technical Baseline/BaselineOverlay catalog and the RequirementBaseline
 catalog before planning, without preference or fallback. This fail-closed collision
-admission rule is accepted architecture for the later coordinated migration; the
-current runtime does not yet enforce it.
+admission rule is implemented under #136.
 
 The assignment contains no Rego, evidence, or control parameters. The baseline
 contains no group selectors or asset IDs. This boundary allows inventory

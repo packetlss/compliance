@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/controls/macos.security.setting-equals/parameters/v1.schema.json",
   "type": "object",
   "required": ["setting", "expected"],
   "additionalProperties": false,

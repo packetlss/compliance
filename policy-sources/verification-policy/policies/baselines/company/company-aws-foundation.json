@@ -10,14 +10,14 @@
     "extends": [
       {
         "baseline": "profile.csa-ccm.aws-foundations@4.1-profile1",
-        "digest": "sha256:6f0661efbaa08d41e28a87669218018dfc5be282abe7f2eee7654c5a350cc811"
+        "digest": "sha256:a6bb9de52427d1ebdda07eefe0f476d0a745d4831cdbc6ebeee2c2a1f6cc0681"
       }
     ],
     "operations": [
       {
         "op": "tailor",
         "target": "csa-ccm.aws.audit-log-retention",
-        "expected_parent_fingerprint": "sha256:702d6620cd1d1a3ddb92559619c826d95196325ac362ebfb8b441c19ba249f4c",
+        "expected_parent_fingerprint": "sha256:8dc113decfc79b9a3b33f3e0d5f873ee2244a029a452eceb00e61a13d9b51e94",
         "parameters": {
           "section": "cloudtrail",
           "setting": "retention_days",
@@ -34,7 +34,7 @@
       {
         "op": "annotate",
         "target": "csa-ccm.aws.multi-region-audit-trail",
-        "expected_parent_fingerprint": "sha256:69fc866d51684628f45cf68fb2e1976f61e773982928c3fd27322b24e5f42539",
+        "expected_parent_fingerprint": "sha256:5e3dc074e69412d284baa44908a49eaf6d859f2991c8386076f88a1da8fb9642",
         "annotations": {
           "severity": "critical",
           "remediation": "Enable the organization CloudTrail for all enabled Regions through the approved landing-zone deployment."
@@ -44,7 +44,7 @@
         "op": "add",
         "control": {
           "instance_id": "company.aws.security-contact-configured",
-          "implementation": "aws.account.setting_equals",
+          "implementation": "aws.account.setting-equals",
           "severity": "medium",
           "remediation": "Configure the AWS account SECURITY alternate contact using the approved security operations address.",
           "parameters": {

@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/controls/aws.account.setting-equals/parameters/v1.schema.json",
   "type": "object",
   "required": ["section", "setting", "expected"],
   "additionalProperties": false,

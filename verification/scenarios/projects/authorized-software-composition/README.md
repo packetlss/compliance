@@ -43,6 +43,6 @@ Missing/ineligible evidence remains `unknown` under the existing evidence contra
 This scenario adds no remediation or adapter execution and does not broaden the
 independent `technical-only-packages` anchor or Stage 9 scenario scope.
 
-Identifiers introduced under #131 remain experimental. Accepted ADR 0019 owns the
-namespace and schema-URI conventions; this scenario applies only its bounded PR #133
-mappings and establishes no compatibility alias or contract freeze.
+Identifiers introduced under #131 remain experimental. Implemented ADR 0019 owns the
+namespace and schema-URI conventions; the #136 migration establishes no compatibility
+alias or contract freeze.

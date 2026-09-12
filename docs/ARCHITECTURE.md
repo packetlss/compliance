@@ -53,8 +53,8 @@ subject plan across direct-baseline and realization paths.
 Assignments use a kindless `name@revision` reference. The technical-baseline and
 RequirementBaseline catalogs therefore share one assignment-reference collision
 admission namespace: a composition containing both kinds at the same reference must
-fail before planning without precedence or fallback. This accepted rule is not yet
-implemented; ADR 0019 requires it in the separate coordinated pre-freeze migration.
+fail before planning without precedence or fallback. This rule is implemented under
+#136 and is independent of policy-source, file, and traversal order.
 
 JSON Schema `$id` is a predictable absolute HTTPS schema-contract URI, separate
 from semantic resource lookup and exact schema content. Digests and enclosing

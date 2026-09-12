@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://compliance.example/schemas/policy/control-realization-v1alpha1.schema.json",
+  "$id": "https://compliance.example/schemas/platform/policy/control-realization/v1alpha1.schema.json",
   "title": "Environment-specific realization of a control requirement",
   "type": "object",
   "required": [
@@ -119,7 +119,7 @@
                 "properties": {
                   "requirement": {
                     "type": "string",
-                    "minLength": 1
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
                   },
                   "digest": {
                     "type": "string",
@@ -127,7 +127,7 @@
                   },
                   "slot": {
                     "type": "string",
-                    "minLength": 1
+                    "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
                   },
                   "declaration_digest": {
                     "type": "string",
@@ -152,7 +152,7 @@
                 "properties": {
                   "instance_id": {
                     "type": "string",
-                    "minLength": 1
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
                   },
                   "implementation": {
                     "type": "object",
@@ -160,15 +160,17 @@
                     "properties": {
                       "id": {
                         "type": "string",
-                        "minLength": 1
+                        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
                       },
                       "version": {
                         "oneOf": [
                           {
-                            "type": "integer"
+                            "type": "integer",
+                            "minimum": 1
                           },
                           {
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
                           }
                         ]
                       },
@@ -192,7 +194,7 @@
                   },
                   "dependency": {
                     "type": "string",
-                    "minLength": 1
+                    "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
                   },
                   "path": {
                     "type": "string",
@@ -296,7 +298,7 @@
     "identifier": {
       "type": "string",
       "minLength": 1,
-      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
     },
     "revision": {
       "oneOf": [
@@ -306,7 +308,8 @@
         },
         {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
         }
       ]
     },
@@ -325,7 +328,7 @@
         "requirement": {
           "type": "string",
           "minLength": 3,
-          "pattern": "^.+@.+$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
         },
         "digest": {
           "$ref": "#/$defs/digest"
@@ -343,7 +346,7 @@
         "realization": {
           "type": "string",
           "minLength": 3,
-          "pattern": "^.+@.+$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
         },
         "digest": {
           "$ref": "#/$defs/digest"
@@ -514,6 +517,9 @@
         },
         "evidence": {
           "type": "object",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
+          },
           "additionalProperties": {
             "type": "object",
             "additionalProperties": false,

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://compliance.example/schemas/policy-diff-set-v1alpha1.schema.json",
+  "$id": "https://compliance.example/schemas/platform/policy-diff-set/v1alpha1.schema.json",
   "type": "object",
   "required": ["schema", "comparison", "before", "after", "summary", "subjects"],
   "additionalProperties": false,

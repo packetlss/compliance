@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://compliance.example/schemas/assessment-provenance-v1alpha1.schema.json",
+  "$id": "https://compliance.example/schemas/platform/assessment-provenance/v1alpha1.schema.json",
   "oneOf": [
     {
       "type": "object",
@@ -93,8 +93,8 @@
       "type": "object", "additionalProperties": false,
       "required": ["instance_id", "dependency_id", "evidence_id", "evidence_digest", "collected_at"],
       "properties": {
-        "instance_id": {"type": "string", "minLength": 1},
-        "dependency_id": {"type": "string", "minLength": 1},
+        "instance_id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"},
+        "dependency_id": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"},
         "evidence_id": {"type": "string", "minLength": 1},
         "evidence_digest": {"$ref": "#/$defs/digest"},
         "collected_at": {"type": "string", "format": "date-time"}

@@ -24,7 +24,10 @@ class PackageSchemaMirrorTests(unittest.TestCase):
         path = project_registry_schema_path()
         self.assertEqual(path.name, "project-registry.schema.json")
         schema = json.loads(path.read_text(encoding="utf-8"))
-        self.assertEqual(schema["$id"], "https://compliance.example/schemas/config/project-registry-v1alpha1.schema.json")
+        self.assertEqual(
+            schema["$id"],
+            "https://compliance.example/schemas/platform/project-registry/v1alpha1.schema.json",
+        )
         self.assertEqual(schema["properties"]["schema"]["const"], PROJECT_REGISTRY_SCHEMA)
         self.assertFalse(path.with_name("workspace-config.schema.json").exists())
 

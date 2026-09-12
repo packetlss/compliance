@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/controls/aws.account.number-at-least/parameters/v1.schema.json",
   "type": "object",
   "required": ["section", "setting", "minimum"],
   "additionalProperties": false,

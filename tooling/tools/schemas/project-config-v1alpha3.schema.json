@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://compliance.example/schemas/project-config-v1alpha3.schema.json",
+  "$id": "https://compliance.example/schemas/platform/project-config/v1alpha3.schema.json",
   "title": "Compliance project configuration with actual composition and optional enforcement",
   "type": "object",
   "required": [

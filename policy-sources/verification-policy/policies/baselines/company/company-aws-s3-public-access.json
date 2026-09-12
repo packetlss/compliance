@@ -10,7 +10,7 @@
     "controls": [
       {
         "instance_id": "company.aws.s3-account-public-access-block",
-        "implementation": "aws.s3.account_public_access_block_required",
+        "implementation": "aws.s3.account-public-access-block-required",
         "external_refs": [
           "AWS-Security-Hub:S3.1"
         ],

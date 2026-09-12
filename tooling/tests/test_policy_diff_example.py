@@ -33,6 +33,9 @@ class PolicyDiffExampleTests(unittest.TestCase):
 
         base["controls"][0]["policy_inputs"]["instance"]["instance_id"] = base["controls"][0]["instance_id"]
         base["controls"][0]["definition_fingerprint"] = control_definition_fingerprint(base["controls"][0]["policy_inputs"]["instance"])
+        base["controls"][0]["policy_inputs"]["instance"][
+            "definition_fingerprint"
+        ] = base["controls"][0]["definition_fingerprint"]
 
         def sample(_project, subject_id):
             plan = copy.deepcopy(base)

@@ -8,7 +8,7 @@ base_input := {
 	"subject": {"id": "workstation/test"},
 	"control": {
 		"instance_id": "test.version",
-		"implementation": "macos.system.minimum_version",
+		"implementation": "macos.system.minimum-version",
 		"severity": "high",
 		"remediation": "Upgrade",
 		"parameters": {"minimum": "15.0.0"},

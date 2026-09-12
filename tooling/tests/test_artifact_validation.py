@@ -27,11 +27,39 @@ from tools.render_plan import (
 
 
 class AssessmentArtifactValidationTests(unittest.TestCase):
+    def test_public_semantic_identifiers_are_not_normalized_in_frozen_plans(self):
+        plan = assessment_plan(
+            [{"name": "test", "digest": "sha256:" + "1" * 64}],
+            with_requirement=True,
+        )
+        mutations = (
+            lambda item: item["controls"][0].update(
+                implementation="test.control_legacy"
+            ),
+            lambda item: item["controls"][0].update(
+                instance_id="test.check_legacy"
+            ),
+            lambda item: item["assignments"][0]["baselines"].__setitem__(
+                0, "test_baseline@1"
+            ),
+            lambda item: item["requirements"][0].update(
+                reference="test_requirement@1"
+            ),
+        )
+        for mutate in mutations:
+            changed = copy.deepcopy(plan)
+            mutate(changed)
+            with self.subTest(mutation=mutate), self.assertRaises(
+                ArtifactValidationError
+            ):
+                validate_assessment_plan(changed)
+
     @staticmethod
-    def parameterized_plan():
+    def parameterized_plan(schema_host="compliance.example"):
         """Build one self-contained valid plan with a frozen freshness binding."""
         from tools import policy_parameters as parameters
 
+        schema_origin = f"https://{schema_host}"
         policy_sources = [{"name": "test", "digest": "sha256:" + "1" * 64}]
         plan = assessment_plan(policy_sources, with_requirement=True)
         requirement = plan["requirements"][0]
@@ -39,7 +67,10 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
 
         requirement_document = copy.deepcopy(requirement["parameter_facts"]["document"])
         value_schema = {
-            "$id": "https://example.test/frozen-age",
+            "$id": (
+                schema_origin
+                + "/schemas/requirements/test.requirement/parameters/age/v1.schema.json"
+            ),
             "type": "string",
             "pattern": "^[1-9][0-9]*[smhd]$",
         }
@@ -90,6 +121,20 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         definition["_parameters_schema"] = copy.deepcopy(
             control["policy_inputs"]["parameters_schema"]
         )
+        definition["_parameters_schema"]["$id"] = (
+            schema_origin
+            + "/schemas/controls/test.control/parameters/v1.schema.json"
+        )
+        if schema_host != "compliance.example":
+            definition["spec"]["evidence"][0]["inputs_schema"] = {
+                "$id": (
+                    schema_origin
+                    + "/schemas/controls/test.control/evidence/observation/"
+                    "inputs/v1.schema.json"
+                ),
+                "type": "object",
+                "additionalProperties": False,
+            }
         definition["_implementation_modules"] = []
         instance = {
             "instance_id": control["instance_id"],
@@ -132,6 +177,20 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         control["parameters"] = copy.deepcopy(instance["parameters"])
         control["evidence"] = parameters.evidence_for(instance, definition)
         control["definition_fingerprint"] = parameters.digest(instance)
+        realization_reference = (
+            f"{realization['metadata']['id']}@{realization['metadata']['revision']}"
+        )
+        control["provenance"] = [{
+            **control["provenance"][0],
+            "requirement": requirement["reference"],
+            "realization": realization_reference,
+        }]
+        control["lineage"] = [{
+            "realization": realization_reference,
+            "operation": "defined",
+        }]
+        control["derivations"] = []
+        control.pop("overlay_policy", None)
 
         requirement["parameter_facts"] = {
             "document": requirement_document,
@@ -154,6 +213,675 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         validate_assessment_plan(plan)
         return plan
 
+    def test_frozen_plan_preserves_and_accepts_adopter_schema_host(self):
+        plan = self.parameterized_plan("schemas.adopter.example")
+        requirement_schema_id = plan["requirements"][0]["parameter_facts"][
+            "document"
+        ]["spec"]["parameters"]["age"]["schema"]["$id"]
+        control = plan["controls"][0]
+
+        self.assertTrue(requirement_schema_id.startswith(
+            "https://schemas.adopter.example/"
+        ))
+        self.assertTrue(control["policy_inputs"]["parameters_schema"]["$id"].startswith(
+            "https://schemas.adopter.example/"
+        ))
+        self.assertTrue(control["policy_inputs"]["definition"]["spec"]["evidence"][0][
+            "inputs_schema"
+        ]["$id"].startswith("https://schemas.adopter.example/"))
+        validate_assessment_plan(plan)
+
+    def test_invalid_plan_still_rejects_retained_contract_tampering(self):
+        from tools import policy_parameters as parameters
+
+        def rename(mapping, old, new):
+            mapping[new] = mapping.pop(old)
+
+        def change_state_schema(plan, derivation=False):
+            if derivation:
+                declaration = plan["resolved_requirement_baselines"][0][
+                    "parameter_derivation"
+                ]["states"]["test.requirement@1"]["age"]["declaration"]
+            else:
+                declaration = plan["requirements"][0]["parameter_facts"][
+                    "states"
+                ]["age"]["declaration"]
+            declaration["schema"]["$id"] = "https://bad.example/wrong"
+            declaration["schema_digest"] = parameters.digest(declaration["schema"])
+
+        def add_instance_derivation(plan, mutate):
+            derivation = {
+                "operation": "tailor",
+                "overlay": "test.overlay@1",
+                "parent_fingerprint": "sha256:" + "0" * 64,
+                "inherited_lineage": [{
+                    "baseline": "test.baseline@1",
+                    "operation": "defined",
+                }],
+                "before": {
+                    "implementation": "test.control",
+                    "parameters": {},
+                    "disposition": "evaluate",
+                    "evidence": {"observation": {"max_age": "1d"}},
+                },
+                "after": {
+                    "implementation": "test.control",
+                    "parameters": {},
+                    "disposition": "evaluate",
+                    "evidence": {"observation": {"max_age": "1d"}},
+                },
+            }
+            mutate(derivation)
+            plan["controls"][0]["policy_inputs"]["instance"]["derivations"] = [
+                derivation
+            ]
+
+        cases = {
+            "control parameter schema": lambda plan: plan["controls"][0][
+                "policy_inputs"
+            ]["parameters_schema"].update({"$id": "https://bad.example/wrong"}),
+            "evidence input schema": lambda plan: plan["controls"][0][
+                "policy_inputs"
+            ]["definition"]["spec"]["evidence"][0]["inputs_schema"].update(
+                {"$id": "https://bad.example/wrong"}
+            ),
+            "requirement parameter schema": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["document"]["spec"]["parameters"]["age"].update({
+                "schema": {
+                    **plan["requirements"][0]["parameter_facts"]["document"][
+                        "spec"
+                    ]["parameters"]["age"]["schema"],
+                    "$id": "https://bad.example/wrong",
+                },
+            }),
+            "requirement schema digest": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["document"]["spec"]["parameters"]["age"].update(
+                schema_digest="sha256:" + "0" * 64
+            ),
+            "control version": lambda plan: plan["controls"][0]["policy_inputs"][
+                "definition"
+            ]["metadata"].update(version="bad__version"),
+            "evidence type": lambda plan: plan["controls"][0]["policy_inputs"][
+                "definition"
+            ]["spec"]["evidence"][0].update(type="bad_type/v1"),
+            "instance evidence dependency": lambda plan: plan["controls"][0][
+                "policy_inputs"
+            ]["instance"].update(evidence={"bad__slot": {"max_age": "1d"}}),
+            "instance lineage": lambda plan: plan["controls"][0][
+                "policy_inputs"
+            ]["instance"].update(lineage=[{
+                "baseline": "bad_baseline@1",
+                "operation": "defined",
+            }]),
+            "instance derivation overlay": lambda plan: add_instance_derivation(
+                plan,
+                lambda derivation: derivation.update(overlay="bad_overlay@1"),
+            ),
+            "instance inherited lineage": lambda plan: add_instance_derivation(
+                plan,
+                lambda derivation: derivation["inherited_lineage"][0].update(
+                    baseline="bad_baseline@1"
+                ),
+            ),
+            "instance before implementation": lambda plan: add_instance_derivation(
+                plan,
+                lambda derivation: derivation["before"].update(
+                    implementation="bad_implementation"
+                ),
+            ),
+            "instance after implementation": lambda plan: add_instance_derivation(
+                plan,
+                lambda derivation: derivation["after"].update(
+                    implementation="bad_implementation"
+                ),
+            ),
+            "instance before evidence dependency": lambda plan: add_instance_derivation(
+                plan,
+                lambda derivation: rename(
+                    derivation["before"]["evidence"],
+                    "observation",
+                    "bad__slot",
+                ),
+            ),
+            "instance after evidence dependency": lambda plan: add_instance_derivation(
+                plan,
+                lambda derivation: rename(
+                    derivation["after"]["evidence"],
+                    "observation",
+                    "bad__slot",
+                ),
+            ),
+            "instance sealing reference": lambda plan: plan["controls"][0][
+                "policy_inputs"
+            ]["instance"].update(overlay_policy={
+                "blocked_operations": ["tailor"],
+                "reason": "synthetic",
+                "sealed_by": "bad_baseline@1",
+            }),
+            "binding scope": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["document"]["spec"]["parameters"]["age"].update(
+                binding_scope=["bad_scope"]
+            ),
+            "requirement state slot": lambda plan: rename(
+                plan["requirements"][0]["parameter_facts"]["states"],
+                "age",
+                "bad__slot",
+            ),
+            "state identity": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["states"]["age"]["identity"].update(requirement="bad_requirement"),
+            "state pin": lambda plan: plan["requirements"][0]["parameter_facts"][
+                "states"
+            ]["age"]["pin"].update(requirement="bad_requirement@1"),
+            "state history": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["states"]["age"]["history"][0].update(baseline="bad_baseline@1"),
+            "state schema owner": lambda plan: change_state_schema(plan),
+            "realization identity": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["realization"]["metadata"].update(id="bad_realization"),
+            "realization requirement": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["realization"]["spec"]["requirement"].update(
+                requirement="bad_requirement@1"
+            ),
+            "realization parent": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["realization"]["spec"].update(
+                based_on={
+                    "realization": "bad_realization@1",
+                    "digest": "sha256:" + "0" * 64,
+                }
+            ),
+            "realization satisfaction": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["realization"]["spec"]["satisfaction"].update(
+                allOf=["bad_instance"]
+            ),
+            "realization check": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["realization"]["spec"]["checks"][0].update(
+                implementation="bad_implementation"
+            ),
+            "realization link source": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["realization"]["spec"]["parameter_links"][0]["source"].update(
+                slot="bad__slot"
+            ),
+            "realization link destination": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["realization"]["spec"]["parameter_links"][0]["destination"].update(
+                dependency="bad__slot"
+            ),
+            "consumption link": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["consumption"][0]["link"]["source"].update(slot="bad__slot"),
+            "derivation requirement": lambda plan: rename(
+                plan["resolved_requirement_baselines"][0]["parameter_derivation"][
+                    "states"
+                ],
+                "test.requirement@1",
+                "bad_requirement@1",
+            ),
+            "derivation slot": lambda plan: rename(
+                plan["resolved_requirement_baselines"][0]["parameter_derivation"][
+                    "states"
+                ]["test.requirement@1"],
+                "age",
+                "bad__slot",
+            ),
+            "derivation state schema owner": lambda plan: change_state_schema(
+                plan,
+                derivation=True,
+            ),
+            "ancestor reference": lambda plan: plan[
+                "resolved_requirement_baselines"
+            ][0]["parameter_derivation"]["ancestry"][0].update(
+                reference="bad_baseline@1"
+            ),
+            "ancestor identity": lambda plan: plan[
+                "resolved_requirement_baselines"
+            ][0]["parameter_derivation"]["ancestry"][0]["document"][
+                "metadata"
+            ].update(id="bad_baseline"),
+            "ancestor parent": lambda plan: plan[
+                "resolved_requirement_baselines"
+            ][0]["parameter_derivation"]["ancestry"][0]["document"]["spec"].update(
+                extends={
+                    "baseline": "bad_parent@1",
+                    "digest": "sha256:" + "0" * 64,
+                }
+            ),
+            "ancestor requirement": lambda plan: plan[
+                "resolved_requirement_baselines"
+            ][0]["parameter_derivation"]["ancestry"][0]["document"]["spec"][
+                "requirements"
+            ][0].update(requirement="bad_requirement@1"),
+            "ancestor operation": lambda plan: plan[
+                "resolved_requirement_baselines"
+            ][0]["parameter_derivation"]["ancestry"][0]["document"]["spec"][
+                "parameter_operations"
+            ][0]["target"].update(slot="bad__slot"),
+            "ancestor contribution": lambda plan: plan[
+                "resolved_requirement_baselines"
+            ][0]["parameter_derivation"]["ancestry"][0]["document"]["spec"].update(
+                parameter_contributions=[{
+                    "id": "test-contribution",
+                    "target": {
+                        "requirement": "bad_requirement",
+                        "slot": "bad__slot",
+                    },
+                    "members": ["test"],
+                }]
+            ),
+        }
+        for case, mutate in cases.items():
+            with self.subTest(case=case):
+                plan = self.parameterized_plan("schemas.adopter.example")
+                mutate(plan)
+                if case == "requirement parameter schema":
+                    declaration = plan["requirements"][0]["parameter_facts"][
+                        "document"
+                    ]["spec"]["parameters"]["age"]
+                    declaration["schema_digest"] = parameters.digest(
+                        declaration["schema"]
+                    )
+                plan["resolution"] = {
+                    "status": "invalid",
+                    "errors": [{"type": "synthetic"}],
+                }
+                refresh_operation(plan)
+                plan["id"] = artifact_digest(plan)
+
+                with self.assertRaises(ArtifactValidationError):
+                    validate_assessment_plan(plan)
+
+        plan = copy.deepcopy(self.plan)
+        control = next(item for item in plan["controls"] if item["derivations"])
+        control["derivations"][0]["before"]["evidence"] = {
+            "bad__slot": {"max_age": "1d"}
+        }
+        plan["resolution"] = {
+            "status": "invalid",
+            "errors": [{"type": "synthetic"}],
+        }
+        refresh_operation(plan)
+        plan["id"] = artifact_digest(plan)
+        with self.assertRaises(ArtifactValidationError):
+            validate_assessment_plan(plan)
+
+    def test_rejects_canonical_but_divergent_retained_contract_copies(self):
+        from tools import policy_parameters as parameters
+
+        def macos_plan(mutate):
+            plan = copy.deepcopy(self.plan)
+            mutate(plan)
+            return plan
+
+        def iam_plan(mutate):
+            plan = copy.deepcopy(self.iam_plan)
+            mutate(plan)
+            return plan
+
+        def additive_policy_plan(mutate):
+            plan = self.additive_plan()
+            mutate(plan)
+            return plan
+
+        def invalid_parameterized_plan(mutate):
+            plan = self.parameterized_plan("schemas.adopter.example")
+            mutate(plan)
+            plan["resolution"] = {
+                "status": "invalid",
+                "errors": [{"type": "synthetic"}],
+            }
+            return plan
+
+        def mixed_alignment_provenance_plan():
+            plan = assessment_plan(
+                [{"name": "test", "digest": "sha256:" + "1" * 64}],
+                with_requirement=True,
+            )
+            control = plan["controls"][0]
+            control["provenance"].append({
+                "group": "test-hosts",
+                "assignment": "test-policy",
+                "baseline": "test.baseline@1",
+            })
+            return plan
+
+        def derived_control(plan):
+            return next(control for control in plan["controls"] if control["derivations"])
+
+        def mutate_outer_and_nested_lineage(plan):
+            control = derived_control(plan)
+            control["lineage"][-1]["baseline"] = "test.other@1"
+            control["policy_inputs"]["instance"]["lineage"][-1][
+                "baseline"
+            ] = "test.other@1"
+
+        def mutate_state_declaration(plan):
+            state = plan["requirements"][0]["parameter_facts"]["states"]["age"]
+            state["declaration"]["schema"]["maxLength"] = 10
+            state["declaration"]["schema_digest"] = parameters.digest(
+                state["declaration"]["schema"]
+            )
+            state["pin"]["schema_digest"] = state["declaration"]["schema_digest"]
+            state["pin"]["declaration_digest"] = parameters.digest(
+                state["declaration"]
+            )
+
+        def mutate_realization_requirement_digest(plan):
+            realization = plan["requirements"][0]["parameter_facts"]["realization"]
+            realization["spec"]["requirement"]["digest"] = "sha256:" + "0" * 64
+            plan["requirements"][0]["realization"]["digest"] = parameters.digest(
+                realization
+            )
+
+        def remove_parameter_state_coverage(plan):
+            plan["requirements"][0]["parameter_facts"]["states"].pop("age")
+            plan["resolved_requirement_baselines"][0]["parameter_derivation"][
+                "states"
+            ]["test.requirement@1"].pop("age", None)
+
+        def duplicate_realization_check(plan):
+            realization = plan["requirements"][0]["parameter_facts"]["realization"]
+            realization["spec"]["checks"].append(
+                copy.deepcopy(realization["spec"]["checks"][0])
+            )
+            plan["requirements"][0]["realization"]["digest"] = parameters.digest(
+                realization
+            )
+
+        def mutate_excluded_evidence_slot(plan):
+            from tools.render_plan import control_definition_fingerprint
+
+            control = plan["excluded_controls"][0]
+            instance = control["policy_inputs"]["instance"]
+            instance["evidence"]["other-slot"] = instance["evidence"].pop(
+                "observation"
+            )
+            for derivations in (instance["derivations"], control["derivations"]):
+                for derivation in derivations:
+                    for snapshot in (derivation["before"], derivation["after"]):
+                        snapshot["evidence"]["other-slot"] = snapshot[
+                            "evidence"
+                        ].pop("observation")
+            fingerprint = control_definition_fingerprint(instance)
+            instance["definition_fingerprint"] = fingerprint
+            control["definition_fingerprint"] = fingerprint
+
+        def mutate_realization_attribution(plan):
+            control = next(
+                item for item in plan["controls"]
+                if item["alignment"] == "realization"
+            )
+            for provenance in control["provenance"]:
+                if "realization" in provenance:
+                    provenance["realization"] = "test.other@1"
+            for lineage in control["lineage"]:
+                if "realization" in lineage:
+                    lineage["realization"] = "test.other@1"
+
+        def mutate_requirement_adoption(plan):
+            plan["requirements"][0]["adoption"]["owner"] = "forged-owner"
+
+        def mutate_technical_provenance_to_requirement_baseline(plan):
+            from tools.render_plan import control_definition_fingerprint
+
+            baseline = plan["resolved_requirement_baselines"][0]
+            group = baseline["group"]
+            policy_source = plan["provenance"]["planningComposition"]["actual"][
+                "policySources"
+            ][0]["name"]
+            template = plan["controls"][0]
+            control = copy.deepcopy(template)
+            control["instance_id"] = "test.technical-check"
+            control["alignment"] = "unaltered"
+            control["lineage"] = [{
+                "baseline": "test.technical@1",
+                "operation": "defined",
+            }]
+            control["provenance"] = [{
+                "assignment": "test-technical-policy",
+                "group": group,
+                "baseline": "test.technical@1",
+            }]
+            instance = control["policy_inputs"]["instance"]
+            instance.update({
+                "instance_id": control["instance_id"],
+                "alignment": control["alignment"],
+                "derivations": [],
+                "deviations": [],
+                "disposition": control["disposition"],
+                "lineage": copy.deepcopy(control["lineage"]),
+            })
+            fingerprint = control_definition_fingerprint(instance)
+            instance["definition_fingerprint"] = fingerprint
+            control["definition_fingerprint"] = fingerprint
+            plan["controls"].append(control)
+            plan["controls"].sort(key=lambda item: item["instance_id"])
+            plan["assignments"].append({
+                "id": "test-technical-policy",
+                "group": group,
+                "baselines": ["test.technical@1"],
+            })
+            technical_digest = parameters.digest({"reference": "test.technical@1"})
+            plan["resolved_baselines"].append({
+                "assignment": "test-technical-policy",
+                "group": group,
+                "reference": "test.technical@1",
+                "title": "Synthetic technical policy",
+                "digest": technical_digest,
+                "lineage": [{
+                    "reference": "test.technical@1",
+                    "digest": technical_digest,
+                }],
+                "deviations": [],
+                "policy_sources": [{
+                    "policy_source": policy_source,
+                    "path": "baselines/test-technical.json",
+                }],
+            })
+            control["provenance"][0].update({
+                "assignment": baseline["assignment"],
+                "group": baseline["group"],
+                "baseline": baseline["reference"],
+            })
+            for lineage_records in (
+                control["lineage"],
+                control["policy_inputs"]["instance"]["lineage"],
+            ):
+                for lineage in lineage_records:
+                    if "baseline" in lineage:
+                        lineage["baseline"] = baseline["reference"]
+
+        cases = {
+            "technical baseline record digest": lambda: macos_plan(
+                lambda plan: plan["resolved_baselines"][0].update(
+                    digest="sha256:" + "0" * 64
+                )
+            ),
+            "technical baseline terminal reference": lambda: macos_plan(
+                lambda plan: plan["resolved_baselines"][0]["lineage"][-1].update(
+                    reference="test.other@1"
+                )
+            ),
+            "technical baseline terminal digest": lambda: macos_plan(
+                lambda plan: plan["resolved_baselines"][0]["lineage"][-1].update(
+                    digest="sha256:" + "0" * 64
+                )
+            ),
+            "technical provenance selection": lambda: macos_plan(
+                lambda plan: plan["controls"][0]["provenance"][0].update(
+                    baseline="test.other@1"
+                )
+            ),
+            "outer and nested lineage attribution": lambda: macos_plan(
+                mutate_outer_and_nested_lineage
+            ),
+            "nested lineage copy": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "lineage"
+                ][-1].update(baseline="test.other@1")
+            ),
+            "nested derivation overlay": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "derivations"
+                ][0].update(overlay="test.other@1")
+            ),
+            "nested inherited lineage": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "derivations"
+                ][0]["inherited_lineage"][-1].update(baseline="test.other@1")
+            ),
+            "nested snapshot implementation": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "derivations"
+                ][0]["before"].update(implementation="test.other")
+            ),
+            "nested after snapshot implementation": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "derivations"
+                ][0]["after"].update(implementation="test.other")
+            ),
+            "nested snapshot evidence slot": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "derivations"
+                ][0]["before"].update(evidence={"other": {}})
+            ),
+            "nested after snapshot evidence slot": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "derivations"
+                ][0]["after"].update(evidence={"other": {}})
+            ),
+            "nested alignment": lambda: macos_plan(
+                lambda plan: plan["controls"][0]["policy_inputs"]["instance"].update(
+                    alignment="annotated"
+                )
+            ),
+            "nested fingerprint": lambda: macos_plan(
+                lambda plan: plan["controls"][0]["policy_inputs"]["instance"].update(
+                    definition_fingerprint="sha256:" + "0" * 64
+                )
+            ),
+            "nested deviation": lambda: macos_plan(
+                lambda plan: derived_control(plan)["policy_inputs"]["instance"][
+                    "deviations"
+                ][0].update(id="OTHER")
+            ),
+            "nested disposition": lambda: macos_plan(
+                lambda plan: plan["controls"][0]["policy_inputs"]["instance"].update(
+                    disposition="excluded"
+                )
+            ),
+            "nested-only overlay policy": lambda: macos_plan(
+                lambda plan: plan["controls"][0]["policy_inputs"]["instance"].update(
+                    overlay_policy={
+                        "blocked_operations": ["tailor"],
+                        "reason": "synthetic",
+                        "sealed_by": "company.developer-workstation@1",
+                    }
+                )
+            ),
+            "requirement baseline selection copy": lambda: iam_plan(
+                lambda plan: plan["resolved_requirement_baselines"][0].update(
+                    baseline="test.other@1"
+                )
+            ),
+            "realization parent copy": lambda: iam_plan(
+                lambda plan: plan["requirements"][0]["realization"].update(
+                    based_on={
+                        "realization": "test.other@1",
+                        "digest": "sha256:" + "0" * 64,
+                    }
+                )
+            ),
+            "realization provenance attribution": lambda: iam_plan(
+                mutate_realization_attribution
+            ),
+            "realization provenance baseline membership": lambda: additive_policy_plan(
+                lambda plan: plan["controls"][0]["provenance"][0].update(
+                    assignment="test-feature",
+                    baseline="test.feature@1",
+                )
+            ),
+            "mixed technical and realization provenance": mixed_alignment_provenance_plan,
+            "technical provenance on requirement baseline": lambda: iam_plan(
+                mutate_technical_provenance_to_requirement_baseline
+            ),
+            "requirement membership required flag": lambda: iam_plan(
+                lambda plan: plan["requirements"][0].update(
+                    required=not plan["requirements"][0]["required"]
+                )
+            ),
+            "invalid evidence TYPE copy": lambda: invalid_parameterized_plan(
+                lambda plan: plan["controls"][0]["evidence"][0].update(
+                    type="test.other/v1"
+                )
+            ),
+            "invalid requirement explanation copy": lambda: invalid_parameterized_plan(
+                lambda plan: plan["requirements"][0].update(title="Different title")
+            ),
+            "invalid requirement declaration copy": lambda: invalid_parameterized_plan(
+                mutate_state_declaration
+            ),
+            "invalid requirement state coverage": lambda: invalid_parameterized_plan(
+                remove_parameter_state_coverage
+            ),
+            "invalid realization requirement pin": lambda: invalid_parameterized_plan(
+                mutate_realization_requirement_digest
+            ),
+            "invalid requirement adoption copy": lambda: invalid_parameterized_plan(
+                mutate_requirement_adoption
+            ),
+            "invalid requirement provenance selection": lambda: invalid_parameterized_plan(
+                lambda plan: plan["requirements"][0]["provenance"][0].update(
+                    baseline="test.other@1"
+                )
+            ),
+            "invalid duplicate realization check": lambda: invalid_parameterized_plan(
+                duplicate_realization_check
+            ),
+            "invalid excluded evidence dependency": lambda: macos_plan(
+                mutate_excluded_evidence_slot
+            ),
+            "invalid realization source pin": lambda: invalid_parameterized_plan(
+                lambda plan: plan["requirements"][0]["parameter_facts"][
+                    "realization"
+                ]["spec"]["parameter_links"][0]["source"].update(
+                    requirement="test.other@1"
+                )
+            ),
+            "invalid realization destination": lambda: invalid_parameterized_plan(
+                lambda plan: plan["requirements"][0]["parameter_facts"][
+                    "realization"
+                ]["spec"]["parameter_links"][0]["destination"].update(
+                    instance_id="test.other"
+                )
+            ),
+            "invalid requirement baseline digest": lambda: invalid_parameterized_plan(
+                lambda plan: plan["resolved_requirement_baselines"][0].update(
+                    digest="sha256:" + "0" * 64
+                )
+            ),
+            "invalid requirement baseline membership": lambda: invalid_parameterized_plan(
+                lambda plan: plan["resolved_requirement_baselines"][0].update(
+                    requirements=[]
+                )
+            ),
+        }
+        for case, build in cases.items():
+            with self.subTest(case=case):
+                plan = build()
+                refresh_operation(plan)
+                plan["id"] = artifact_digest(plan)
+                with self.assertRaises(ArtifactValidationError):
+                    validate_assessment_plan(plan)
+
     @classmethod
     def additive_plan(cls):
         """Build a valid plan with one additive contribution and exact consumer."""
@@ -165,7 +893,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         base_record = plan["resolved_requirement_baselines"][0]
         requirement_document = copy.deepcopy(requirement["parameter_facts"]["document"])
         value_schema = {
-            "$id": "https://example.test/frozen-set",
+            "$id": "https://compliance.example/schemas/requirements/test.requirement/parameters/allowed/v1.schema.json",
             "type": "array",
             "items": {"type": "string"},
             "uniqueItems": True,
@@ -256,6 +984,10 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             "type": "test.evidence/v1",
         }]
         definition["_parameters_schema"] = {
+            "$id": (
+                "https://compliance.example/schemas/controls/"
+                f"{control['implementation']}/parameters/v1.schema.json"
+            ),
             "type": "object",
             "properties": {
                 "allowed": {"type": "array", "items": {"type": "string"}},
@@ -350,7 +1082,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 lambda document: document["requirements"][0]["parameter_facts"][
                     "states"
                 ]["age"].update(value="7200s"),
-                "frozen derivation inconsistent",
+                "frozen consumption records mismatch",
             ),
             "materialized freshness": (
                 lambda document: document["controls"][0]["evidence"][0].update(
@@ -385,6 +1117,174 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                     expected,
                 ):
                     validate_assessment_plan(tampered)
+
+    def test_parameterized_plan_rejects_noncanonical_frozen_binding_scope(self):
+        from tools import policy_parameters as parameters
+
+        tampered = copy.deepcopy(self.parameterized_plan())
+        requirement = tampered["requirements"][0]
+        requirement_document = requirement["parameter_facts"]["document"]
+        requirement_document["spec"]["parameters"]["age"]["binding_scope"].append(
+            "bad__scope"
+        )
+        requirement["digest"] = parameters.digest(requirement_document)
+        realization = requirement["parameter_facts"]["realization"]
+        realization["spec"]["requirement"]["digest"] = requirement["digest"]
+        requirement["realization"]["digest"] = parameters.digest(realization)
+        baseline = tampered["resolved_requirement_baselines"][0]
+        baseline["requirements"][0]["digest"] = requirement["digest"]
+        ancestor = baseline["parameter_derivation"]["ancestry"][-1]
+        ancestor["document"]["spec"]["requirements"][0]["digest"] = requirement[
+            "digest"
+        ]
+        ancestor["digest"] = parameters.digest(ancestor["document"])
+        baseline["digest"] = ancestor["digest"]
+        refresh_operation(tampered)
+        tampered["id"] = artifact_digest(tampered)
+
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "invalid requirement parameter binding scope",
+        ):
+            validate_assessment_plan(tampered)
+
+    def test_plan_rejects_frozen_control_identity_contract_tampering(self):
+        cases = {
+            "active version": (
+                lambda document: document["controls"][0]["policy_inputs"][
+                    "definition"
+                ]["metadata"].update(version="bad__version"),
+                "invalid frozen Control version",
+            ),
+            "active evidence dependency": (
+                lambda document: document["controls"][0]["policy_inputs"][
+                    "definition"
+                ]["spec"]["evidence"][0].update(id="bad__dependency"),
+                "invalid frozen Control evidence dependency identity",
+            ),
+            "active evidence type": (
+                lambda document: document["controls"][0]["policy_inputs"][
+                    "definition"
+                ]["spec"]["evidence"][0].update(type="bad_type/v1"),
+                "invalid frozen Control evidence type",
+            ),
+            "excluded parameter schema owner": (
+                lambda document: document["excluded_controls"][0]["policy_inputs"][
+                    "parameters_schema"
+                ].update(
+                    {
+                        "$id": (
+                            "https://compliance.example/schemas/controls/other.control/"
+                            "parameters/v1.schema.json"
+                        )
+                    }
+                ),
+                "parameter schema identity does not match its semantic owner",
+            ),
+            "malformed parameter schema URI": (
+                lambda document: document["excluded_controls"][0]["policy_inputs"][
+                    "parameters_schema"
+                ].update({
+                    "$id": (
+                        "https://schemas.\nadopter.example/schemas/controls/"
+                        "test.setting-equals/parameters/v1.schema.json"
+                    )
+                }),
+                "parameter schema identity does not match its semantic owner",
+            ),
+            "empty query delimiter in parameter schema URI": (
+                lambda document: document["excluded_controls"][0]["policy_inputs"][
+                    "parameters_schema"
+                ].update({
+                    "$id": (
+                        "https://schemas.adopter.example/schemas/controls/"
+                        "test.setting-equals/parameters/v1.schema.json?"
+                    )
+                }),
+                "parameter schema identity does not match its semantic owner",
+            ),
+        }
+        for case, (mutate, expected) in cases.items():
+            with self.subTest(case=case):
+                tampered = copy.deepcopy(self.plan)
+                mutate(tampered)
+                refresh_operation(tampered)
+                tampered["id"] = artifact_digest(tampered)
+                with self.assertRaisesRegex(ArtifactValidationError, expected):
+                    validate_assessment_plan(tampered)
+
+    def test_plan_rejects_noncanonical_refs_in_opaque_frozen_policy(self):
+        from tools import policy_parameters as parameters
+
+        baseline_plan = copy.deepcopy(self.parameterized_plan())
+        requirement = baseline_plan["requirements"][0]
+        baseline = baseline_plan["resolved_requirement_baselines"][0]
+        original_ancestor = baseline["parameter_derivation"]["ancestry"][-1]
+        child_document = copy.deepcopy(original_ancestor["document"])
+        parent_document = {
+            "metadata": {"id": "test.parent", "revision": 1},
+            "spec": {
+                "title": "Synthetic parent requirement policy",
+                "requirements": copy.deepcopy(child_document["spec"]["requirements"]),
+            },
+        }
+        child_document["spec"]["extends"] = {
+            "baseline": "test.parent@1",
+            "digest": parameters.digest(parent_document),
+        }
+        sources = original_ancestor["policy_sources"]
+        catalog = {
+            "test.parent@1": {**parent_document, "_sources": sources},
+            baseline["reference"]: {**child_document, "_sources": sources},
+        }
+        states, ancestry = parameters.resolve(
+            baseline["reference"],
+            catalog,
+            {requirement["reference"]: requirement["parameter_facts"]["document"]},
+        )
+        parameters.complete(states)
+        ancestry[0]["reference"] = "bad__parent@1"
+        ancestry[0]["document"]["metadata"]["id"] = "bad__parent"
+        ancestry[0]["digest"] = parameters.digest(ancestry[0]["document"])
+        ancestry[1]["document"]["spec"]["extends"] = {
+            "baseline": "bad__parent@1",
+            "digest": ancestry[0]["digest"],
+        }
+        ancestry[1]["digest"] = parameters.digest(ancestry[1]["document"])
+        baseline["parameter_derivation"] = {
+            "states": states,
+            "ancestry": ancestry,
+        }
+        baseline["digest"] = ancestry[-1]["digest"]
+        requirement["parameter_facts"]["states"] = states[requirement["reference"]]
+        refresh_operation(baseline_plan)
+        baseline_plan["id"] = artifact_digest(baseline_plan)
+
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "invalid frozen requirement baseline reference",
+        ):
+            validate_assessment_plan(baseline_plan)
+
+        realization_plan = copy.deepcopy(self.iam_plan)
+        realization_requirement = next(
+            item
+            for item in realization_plan["requirements"]
+            if item.get("parameter_facts", {}).get("realization", {}).get("spec", {}).get(
+                "based_on"
+            )
+        )
+        realization = realization_requirement["parameter_facts"]["realization"]
+        realization["spec"]["based_on"]["realization"] = "bad__base@1"
+        realization_requirement["realization"]["digest"] = parameters.digest(realization)
+        refresh_operation(realization_plan)
+        realization_plan["id"] = artifact_digest(realization_plan)
+
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "invalid frozen realization parent reference",
+        ):
+            validate_assessment_plan(realization_plan)
 
     def test_additive_plan_rejects_frozen_composition_and_consumer_tampering(self):
         plan = self.additive_plan()
@@ -554,7 +1454,10 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         plan = copy.deepcopy(self.iam_plan)
         plan['resolved_requirement_baselines'] = []
         plan['id'] = artifact_digest(plan)
-        with self.assertRaisesRegex(ArtifactValidationError, 'derivation coverage'):
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            'selected baseline|derivation coverage',
+        ):
             validate_assessment_plan(plan)
 
     @classmethod

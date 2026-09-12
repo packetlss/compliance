@@ -330,7 +330,7 @@ Realization digest and source attribution: sha256:<realization-content> / <polic
 Freshness slot: company.iam.role-based-access/privileged_evidence_max_age = 86400s
 Consumption: slot -> each named realization check dependency observation/max_age
 Check instance: company.linux.rbac.sssd-installed
-Control implementation: linux.access.setting_equals@1
+Control implementation: linux.access.setting-equals@1
 Planning sources and plan: <exact named source digests and bound plan ID>
 ```
 
@@ -391,10 +391,10 @@ Advanced provenance drill-down:
 ```text
 Policy: company.macos-policy@1
 Check instance: benchmark.example.macos.audit-formula-required
-Control implementation: macos.homebrew.formulae_required@1
+Control implementation: macos.homebrew.formulae-required@1
 Alignment/disposition: deviated / excluded
 Derivation: exclude by company.macos-policy@1
-Parent fingerprint: sha256:88103cfc471430fb952f1d1049a64ea4908b15a7615b80993243bb6a528397a5
+Parent fingerprint: sha256:97eb6ef06ca9ad85422311b55328f46518a97dfcf1f640b1ebb5a46d200fc62a
 Deviation: DEV-MAC-002 / alternative-company-control
 Approval/review: company-policy/endpoint-monitoring / 2027-01-31
 ```

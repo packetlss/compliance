@@ -8,7 +8,7 @@ assessment_input(observed) := {
 	"subject": {"id": "host/test"},
 	"control": {
 		"instance_id": "test.setting",
-		"implementation": "linux.access.setting_equals",
+		"implementation": "linux.access.setting-equals",
 		"severity": "high",
 		"remediation": "Fix it",
 		"parameters": {"section": "ssh", "setting": "allowed_groups", "expected": ["operators"]},

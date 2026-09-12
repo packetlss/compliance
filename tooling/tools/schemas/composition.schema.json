@@ -103,5 +103,5 @@
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://compliance.example/schemas/composition.schema.json"
+  "$id": "https://compliance.example/schemas/platform/composition/v1alpha1.schema.json"
 }
