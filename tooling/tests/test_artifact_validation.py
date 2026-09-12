@@ -464,6 +464,38 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         ):
             validate_assessment_plan(tampered)
 
+    def test_additive_plan_rejects_unsupported_and_empty_present_frozen_syntax(self):
+        from tools import policy_parameters as parameters
+
+        cases = {
+            "unsupported priority": (
+                lambda document: document["spec"]["parameter_contributions"][0].update(
+                    priority=1
+                ),
+                "unsupported additive contribution syntax",
+            ),
+            "present empty requirements": (
+                lambda document: document["spec"].update(requirements=[]),
+                "requirements must be nonempty when present",
+            ),
+        }
+        for case, (mutate, expected) in cases.items():
+            with self.subTest(case=case):
+                tampered = copy.deepcopy(self.additive_plan())
+                contributor = next(
+                    item for item in tampered["resolved_requirement_baselines"]
+                    if item["reference"] == "test.feature@1"
+                )
+                ancestor = contributor["parameter_derivation"]["ancestry"][-1]
+                mutate(ancestor["document"])
+                ancestor["digest"] = parameters.digest(ancestor["document"])
+                contributor["digest"] = ancestor["digest"]
+                refresh_operation(tampered)
+                tampered["id"] = artifact_digest(tampered)
+
+                with self.assertRaisesRegex(ArtifactValidationError, expected):
+                    validate_assessment_plan(tampered)
+
     def test_result_outcome_uses_fail_first_logical_precedence(self):
         self.assertEqual(result_outcome({
             "results": [{"status": "error"}, {"status": "fail"}],

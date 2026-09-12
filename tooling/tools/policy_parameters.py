@@ -54,6 +54,43 @@ def resource_digest(value, requirements=None):
     return digest(normalized_resource_document(value, requirements))
 
 
+def validate_baseline_structure(value):
+    """Re-enforce the bounded RequirementBaseline wire needed by frozen resolution."""
+    clean = document(value)
+    spec = clean.get('spec')
+    require(isinstance(spec, dict), 'requirement baseline spec must be an object')
+    require(set(spec).issubset({
+        'title', 'requirements', 'extends', 'parameter_operations', 'parameter_contributions',
+    }), 'unsupported requirement baseline syntax')
+    if 'requirements' in spec:
+        require(isinstance(spec['requirements'], list) and bool(spec['requirements']),
+                'requirement baseline requirements must be nonempty when present')
+    if 'parameter_contributions' in spec:
+        items = spec['parameter_contributions']
+        require(isinstance(items, list) and bool(items),
+                'parameter contributions must be nonempty when present')
+        for contribution in items:
+            require(isinstance(contribution, dict)
+                    and set(contribution) == {'id', 'target', 'members'},
+                    'unsupported additive contribution syntax')
+            target = contribution.get('target')
+            require(isinstance(contribution.get('id'), str) and bool(contribution['id']),
+                    'additive contribution id must be nonempty')
+            require(isinstance(target, dict) and set(target) == {'requirement', 'slot'},
+                    'unsupported additive contribution target syntax')
+            require(isinstance(target.get('requirement'), str)
+                    and bool(re.fullmatch(r'[a-z0-9][a-z0-9._-]*', target['requirement'])),
+                    'invalid additive contribution requirement target')
+            require(isinstance(target.get('slot'), str)
+                    and bool(re.fullmatch(r'[a-z][a-z0-9_]*', target['slot'])),
+                    'invalid additive contribution slot target')
+            members = contribution.get('members')
+            require(isinstance(members, list) and all(isinstance(member, str) for member in members),
+                    'additive contribution members must be JSON strings')
+    require(bool(spec.get('requirements')) or bool(spec.get('parameter_contributions')),
+            'requirement baseline requires a requirement or parameter contribution')
+
+
 def require(condition, message):
     if not condition:
         raise ParameterResolutionError(message)
@@ -158,10 +195,9 @@ def resolve(reference, baselines, requirements, stack=()):
     require(reference not in stack, 'parameter derivation cycle')
     require(reference in baselines, 'missing parameter baseline')
     baseline = baselines[reference]
+    validate_baseline_structure(baseline)
     clean_baseline = normalized_resource_document(baseline, requirements)
     spec = clean_baseline['spec']
-    require(bool(spec.get('requirements')) or bool(spec.get('parameter_contributions')),
-            'requirement baseline requires a requirement or parameter contribution')
     states, ancestry = {}, []
     for pin in spec.get('requirements', []):
         requirement = requirements.get(pin['requirement'])
