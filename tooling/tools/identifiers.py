@@ -56,7 +56,8 @@ def _is_canonical_https_schema_uri(value: str, path_pattern: str) -> bool:
         and parsed.username is None
         and parsed.password is None
         and port is None
-        and parsed.netloc == parsed.hostname
+        and parsed.hostname is not None
+        and parsed.netloc.casefold() == parsed.hostname.casefold()
         and _is_stable_dns_host(parsed.hostname)
         and not parsed.query
         and not parsed.fragment

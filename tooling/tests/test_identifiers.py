@@ -31,6 +31,11 @@ class SchemaIdentityTests(unittest.TestCase):
             host + "/schemas/evidence/adopter.observation/v5.schema.json",
             "adopter.observation/v5",
         ))
+        self.assertTrue(is_canonical_control_parameter_schema_id(
+            "https://SCHEMAS.ADOPTER.EXAMPLE/schemas/controls/"
+            "adopter.control/parameters/v1.schema.json",
+            "adopter.control",
+        ))
 
     def test_wrong_owner_path_role_and_version_are_rejected(self):
         host = "https://schemas.adopter.example"
