@@ -10,7 +10,9 @@ from referencing import Registry
 from .assessment_provenance import digest
 from ._canonical_json import canonical_json_bytes
 from .identifiers import (
+    EVIDENCE_TYPE,
     ID,
+    REVISION,
     SLOT,
     canonical_control_evidence_inputs_schema_id,
     canonical_control_parameter_schema_id,
@@ -195,7 +197,22 @@ def declarations(requirement):
         validate_composition(declaration)
         fixed = declaration['binding_mode'] == 'fixed'
         require(fixed == ('value' in declaration), 'only fixed declarations contain values')
-        require(fixed or bool(declaration.get('binding_scope')), 'open declaration requires structural binding scope')
+        binding_scope = declaration.get('binding_scope')
+        if binding_scope is not None:
+            require(
+                isinstance(binding_scope, list)
+                and bool(binding_scope)
+                and all(
+                    isinstance(item, str) and bool(re.fullmatch(ID, item))
+                    for item in binding_scope
+                ),
+                'invalid requirement parameter binding scope',
+            )
+            require(
+                len(binding_scope) == len(set(binding_scope)),
+                'invalid requirement parameter binding scope',
+            )
+        require(fixed or binding_scope is not None, 'open declaration requires structural binding scope')
         pin = {'requirement': reference, 'digest': digest(clean), 'slot': name,
                'declaration_digest': digest(declaration), 'schema_digest': declaration['schema_digest']}
         state = {'identity': {'requirement': clean['metadata']['id'], 'slot': name},
@@ -495,6 +512,58 @@ def evidence_for(instance, definition):
     return result
 
 
+def validate_control_contract_identity(definition):
+    """Re-enforce the frozen Control identity contract without source schemas."""
+    metadata = definition.get('metadata')
+    spec = definition.get('spec')
+    require(isinstance(metadata, dict), 'frozen Control metadata must be an object')
+    require(isinstance(spec, dict), 'frozen Control spec must be an object')
+    control_id = metadata.get('id')
+    require(
+        isinstance(control_id, str) and bool(re.fullmatch(ID, control_id)),
+        'invalid frozen Control identity',
+    )
+    version = metadata.get('version')
+    require(
+        (isinstance(version, int) and not isinstance(version, bool) and version >= 1)
+        or (isinstance(version, str) and bool(re.fullmatch(REVISION, version))),
+        'invalid frozen Control version',
+    )
+    validate_schema(
+        definition.get('_parameters_schema'),
+        identity_pattern=canonical_control_parameter_schema_id(control_id),
+    )
+    dependencies = spec.get('evidence')
+    require(isinstance(dependencies, list), 'frozen Control evidence must be an array')
+    dependency_ids = []
+    for dependency in dependencies:
+        require(isinstance(dependency, dict), 'frozen Control evidence dependency must be an object')
+        dependency_id = dependency.get('id')
+        require(
+            isinstance(dependency_id, str) and bool(re.fullmatch(SLOT, dependency_id)),
+            'invalid frozen Control evidence dependency identity',
+        )
+        dependency_ids.append(dependency_id)
+        require(
+            isinstance(dependency.get('type'), str)
+            and bool(re.fullmatch(EVIDENCE_TYPE, dependency['type'])),
+            'invalid frozen Control evidence type',
+        )
+        inputs_schema = dependency.get('inputs_schema')
+        if inputs_schema is not None:
+            validate_schema(
+                inputs_schema,
+                identity_pattern=canonical_control_evidence_inputs_schema_id(
+                    control_id,
+                    dependency_id,
+                ),
+            )
+    require(
+        len(dependency_ids) == len(set(dependency_ids)),
+        'ambiguous evidence dependency identity',
+    )
+
+
 def consume(realization, slots, controls):
     checks = copy.deepcopy(realization['spec'].get('checks', []))
     by_id = {check['instance_id']: check for check in checks}
@@ -555,25 +624,29 @@ def validate_frozen(plan):
     expected_requirements = {pin['requirement'] for baseline in plan['resolved_requirement_baselines'] for pin in baseline['requirements']}
     require(expected_requirements == {r['reference'] for r in plan['requirements']}, 'frozen requirement membership coverage is incomplete')
     controls = {}
-    for control in plan['controls']:
-        facts = control['policy_inputs']
-        definition = copy.deepcopy(facts['definition'])
-        definition['_parameters_schema'] = facts['parameters_schema']
-        definition['_implementation_modules'] = facts.get('implementation_modules', [])
-        instance = facts['instance']
-        from .render_plan import control_definition_fingerprint
-        instance_fingerprint = digest(instance) if control['alignment'] == 'realization' else control_definition_fingerprint(instance)
-        require(instance_fingerprint == control['definition_fingerprint'], 'frozen policy instance fingerprint mismatch')
-        require(definition['metadata']['id'] == control['implementation'], 'frozen implementation definition identity mismatch')
-        require(instance['instance_id'] == control['instance_id'] and instance['implementation'] == control['implementation'],
-                'frozen technical input identity mismatch')
-        require(equal(instance.get('parameters', {}), control['parameters']), 'frozen technical value mismatch')
-        require(equal(evidence_for(instance, definition), control['evidence']), 'frozen policy freshness mismatch')
-        require(definition['spec']['entrypoint'] == control['entrypoint'], 'frozen implementation entrypoint mismatch')
-        Draft202012Validator(definition['_parameters_schema'], format_checker=FormatChecker()).validate(control['parameters'])
-        previous = controls.get(control['implementation'])
-        require(previous is None or equal(previous, definition), 'divergent frozen implementation definitions')
-        controls[control['implementation']] = definition
+    for collection_name in ('controls', 'excluded_controls'):
+        for control in plan[collection_name]:
+            facts = control['policy_inputs']
+            definition = copy.deepcopy(facts['definition'])
+            definition['_parameters_schema'] = facts['parameters_schema']
+            definition['_implementation_modules'] = facts.get('implementation_modules', [])
+            instance = facts['instance']
+            validate_control_contract_identity(definition)
+            from .render_plan import control_definition_fingerprint
+            instance_fingerprint = digest(instance) if control['alignment'] == 'realization' else control_definition_fingerprint(instance)
+            require(instance_fingerprint == control['definition_fingerprint'], 'frozen policy instance fingerprint mismatch')
+            require(definition['metadata']['id'] == control['implementation'], 'frozen implementation definition identity mismatch')
+            require(instance['instance_id'] == control['instance_id'] and instance['implementation'] == control['implementation'],
+                    'frozen technical input identity mismatch')
+            require(equal(instance.get('parameters', {}), control['parameters']), 'frozen technical value mismatch')
+            resolved_evidence = evidence_for(instance, definition)
+            if collection_name == 'controls':
+                require(equal(resolved_evidence, control['evidence']), 'frozen policy freshness mismatch')
+                require(definition['spec']['entrypoint'] == control['entrypoint'], 'frozen implementation entrypoint mismatch')
+            Draft202012Validator(definition['_parameters_schema'], format_checker=FormatChecker()).validate(control['parameters'])
+            previous = controls.get(control['implementation'])
+            require(previous is None or equal(previous, definition), 'divergent frozen implementation definitions')
+            controls[control['implementation']] = definition
     requirements = {r['reference']: r['parameter_facts']['document'] for r in plan['requirements']}
     by_reference = {r['reference']: r for r in plan['requirements']}
     frozen_catalog = {}

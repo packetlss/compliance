@@ -417,6 +417,79 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 ):
                     validate_assessment_plan(tampered)
 
+    def test_parameterized_plan_rejects_noncanonical_frozen_binding_scope(self):
+        from tools import policy_parameters as parameters
+
+        tampered = copy.deepcopy(self.parameterized_plan())
+        requirement = tampered["requirements"][0]
+        requirement_document = requirement["parameter_facts"]["document"]
+        requirement_document["spec"]["parameters"]["age"]["binding_scope"].append(
+            "bad__scope"
+        )
+        requirement["digest"] = parameters.digest(requirement_document)
+        realization = requirement["parameter_facts"]["realization"]
+        realization["spec"]["requirement"]["digest"] = requirement["digest"]
+        requirement["realization"]["digest"] = parameters.digest(realization)
+        baseline = tampered["resolved_requirement_baselines"][0]
+        baseline["requirements"][0]["digest"] = requirement["digest"]
+        ancestor = baseline["parameter_derivation"]["ancestry"][-1]
+        ancestor["document"]["spec"]["requirements"][0]["digest"] = requirement[
+            "digest"
+        ]
+        ancestor["digest"] = parameters.digest(ancestor["document"])
+        baseline["digest"] = ancestor["digest"]
+        refresh_operation(tampered)
+        tampered["id"] = artifact_digest(tampered)
+
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "invalid requirement parameter binding scope",
+        ):
+            validate_assessment_plan(tampered)
+
+    def test_plan_rejects_frozen_control_identity_contract_tampering(self):
+        cases = {
+            "active version": (
+                lambda document: document["controls"][0]["policy_inputs"][
+                    "definition"
+                ]["metadata"].update(version="bad__version"),
+                "invalid frozen Control version",
+            ),
+            "active evidence dependency": (
+                lambda document: document["controls"][0]["policy_inputs"][
+                    "definition"
+                ]["spec"]["evidence"][0].update(id="bad__dependency"),
+                "invalid frozen Control evidence dependency identity",
+            ),
+            "active evidence type": (
+                lambda document: document["controls"][0]["policy_inputs"][
+                    "definition"
+                ]["spec"]["evidence"][0].update(type="bad_type/v1"),
+                "invalid frozen Control evidence type",
+            ),
+            "excluded parameter schema owner": (
+                lambda document: document["excluded_controls"][0]["policy_inputs"][
+                    "parameters_schema"
+                ].update(
+                    {
+                        "$id": (
+                            "https://compliance.example/schemas/controls/other.control/"
+                            "parameters/v1.schema.json"
+                        )
+                    }
+                ),
+                "parameter schema identity does not match its semantic owner",
+            ),
+        }
+        for case, (mutate, expected) in cases.items():
+            with self.subTest(case=case):
+                tampered = copy.deepcopy(self.plan)
+                mutate(tampered)
+                refresh_operation(tampered)
+                tampered["id"] = artifact_digest(tampered)
+                with self.assertRaisesRegex(ArtifactValidationError, expected):
+                    validate_assessment_plan(tampered)
+
     def test_additive_plan_rejects_frozen_composition_and_consumer_tampering(self):
         plan = self.additive_plan()
         cases = {
