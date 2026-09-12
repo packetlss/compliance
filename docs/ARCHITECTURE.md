@@ -1,6 +1,6 @@
 # System architecture
 
-This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 and 0016–0018 (ADRs 0013–0015 are superseded) in `docs/adr/`.
+This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 and 0016–0019 (ADRs 0013–0015 are superseded) in `docs/adr/`.
 
 Historical `packetlss-labs/compliance-workspace` architecture remains migration/design provenance. After this documentation-authority transfer, this repository owns current normative system architecture.
 
@@ -31,6 +31,38 @@ Actual composition provenance and expected enforcement are separate: every succe
 [ADR 0009](adr/0009-active-compliance-vocabulary.md) intentionally renames the maintained reusable semantic source from `shared-library` to `control-library`. The component path `policy-sources/control-library/`, semantic root `policy-sources/control-library/policies/`, and distribution `compliance-control-library` remain distinct namespaces; tooling receives source names explicitly. The name grants no precedence, trust, mandatory dependency, or reserved role. Policy-tree content identity is unchanged, while name-bearing composition/provenance identities change without a compatibility alias.
 
 ADR 0007 `composition-lock` is the sole forward complete expected-composition abstraction. The #57 `workspace-config` → `project-registry` cutover is implemented: the registry selects one project configuration by explicit name or default without composing policy or merging project state. Registry data/location and repository/workspace topology are nonsemantic; the retired discriminator is unsupported without an alias. The changed tooling source bytes affect only existing tooling provenance; technical control/assurance resource names remain unchanged unless separately reviewed.
+
+## Identifier namespaces and schema identity
+
+[ADR 0019](adr/0019-typed-identifier-namespaces-and-schema-uri-ownership.md)
+accepts typed lookup namespaces rather than a global or source-qualified semantic ID
+space. Semantic policy IDs use dot-separated kebab-case segments; revisions remain
+separate `id@revision` pins; requirement slots and technical properties remain
+owner-local snake_case; and evidence types retain dispatch-significant `/vN` wire
+versions. Authority-looking ID prefixes are ordinary authored segments and grant no
+trust, precedence or source ownership.
+
+The Control catalog is currently keyed by stable ID, with Control version and
+definition fingerprint retained as exact interface metadata. This is current lookup
+architecture, not a permanent prohibition on a separately promoted future
+multi-version design. Baseline and BaselineOverlay share a technical `id@revision`
+namespace; ControlRequirement and ControlRealization each have their own typed
+`id@revision` namespace. Technical instance IDs must be unique within the resolved
+subject plan across direct-baseline and realization paths.
+
+Assignments use a kindless `name@revision` reference. The technical-baseline and
+RequirementBaseline catalogs therefore share one assignment-reference collision
+admission namespace: a composition containing both kinds at the same reference must
+fail before planning without precedence or fallback. This accepted rule is not yet
+implemented; ADR 0019 requires it in the separate coordinated pre-freeze migration.
+
+JSON Schema `$id` is a predictable absolute HTTPS schema-contract URI, separate
+from semantic resource lookup and exact schema content. Digests and enclosing
+provenance identify exact bytes; compatible schema changes may retain a contract
+URI, while incompatible changes mint a new schema-contract version. Runtime network
+discovery is not required. The experimental `https://compliance.example` host and
+platform-owned `apiVersion`, evidence-envelope/artifact discriminators and digest
+domains remain unchanged pending separate promotion.
 
 ## Primary intended user jobs
 
@@ -441,7 +473,7 @@ packetlss/compliance
 
 `tooling/` is the explicit Python/build root; the distribution remains `compliance-tooling`. Repository root is not a Python package root.
 
-The policy roots remain independently named/digested. Co-location does not merge their catalogs. Same-kind/same-identity resources coalesce only when complete definitions are identical; divergence is a hard error.
+The policy roots remain independently named/digested. Co-location does not merge their catalogs. Resources in the same typed lookup namespace coalesce only when their complete definitions are identical; divergence is a hard error.
 
 Each ordinary project remains logically isolated with its own inventory, assignments, fixtures, waivers, and generated-state paths.
 

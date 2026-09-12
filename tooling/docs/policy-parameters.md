@@ -20,6 +20,11 @@ An optional `representation: duration` validates fixed positive integral
 A slot reference contains the requirement reference and document digest, slot
 name, declaration digest and schema digest. Semantic slot identity is requirement
 metadata ID plus slot name; revision and content pins remain separately checked.
+Under [ADR 0019](../../docs/adr/0019-typed-identifier-namespaces-and-schema-uri-ownership.md),
+the stable identity is structurally `(requirement ID, owner-local snake_case slot)`;
+the exact declaration additionally includes the exact requirement reference and
+resource/declaration/schema digests. Nested schema properties remain schema-local
+fields rather than a global parameter namespace.
 Constraints and defaults never populate absent values. JSON arrays and objects
 are atomic unless a requirement slot explicitly opts into the string-only
 additive-set contract below. Duration values normalize to an integral seconds string, retaining
@@ -56,6 +61,12 @@ of the outer artifact digest. Under
 the exact plan rather than retaining corresponding resolved facts; historical
 evidence selection identifies the exact assessed dependency by stable
 `(instance_id, dependency_id)`.
+
+An inline parameter schema `$id` identifies its schema contract and URI base, not
+the owning requirement slot or exact schema bytes. The separately retained
+`schema_digest` commits exact content. ADR 0019's canonical absolute HTTPS URI layout
+and schema-version evolution rules are accepted but await the coordinated migration;
+runtime schema resolution remains document-local and offline.
 
 Identity uses the existing provisional digest contracts and JCS. Object keys are
 canonicalized; operations and consumption records are ordered by their explicit

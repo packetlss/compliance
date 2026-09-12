@@ -979,10 +979,25 @@ The assembler treats the source list as a set, not an ordered layer stack:
    pin;
 3. schemas are selected across all partial trees and must have one identical,
    unambiguous definition;
-4. identical resources with the same kind and stable identity coalesce while
-   retaining every source/path locator;
+4. identical resources in the same typed lookup namespace coalesce while retaining
+   every source/path locator;
 5. divergent definitions of one identity invalidate the catalog; and
 6. no source order, filename order, or CLI flag order grants precedence.
+
+[System ADR 0019](../../docs/adr/0019-typed-identifier-namespaces-and-schema-uri-ownership.md)
+defines those typed namespaces and keeps semantic resource IDs separate from source,
+release, Rego, filesystem, schema-contract and exact-content identity. Assignment
+references are the deliberate cross-kind exception: because they carry only
+`name@revision`, technical baselines and RequirementBaselines share one collision
+admission namespace and a duplicate reference across those catalogs must fail before
+planning. That admission check and the canonical ID/schema URI migration are accepted
+but not yet implemented.
+
+Schema `$id` is an absolute HTTPS schema-contract identifier/base URI, not a policy
+resource key, source authority or exact-content identity. A composition still
+requires one exact schema definition for an identity; exact schema/resource digests
+and provenance commit the content. Schema lookup remains offline and does not use
+network discovery.
 
 `BaselineOverlay` operations and complete alternative `ControlRealization`
 documents remain the only customization semantics. Assembly never performs a

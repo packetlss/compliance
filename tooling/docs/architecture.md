@@ -522,6 +522,18 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-12 — Typed identifier namespaces and schema URI ownership (#134)
+
+System ADR 0019 accepts typed lookup namespaces with canonical dot-separated
+kebab-case semantic policy IDs, owner-local snake_case slots/properties, independent
+evidence `/vN` dispatch types, and predictable absolute HTTPS schema-contract `$id`
+values. Source/repository/release coordinates, platform wire discriminators,
+digests/fingerprints, Rego entrypoints and filesystem paths retain separate owners.
+Kindless assignment references require fail-closed admission when a technical and
+RequirementBaseline definition share one `id@revision`. This documentation promotion
+implements none of the resource/schema/runtime migration or collision validation;
+PR #133 receives only its separately bounded amend-before-merge mappings.
+
 ### 2026-09-12 — Explicit additive-set parameter architecture (#127)
 
 ADR 0012 now accepts one bounded, documentation-only exception to atomic parameter
@@ -812,5 +824,5 @@ and commands are unsupported, and adaptation is external.
 | 2026-09-08 | Require source-authored policy titles and Control-owned check title/purpose, freeze them in exact plans, and expose them through policy diff and assessment explanation without changing technical evaluation | Implemented under #100; ADR 0017 remains experimental and no compatibility format or identity algorithm was added |
 | 2026-09-08 | Retain canonical unsuccessful dependency dispositions and closed safe criterion error facts in assessment results, with atomic producer/schema/identity/admission/relational/publication/consumer cutover | Implemented under #102; ADR 0018 remains experimental, old development v4 results require historical tooling, and no identity algorithm identifier changed |
 | 2026-09-11 | Represent `linux.sysctl.required` desired policy as one keyed value per sysctl name and classify divergent duplicate selected observations as attributable inconclusiveness | Accepted for the domain-local #115 cleanup; `linux.sysctl/v1`, general evidence selection, outcome taxonomy, and identity algorithms remain unchanged |
-| 2026-09-11 | Compare `macos.system.minimum_version` with macOS-owned numeric dotted-version semantics and classify malformed selected product versions as attributable inconclusiveness | Accepted for the domain-local #117 cleanup; policy minimum remains explicit three-component syntax, observed versions may have two or three components, and no shared SemVer/version framework is introduced |
+| 2026-09-11 | Compare current pre-migration `macos.system.minimum_version` with macOS-owned numeric dotted-version semantics and classify malformed selected product versions as attributable inconclusiveness | Accepted for the domain-local #117 cleanup; ADR 0019's canonical target is `macos.system.minimum-version`; policy minimum remains explicit three-component syntax, observed versions may have two or three components, and no shared SemVer/version framework is introduced |
 | 2026-09-11 | Remove realization information classification from reusable policy and frozen plans | Implemented under #120 as a pre-freeze deletion; confidentiality remains enforced by source ownership, acquisition/materialization, repository access, and deployment controls, with no replacement runtime taxonomy or access decision |
