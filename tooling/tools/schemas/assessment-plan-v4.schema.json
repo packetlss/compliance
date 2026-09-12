@@ -595,8 +595,7 @@
               "baselines": {
                 "type": "array",
                 "items": {
-                  "type": "string",
-                  "minLength": 1
+                  "$ref": "#/$defs/reference"
                 },
                 "uniqueItems": true
               }

@@ -362,6 +362,54 @@ class OperationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'artifact assignments differ'):
             validate_assessment_plan(changed)
 
+    def test_resigned_sibling_assignment_requires_canonical_baseline_reference(self):
+        plans = self.plans()
+        plans[1]['resolved_groups'].append({
+            'id': 'sibling-hosts',
+            'sources': [{'membership': 'explicit', 'source': 'group.members'}],
+        })
+        plans[1]['assignments'].append({
+            'id': 'sibling-policy',
+            'group': 'sibling-hosts',
+            'baselines': ['test.baseline@1'],
+        })
+        subjects = {plan['subject']['id']: plan['subject'] for plan in plans}
+        groups = [
+            {'id': 'test-hosts', 'parents': [], 'members': ['host/A', 'host/B']},
+            {'id': 'sibling-hosts', 'parents': [], 'members': ['host/B']},
+        ]
+        assignments = [
+            {'id': 'test-policy', 'target': {'group': 'test-hosts'},
+             'baselines': ['test.baseline@1']},
+            {'id': 'sibling-policy', 'target': {'group': 'sibling-hosts'},
+             'baselines': ['test.baseline@1']},
+        ]
+        freeze_operation(
+            plans,
+            subjects,
+            groups,
+            assignments,
+            {'subjects': ['host/A', 'host/B'], 'groups': [], 'all': False},
+        )
+        anchor = plans[0]
+        validate_assessment_plan(anchor)
+
+        sibling = next(
+            assignment for assignment in anchor['operation']['assignments']
+            if assignment['id'] == 'sibling-policy'
+        )
+        sibling['baselines'] = ['bad__baseline@1']
+        semantic = {
+            key: copy.deepcopy(value)
+            for key, value in anchor['operation'].items()
+            if key != 'operation_id'
+        }
+        anchor['operation']['operation_id'] = digest(semantic)
+        anchor['id'] = artifact_digest(anchor)
+
+        with self.assertRaisesRegex(ValueError, 'does not match'):
+            validate_assessment_plan(anchor)
+
     def test_sibling_member_commitment_tampering_is_rejected(self):
         anchor = self.plans()[0]
         for mutation in ('omit-controls', 'replace-member-commitment'):
