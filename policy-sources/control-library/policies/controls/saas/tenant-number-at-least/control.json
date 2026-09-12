@@ -2,7 +2,7 @@
   "apiVersion": "compliance.example/v1",
   "kind": "Control",
   "metadata": {
-    "id": "saas.tenant.number_at_least",
+    "id": "saas.tenant.number-at-least",
     "version": 1
   },
   "spec": {

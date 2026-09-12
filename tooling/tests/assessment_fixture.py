@@ -125,6 +125,7 @@ def assessment_plan(policy_sources, *, with_requirement=False):
 def evidence_schema() -> dict:
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://compliance.example/schemas/evidence/test.evidence/v1.schema.json",
         "type": "object",
         "required": [
             "schema", "id", "subject", "type", "collected_at",
@@ -252,7 +253,17 @@ def freeze_policy_inputs(plan):
                       'spec': {'title': control['title'], 'purpose': control['purpose'],
                                'entrypoint': control['entrypoint'],
                                'evidence': [{k: v for k, v in e.items() if k != 'max_age'} for e in control['evidence']]}}
-        control['policy_inputs'] = {'instance': instance, 'definition': definition, 'parameters_schema': {'type': 'object'}}
+        control['policy_inputs'] = {
+            'instance': instance,
+            'definition': definition,
+            'parameters_schema': {
+                '$id': (
+                    'https://compliance.example/schemas/controls/'
+                    f"{control['implementation']}/parameters/v1.schema.json"
+                ),
+                'type': 'object',
+            },
+        }
         from tools.render_plan import control_definition_fingerprint
         control['definition_fingerprint'] = pp.digest(instance) if control['alignment'] == 'realization' else control_definition_fingerprint(instance)
     if not plan['resolved_baselines'] and not plan['resolved_requirement_baselines']:

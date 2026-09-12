@@ -33,7 +33,7 @@
               "minLength": 1
             }
           },
-          "$id": "https://compliance.example/inputs/iam.integration.required/service"
+          "$id": "https://compliance.example/schemas/controls/iam.integration.required/evidence/service/inputs/v1.schema.json"
         }
       },
       {

@@ -192,7 +192,7 @@ class PolicyDiffTests(unittest.TestCase):
 
             before_control = next(
                 item for item in self.macos_plan["controls"]
-                if item["implementation"] == "macos.system.minimum_version"
+                if item["implementation"] == "macos.system.minimum-version"
             )
             after_control = next(
                 item for item in after["controls"]

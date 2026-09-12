@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://compliance.example/schemas/policy/baseline-v1.schema.json",
+  "$id": "https://compliance.example/schemas/platform/policy/baseline/v1.schema.json",
   "title": "Compliance baseline",
   "type": "object",
   "required": [
@@ -50,7 +50,8 @@
         },
         {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
         }
       ]
     },
@@ -64,7 +65,7 @@
         "id": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
         },
         "version": {
           "$ref": "#/$defs/revision"
@@ -143,12 +144,12 @@
         "instance_id": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
         },
         "implementation": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
         },
         "parameters": {
           "type": "object",
@@ -165,6 +166,9 @@
         },
         "evidence": {
           "type": "object",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+          },
           "additionalProperties": {
             "type": "object",
             "additionalProperties": false,

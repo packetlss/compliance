@@ -1,11 +1,11 @@
 # ADR 0019: Typed identifier namespaces and schema URI ownership
 
-- **Status:** Accepted design, not yet implemented; experimental, not frozen
+- **Status:** Implemented under #136; experimental, not frozen
 - **Date:** 2026-09-12
 - **Architecture contract:** [#134](https://github.com/packetlss/compliance/issues/134)
 - **Exploration:** [#132](https://github.com/packetlss/compliance/issues/132)
 - **Refines:** [ADR 0005](0005-content-addressed-development-boundaries.md), [ADR 0007](0007-unified-actual-and-expected-composition-provenance.md), [ADR 0009](0009-active-compliance-vocabulary.md), [ADR 0012](0012-explicit-policy-parameter-resolution.md), and [ADR 0017](0017-source-authored-policy-and-check-meaning.md)
-- **Implementation:** Deferred to the bounded PR #133 amendment and a separate coordinated pre-freeze namespace migration
+- **Implementation:** Bounded PR #133 amendment followed by coordinated migration #136
 
 ## Context and decision boundary
 
@@ -19,10 +19,9 @@ global namespace.
 
 Mixed underscore and hyphen spelling in current semantic resource IDs and several
 unrelated JSON Schema URI layouts also make new authoring ambiguous. The project is
-pre-freeze, so one canonical direction must be promoted before more identities are
-minted. This decision records that direction only. It does not rename a resource or
-schema, change a validator or reader, or make the accepted cross-kind collision rule
-executable.
+pre-freeze, so one canonical direction was promoted before more identities were
+minted. Issue #136 implements that direction across maintained resources, schemas,
+validators, references, pins, fixtures, and release vectors.
 
 The following concepts remain distinct:
 
@@ -125,10 +124,8 @@ RequirementBaseline must be rejected before planning, independently of source,
 file or traversal order. The runtime must not prefer one catalog, fall back between
 catalogs, infer a kind, or add source qualification.
 
-This fail-closed rule is accepted architecture but is not implemented by this ADR
-promotion. The coordinated pre-freeze migration must add its validation and tests;
-until then, current executable behavior must not be represented as conforming to the
-rule.
+This fail-closed rule is implemented under #136 with source-order-independent
+admission validation before trustworthy planning.
 
 ### Parameter and other owner-local identity
 
@@ -202,21 +199,28 @@ discriminators and digest-algorithm domains remain platform-owned and unchanged.
 Their `compliance.example/...` spelling neither grants semantic resource authority
 nor requires semantic IDs to carry an equivalent prefix.
 
-## Migration direction and PR #133 disposition
+## Implemented migration and PR #133 disposition
 
-The coordinated pre-freeze migration will rename current authored identities to the
-canonical grammar without aliases or compatibility readers. Representative
-direction is:
+The coordinated pre-freeze migration implemented under #136 renamed maintained
+authored identities to the canonical grammar without aliases or compatibility
+readers:
 
 | Current | Canonical |
 | --- | --- |
-| `macos.system.minimum_version` | `macos.system.minimum-version` |
+| `aws.account.number_at_least` | `aws.account.number-at-least` |
+| `aws.account.setting_equals` | `aws.account.setting-equals` |
 | `aws.s3.account_public_access_block_required` | `aws.s3.account-public-access-block-required` |
+| `linux.access.setting_equals` | `linux.access.setting-equals` |
+| `macos.homebrew.formulae_required` | `macos.homebrew.formulae-required` |
+| `macos.security.setting_equals` | `macos.security.setting-equals` |
+| `macos.system.minimum_version` | `macos.system.minimum-version` |
+| `saas.tenant.number_at_least` | `saas.tenant.number-at-least` |
+| `saas.tenant.setting_equals` | `saas.tenant.setting-equals` |
 | `linux.packages/v1` | unchanged |
 | Owner-local slot `privileged_evidence_max_age` | unchanged |
 
-Open PR [#133](https://github.com/packetlss/compliance/pull/133) is
-**amend-before-merge**, bounded to exactly these mappings:
+PR [#133](https://github.com/packetlss/compliance/pull/133) merged before #136 with
+exactly these bounded mappings:
 
 | PR #133 identity | Required disposition |
 | --- | --- |
@@ -229,16 +233,11 @@ Open PR [#133](https://github.com/packetlss/compliance/pull/133) is
 | Control parameter schema `$id` | `https://compliance.example/schemas/controls/linux.packages.only-allowed/parameters/v1.schema.json` |
 | Requirement parameter schema `$id` | `https://compliance.example/schemas/requirements/company.authorized-software/parameters/allowed_software/v1.schema.json` |
 
-Changing those authored identities naturally recalculates affected resource digests,
+Changing those authored identities naturally recalculated affected resource digests,
 definition fingerprints, exact pins and experimental release vectors through the
-existing algorithms. This ADR does not amend PR #133. After this promotion merges,
-PR #133 must make only the bounded amendment, recompute its affected pins/vectors,
-and repeat exact-head validation, CI and review.
-
-A separate coordinated pre-freeze migration issue must then cover existing
-maintained resource IDs, schema `$id` values, validators/reference patterns and the
-cross-kind assignment collision rule. That broader migration must not be folded
-into PR #133.
+existing algorithms. Issue #136 then covered the remaining maintained resource IDs,
+schema `$id` values, validators/reference patterns and the cross-kind assignment
+collision rule without amending the bounded semantics of PR #133.
 
 ## Consequences and non-goals
 
@@ -247,19 +246,15 @@ sources while allowing short domain-oriented identifiers. This makes the lookup
 kind and structural owner important context. URI-shaped schema contract identity
 remains separate from content-addressed exactness and platform wire ownership.
 
-This decision does not:
+The implementation does not:
 
-- rename or migrate current resources or schemas;
-- change runtime, schema, validator, test, fixture or generated-artifact behavior;
 - add aliases, compatibility readers, source-qualified identity or precedence;
 - introduce network schema discovery or a namespace registry/service;
 - select a production schema authority;
 - change evidence qualification or selection, digest algorithms, or identity projections;
 - change ADR 0012 stable parameter targeting or create a global parameter ontology;
-- implement the technical/RequirementBaseline collision rule; or
 - redesign Control multi-version lookup.
 
-Current pre-migration resources and artifacts preserve their exact historical
-identity and require the tooling that understands them. New executable conformance
-and coordinated identity changes require the separately reviewed implementation
-tranches above. Human promotion and merge authority remains unchanged.
+Historical pre-migration artifacts preserve their exact historical identity and
+require the tooling that understands them. Current maintained resources use the
+canonical identities above. Human promotion and merge authority remains unchanged.

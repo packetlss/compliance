@@ -27,6 +27,33 @@ from tools.render_plan import (
 
 
 class AssessmentArtifactValidationTests(unittest.TestCase):
+    def test_public_semantic_identifiers_are_not_normalized_in_frozen_plans(self):
+        plan = assessment_plan(
+            [{"name": "test", "digest": "sha256:" + "1" * 64}],
+            with_requirement=True,
+        )
+        mutations = (
+            lambda item: item["controls"][0].update(
+                implementation="test.control_legacy"
+            ),
+            lambda item: item["controls"][0].update(
+                instance_id="test.check_legacy"
+            ),
+            lambda item: item["assignments"][0]["baselines"].__setitem__(
+                0, "test_baseline@1"
+            ),
+            lambda item: item["requirements"][0].update(
+                reference="test_requirement@1"
+            ),
+        )
+        for mutate in mutations:
+            changed = copy.deepcopy(plan)
+            mutate(changed)
+            with self.subTest(mutation=mutate), self.assertRaises(
+                ArtifactValidationError
+            ):
+                validate_assessment_plan(changed)
+
     @staticmethod
     def parameterized_plan():
         """Build one self-contained valid plan with a frozen freshness binding."""
@@ -39,7 +66,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
 
         requirement_document = copy.deepcopy(requirement["parameter_facts"]["document"])
         value_schema = {
-            "$id": "https://example.test/frozen-age",
+            "$id": "https://compliance.example/schemas/requirements/test.requirement/parameters/age/v1.schema.json",
             "type": "string",
             "pattern": "^[1-9][0-9]*[smhd]$",
         }
@@ -165,7 +192,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         base_record = plan["resolved_requirement_baselines"][0]
         requirement_document = copy.deepcopy(requirement["parameter_facts"]["document"])
         value_schema = {
-            "$id": "https://example.test/frozen-set",
+            "$id": "https://compliance.example/schemas/requirements/test.requirement/parameters/allowed/v1.schema.json",
             "type": "array",
             "items": {"type": "string"},
             "uniqueItems": True,
@@ -256,6 +283,10 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             "type": "test.evidence/v1",
         }]
         definition["_parameters_schema"] = {
+            "$id": (
+                "https://compliance.example/schemas/controls/"
+                f"{control['implementation']}/parameters/v1.schema.json"
+            ),
             "type": "object",
             "properties": {
                 "allowed": {"type": "array", "items": {"type": "string"}},

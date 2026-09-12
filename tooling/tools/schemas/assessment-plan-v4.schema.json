@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://compliance.example/schemas/assessment-plan-v4.schema.json",
+  "$id": "https://compliance.example/schemas/platform/assessment-plan/v4.schema.json",
   "type": "object",
   "required": [
     "schema",
@@ -694,7 +694,7 @@
                       "properties": {
                         "instance_id": {
                           "type": "string",
-                          "minLength": 1
+                          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
                         },
                         "disposition": {
                           "enum": [
@@ -721,8 +721,7 @@
                       ],
                       "properties": {
                         "reference": {
-                          "type": "string",
-                          "minLength": 1
+                          "$ref": "#/$defs/reference"
                         },
                         "required": {
                           "type": "boolean"
@@ -772,7 +771,7 @@
     "reference": {
       "type": "string",
       "minLength": 3,
-      "pattern": "^.+@.+$"
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$"
     },
     "nonEmptyString": {
       "type": "string",
@@ -957,7 +956,7 @@
               "uniqueItems": true,
               "items": {
                 "type": "string",
-                "minLength": 1
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
               }
             }
           }
@@ -1401,7 +1400,7 @@
           "uniqueItems": true,
           "items": {
             "type": "string",
-            "minLength": 1
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
           }
         },
         "provenance": {
@@ -1431,7 +1430,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*/v[1-9][0-9]*$"
         },
         "max_age": {
           "type": "string",
@@ -1439,7 +1438,7 @@
         },
         "id": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
         },
         "inputs": {
           "type": "object"
@@ -1501,7 +1500,7 @@
       "properties": {
         "implementation": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
         },
         "parameters": {
           "type": "object",
@@ -1667,11 +1666,11 @@
       "properties": {
         "instance_id": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
         },
         "implementation": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
         },
         "title": {
           "$ref": "#/$defs/nonEmptyString"
@@ -1797,11 +1796,11 @@
       "properties": {
         "instance_id": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
         },
         "implementation": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
         },
         "title": {
           "$ref": "#/$defs/nonEmptyString"

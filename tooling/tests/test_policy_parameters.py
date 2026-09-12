@@ -9,7 +9,12 @@ from tools import policy_parameters as p
 
 class PolicyParameterTests(unittest.TestCase):
     def setUp(self):
-        schema = {'$id': 'https://example.test/age', 'type': 'string', 'pattern': '^[1-9][0-9]*[smhd]$', 'default': '30d'}
+        schema = {
+            '$id': 'https://compliance.example/schemas/requirements/objective/parameters/age/v1.schema.json',
+            'type': 'string',
+            'pattern': '^[1-9][0-9]*[smhd]$',
+            'default': '30d',
+        }
         self.requirement = {'metadata': {'id': 'objective', 'revision': 1}, 'spec': {'parameters': {
             'age': {'required': True, 'binding_mode': 'open', 'schema': schema, 'schema_digest': p.digest(schema),
                     'binding_scope': ['company', 'enclave'], 'representation': 'duration'}}}}
@@ -21,9 +26,11 @@ class PolicyParameterTests(unittest.TestCase):
         self.catalog = {'company@1': self.baseline}
         self.definition = {'metadata': {'id': 'test.check', 'version': 1}, 'spec': {
             'evidence': [{'id': 'observation', 'type': 'test/v1',
-                          'inputs_schema': {'$id': 'https://example.test/evidence-input', 'type': 'object',
+                          'inputs_schema': {'$id': 'https://compliance.example/schemas/controls/test.check/evidence/observation/inputs/v1.schema.json', 'type': 'object',
                                             'properties': {'period': {'type': 'string'}}, 'required': ['period'], 'additionalProperties': False}}]},
-            '_parameters_schema': {'type': 'object', 'properties': {'age': {'type': 'string'}}, 'required': ['age'], 'additionalProperties': False}}
+            '_parameters_schema': {'$id': 'https://compliance.example/schemas/controls/test.check/parameters/v1.schema.json',
+                                   'type': 'object', 'properties': {'age': {'type': 'string'}},
+                                   'required': ['age'], 'additionalProperties': False}}
         self.controls = {'test.check': self.definition}
         self.realization = {'spec': {'adoption': {'status': 'implemented'},
                                     'checks': [{'instance_id': 'check', 'implementation': 'test.check', 'parameters': {}}],
@@ -54,7 +61,7 @@ class PolicyParameterTests(unittest.TestCase):
 
     def additive_inputs(self, *, base=None, schema_update=None, declaration_update=None):
         value_schema = {
-            '$id': 'https://example.test/allowed',
+            '$id': 'https://compliance.example/schemas/requirements/objective/parameters/allowed/v1.schema.json',
             'type': 'array',
             'items': {'type': 'string'},
             'uniqueItems': True,
@@ -234,7 +241,8 @@ class PolicyParameterTests(unittest.TestCase):
 
     def test_nested_symbolic_input_validates_after_materialization(self):
         from jsonschema import Draft202012Validator
-        schema = {'type': 'object', 'properties': {'settings': {'type': 'object',
+        schema = {'$id': 'https://compliance.example/schemas/controls/test.check/parameters/v1.schema.json',
+                  'type': 'object', 'properties': {'settings': {'type': 'object',
                   'properties': {'age': {'type': 'string'}}, 'required': ['age']}}, 'required': ['settings']}
         self.definition['_parameters_schema'] = schema
         self.realization['spec']['checks'][0]['parameters'] = {'settings': {}}
@@ -521,6 +529,13 @@ class PolicyParameterTests(unittest.TestCase):
 
         renamed = copy.deepcopy(requirement)
         renamed['spec']['parameters']['renamed'] = renamed['spec']['parameters'].pop('allowed')
+        renamed['spec']['parameters']['renamed']['schema']['$id'] = (
+            'https://compliance.example/schemas/requirements/objective/'
+            'parameters/renamed/v1.schema.json'
+        )
+        renamed['spec']['parameters']['renamed']['schema_digest'] = p.digest(
+            renamed['spec']['parameters']['renamed']['schema']
+        )
         renamed_requirements = {'objective@1': renamed}
         renamed_initial = p.declarations(renamed)['renamed']
         renamed_base = copy.deepcopy(baselines['base@1'])

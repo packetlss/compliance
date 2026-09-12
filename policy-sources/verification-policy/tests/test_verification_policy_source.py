@@ -15,6 +15,7 @@ from tools.control_realization import roll_up_plan_requirements
 from tools.operation import account_operation, qualify_operation
 from tools.policy_sources import PolicySource, policy_source_revisions, source_tree_digest
 from tools.render_plan import (
+    content_digest,
     load_policy_catalogs,
     load_requirement_catalogs,
     render_plan,
@@ -28,6 +29,7 @@ CONTROL_LIBRARY = Path(os.environ["COMPLIANCE_CONTROL_LIBRARY_ROOT"]) / "policie
 check_source_boundary = runpy.run_path(str(ROOT / "scripts/check-source-boundary.py"))["check_source_boundary"]
 BASELINE = Path("baselines/company/company-linux-server-operations.json")
 REALIZATION = Path("realizations/company/company-linux-role-based-access.json")
+REQUIREMENT = Path("requirements/company/company-role-based-access.json")
 AWS_BASELINE = Path("baselines/upstream/csa-ccm-aws-foundations-profile.json")
 SAAS_BASELINE = Path("baselines/upstream/csa-ccm-saas-foundations-profile.json")
 
@@ -428,6 +430,25 @@ class VerificationPolicySourceTests(unittest.TestCase):
     def test_requirement_digest_mismatch_is_rejected(self) -> None:
         self.mutate(REALIZATION, lambda item: item["spec"]["requirement"].update(digest="sha256:" + "0" * 64))
         self.assertIn("requirement-digest-mismatch", self.error_types())
+
+    def test_requirement_parameter_schema_identity_must_match_owner_and_slot(self) -> None:
+        def change(document):
+            declaration = document["spec"]["parameters"][
+                "privileged_evidence_max_age"
+            ]
+            declaration["schema"]["$id"] = (
+                "https://compliance.example/schemas/requirements/company.other/"
+                "parameters/privileged_evidence_max_age/v1.schema.json"
+            )
+            declaration["schema_digest"] = content_digest(declaration["schema"])
+
+        self.mutate(REQUIREMENT, change)
+        _, _, errors = load_policy_catalogs(sources(self.root))
+        error = next(
+            item for item in errors
+            if item["type"] == "parameter-declaration-invalid"
+        )
+        self.assertIn("semantic owner", error["message"])
 
     @staticmethod
     def mutate_private(path: Path, change) -> None:

@@ -841,7 +841,7 @@ spec:
         ecosystem: linux-native
         required: [a, b, c]
     - instance_id: linux.access.sssd-installed
-      implementation: linux.access.setting_equals
+      implementation: linux.access.setting-equals
       parameters:
         section: packages
         setting: sssd_installed
@@ -871,7 +871,7 @@ Proposed assignment and baseline composition rules:
    assessment so historical results remain explainable.
 
 For example, a workstation baseline may instantiate
-`macos.homebrew.formulae_required` to require `git`, while a developer baseline
+`macos.homebrew.formulae-required` to require `git`, while a developer baseline
 instantiates the same implementation to require `opa` and `shellcheck`. The
 rendered plan contains two controls and two results. They reuse the same package
 evidence but are not collapsed into a synthetic merged package list.
@@ -991,7 +991,7 @@ references are the deliberate cross-kind exception: because they carry only
 `name@revision`, technical baselines and RequirementBaselines share one collision
 admission namespace and a duplicate reference across those catalogs must fail before
 planning. That admission check and the canonical ID/schema URI migration are accepted
-but not yet implemented.
+and implemented under #136.
 
 Schema `$id` is an absolute HTTPS schema-contract identifier/base URI, not a policy
 resource key, source authority, exact-content identity or global composition key.

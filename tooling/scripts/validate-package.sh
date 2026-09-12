@@ -346,7 +346,7 @@ spec:
   subjectRef:
     id: host/package-host
   controlRef:
-    instanceId: package-validation/control
+    instanceId: package-validation.control
   validFrom: "2026-08-29T00:00:00Z"
   expiresAt: "2027-08-29T00:00:00Z"
   rationale: Standalone package validation fixture.

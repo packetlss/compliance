@@ -9,7 +9,7 @@ test_reports_missing_formula if {
 		"subject": {"id": "workstation/test"},
 		"control": {
 			"instance_id": "test.packages",
-			"implementation": "macos.homebrew.formulae_required",
+			"implementation": "macos.homebrew.formulae-required",
 			"severity": "medium",
 			"remediation": "Install it",
 			"parameters": {"required": ["git", "shellcheck"]},
@@ -31,7 +31,7 @@ test_reports_unknown_without_evidence if {
 		"subject": {"id": "workstation/test"},
 		"control": {
 			"instance_id": "test.packages",
-			"implementation": "macos.homebrew.formulae_required",
+			"implementation": "macos.homebrew.formulae-required",
 			"severity": "medium",
 			"remediation": "Install it",
 			"parameters": {"required": ["git"]},

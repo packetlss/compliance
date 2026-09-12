@@ -2,7 +2,7 @@
   "apiVersion": "compliance.example/v1",
   "kind": "Control",
   "metadata": {
-    "id": "linux.access.setting_equals",
+    "id": "linux.access.setting-equals",
     "version": 1
   },
   "spec": {

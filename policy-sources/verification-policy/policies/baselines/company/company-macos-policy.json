@@ -10,14 +10,14 @@
     "extends": [
       {
         "baseline": "benchmark.example.macos-hardening@2026.1",
-        "digest": "sha256:6fdc95a46ad537aea3fc9b043ded2fa0f84db1973ef3df1c4ba5a9e3fc1eef19"
+        "digest": "sha256:8162f7f2aee8a078e049e974eb8a5b175fde193309ac4798b907c19819a41e00"
       }
     ],
     "operations": [
       {
         "op": "tailor",
         "target": "benchmark.example.macos.minimum-version",
-        "expected_parent_fingerprint": "sha256:7c793db86ac6eb5ac69475d50a2d3d3ad4c6f8f556059db2ab5e6e2e36c21f6f",
+        "expected_parent_fingerprint": "sha256:31788f37f29a95099c5a0c9a33d84ff51cef81e7df26d9d141acef5fb97a3616",
         "parameters": {
           "minimum": "26.0.0"
         },
@@ -32,7 +32,7 @@
       {
         "op": "exclude",
         "target": "benchmark.example.macos.audit-formula-required",
-        "expected_parent_fingerprint": "sha256:88103cfc471430fb952f1d1049a64ea4908b15a7615b80993243bb6a528397a5",
+        "expected_parent_fingerprint": "sha256:97eb6ef06ca9ad85422311b55328f46518a97dfcf1f640b1ebb5a46d200fc62a",
         "deviation": {
           "id": "DEV-MAC-002",
           "classification": "alternative-company-control",
@@ -44,7 +44,7 @@
       {
         "op": "seal",
         "target": "benchmark.example.macos.gatekeeper-enabled",
-        "expected_parent_fingerprint": "sha256:2e28771b3f6d2bd2f3b787d725193e87523e73d121ca28d2c9459fe106f1b7d0",
+        "expected_parent_fingerprint": "sha256:17be544c770413c1cb3f5ac757dcf35d25031aa95dca85e636b84c5a62cdb8ae",
         "blocked_operations": [
           "tailor",
           "exclude",
@@ -56,7 +56,7 @@
         "op": "add",
         "control": {
           "instance_id": "company.macos.opa-required",
-          "implementation": "macos.homebrew.formulae_required",
+          "implementation": "macos.homebrew.formulae-required",
           "parameters": {
             "required": [
               "opa"

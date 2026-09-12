@@ -8,7 +8,7 @@ assessment_input(observed) := {
 	"subject": {"id": "cloud-account/test"},
 	"control": {
 		"instance_id": "test.setting",
-		"implementation": "aws.account.setting_equals",
+		"implementation": "aws.account.setting-equals",
 		"severity": "high",
 		"remediation": "Fix it",
 		"parameters": {"section": "cloudtrail", "setting": "multi_region_enabled", "expected": true},
@@ -37,7 +37,7 @@ test_missing_optional_security_contact_is_unknown if {
 		"subject": {"id": "cloud-account/test"},
 		"control": {
 			"instance_id": "test.security-contact",
-			"implementation": "aws.account.setting_equals",
+			"implementation": "aws.account.setting-equals",
 			"severity": "high",
 			"remediation": "Fix it",
 			"parameters": {"section": "security_contact", "setting": "configured", "expected": true},

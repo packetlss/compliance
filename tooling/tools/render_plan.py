@@ -7,6 +7,7 @@ from . import policy_parameters as pp
 import copy
 import hashlib
 import json
+import re
 import subprocess
 from collections import defaultdict, deque
 from pathlib import Path
@@ -18,6 +19,12 @@ from jsonschema.exceptions import SchemaError
 
 from ._canonical_json import canonical_json_bytes
 from .artifact_validation import validate_assessment_plan
+from .identifiers import (
+    EVIDENCE_TYPE,
+    canonical_control_evidence_inputs_schema_id,
+    canonical_control_parameter_schema_id,
+    canonical_evidence_schema_id,
+)
 from .policy_sources import (
     PolicySource,
     PolicySources,
@@ -534,6 +541,53 @@ def load_control_catalog(
             })
             continue
 
+        parameters_schema_id = parameters_schema.get("$id")
+        if not isinstance(parameters_schema_id, str) or not canonical_control_parameter_schema_id(
+            control_id
+        ).fullmatch(parameters_schema_id):
+            errors.append({
+                "type": "control-parameters-schema-identity-invalid",
+                "control": control_id,
+                "source": source,
+                "parameters_schema": control["spec"]["parameters_schema"],
+                "schema_id": parameters_schema_id,
+            })
+            continue
+
+        invalid_inputs_schema = False
+        for dependency in control["spec"].get("evidence", []):
+            inputs_schema = dependency.get("inputs_schema")
+            if inputs_schema is None:
+                continue
+            try:
+                Draft202012Validator.check_schema(inputs_schema)
+            except SchemaError as error:
+                errors.append({
+                    "type": "control-evidence-inputs-schema-invalid",
+                    "control": control_id,
+                    "dependency": dependency["id"],
+                    "source": source,
+                    "path": _json_pointer(error.absolute_path),
+                    "message": error.message,
+                })
+                invalid_inputs_schema = True
+                continue
+            inputs_schema_id = inputs_schema.get("$id")
+            if not isinstance(inputs_schema_id, str) or not canonical_control_evidence_inputs_schema_id(
+                control_id,
+                dependency["id"],
+            ).fullmatch(inputs_schema_id):
+                errors.append({
+                    "type": "control-evidence-inputs-schema-identity-invalid",
+                    "control": control_id,
+                    "dependency": dependency["id"],
+                    "source": source,
+                    "schema_id": inputs_schema_id,
+                })
+                invalid_inputs_schema = True
+        if invalid_inputs_schema:
+            continue
+
         control["_implementation_modules"] = sorted(content_digest(module.read_text(encoding="utf-8")) for module in path.parent.rglob("*.rego") if not module.name.endswith("_test.rego"))
         control["_source"] = source
         control["_parameters_schema"] = parameters_schema
@@ -594,6 +648,23 @@ def _load_evidence_schema_catalog_root(
                 "type": "evidence-schema-type-missing",
                 "source": source,
                 "message": "properties.type.const must declare the evidence type",
+            })
+            continue
+        expected_schema_id = canonical_evidence_schema_id(evidence_type)
+        if expected_schema_id is None:
+            errors.append({
+                "type": "evidence-schema-type-invalid",
+                "source": source,
+                "evidence_type": evidence_type,
+            })
+            continue
+        if schema.get("$id") != expected_schema_id:
+            errors.append({
+                "type": "evidence-schema-identity-invalid",
+                "source": source,
+                "evidence_type": evidence_type,
+                "schema_id": schema.get("$id"),
+                "expected_schema_id": expected_schema_id,
             })
             continue
         if evidence_type in catalog:
@@ -722,9 +793,9 @@ def _evidence_schema_envelope_errors(
     require(
         isinstance(type_field, dict)
         and isinstance(type_field.get("const"), str)
-        and bool(type_field["const"]),
+        and re.fullmatch(EVIDENCE_TYPE, type_field["const"]) is not None,
         "/properties/type/const",
-        "must declare one non-empty evidence type",
+        "must declare one canonical evidence type",
     )
 
     collected_at = properties.get("collected_at")
@@ -1116,13 +1187,27 @@ def load_policy_catalogs(
     controls, control_errors = _load_control_catalogs(policy_sources)
     catalog, baseline_errors = _load_baseline_catalogs(policy_sources)
     _, evidence_errors = validate_control_evidence_contracts(policy_sources, controls)
-    _, _, _, requirement_errors = load_requirement_catalogs(policy_sources, controls)
+    _, requirement_baselines, _, requirement_errors = load_requirement_catalogs(
+        policy_sources,
+        controls,
+    )
+    assignment_reference_collisions = sorted(set(catalog) & set(requirement_baselines))
+    collision_errors = [
+        {
+            "type": "assignment-reference-kind-collision",
+            "reference": reference,
+            "technical_sources": catalog[reference].get("_sources", []),
+            "requirement_sources": requirement_baselines[reference].get("_sources", []),
+        }
+        for reference in assignment_reference_collisions
+    ]
     errors = [
         *source_pin_errors(policy_sources),
         *control_errors,
         *baseline_errors,
         *evidence_errors,
         *requirement_errors,
+        *collision_errors,
     ]
     if errors:
         return controls, catalog, errors

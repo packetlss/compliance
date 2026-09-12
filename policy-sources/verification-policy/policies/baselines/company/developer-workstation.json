@@ -10,7 +10,7 @@
     "extends": [
       {
         "baseline": "company.macos-policy@1",
-        "digest": "sha256:87caedb7beeb817ae27fd501d62eed4fe0f9984a2aac060764c8954ddc857214"
+        "digest": "sha256:66a2faae762d3e73bb747e6776b8f6558ca2b92f2cfb6f6c9fb1dd3420dbd3bf"
       }
     ],
     "operations": [
@@ -18,7 +18,7 @@
         "op": "add",
         "control": {
           "instance_id": "developer.macos.shellcheck-required",
-          "implementation": "macos.homebrew.formulae_required",
+          "implementation": "macos.homebrew.formulae-required",
           "parameters": {
             "required": [
               "shellcheck"

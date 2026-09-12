@@ -322,6 +322,7 @@ class AssessmentV4Tests(unittest.TestCase):
         schema_path = self.source.path/'schemas/evidence/second.json'
         schema = evidence_schema()
         schema['properties']['type']['const'] = 'second/v1'
+        schema['$id'] = 'https://compliance.example/schemas/evidence/second/v1.schema.json'
         schema_path.write_text(json.dumps(schema))
         independent = copy.deepcopy(self.plan['controls'][0])
         independent['instance_id'] = 'independent'
@@ -329,7 +330,7 @@ class AssessmentV4Tests(unittest.TestCase):
         independent['evidence'] = []
         self.plan['controls'].append(independent)
         self.plan['controls'][0]['evidence'].append({
-            'id': 'second-observation',
+            'id': 'second_observation',
             'type': 'second/v1',
             'max_age': '24h',
         })
@@ -770,7 +771,7 @@ class AssessmentV4Tests(unittest.TestCase):
     def test_same_document_selected_for_two_requirements_retains_attributable_error(self):
         requirement = copy.deepcopy(self.plan['controls'][0]['evidence'][0])
         requirement['max_age'] = '48h'
-        requirement['id'] = 'second-observation'
+        requirement['id'] = 'second_observation'
         self.plan['controls'][0]['evidence'].append(requirement)
         self.sign_plan()
         for effect in (RuntimeError('scoped'), lambda *args: None):
@@ -779,7 +780,7 @@ class AssessmentV4Tests(unittest.TestCase):
             self.assertNotIn('evidence_ids', report['results'][0])
             self.assertEqual(
                 [use['dependency_id'] for use in report['provenance']['selectedEvidence']],
-                ['observation', 'second-observation'],
+                ['observation', 'second_observation'],
             )
             self.assertEqual(opa.call_count,1)
 

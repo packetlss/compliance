@@ -9,7 +9,7 @@ test_setting_matches if {
 		"subject": {"id": "workstation/test"},
 		"control": {
 			"instance_id": "test.gatekeeper",
-			"implementation": "macos.security.setting_equals",
+			"implementation": "macos.security.setting-equals",
 			"severity": "high",
 			"remediation": "Enable it",
 			"parameters": {"setting": "gatekeeper", "expected": "enabled"},

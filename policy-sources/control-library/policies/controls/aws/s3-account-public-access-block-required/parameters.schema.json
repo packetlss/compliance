@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://compliance.example/schemas/controls/aws-s3-account-public-access-block-required-parameters-v1.schema.json",
+  "$id": "https://compliance.example/schemas/controls/aws.s3.account-public-access-block-required/parameters/v1.schema.json",
   "type": "object",
   "required": [
     "block_public_acls",

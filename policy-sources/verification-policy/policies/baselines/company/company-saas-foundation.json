@@ -10,14 +10,14 @@
     "extends": [
       {
         "baseline": "profile.csa-ccm.saas-foundations@4.1-profile1",
-        "digest": "sha256:99184bfd4ca8f5989e2b5080c0f96baef55ee61c39460d9f331a050ab02c729c"
+        "digest": "sha256:9cc4e2982063166dd1e65a8ff82477b2d817845ab71fe32f9be729a700a0a226"
       }
     ],
     "operations": [
       {
         "op": "tailor",
         "target": "csa-ccm.saas.audit-log-retention",
-        "expected_parent_fingerprint": "sha256:e80d3390127ceef69754f98c326bcef4bc034b6c5fc0ba342911550cf985cd18",
+        "expected_parent_fingerprint": "sha256:9f1b0aea49bc2f5a93996ae0aa92f31e3855c86761ea52f313c2605dfd8bdde7",
         "parameters": {
           "section": "audit_log",
           "setting": "retention_days",
@@ -34,7 +34,7 @@
       {
         "op": "annotate",
         "target": "csa-ccm.saas.mfa-enforced",
-        "expected_parent_fingerprint": "sha256:53ad915299f6b0344ab19eae1cd43a26ad44d9b39020b600987c8d36ebe7df7c",
+        "expected_parent_fingerprint": "sha256:07856d1e798aa9fb52b07bcd763a00bcc376cc9ff39291450dab770a5998afc4",
         "annotations": {
           "severity": "critical",
           "remediation": "Enforce MFA for every interactive tenant account, including accounts outside the company SSO domain."
@@ -44,7 +44,7 @@
         "op": "add",
         "control": {
           "instance_id": "company.saas.guest-access-disabled",
-          "implementation": "saas.tenant.setting_equals",
+          "implementation": "saas.tenant.setting-equals",
           "severity": "high",
           "remediation": "Disable guest access in the tenant security administration page.",
           "parameters": {

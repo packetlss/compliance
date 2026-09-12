@@ -43,8 +43,10 @@ def instance(identifier, implementation, parameters, **extra):
 
 
 def evidence_schema(evidence_type, subject_type):
+    evidence_id, version = evidence_type.rsplit("/v", 1)
     return {
         "$schema": DRAFT,
+        "$id": f"https://compliance.example/schemas/evidence/{evidence_id}/v{version}.schema.json",
         "type": "object",
         "required": [
             "schema", "id", "subject", "type", "collected_at",
@@ -152,12 +154,21 @@ def build_fixture(root):
             "required": ["requirement", "applies_to", "adoption"],
         },
     }
+    schema_ids = {
+        "control": "https://compliance.example/schemas/platform/policy/control/v1.schema.json",
+        "baseline": "https://compliance.example/schemas/platform/policy/baseline/v1.schema.json",
+        "baseline-overlay": "https://compliance.example/schemas/platform/policy/baseline-overlay/v1.schema.json",
+        "control-requirement": "https://compliance.example/schemas/platform/policy/control-requirement/v1alpha1.schema.json",
+        "requirement-baseline": "https://compliance.example/schemas/platform/policy/requirement-baseline/v1alpha1.schema.json",
+        "control-realization": "https://compliance.example/schemas/platform/policy/control-realization/v1alpha1.schema.json",
+    }
     for name, spec in specs.items():
         write(
             shared,
             f"schemas/policy/{name}.schema.json",
             {
                 "$schema": DRAFT,
+                "$id": schema_ids[name],
                 "type": "object",
                 "required": ["apiVersion", "kind", "metadata", "spec"],
                 "properties": {
@@ -175,13 +186,13 @@ def build_fixture(root):
     controls = [
         (
             "macos/security-setting-equals",
-            "macos.security.setting_equals",
+            "macos.security.setting-equals",
             {"setting": {"type": "string"}, "expected": {}},
             ["setting", "expected"],
         ),
         (
             "macos/minimum-version",
-            "macos.system.minimum_version",
+            "macos.system.minimum-version",
             {"minimum": {"type": "string"}},
             ["minimum"],
         ),
@@ -205,7 +216,7 @@ def build_fixture(root):
         ),
         (
             "aws/block",
-            "aws.s3.account_public_access_block",
+            "aws.s3.account-public-access-block",
             {
                 "block_public_acls": {"type": "boolean"},
                 "block_public_policy": {"type": "boolean"},
@@ -249,6 +260,7 @@ def build_fixture(root):
             f"controls/{path}/parameters.schema.json",
             {
                 "$schema": DRAFT,
+                "$id": f"https://compliance.example/schemas/controls/{identifier}/parameters/v1.schema.json",
                 "type": "object",
                 "properties": properties,
                 "required": required,
@@ -307,7 +319,7 @@ def build_fixture(root):
 
     minimum = instance(
         "test.macos.minimum",
-        "macos.system.minimum_version",
+        "macos.system.minimum-version",
         {"minimum": "26.6.0"},
         external_refs=["TEST:retention"],
     )
@@ -337,7 +349,7 @@ def build_fixture(root):
         [
             instance(
                 "test.macos.setting",
-                "macos.security.setting_equals",
+                "macos.security.setting-equals",
                 {"setting": "test", "expected": True},
             )
         ],
@@ -410,7 +422,7 @@ def build_fixture(root):
         [
             instance(
                 "test.cloud.base",
-                "aws.s3.account_public_access_block",
+                "aws.s3.account-public-access-block",
                 aws_parameters,
                 external_refs=["TEST:cloud"],
             )
@@ -422,7 +434,7 @@ def build_fixture(root):
         [
             instance(
                 "test.cloud.other",
-                "aws.s3.account_public_access_block",
+                "aws.s3.account-public-access-block",
                 {**aws_parameters, "block_public_policy": False},
             )
         ],

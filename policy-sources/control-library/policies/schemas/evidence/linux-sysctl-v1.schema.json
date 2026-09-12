@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://compliance.example/schemas/evidence/linux-sysctl-v1.schema.json",
+  "$id": "https://compliance.example/schemas/evidence/linux.sysctl/v1.schema.json",
   "type": "object",
   "required": ["schema", "id", "subject", "type", "collected_at", "collector", "payload"],
   "additionalProperties": true,

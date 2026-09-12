@@ -18,18 +18,18 @@ POLICIES = ROOT / "policies"
 EXPECTED_CONTROL_IDS = {
     "organization.assertion.required",
     "iam.integration.required",
-    "aws.account.number_at_least",
-    "aws.account.setting_equals",
-    "aws.s3.account_public_access_block_required",
-    "linux.access.setting_equals",
+    "aws.account.number-at-least",
+    "aws.account.setting-equals",
+    "aws.s3.account-public-access-block-required",
+    "linux.access.setting-equals",
     "linux.packages.only-allowed",
     "linux.packages.required",
     "linux.sysctl.required",
-    "macos.homebrew.formulae_required",
-    "macos.security.setting_equals",
-    "macos.system.minimum_version",
-    "saas.tenant.number_at_least",
-    "saas.tenant.setting_equals",
+    "macos.homebrew.formulae-required",
+    "macos.security.setting-equals",
+    "macos.system.minimum-version",
+    "saas.tenant.number-at-least",
+    "saas.tenant.setting-equals",
 }
 EXPECTED_EVIDENCE_PAYLOADS = {
     "aws.account.configuration/v1": {
@@ -233,7 +233,7 @@ class PolicyResourceTests(unittest.TestCase):
             read_json(schema_root / "requirement-baseline.schema.json")
         )
         value_schema = {
-            "$id": "https://example.test/allowed-software",
+            "$id": "https://compliance.example/schemas/requirements/company.authorized-software/parameters/allowed_software/v1.schema.json",
             "type": "array",
             "items": {"type": "string"},
             "uniqueItems": True,
@@ -597,6 +597,100 @@ class PolicyResourceTests(unittest.TestCase):
         ]
         self.assertTrue(identities)
         self.assertEqual(len(identities), len(set(identities)))
+
+    def test_schema_identities_follow_their_canonical_owner_layouts(self):
+        policy_schema_ids = {
+            "baseline-overlay.schema.json": "https://compliance.example/schemas/platform/policy/baseline-overlay/v1.schema.json",
+            "baseline.schema.json": "https://compliance.example/schemas/platform/policy/baseline/v1.schema.json",
+            "control-realization.schema.json": "https://compliance.example/schemas/platform/policy/control-realization/v1alpha1.schema.json",
+            "control-requirement.schema.json": "https://compliance.example/schemas/platform/policy/control-requirement/v1alpha1.schema.json",
+            "control.schema.json": "https://compliance.example/schemas/platform/policy/control/v1.schema.json",
+            "requirement-baseline.schema.json": "https://compliance.example/schemas/platform/policy/requirement-baseline/v1alpha1.schema.json",
+        }
+        for filename, expected in policy_schema_ids.items():
+            self.assertEqual(
+                read_json(POLICIES / "schemas/policy" / filename)["$id"],
+                expected,
+            )
+
+        for manifest_path in sorted(POLICIES.rglob("control.json")):
+            manifest = read_json(manifest_path)
+            control_id = manifest["metadata"]["id"]
+            parameter_schema = read_json(manifest_path.parent / "parameters.schema.json")
+            self.assertEqual(
+                parameter_schema["$id"],
+                f"https://compliance.example/schemas/controls/{control_id}/parameters/v1.schema.json",
+            )
+            for dependency in manifest["spec"]["evidence"]:
+                if "inputs_schema" in dependency:
+                    self.assertEqual(
+                        dependency["inputs_schema"]["$id"],
+                        "https://compliance.example/schemas/controls/"
+                        f"{control_id}/evidence/{dependency['id']}/inputs/v1.schema.json",
+                    )
+
+        for path in sorted((POLICIES / "schemas/evidence").glob("*.schema.json")):
+            schema = read_json(path)
+            evidence_id, version = schema["properties"]["type"]["const"].rsplit("/", 1)
+            self.assertEqual(
+                schema["$id"],
+                f"https://compliance.example/schemas/evidence/{evidence_id}/{version}.schema.json",
+            )
+
+    def test_schema_owner_identity_mismatches_are_rejected(self):
+        cases = (
+            (
+                "controls/linux/sysctl-required/parameters.schema.json",
+                lambda document: document.update({
+                    "$id": "https://compliance.example/schemas/controls/linux.other/parameters/v1.schema.json",
+                }),
+                "control-parameters-schema-identity-invalid",
+            ),
+            (
+                "controls/organization/assertion-required/control.json",
+                lambda document: document["spec"]["evidence"][0]["inputs_schema"].update({
+                    "$id": "https://compliance.example/schemas/controls/organization.other/evidence/assertion/inputs/v1.schema.json",
+                }),
+                "control-evidence-inputs-schema-identity-invalid",
+            ),
+            (
+                "schemas/evidence/linux-sysctl-v1.schema.json",
+                lambda document: document.update({
+                    "$id": "https://compliance.example/schemas/evidence/linux.other/v1.schema.json",
+                }),
+                "evidence-schema-identity-invalid",
+            ),
+        )
+        for relative, mutate, expected in cases:
+            with self.subTest(path=relative), tempfile.TemporaryDirectory() as temporary:
+                policy = Path(temporary) / "policy"
+                shutil.copytree(POLICIES, policy)
+                target = policy / relative
+                document = read_json(target)
+                mutate(document)
+                target.write_text(json.dumps(document), encoding="utf-8")
+                _, _, errors = load_policy_catalogs(PolicySource("control-library", policy))
+                self.assertIn(expected, {error["type"] for error in errors}, errors)
+
+    def test_legacy_public_identifier_is_rejected_without_normalization(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            policy = Path(temporary) / "policy"
+            shutil.copytree(POLICIES, policy)
+            manifest_path = policy / "controls/macos/system-minimum-version/control.json"
+            manifest = read_json(manifest_path)
+            manifest["metadata"]["id"] = "macos.system.minimum_version"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            controls, _, errors = load_policy_catalogs(
+                PolicySource("control-library", policy)
+            )
+
+        self.assertNotIn("macos.system.minimum_version", controls)
+        self.assertNotIn("macos.system.minimum-version", controls)
+        self.assertIn(
+            "control-manifest-schema-invalid",
+            {error["type"] for error in errors},
+        )
 
     def test_broken_library_contracts_are_rejected(self):
         # Mutate copies of this producer's actual resources. No consumer policy

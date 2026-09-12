@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://compliance.example/schemas/policy/control-requirement-v1alpha1.schema.json",
+  "$id": "https://compliance.example/schemas/platform/policy/control-requirement/v1alpha1.schema.json",
   "title": "Technology-neutral compliance control requirement",
   "type": "object",
   "required": [
@@ -119,7 +119,7 @@
                 "uniqueItems": true,
                 "items": {
                   "type": "string",
-                  "minLength": 1
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
                 }
               },
               "value": {},
@@ -208,7 +208,7 @@
           },
           "propertyNames": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9_]*$"
+            "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
           }
         }
       }
@@ -218,7 +218,7 @@
     "identifier": {
       "type": "string",
       "minLength": 1,
-      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
     },
     "revision": {
       "oneOf": [
@@ -228,7 +228,8 @@
         },
         {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
         }
       ]
     }

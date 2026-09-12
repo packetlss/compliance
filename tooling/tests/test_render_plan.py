@@ -115,6 +115,21 @@ spec: {}
             {"providerSpecific": {"region": "eu"}},
         )
 
+    def test_assignment_rejects_noncanonical_baseline_identity(self):
+        document = {
+            "apiVersion": "compliance.example/v1alpha1",
+            "kind": "PolicyAssignment",
+            "metadata": {"name": "test"},
+            "spec": {
+                "targetRef": {"kind": "InventoryGroup", "name": "test"},
+                "baselineRefs": [{"name": "test_legacy", "revision": "1"}],
+            },
+        }
+
+        errors = resource_validation_errors(document, self.schema)
+
+        self.assertTrue(errors)
+
 
 class GroupResolutionTests(unittest.TestCase):
     def setUp(self):
@@ -190,12 +205,12 @@ class BaselineOverlayTests(unittest.TestCase):
                 "controls": [
                     {
                         "instance_id": "benchmark.setting",
-                        "implementation": "test.setting_equals",
+                        "implementation": "test.setting-equals",
                         "parameters": {"expected": "strict"},
                     },
                     {
                         "instance_id": "benchmark.optional",
-                        "implementation": "test.setting_equals",
+                        "implementation": "test.setting-equals",
                         "parameters": {"expected": "enabled"},
                     },
                 ]
@@ -274,7 +289,7 @@ class BaselineOverlayTests(unittest.TestCase):
             "op": "substitute",
             "target": "benchmark.setting",
             "expected_parent_fingerprint": self.setting_fingerprint,
-            "implementation": "test.alternative_setting_equals",
+            "implementation": "test.alternative-setting-equals",
             "parameters": {"expected": "strict"},
             "equivalence_ref": "test/equivalence-review",
         }]
@@ -286,11 +301,11 @@ class BaselineOverlayTests(unittest.TestCase):
         self.assertEqual(derivation["operation"], "substitute")
         self.assertEqual(
             derivation["before"]["implementation"],
-            "test.setting_equals",
+            "test.setting-equals",
         )
         self.assertEqual(
             derivation["after"]["implementation"],
-            "test.alternative_setting_equals",
+            "test.alternative-setting-equals",
         )
         self.assertEqual(derivation["equivalence_ref"], "test/equivalence-review")
 
@@ -357,7 +372,7 @@ class BaselineOverlayTests(unittest.TestCase):
             "target": "benchmark.setting",
             "expected_parent_fingerprint": control_definition_fingerprint({
                 "instance_id": "benchmark.setting",
-                "implementation": "test.setting_equals",
+                "implementation": "test.setting-equals",
                 "parameters": {"expected": "company"},
             }),
             "blocked_operations": ["tailor", "exclude", "substitute"],
@@ -568,6 +583,71 @@ class PolicySchemaTests(unittest.TestCase):
             "environment-private",
         )
 
+    def test_noncolliding_technical_and_requirement_assignments_plan_together(self):
+        subject, groups, assignments = load_inventory_inputs(
+            self.root / "iam/inventory",
+            self.root / "iam/assignments",
+            "host/restricted-linux-01",
+            self.root / "schemas/inventory/resource.schema.json",
+        )
+        assignments[0]["baselines"].append("test.linux@1")
+
+        plan = render_plan(
+            subject,
+            groups,
+            assignments,
+            (
+                PolicySource("control-library", self.root / "shared"),
+                PolicySource("verification-policy", self.root / "selection"),
+                PolicySource("environment-private", self.root / "iam/policy"),
+            ),
+        )
+
+        self.assertEqual(plan["resolution"]["status"], "valid")
+        self.assertEqual(
+            [item["reference"] for item in plan["resolved_baselines"]],
+            ["test.linux@1"],
+        )
+        self.assertEqual(
+            [item["reference"] for item in plan["resolved_requirement_baselines"]],
+            ["test.iam@1"],
+        )
+
+    def test_cross_kind_assignment_reference_collision_is_order_independent(self):
+        with tempfile.TemporaryDirectory() as directory:
+            collision = Path(directory) / "collision"
+            target = collision / "baselines/test-iam.json"
+            target.parent.mkdir(parents=True)
+            target.write_text(json.dumps({
+                "apiVersion": "compliance.example/v1",
+                "kind": "Baseline",
+                "metadata": {"id": "test.iam", "revision": 1},
+                "spec": {"title": "Colliding technical baseline", "controls": []},
+            }), encoding="utf-8")
+            sources = (
+                PolicySource("control-library", self.root / "shared"),
+                PolicySource("verification-policy", self.root / "selection"),
+                PolicySource("collision", collision),
+            )
+            collisions = []
+            for ordered in (sources, tuple(reversed(sources))):
+                _, _, errors = load_policy_catalogs(ordered)
+                collisions.append(next(
+                    error for error in errors
+                    if error["type"] == "assignment-reference-kind-collision"
+                ))
+
+        self.assertEqual(collisions[0], collisions[1])
+        self.assertEqual(collisions[0]["reference"], "test.iam@1")
+        self.assertEqual(
+            [source["policy_source"] for source in collisions[0]["technical_sources"]],
+            ["collision"],
+        )
+        self.assertEqual(
+            [source["policy_source"] for source in collisions[0]["requirement_sources"]],
+            ["verification-policy"],
+        )
+
     def test_policy_source_digest_pin_mismatch_is_invalid(self):
         shared = self.root / "shared"
         _, _, errors = load_policy_catalogs((PolicySource(
@@ -776,7 +856,7 @@ class PolicySchemaTests(unittest.TestCase):
                         "title": "Invalid authored parameter policy",
                         "controls": [{
                             "instance_id": "test.macos.gatekeeper-enabled",
-                            "implementation": "macos.security.setting_equals",
+                            "implementation": "macos.security.setting-equals",
                             "parameters": {"setting": "gatekeeper"},
                         }],
                     },
@@ -895,7 +975,7 @@ class PolicySchemaTests(unittest.TestCase):
             shutil.copytree(self.schemas, policies / "schemas/policy")
             control = {
                 "instance_id": "duplicate.control",
-                "implementation": "test.setting_equals",
+                "implementation": "test.setting-equals",
                 "parameters": {"expected": "value"},
             }
             (policies / "baselines/duplicate.json").write_text(
@@ -1246,7 +1326,7 @@ class PlanRevisionTests(unittest.TestCase):
             baseline_schema_path.write_text(json.dumps(baseline_schema), encoding="utf-8")
 
             value_schema = {
-                "$id": "https://example.test/allowed-packages",
+                "$id": "https://compliance.example/schemas/requirements/test.allowed-packages/parameters/allowed/v1.schema.json",
                 "type": "array",
                 "items": {"type": "string"},
                 "uniqueItems": True,

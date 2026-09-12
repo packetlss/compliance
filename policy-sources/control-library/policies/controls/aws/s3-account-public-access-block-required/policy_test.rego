@@ -15,7 +15,7 @@ base_input := {
 	"assessment": {"plan_id": "sha256:plan"},
 	"control": {
 		"instance_id": "company.aws.s3-account-public-access-block",
-		"implementation": "aws.s3.account_public_access_block_required",
+		"implementation": "aws.s3.account-public-access-block-required",
 		"parameters": desired,
 		"severity": "high",
 		"remediation": "Enable all S3 account public-access blocks",

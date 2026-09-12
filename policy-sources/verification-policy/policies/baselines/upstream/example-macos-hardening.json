@@ -14,7 +14,7 @@
     "controls": [
       {
         "instance_id": "benchmark.example.macos.minimum-version",
-        "implementation": "macos.system.minimum_version",
+        "implementation": "macos.system.minimum-version",
         "external_refs": [
           "illustrative-benchmark:1.1"
         ],
@@ -29,7 +29,7 @@
       },
       {
         "instance_id": "benchmark.example.macos.gatekeeper-enabled",
-        "implementation": "macos.security.setting_equals",
+        "implementation": "macos.security.setting-equals",
         "external_refs": [
           "illustrative-benchmark:1.2"
         ],
@@ -45,7 +45,7 @@
       },
       {
         "instance_id": "benchmark.example.macos.audit-formula-required",
-        "implementation": "macos.homebrew.formulae_required",
+        "implementation": "macos.homebrew.formulae-required",
         "external_refs": [
           "illustrative-benchmark:1.3"
         ],

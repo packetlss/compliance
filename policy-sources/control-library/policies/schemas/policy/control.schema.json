@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://compliance.example/schemas/policy/control-v1.schema.json",
+  "$id": "https://compliance.example/schemas/platform/policy/control/v1.schema.json",
   "title": "Compliance control implementation manifest",
   "type": "object",
   "required": [
@@ -28,7 +28,7 @@
         "id": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$"
         },
         "version": {
           "oneOf": [
@@ -38,7 +38,8 @@
             },
             {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
             }
           ]
         }
@@ -115,11 +116,11 @@
       "properties": {
         "type": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*/v[1-9][0-9]*$"
         },
         "id": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
         },
         "inputs_schema": {
           "type": "object"

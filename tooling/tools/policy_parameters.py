@@ -9,6 +9,13 @@ from referencing import Registry
 
 from .assessment_provenance import digest
 from ._canonical_json import canonical_json_bytes
+from .identifiers import (
+    ID,
+    SLOT,
+    canonical_control_evidence_inputs_schema_id,
+    canonical_control_parameter_schema_id,
+    canonical_requirement_parameter_schema_id,
+)
 
 
 class ParameterResolutionError(ValueError):
@@ -79,10 +86,10 @@ def validate_baseline_structure(value):
             require(isinstance(target, dict) and set(target) == {'requirement', 'slot'},
                     'unsupported additive contribution target syntax')
             require(isinstance(target.get('requirement'), str)
-                    and bool(re.fullmatch(r'[a-z0-9][a-z0-9._-]*', target['requirement'])),
+                    and bool(re.fullmatch(ID, target['requirement'])),
                     'invalid additive contribution requirement target')
             require(isinstance(target.get('slot'), str)
-                    and bool(re.fullmatch(r'[a-z][a-z0-9_]*', target['slot'])),
+                    and bool(re.fullmatch(SLOT, target['slot'])),
                     'invalid additive contribution slot target')
             members = contribution.get('members')
             require(isinstance(members, list) and all(isinstance(member, str) for member in members),
@@ -107,9 +114,12 @@ def duration(value):
     return f'{seconds}s'
 
 
-def validate_schema(schema):
+def validate_schema(schema, *, identity_pattern=None):
     require(isinstance(schema, dict) and isinstance(schema.get('$id'), str),
             'parameter schema requires explicit identity')
+    if identity_pattern is not None:
+        require(bool(identity_pattern.fullmatch(schema['$id'])),
+                'parameter schema identity does not match its semantic owner')
     Draft202012Validator.check_schema(schema)
     validator = Draft202012Validator(schema, format_checker=FormatChecker(), registry=Registry())
 
@@ -171,7 +181,13 @@ def declarations(requirement):
     states = {}
     for name, declaration in sorted(clean['spec'].get('parameters', {}).items()):
         require(declaration['schema_digest'] == digest(declaration['schema']), 'stale parameter schema digest')
-        validate_schema(declaration['schema'])
+        validate_schema(
+            declaration['schema'],
+            identity_pattern=canonical_requirement_parameter_schema_id(
+                clean['metadata']['id'],
+                name,
+            ),
+        )
         validate_composition(declaration)
         fixed = declaration['binding_mode'] == 'fixed'
         require(fixed == ('value' in declaration), 'only fixed declarations contain values')
@@ -403,6 +419,12 @@ def compose_selected(resolutions, baselines, requirements=None):
 
 
 def implementation_pin(definition):
+    validate_schema(
+        definition['_parameters_schema'],
+        identity_pattern=canonical_control_parameter_schema_id(
+            definition['metadata']['id'],
+        ),
+    )
     return {'id': definition['metadata']['id'], 'version': definition['metadata']['version'],
             'fingerprint': digest({'manifest': document(definition), 'parameters_schema': definition['_parameters_schema'], 'implementation_modules': definition.get('_implementation_modules', [])})}
 
@@ -457,7 +479,13 @@ def evidence_for(instance, definition):
         if input_schema is None:
             require(not inputs, 'evidence dependency has no declared input interface')
         else:
-            validate_schema(input_schema).validate(inputs)
+            validate_schema(
+                input_schema,
+                identity_pattern=canonical_control_evidence_inputs_schema_id(
+                    definition['metadata']['id'],
+                    contract['id'],
+                ),
+            ).validate(inputs)
         result.append({'id': contract['id'], 'type': contract['type'],
                        'max_age': age, **({'inputs': copy.deepcopy(inputs)} if input_schema is not None else {})})
     return result

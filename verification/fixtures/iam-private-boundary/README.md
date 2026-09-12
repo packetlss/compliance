@@ -40,7 +40,7 @@ The inventory contains `host/restricted-linux-01`. Its trusted
 `iam-profile=restricted-linux` label selects the complete restricted
 realization. The assigned `company.identity-access-objectives@1` baseline
 expands into four independently attributable checks using
-`linux.access.setting_equals` and `linux.access.configuration/v1` evidence.
+`linux.access.setting-equals` and `linux.access.configuration/v1` evidence.
 
 Trusted `iam-profile` labels must select exactly one realization:
 

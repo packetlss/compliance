@@ -65,8 +65,8 @@ evidence selection identifies the exact assessed dependency by stable
 An inline parameter schema `$id` identifies its schema contract and URI base, not
 the owning requirement slot or exact schema bytes. The separately retained
 `schema_digest` commits exact content. ADR 0019's canonical absolute HTTPS URI layout
-and schema-version evolution rules are accepted but await the coordinated migration;
-runtime schema resolution remains document-local and offline.
+and schema-version evolution rules are implemented under #136; runtime schema
+resolution remains document-local and offline.
 
 Identity uses the existing provisional digest contracts and JCS. Object keys are
 canonicalized; operations and consumption records are ordered by their explicit
