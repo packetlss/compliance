@@ -208,8 +208,9 @@ by this ADR.
 
 Policy sources remain an unordered set.
 
-- Exact-identical same-kind/same-identity definitions, including identical title
-  and purpose, may coalesce while retaining all source locators.
+- Exact-identical definitions in the same ADR 0019 typed lookup namespace,
+  including identical title and purpose, may coalesce while retaining all source
+  locators.
 - Same-identity definitions with different title or purpose are divergent resource
   definitions and fail closed. Equal executable fields do not make their human
   semantic conflict mergeable.

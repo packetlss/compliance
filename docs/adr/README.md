@@ -32,6 +32,8 @@ Accepted destination decisions:
 - [ADR 0017 — Author policy and technical-check meaning on canonical source objects](0017-source-authored-policy-and-check-meaning.md) — accepted and implemented under #100; experimental, not frozen. Its architecture contract is #97.
 - [ADR 0018 — Retain minimal durable assessment explanation facts](0018-durable-assessment-explanation-facts.md) — implemented under #102; experimental, not frozen. Its architecture contract is #98.
 
+- [ADR 0019 — Typed identifier namespaces and schema URI ownership](0019-typed-identifier-namespaces-and-schema-uri-ownership.md) — accepted design under #134; documentation promoted, namespace/schema/runtime migration not yet implemented. Its exploration is #132.
+
 Current system-level documents:
 
 - [`../ARCHITECTURE.md`](../ARCHITECTURE.md)
