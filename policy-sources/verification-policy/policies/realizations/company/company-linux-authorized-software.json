@@ -1,0 +1,66 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "ControlRealization",
+  "metadata": {
+    "id": "company.linux.authorized-software",
+    "revision": 1
+  },
+  "spec": {
+    "requirement": {
+      "requirement": "company.authorized-software@1",
+      "digest": "sha256:b69d0692d6721011c5b60526c47f15e9fe19ad971ba0cd12150b70f5fff00cbb"
+    },
+    "applies_to": {
+      "subject_types": [
+        "linux-host"
+      ]
+    },
+    "adoption": {
+      "status": "implemented",
+      "method": "automated",
+      "owner": "synthetic-platform-team",
+      "implementation_ref": "synthetic/linux-authorized-software-v1"
+    },
+    "checks": [
+      {
+        "instance_id": "company.linux.authorized-software.only-allowed",
+        "implementation": "linux.packages.only-allowed",
+        "parameters": {
+          "ecosystem": "linux-native"
+        },
+        "evidence": {
+          "observation": {
+            "max_age": "24h"
+          }
+        }
+      }
+    ],
+    "satisfaction": {
+      "allOf": [
+        "company.linux.authorized-software.only-allowed"
+      ]
+    },
+    "parameter_links": [
+      {
+        "id": "allowed-software",
+        "source": {
+          "requirement": "company.authorized-software@1",
+          "digest": "sha256:b69d0692d6721011c5b60526c47f15e9fe19ad971ba0cd12150b70f5fff00cbb",
+          "slot": "allowed_software",
+          "declaration_digest": "sha256:c20565ab79bc904cfe206770f81b8521e9860c667a408fcd6014ab8574dc0875",
+          "schema_digest": "sha256:97dc85e04e624b64e9962bc7e9387080bef130447a415c491d05b9370a961f94"
+        },
+        "destination": {
+          "instance_id": "company.linux.authorized-software.only-allowed",
+          "implementation": {
+            "id": "linux.packages.only-allowed",
+            "version": 1,
+            "fingerprint": "sha256:c6060f3edba379e20a3e6bdc9ea690215bedd408b985f64fa96fa2cab5531acb"
+          },
+          "kind": "parameters",
+          "path": "/allowed"
+        }
+      }
+    ]
+  }
+}

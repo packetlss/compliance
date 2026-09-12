@@ -1,0 +1,20 @@
+{
+  "subject": {
+    "id": "host/authorized-base",
+    "type": "linux-host"
+  },
+  "type": "linux.packages/v1",
+  "collector": {
+    "id": "synthetic/linux-packages",
+    "version": "1"
+  },
+  "payload": {
+    "ecosystem": "linux-native",
+    "packages": [
+      {
+        "id": "auditd",
+        "version": "4.0"
+      }
+    ]
+  }
+}

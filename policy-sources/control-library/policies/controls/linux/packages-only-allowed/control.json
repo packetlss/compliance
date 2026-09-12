@@ -1,0 +1,27 @@
+{
+  "apiVersion": "compliance.example/v1",
+  "kind": "Control",
+  "metadata": {
+    "id": "linux.packages.only-allowed",
+    "version": 1
+  },
+  "spec": {
+    "title": "Only authorized system packages are installed",
+    "purpose": "Verify that every installed package ID belongs to the policy-authorized set.",
+    "entrypoint": "data.compliance.controls.linux.packages_only_allowed.evaluate",
+    "applies_to": [
+      "linux-host"
+    ],
+    "evidence": [
+      {
+        "id": "observation",
+        "type": "linux.packages/v1"
+      }
+    ],
+    "parameters_schema": "parameters.schema.json",
+    "defaults": {
+      "severity": "medium",
+      "remediation": "Remove unexpected packages or obtain a reviewed policy authorization."
+    }
+  }
+}

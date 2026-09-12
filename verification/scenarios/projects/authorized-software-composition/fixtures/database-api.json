@@ -1,0 +1,24 @@
+{
+  "subject": {
+    "id": "host/authorized-database",
+    "type": "linux-host"
+  },
+  "type": "linux.packages/v1",
+  "collector": {
+    "id": "synthetic/linux-packages",
+    "version": "1"
+  },
+  "payload": {
+    "ecosystem": "linux-native",
+    "packages": [
+      {
+        "id": "auditd",
+        "version": "4.0"
+      },
+      {
+        "id": "postgresql",
+        "version": "17.0"
+      }
+    ]
+  }
+}
