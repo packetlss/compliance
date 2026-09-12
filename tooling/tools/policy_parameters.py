@@ -654,6 +654,7 @@ def consume(realization, slots, controls):
 
 def validate_realization_reference_identity(realization):
     """Re-enforce semantic identities retained in an opaque frozen realization."""
+    require(isinstance(realization, dict), 'frozen realization must be an object')
     metadata = realization.get('metadata')
     spec = realization.get('spec')
     require(isinstance(metadata, dict), 'frozen realization metadata must be an object')
@@ -677,17 +678,358 @@ def validate_realization_reference_identity(realization):
         )
 
 
+def require_identity(value, grammar, message):
+    require(
+        isinstance(value, str) and bool(re.fullmatch(grammar, value)),
+        message,
+    )
+
+
+def validate_parameter_pin_identities(pin, *, requirement=None, slot=None):
+    require(isinstance(pin, dict), 'frozen parameter pin must be an object')
+    require_identity(
+        pin.get('requirement'),
+        REFERENCE,
+        'invalid frozen parameter requirement reference',
+    )
+    require_identity(
+        pin.get('slot'),
+        SLOT,
+        'invalid frozen parameter slot',
+    )
+    if requirement is not None:
+        require(
+            pin.get('requirement') == requirement,
+            'frozen parameter pin requirement mismatch',
+        )
+    if slot is not None:
+        require(pin.get('slot') == slot, 'frozen parameter pin slot mismatch')
+
+
+def validate_implementation_pin_identities(pin):
+    require(isinstance(pin, dict), 'frozen implementation pin must be an object')
+    require_identity(
+        pin.get('id'),
+        ID,
+        'invalid frozen implementation pin identity',
+    )
+    require(
+        valid_revision(pin.get('version')),
+        'invalid frozen implementation pin version',
+    )
+
+
+def validate_control_instance_identities(instance):
+    require(isinstance(instance, dict), 'frozen Control instance must be an object')
+    require_identity(
+        instance.get('instance_id'),
+        ID,
+        'invalid frozen Control instance identity',
+    )
+    require_identity(
+        instance.get('implementation'),
+        ID,
+        'invalid frozen Control implementation reference',
+    )
+    evidence = instance.get('evidence', {})
+    require(isinstance(evidence, dict), 'frozen Control instance evidence must be an object')
+    for dependency_id in evidence:
+        require_identity(
+            dependency_id,
+            SLOT,
+            'invalid frozen Control evidence dependency reference',
+        )
+
+
+def validate_requirement_declaration_identities(
+    declaration,
+    requirement_id,
+    slot,
+):
+    require(
+        isinstance(declaration, dict),
+        'frozen requirement parameter declaration must be an object',
+    )
+    schema = declaration.get('schema')
+    validate_schema(
+        schema,
+        identity_validator=lambda schema_id: (
+            is_canonical_requirement_parameter_schema_id(
+                schema_id,
+                requirement_id,
+                slot,
+            )
+        ),
+    )
+    require(
+        declaration.get('schema_digest') == digest(schema),
+        'stale parameter schema digest',
+    )
+    binding_scope = declaration.get('binding_scope')
+    if binding_scope is not None:
+        require(
+            isinstance(binding_scope, list)
+            and all(
+                isinstance(item, str) and bool(re.fullmatch(ID, item))
+                for item in binding_scope
+            ),
+            'invalid requirement parameter binding scope',
+        )
+
+
+def validate_contribution_identity(identity):
+    require(isinstance(identity, dict), 'frozen contribution identity must be an object')
+    require_identity(
+        identity.get('baseline'),
+        REFERENCE,
+        'invalid frozen contribution baseline reference',
+    )
+    require_identity(
+        identity.get('requirement'),
+        ID,
+        'invalid frozen contribution requirement identity',
+    )
+    require_identity(
+        identity.get('slot'),
+        SLOT,
+        'invalid frozen contribution slot',
+    )
+
+
+def validate_parameter_state_identities(
+    state,
+    requirement_reference,
+    slot,
+    requirement_digest=None,
+):
+    require(isinstance(state, dict), 'frozen parameter state must be an object')
+    identity = state.get('identity')
+    require(isinstance(identity, dict), 'frozen parameter identity must be an object')
+    require_identity(
+        identity.get('requirement'),
+        ID,
+        'invalid frozen parameter requirement identity',
+    )
+    require_identity(
+        identity.get('slot'),
+        SLOT,
+        'invalid frozen parameter identity slot',
+    )
+    requirement_id = requirement_reference.rsplit('@', 1)[0]
+    require(
+        identity == {'requirement': requirement_id, 'slot': slot},
+        'frozen parameter identity mismatch',
+    )
+    validate_parameter_pin_identities(
+        state.get('pin'),
+        requirement=requirement_reference,
+        slot=slot,
+    )
+    if requirement_digest is not None:
+        require(
+            state['pin'].get('digest') == requirement_digest,
+            'stale frozen parameter requirement pin',
+        )
+    validate_requirement_declaration_identities(
+        state.get('declaration'),
+        requirement_id,
+        slot,
+    )
+    require(
+        state['pin'].get('declaration_digest') == digest(state['declaration']),
+        'stale frozen parameter declaration pin',
+    )
+    require(
+        state['pin'].get('schema_digest') == state['declaration'].get('schema_digest'),
+        'stale frozen parameter schema pin',
+    )
+    for history in state.get('history', []):
+        require(isinstance(history, dict), 'frozen parameter history must be an object')
+        require_identity(
+            history.get('baseline'),
+            REFERENCE,
+            'invalid frozen parameter history baseline reference',
+        )
+        operation = history.get('operation')
+        require(isinstance(operation, dict), 'frozen parameter history operation must be an object')
+        validate_parameter_pin_identities(
+            operation.get('target'),
+            requirement=requirement_reference,
+            slot=slot,
+        )
+
+    composition = state.get('composition')
+    if not isinstance(composition, dict):
+        return
+    for origin in composition.get('base_origins', []):
+        require(isinstance(origin, dict), 'frozen additive base origin must be an object')
+        require_identity(
+            origin.get('baseline'),
+            REFERENCE,
+            'invalid frozen additive base reference',
+        )
+        applicability = origin.get('applicability', {})
+        require(isinstance(applicability, dict), 'frozen additive applicability must be an object')
+        require_identity(
+            applicability.get('baseline'),
+            REFERENCE,
+            'invalid frozen additive applicability reference',
+        )
+    for contribution in composition.get('contributions', []):
+        require(isinstance(contribution, dict), 'frozen contribution must be an object')
+        validate_contribution_identity(contribution.get('identity'))
+        owner = contribution.get('owner', {})
+        require(isinstance(owner, dict), 'frozen contribution owner must be an object')
+        require_identity(
+            owner.get('reference'),
+            REFERENCE,
+            'invalid frozen contribution owner reference',
+        )
+        validate_requirement_baseline_document_identities(owner.get('document'))
+        for applicability in contribution.get('applicability', []):
+            require(isinstance(applicability, dict), 'frozen contribution applicability must be an object')
+            require_identity(
+                applicability.get('baseline'),
+                REFERENCE,
+                'invalid frozen contribution applicability reference',
+            )
+    for member in composition.get('member_origins', []):
+        require(isinstance(member, dict), 'frozen additive member must be an object')
+        for origin in member.get('origins', []):
+            require(isinstance(origin, dict), 'frozen additive member origin must be an object')
+            if origin.get('kind') == 'base':
+                require_identity(
+                    origin.get('baseline'),
+                    REFERENCE,
+                    'invalid frozen additive member baseline reference',
+                )
+                applicability = origin.get('applicability', {})
+                require(isinstance(applicability, dict), 'frozen additive applicability must be an object')
+                require_identity(
+                    applicability.get('baseline'),
+                    REFERENCE,
+                    'invalid frozen additive member applicability reference',
+                )
+            elif origin.get('kind') == 'contribution':
+                validate_contribution_identity(origin.get('identity'))
+
+
+def validate_parameter_link_identities(link, controls=None):
+    require(isinstance(link, dict), 'frozen parameter link must be an object')
+    validate_parameter_pin_identities(link.get('source'))
+    destination = link.get('destination')
+    require(isinstance(destination, dict), 'frozen parameter destination must be an object')
+    require_identity(
+        destination.get('instance_id'),
+        ID,
+        'invalid frozen parameter destination instance identity',
+    )
+    validate_implementation_pin_identities(destination.get('implementation'))
+    implementation_id = destination['implementation']['id']
+    if controls is not None and implementation_id in controls:
+        require(
+            equal(
+                destination['implementation'],
+                implementation_pin(controls[implementation_id]),
+            ),
+            'stale frozen implementation destination',
+        )
+    if 'dependency' in destination:
+        require_identity(
+            destination.get('dependency'),
+            SLOT,
+            'invalid frozen parameter destination dependency',
+        )
+
+
+def validate_realization_contract_identities(
+    realization,
+    requirement_reference,
+    controls,
+):
+    validate_realization_reference_identity(realization)
+    spec = realization['spec']
+    requirement_pin = spec.get('requirement')
+    require(isinstance(requirement_pin, dict), 'frozen realization requirement must be an object')
+    require_identity(
+        requirement_pin.get('requirement'),
+        REFERENCE,
+        'invalid frozen realization requirement reference',
+    )
+    require(
+        requirement_pin.get('requirement') == requirement_reference,
+        'frozen realization requirement reference mismatch',
+    )
+    satisfaction = spec.get('satisfaction', {})
+    require(isinstance(satisfaction, dict), 'frozen realization satisfaction must be an object')
+    for instance_id in satisfaction.get('allOf', []):
+        require_identity(
+            instance_id,
+            ID,
+            'invalid frozen realization satisfaction identity',
+        )
+    for check in spec.get('checks', []):
+        validate_control_instance_identities(check)
+    for link in spec.get('parameter_links', []):
+        validate_parameter_link_identities(link, controls)
+
+
+def validate_requirement_baseline_document_identities(document):
+    require(isinstance(document, dict), 'frozen requirement baseline must be an object')
+    validate_baseline_structure(document)
+    spec = document['spec']
+    for pin in spec.get('requirements', []):
+        require_identity(
+            pin.get('requirement'),
+            REFERENCE,
+            'invalid frozen requirement baseline requirement reference',
+        )
+    for operation in spec.get('parameter_operations', []):
+        validate_parameter_pin_identities(operation.get('target'))
+
+
 def validate_frozen_contract_identities(plan):
     """Validate retained semantic/schema contracts independently of resolution."""
+    controls = {}
     for collection_name in ('controls', 'excluded_controls'):
         for control in plan[collection_name]:
             facts = control['policy_inputs']
             definition = copy.deepcopy(facts['definition'])
             definition['_parameters_schema'] = facts['parameters_schema']
+            definition['_implementation_modules'] = facts.get(
+                'implementation_modules',
+                [],
+            )
             validate_control_contract_identity(definition)
+            validate_control_instance_identities(facts['instance'])
+            require(
+                definition['metadata']['id'] == control['implementation'],
+                'frozen implementation definition identity mismatch',
+            )
+            require(
+                facts['instance']['instance_id'] == control['instance_id']
+                and facts['instance']['implementation'] == control['implementation'],
+                'frozen technical input identity mismatch',
+            )
+            previous = controls.get(control['implementation'])
+            require(
+                previous is None or equal(previous, definition),
+                'divergent frozen implementation definitions',
+            )
+            controls[control['implementation']] = definition
+            for derivation in control.get('derivations', []):
+                for snapshot_name in ('before', 'after'):
+                    evidence = derivation[snapshot_name].get('evidence', {})
+                    for dependency_id in evidence:
+                        require_identity(
+                            dependency_id,
+                            SLOT,
+                            'invalid frozen derivation evidence dependency',
+                        )
 
     for requirement in plan['requirements']:
         frozen = requirement['parameter_facts']['document']
+        require(isinstance(frozen, dict), 'frozen requirement must be an object')
         metadata = frozen.get('metadata')
         spec = frozen.get('spec')
         require(isinstance(metadata, dict), 'frozen requirement metadata must be an object')
@@ -700,6 +1042,15 @@ def validate_frozen_contract_identities(plan):
             valid_revision(metadata.get('revision')),
             'invalid frozen requirement revision',
         )
+        requirement_reference = f"{requirement_id}@{metadata['revision']}"
+        require(
+            requirement.get('reference') == requirement_reference,
+            'frozen requirement reference mismatch',
+        )
+        require(
+            requirement.get('digest') == digest(frozen),
+            'frozen requirement digest mismatch',
+        )
         require(isinstance(spec, dict), 'frozen requirement spec must be an object')
         parameters = spec.get('parameters', {})
         require(isinstance(parameters, dict), 'frozen requirement parameters must be an object')
@@ -708,24 +1059,84 @@ def validate_frozen_contract_identities(plan):
                 isinstance(slot, str) and bool(re.fullmatch(SLOT, slot)),
                 'invalid requirement parameter slot',
             )
-            require(
-                isinstance(declaration, dict),
-                'frozen requirement parameter declaration must be an object',
+            validate_requirement_declaration_identities(
+                declaration,
+                requirement_id,
+                slot,
             )
-            schema = declaration.get('schema')
-            validate_schema(
-                schema,
-                identity_validator=lambda schema_id: (
-                    is_canonical_requirement_parameter_schema_id(
-                        schema_id,
-                        requirement_id,
-                        slot,
-                    )
-                ),
+        states = requirement['parameter_facts'].get('states', {})
+        require(isinstance(states, dict), 'frozen requirement parameter states must be an object')
+        for slot, state in states.items():
+            require_identity(slot, SLOT, 'invalid frozen requirement parameter state slot')
+            validate_parameter_state_identities(
+                state,
+                requirement_reference,
+                slot,
+                requirement['digest'],
+            )
+        realization = requirement['parameter_facts'].get('realization')
+        if realization is not None:
+            validate_realization_contract_identities(
+                realization,
+                requirement_reference,
+                controls,
+            )
+            if 'realization' in requirement:
+                realization_reference = (
+                    f"{realization['metadata']['id']}@"
+                    f"{realization['metadata']['revision']}"
+                )
+                require(
+                    requirement['realization'].get('reference') == realization_reference,
+                    'frozen realization reference mismatch',
+                )
+                require(
+                    requirement['realization'].get('digest') == digest(realization),
+                    'frozen realization digest mismatch',
+                )
+        for consumption in requirement['parameter_facts'].get('consumption', []):
+            require(isinstance(consumption, dict), 'frozen consumption must be an object')
+            validate_parameter_link_identities(consumption.get('link'), controls)
+
+    requirement_digests = {
+        requirement['reference']: requirement['digest']
+        for requirement in plan['requirements']
+    }
+    for baseline in plan['resolved_requirement_baselines']:
+        derivation = baseline.get('parameter_derivation', {})
+        states = derivation.get('states', {})
+        require(isinstance(states, dict), 'frozen derivation states must be an object')
+        for reference, slots in states.items():
+            require_identity(reference, REFERENCE, 'invalid frozen derivation requirement reference')
+            require(isinstance(slots, dict), 'frozen derivation requirement states must be an object')
+            for slot, state in slots.items():
+                require_identity(slot, SLOT, 'invalid frozen derivation parameter slot')
+                validate_parameter_state_identities(
+                    state,
+                    reference,
+                    slot,
+                    requirement_digests.get(reference),
+                )
+        for ancestor in derivation.get('ancestry', []):
+            require(isinstance(ancestor, dict), 'frozen derivation ancestor must be an object')
+            require_identity(
+                ancestor.get('reference'),
+                REFERENCE,
+                'invalid frozen requirement baseline reference',
+            )
+            ancestor_document = ancestor.get('document')
+            validate_requirement_baseline_document_identities(ancestor_document)
+            expected_reference = (
+                f"{ancestor_document['metadata']['id']}@"
+                f"{ancestor_document['metadata']['revision']}"
             )
             require(
-                declaration.get('schema_digest') == digest(schema),
-                'stale parameter schema digest',
+                ancestor['reference'] == expected_reference,
+                'frozen requirement baseline reference mismatch',
+            )
+            require(
+                ancestor.get('digest') == digest(ancestor_document),
+                'frozen parent document digest mismatch',
             )
 
 

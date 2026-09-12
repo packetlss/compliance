@@ -220,6 +220,21 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
     def test_invalid_plan_still_rejects_retained_contract_tampering(self):
         from tools import policy_parameters as parameters
 
+        def rename(mapping, old, new):
+            mapping[new] = mapping.pop(old)
+
+        def change_state_schema(plan, derivation=False):
+            if derivation:
+                declaration = plan["resolved_requirement_baselines"][0][
+                    "parameter_derivation"
+                ]["states"]["test.requirement@1"]["age"]["declaration"]
+            else:
+                declaration = plan["requirements"][0]["parameter_facts"][
+                    "states"
+                ]["age"]["declaration"]
+            declaration["schema"]["$id"] = "https://bad.example/wrong"
+            declaration["schema_digest"] = parameters.digest(declaration["schema"])
+
         cases = {
             "control parameter schema": lambda plan: plan["controls"][0][
                 "policy_inputs"
@@ -250,6 +265,126 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             "evidence type": lambda plan: plan["controls"][0]["policy_inputs"][
                 "definition"
             ]["spec"]["evidence"][0].update(type="bad_type/v1"),
+            "instance evidence dependency": lambda plan: plan["controls"][0][
+                "policy_inputs"
+            ]["instance"].update(evidence={"bad__slot": {"max_age": "1d"}}),
+            "binding scope": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["document"]["spec"]["parameters"]["age"].update(
+                binding_scope=["bad_scope"]
+            ),
+            "requirement state slot": lambda plan: rename(
+                plan["requirements"][0]["parameter_facts"]["states"],
+                "age",
+                "bad__slot",
+            ),
+            "state identity": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["states"]["age"]["identity"].update(requirement="bad_requirement"),
+            "state pin": lambda plan: plan["requirements"][0]["parameter_facts"][
+                "states"
+            ]["age"]["pin"].update(requirement="bad_requirement@1"),
+            "state history": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["states"]["age"]["history"][0].update(baseline="bad_baseline@1"),
+            "state schema owner": lambda plan: change_state_schema(plan),
+            "realization identity": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["realization"]["metadata"].update(id="bad_realization"),
+            "realization requirement": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["realization"]["spec"]["requirement"].update(
+                requirement="bad_requirement@1"
+            ),
+            "realization parent": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["realization"]["spec"].update(
+                based_on={
+                    "realization": "bad_realization@1",
+                    "digest": "sha256:" + "0" * 64,
+                }
+            ),
+            "realization satisfaction": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["realization"]["spec"]["satisfaction"].update(
+                allOf=["bad_instance"]
+            ),
+            "realization check": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["realization"]["spec"]["checks"][0].update(
+                implementation="bad_implementation"
+            ),
+            "realization link source": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["realization"]["spec"]["parameter_links"][0]["source"].update(
+                slot="bad__slot"
+            ),
+            "realization link destination": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["realization"]["spec"]["parameter_links"][0]["destination"].update(
+                dependency="bad__slot"
+            ),
+            "consumption link": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["consumption"][0]["link"]["source"].update(slot="bad__slot"),
+            "derivation requirement": lambda plan: rename(
+                plan["resolved_requirement_baselines"][0]["parameter_derivation"][
+                    "states"
+                ],
+                "test.requirement@1",
+                "bad_requirement@1",
+            ),
+            "derivation slot": lambda plan: rename(
+                plan["resolved_requirement_baselines"][0]["parameter_derivation"][
+                    "states"
+                ]["test.requirement@1"],
+                "age",
+                "bad__slot",
+            ),
+            "derivation state schema owner": lambda plan: change_state_schema(
+                plan,
+                derivation=True,
+            ),
+            "ancestor reference": lambda plan: plan[
+                "resolved_requirement_baselines"
+            ][0]["parameter_derivation"]["ancestry"][0].update(
+                reference="bad_baseline@1"
+            ),
+            "ancestor identity": lambda plan: plan[
+                "resolved_requirement_baselines"
+            ][0]["parameter_derivation"]["ancestry"][0]["document"][
+                "metadata"
+            ].update(id="bad_baseline"),
+            "ancestor parent": lambda plan: plan[
+                "resolved_requirement_baselines"
+            ][0]["parameter_derivation"]["ancestry"][0]["document"]["spec"].update(
+                extends={
+                    "baseline": "bad_parent@1",
+                    "digest": "sha256:" + "0" * 64,
+                }
+            ),
+            "ancestor requirement": lambda plan: plan[
+                "resolved_requirement_baselines"
+            ][0]["parameter_derivation"]["ancestry"][0]["document"]["spec"][
+                "requirements"
+            ][0].update(requirement="bad_requirement@1"),
+            "ancestor operation": lambda plan: plan[
+                "resolved_requirement_baselines"
+            ][0]["parameter_derivation"]["ancestry"][0]["document"]["spec"][
+                "parameter_operations"
+            ][0]["target"].update(slot="bad__slot"),
+            "ancestor contribution": lambda plan: plan[
+                "resolved_requirement_baselines"
+            ][0]["parameter_derivation"]["ancestry"][0]["document"]["spec"].update(
+                parameter_contributions=[{
+                    "id": "test-contribution",
+                    "target": {
+                        "requirement": "bad_requirement",
+                        "slot": "bad__slot",
+                    },
+                    "members": ["test"],
+                }]
+            ),
         }
         for case, mutate in cases.items():
             with self.subTest(case=case):
@@ -271,6 +406,20 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
 
                 with self.assertRaises(ArtifactValidationError):
                     validate_assessment_plan(plan)
+
+        plan = copy.deepcopy(self.plan)
+        control = next(item for item in plan["controls"] if item["derivations"])
+        control["derivations"][0]["before"]["evidence"] = {
+            "bad__slot": {"max_age": "1d"}
+        }
+        plan["resolution"] = {
+            "status": "invalid",
+            "errors": [{"type": "synthetic"}],
+        }
+        refresh_operation(plan)
+        plan["id"] = artifact_digest(plan)
+        with self.assertRaises(ArtifactValidationError):
+            validate_assessment_plan(plan)
 
     @classmethod
     def additive_plan(cls):
@@ -492,7 +641,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 lambda document: document["requirements"][0]["parameter_facts"][
                     "consumption"
                 ][0]["link"]["destination"]["implementation"].update(version=99),
-                "frozen consumption records mismatch",
+                "stale frozen implementation destination",
             ),
         }
         for case, (mutate, expected) in cases.items():
@@ -652,7 +801,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ArtifactValidationError,
-            "invalid frozen requirement baseline parent reference",
+            "invalid frozen requirement baseline reference",
         ):
             validate_assessment_plan(baseline_plan)
 
