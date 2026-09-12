@@ -461,6 +461,101 @@ class PolicySchemaTests(unittest.TestCase):
         self.assertEqual(len(evidence_schemas), 3)
         self.assertEqual(errors, [])
 
+    def test_adopter_schema_publisher_host_is_accepted_by_generic_loaders(self):
+        publisher = "https://schemas.adopter.example"
+        with tempfile.TemporaryDirectory() as directory:
+            adopter = Path(directory) / "adopter"
+            control_path = adopter / "controls/test/minimum"
+            shutil.copytree(
+                self.root / "shared/controls/test/minimum",
+                control_path,
+            )
+            parameter_path = control_path / "parameters.schema.json"
+            parameter_schema = load_json(parameter_path)
+            parameter_schema["$id"] = (
+                publisher
+                + "/schemas/controls/test.minimum/parameters/v2.schema.json"
+            )
+            parameter_path.write_text(json.dumps(parameter_schema), encoding="utf-8")
+            manifest_path = control_path / "control.json"
+            manifest = load_json(manifest_path)
+            manifest["spec"]["evidence"][0]["inputs_schema"] = {
+                "$id": (
+                    publisher
+                    + "/schemas/controls/test.minimum/evidence/observation/"
+                    "inputs/v3.schema.json"
+                ),
+                "type": "object",
+                "additionalProperties": False,
+            }
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            controls, control_errors = load_control_catalog(
+                adopter / "controls",
+                self.schemas / "control.schema.json",
+            )
+
+            evidence_path = adopter / "schemas/evidence/linux-host.schema.json"
+            evidence_path.parent.mkdir(parents=True)
+            evidence = load_json(
+                self.root / "shared/schemas/evidence/linux-host.schema.json"
+            )
+            evidence["$id"] = (
+                publisher
+                + "/schemas/evidence/test.linux-host/v1.schema.json"
+            )
+            evidence_path.write_text(json.dumps(evidence), encoding="utf-8")
+            evidence_catalog, evidence_errors = load_evidence_schema_catalog(
+                PolicySource("adopter", adopter)
+            )
+
+            value_schema = {
+                "$id": (
+                    publisher
+                    + "/schemas/requirements/adopter.requirement/"
+                    "parameters/review_age/v4.schema.json"
+                ),
+                "type": "string",
+            }
+            requirement = {
+                "apiVersion": "compliance.example/v1",
+                "kind": "ControlRequirement",
+                "metadata": {"id": "adopter.requirement", "revision": 1},
+                "spec": {
+                    "title": "Adopter-published requirement",
+                    "statement": "Exercise generic publisher-host validation.",
+                    "external_refs": [],
+                    "parameters": {
+                        "review_age": {
+                            "required": True,
+                            "binding_mode": "open",
+                            "binding_scope": ["adopter.baseline"],
+                            "schema": value_schema,
+                            "schema_digest": content_digest(value_schema),
+                        }
+                    },
+                },
+            }
+            requirement_path = adopter / "requirements/adopter/requirement.json"
+            requirement_path.parent.mkdir(parents=True)
+            requirement_path.write_text(json.dumps(requirement), encoding="utf-8")
+            requirements, _, _, requirement_errors = load_requirement_catalogs((
+                PolicySource("platform-contracts", self.root / "shared"),
+                PolicySource("adopter", adopter),
+            ))
+
+        self.assertEqual(control_errors, [])
+        self.assertEqual(controls["test.minimum"]["_parameters_schema"]["$id"], parameter_schema["$id"])
+        self.assertEqual(evidence_errors, [])
+        self.assertEqual(evidence_catalog["test.linux-host/v1"]["$id"], evidence["$id"])
+        self.assertEqual(requirement_errors, [])
+        self.assertEqual(
+            requirements["adopter.requirement@1"]["spec"]["parameters"][
+                "review_age"
+            ]["schema"]["$id"],
+            value_schema["$id"],
+        )
+
     def test_identical_resources_coalesce_across_sources_with_provenance(self):
         shared = self.root / "shared"
         verification = self.root / "selection"

@@ -55,10 +55,11 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 validate_assessment_plan(changed)
 
     @staticmethod
-    def parameterized_plan():
+    def parameterized_plan(schema_host="compliance.example"):
         """Build one self-contained valid plan with a frozen freshness binding."""
         from tools import policy_parameters as parameters
 
+        schema_origin = f"https://{schema_host}"
         policy_sources = [{"name": "test", "digest": "sha256:" + "1" * 64}]
         plan = assessment_plan(policy_sources, with_requirement=True)
         requirement = plan["requirements"][0]
@@ -66,7 +67,10 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
 
         requirement_document = copy.deepcopy(requirement["parameter_facts"]["document"])
         value_schema = {
-            "$id": "https://compliance.example/schemas/requirements/test.requirement/parameters/age/v1.schema.json",
+            "$id": (
+                schema_origin
+                + "/schemas/requirements/test.requirement/parameters/age/v1.schema.json"
+            ),
             "type": "string",
             "pattern": "^[1-9][0-9]*[smhd]$",
         }
@@ -117,6 +121,20 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         definition["_parameters_schema"] = copy.deepcopy(
             control["policy_inputs"]["parameters_schema"]
         )
+        definition["_parameters_schema"]["$id"] = (
+            schema_origin
+            + "/schemas/controls/test.control/parameters/v1.schema.json"
+        )
+        if schema_host != "compliance.example":
+            definition["spec"]["evidence"][0]["inputs_schema"] = {
+                "$id": (
+                    schema_origin
+                    + "/schemas/controls/test.control/evidence/observation/"
+                    "inputs/v1.schema.json"
+                ),
+                "type": "object",
+                "additionalProperties": False,
+            }
         definition["_implementation_modules"] = []
         instance = {
             "instance_id": control["instance_id"],
@@ -180,6 +198,24 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         plan["id"] = artifact_digest(plan)
         validate_assessment_plan(plan)
         return plan
+
+    def test_frozen_plan_preserves_and_accepts_adopter_schema_host(self):
+        plan = self.parameterized_plan("schemas.adopter.example")
+        requirement_schema_id = plan["requirements"][0]["parameter_facts"][
+            "document"
+        ]["spec"]["parameters"]["age"]["schema"]["$id"]
+        control = plan["controls"][0]
+
+        self.assertTrue(requirement_schema_id.startswith(
+            "https://schemas.adopter.example/"
+        ))
+        self.assertTrue(control["policy_inputs"]["parameters_schema"]["$id"].startswith(
+            "https://schemas.adopter.example/"
+        ))
+        self.assertTrue(control["policy_inputs"]["definition"]["spec"]["evidence"][0][
+            "inputs_schema"
+        ]["$id"].startswith("https://schemas.adopter.example/"))
+        validate_assessment_plan(plan)
 
     @classmethod
     def additive_plan(cls):

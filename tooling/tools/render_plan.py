@@ -21,9 +21,10 @@ from ._canonical_json import canonical_json_bytes
 from .artifact_validation import validate_assessment_plan
 from .identifiers import (
     EVIDENCE_TYPE,
-    canonical_control_evidence_inputs_schema_id,
-    canonical_control_parameter_schema_id,
-    canonical_evidence_schema_id,
+    canonical_evidence_schema_path,
+    is_canonical_control_evidence_inputs_schema_id,
+    is_canonical_control_parameter_schema_id,
+    is_canonical_evidence_schema_id,
 )
 from .policy_sources import (
     PolicySource,
@@ -542,9 +543,10 @@ def load_control_catalog(
             continue
 
         parameters_schema_id = parameters_schema.get("$id")
-        if not isinstance(parameters_schema_id, str) or not canonical_control_parameter_schema_id(
-            control_id
-        ).fullmatch(parameters_schema_id):
+        if not isinstance(parameters_schema_id, str) or not is_canonical_control_parameter_schema_id(
+            parameters_schema_id,
+            control_id,
+        ):
             errors.append({
                 "type": "control-parameters-schema-identity-invalid",
                 "control": control_id,
@@ -573,10 +575,11 @@ def load_control_catalog(
                 invalid_inputs_schema = True
                 continue
             inputs_schema_id = inputs_schema.get("$id")
-            if not isinstance(inputs_schema_id, str) or not canonical_control_evidence_inputs_schema_id(
+            if not isinstance(inputs_schema_id, str) or not is_canonical_control_evidence_inputs_schema_id(
+                inputs_schema_id,
                 control_id,
                 dependency["id"],
-            ).fullmatch(inputs_schema_id):
+            ):
                 errors.append({
                     "type": "control-evidence-inputs-schema-identity-invalid",
                     "control": control_id,
@@ -650,21 +653,24 @@ def _load_evidence_schema_catalog_root(
                 "message": "properties.type.const must declare the evidence type",
             })
             continue
-        expected_schema_id = canonical_evidence_schema_id(evidence_type)
-        if expected_schema_id is None:
+        expected_schema_path = canonical_evidence_schema_path(evidence_type)
+        if expected_schema_path is None:
             errors.append({
                 "type": "evidence-schema-type-invalid",
                 "source": source,
                 "evidence_type": evidence_type,
             })
             continue
-        if schema.get("$id") != expected_schema_id:
+        if not isinstance(schema.get("$id"), str) or not is_canonical_evidence_schema_id(
+            schema["$id"],
+            evidence_type,
+        ):
             errors.append({
                 "type": "evidence-schema-identity-invalid",
                 "source": source,
                 "evidence_type": evidence_type,
                 "schema_id": schema.get("$id"),
-                "expected_schema_id": expected_schema_id,
+                "expected_schema_path": expected_schema_path,
             })
             continue
         if evidence_type in catalog:

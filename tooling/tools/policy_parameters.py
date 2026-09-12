@@ -15,9 +15,9 @@ from .identifiers import (
     REFERENCE,
     REVISION,
     SLOT,
-    canonical_control_evidence_inputs_schema_id,
-    canonical_control_parameter_schema_id,
-    canonical_requirement_parameter_schema_id,
+    is_canonical_control_evidence_inputs_schema_id,
+    is_canonical_control_parameter_schema_id,
+    is_canonical_requirement_parameter_schema_id,
 )
 
 
@@ -147,11 +147,11 @@ def duration(value):
     return f'{seconds}s'
 
 
-def validate_schema(schema, *, identity_pattern=None):
+def validate_schema(schema, *, identity_validator=None):
     require(isinstance(schema, dict) and isinstance(schema.get('$id'), str),
             'parameter schema requires explicit identity')
-    if identity_pattern is not None:
-        require(bool(identity_pattern.fullmatch(schema['$id'])),
+    if identity_validator is not None:
+        require(bool(identity_validator(schema['$id'])),
                 'parameter schema identity does not match its semantic owner')
     Draft202012Validator.check_schema(schema)
     validator = Draft202012Validator(schema, format_checker=FormatChecker(), registry=Registry())
@@ -220,9 +220,12 @@ def declarations(requirement):
         require(declaration['schema_digest'] == digest(declaration['schema']), 'stale parameter schema digest')
         validate_schema(
             declaration['schema'],
-            identity_pattern=canonical_requirement_parameter_schema_id(
-                clean['metadata']['id'],
-                name,
+            identity_validator=lambda schema_id: (
+                is_canonical_requirement_parameter_schema_id(
+                    schema_id,
+                    clean['metadata']['id'],
+                    name,
+                )
             ),
         )
         validate_composition(declaration)
@@ -473,8 +476,11 @@ def compose_selected(resolutions, baselines, requirements=None):
 def implementation_pin(definition):
     validate_schema(
         definition['_parameters_schema'],
-        identity_pattern=canonical_control_parameter_schema_id(
-            definition['metadata']['id'],
+        identity_validator=lambda schema_id: (
+            is_canonical_control_parameter_schema_id(
+                schema_id,
+                definition['metadata']['id'],
+            )
         ),
     )
     return {'id': definition['metadata']['id'], 'version': definition['metadata']['version'],
@@ -533,9 +539,12 @@ def evidence_for(instance, definition):
         else:
             validate_schema(
                 input_schema,
-                identity_pattern=canonical_control_evidence_inputs_schema_id(
-                    definition['metadata']['id'],
-                    contract['id'],
+                identity_validator=lambda schema_id: (
+                    is_canonical_control_evidence_inputs_schema_id(
+                        schema_id,
+                        definition['metadata']['id'],
+                        contract['id'],
+                    )
                 ),
             ).validate(inputs)
         result.append({'id': contract['id'], 'type': contract['type'],
@@ -558,7 +567,9 @@ def validate_control_contract_identity(definition):
     require(valid_revision(version), 'invalid frozen Control version')
     validate_schema(
         definition.get('_parameters_schema'),
-        identity_pattern=canonical_control_parameter_schema_id(control_id),
+        identity_validator=lambda schema_id: (
+            is_canonical_control_parameter_schema_id(schema_id, control_id)
+        ),
     )
     dependencies = spec.get('evidence')
     require(isinstance(dependencies, list), 'frozen Control evidence must be an array')
@@ -580,9 +591,12 @@ def validate_control_contract_identity(definition):
         if inputs_schema is not None:
             validate_schema(
                 inputs_schema,
-                identity_pattern=canonical_control_evidence_inputs_schema_id(
-                    control_id,
-                    dependency_id,
+                identity_validator=lambda schema_id: (
+                    is_canonical_control_evidence_inputs_schema_id(
+                        schema_id,
+                        control_id,
+                        dependency_id,
+                    )
                 ),
             )
     require(
