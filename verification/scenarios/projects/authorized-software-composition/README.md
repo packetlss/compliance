@@ -1,8 +1,9 @@
 # Authorized software composition
 
-This isolated synthetic Stage 8 scenario proves `installed package IDs ⊆ resolved
-allowed_software` through `linux.packages.only-allowed@1`. It composes the independently
-named `control-library` and source-only `verification-policy` roots through the public CLI.
+This isolated synthetic Stage 8/9 scenario proves `installed package IDs ⊆ resolved
+allowed_software` through `linux.packages.only-allowed@1`, then validates the
+current-inventory/history boundary. It composes the independently named
+`control-library` and source-only `verification-policy` roots through the public CLI.
 
 Two fictitious managed Linux hosts receive `company.authorized-software-base@1`,
 which authorizes `auditd` and `curl`. The database host's factual `feature.database`
@@ -22,6 +23,23 @@ collector at `2026-09-01T00:00:00Z`. Machine-readable assertions prove:
 - current Coverage contribution, effective-value and applicability attribution;
 - ordinary plan/result validation and identical historical explanation of the
   retained pair after current policy, inventory and evidence are removed.
+- one retained explicit two-host operation in which both members pass, while the
+  database member's exact plan retains the PostgreSQL contribution and the
+  application member does not;
+- a copied current-input view that removes only the database host's factual
+  `feature.database` classification. Its Inventory explanation loses the database
+  path; current Coverage loses the database contribution and returns to the base
+  set, while application Coverage remains unchanged;
+- comparison rendering of the same two-host request: the application
+  `member_plan_digest` remains unchanged, the database digest changes, the
+  operation ID changes, and both operation-bound plan IDs change;
+- retained historical accounting remains the original complete two-member PASS
+  operation. Its comparison qualification is `different_plan` for both members,
+  without synthesizing a current outcome; the retained database explanation still
+  exposes the old PostgreSQL effective parameter and database applicability path;
+- stored-plan policy diff classifies the application comparison as effective policy
+  unchanged with identity-context-only differences, and the database comparison as
+  an effective policy change due to the removed database assignment/contribution.
 
 Run focused assertions from the repository root against the working tree:
 
@@ -40,8 +58,11 @@ signatures are not authorization criteria. Supplied inventory and observation
 completeness remain governance responsibilities. Passing this synthetic policy
 establishes neither complete security coverage nor continuous effectiveness.
 Missing/ineligible evidence remains `unknown` under the existing evidence contract.
-This scenario adds no remediation or adapter execution and does not broaden the
-independent `technical-only-packages` anchor or Stage 9 scenario scope.
+This scenario adds no remediation, adapter execution, persisted Coverage, latest or
+cross-operation result lookup, or current PASS/FAIL inference. `different_plan` is
+only exact plan alignment; stored-plan policy diff is the separate authority for the
+effective-policy distinction. It does not broaden the independent
+`technical-only-packages` anchor or Stage 9 scenario scope.
 
 Identifiers introduced under #131 remain experimental. Implemented ADR 0019 owns the
 namespace and schema-URI conventions; the #136 migration establishes no compatibility
