@@ -159,11 +159,13 @@ documentation and verification rules are defined in
 Pure governance obligations should not normally receive a synthetic Objective and
 assertion evidence merely to round-trip governance's own declaration. Ask whether
 satisfaction could change independently from the declared implementation without a
-declaration change. If not, governance declaration is normally sufficient for the
-bounded internal accounting model. If yes, the independently observable occurrence,
-completion, outcome, population fact, or technical posture remains assessed. A mixed
-obligation keeps its governance reference and ordinary evidence-backed assessment as
-separate required authorities.
+declaration change. If not, a reviewed governance determination is normally sufficient
+for the bounded internal accounting model and may record affirmative adoption,
+conclusive non-adoption, or insufficient establishment. That determination remains
+declaration-side and creates no evidence, Objective, or assessment result. If yes, the
+independently observable occurrence, completion, outcome, population fact, or technical
+posture remains assessed. A mixed obligation keeps its governance determination and
+ordinary evidence-backed assessment as separate required authorities.
 
 `FrameworkObligationDeclaration` is accepted architecture, not implemented policy.
 It may pin Requirements/Realizations or technical policy as its assessed basis but
@@ -708,7 +710,10 @@ The future ADR 0021 framework projection is a third, explicitly supplied
 interpretation over an exact declaration and exact assessment history. It does not
 persist `Coverage`, create a new assessment result, or mutate the historical result.
 Its only top-level states are `satisfied`, `not_satisfied`, and `not_established`;
-the preferred successful wording is **Satisfied under declared coverage**.
+any conclusive required governance or assessed failure wins as `not_satisfied`, lack
+of establishment wins next as `not_established`, and only every required basis
+affirmatively satisfied produces `satisfied`. The preferred successful wording is
+**Satisfied under declared coverage**.
 
 The same operator CLI exposes `plan render` for inspecting the immutable input
 to evaluation and `assessment run` for rendering, persisting, and evaluating a

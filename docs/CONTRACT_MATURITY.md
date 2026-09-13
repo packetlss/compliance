@@ -276,13 +276,19 @@ tooling; no historical result is reinterpreted.
 ordinary named policy sources and ordinary assessment plans. Its closed ledger owns
 declared framework/profile/version scope, explicit obligation accounting, reviewed
 interpretations and exactly one governance, assessed Objective, direct technical,
-mixed or external-judgment basis per obligation.
+mixed or external-judgment basis per obligation. Every applicable governance portion
+requires a reviewed determination capable of affirmative satisfaction, conclusive
+non-implementation, or insufficient establishment without creating evidence or an
+assessment result.
 
 The associated framework-satisfaction surface is an ephemeral projection over an
 explicit exact declaration, an exact retained operation anchor as its historical
 scope witness, and exact bound plan/results required by assessed/direct portions. It
 has only `satisfied`, `not_satisfied` and `not_established`; the successful operator
-wording is **Satisfied under declared coverage**. This does not change current
+wording is **Satisfied under declared coverage**. Any conclusive required governance
+or assessed failure is `not_satisfied`; otherwise unresolved required governance or
+assessed support is `not_established`; only every required basis affirmatively
+satisfied is `satisfied`. This does not change current
 `Coverage`, AssessmentResult or plan/result identity, infer completeness from
 `external_refs`, or establish external conformity, certification, legal applicability,
 framework-universe completeness or real-world population completeness.

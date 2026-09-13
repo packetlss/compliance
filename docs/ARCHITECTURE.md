@@ -341,6 +341,9 @@ The declaration references existing company policy without replacing it.
 `Baseline` / `BaselineOverlay`, reusable Controls, and evidence retain their current
 responsibilities. Pure governance adoption normally needs no synthetic Objective or
 assertion evidence when it cannot vary independently from the reviewed declaration.
+Its reviewed governance determination can be affirmative, conclusively negative, or
+insufficiently established; a known governance-negative remains declaration-side and
+creates no assessment result.
 Independently observable occurrence, completion, outcome, or technical state remains
 ordinary assessment evidence. A direct technical policy is a complete obligation
 basis only when the declaration explicitly says so; `external_refs` remain
@@ -351,17 +354,23 @@ an exact retained operation anchor as the historical scope witness, the exact bo
 plans/results required by assessed/direct portions, and an explicit query/as-of instant
 where qualification is needed. The declaration
 reuses project and `InventoryGroup` scope concepts; the frozen operation provides the
-historical assessed subject denominator. Missing scope, results, policy-pin alignment,
+frozen scope witness and historical subject denominator. It does not imply that
+governance-only obligations were assessed. Missing scope, results, policy-pin alignment,
 or other required support fails closed. Neither this denominator nor the declaration
 proves external framework-universe or real-world population completeness.
 
 The only top-level states are `satisfied`, `not_satisfied`, and `not_established`.
-A conclusive required assessed failure produces `not_satisfied`; missing, unknown,
-error, stale, invalid or misaligned support, a waived required failure, or unresolved
-external judgment produces `not_established`. Governance cannot override an assessed
-failure or uncertainty. Waivers, internal deviations, and external-recognition facts
-are qualifications, never successful top-level states. The preferred successful
-wording is **Satisfied under declared coverage**, not normative `compliant`.
+Any conclusive required governance or assessed failure produces `not_satisfied`, even
+if another basis is unresolved. With no conclusive failure, an absent, invalid,
+ambiguous, unreviewed or insufficient governance determination, missing/unknown/error/
+stale/invalid/misaligned assessed support, a waived required failure, or unresolved
+external judgment produces `not_established`. Only affirmative governance
+determinations plus passing assessed/direct support for every required portion can
+produce `satisfied`. Governance cannot override assessed failure or uncertainty, and
+governance uncertainty is not synthetic assessment `unknown`. Waivers, internal
+deviations, and external-recognition facts are qualifications, never successful
+top-level states. The preferred successful wording is **Satisfied under declared
+coverage**, not normative `compliant`.
 
 Declaration revisions never rewrite historical outcomes or reinterpret an old
 category. Historical use explicitly retains and supplies the exact declaration

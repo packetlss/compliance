@@ -140,10 +140,12 @@ wire form, project path, schema, identity algorithm, runtime, or CLI.
 
 A pure governance obligation needs no synthetic `ControlRequirement`, realization,
 or assertion evidence merely to re-prove the reviewed declaration when satisfaction
-cannot vary independently from it. Where actual occurrence, completion, outcome,
+cannot vary independently from it. Its reviewed governance determination may be
+affirmative, conclusively negative, or not established; all three remain declaration-
+side rather than assessment outcomes. Where actual occurrence, completion, outcome,
 population, or technical state can drift independently, that portion remains an
 ordinary evidence-backed Objective or direct technical assessment. A mixed obligation
-requires both authorities; the governance reference is not evidence and does not
+requires both authorities; the governance determination is not evidence and does not
 alter complete `satisfaction.allOf` semantics.
 
 The existing `Baseline` and `BaselineOverlay` contracts continue to describe

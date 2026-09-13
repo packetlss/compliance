@@ -81,9 +81,10 @@ A valid declaration owns, semantically:
 6. the reviewed company interpretation or exact interpretation reference/pin where
    applicable;
 7. exactly one satisfaction-basis category for every obligation;
-8. for governance portions, the implementation/process reference, responsible owner,
-   review/approval reference and review information necessary to understand the
-   declaration;
+8. for every applicable governance portion, the implementation/process subject or
+   reference, responsible owner, review/approval information, and a governance-
+   determination responsibility that distinguishes valid reviewed affirmative or
+   negative conclusions from insufficient establishment;
 9. for assessed or direct portions, exact typed company-policy references/pins that
    can be matched to frozen plan provenance; and
 10. a scope binding expressed with the project's existing identity and
@@ -112,18 +113,19 @@ are governance accounting and do not imply external-authority acceptance.
 Each ledger entry has exactly one of these categories, independently of its
 applicable/excluded/not-applicable disposition:
 
-1. **Governance-declared** — the represented obligation is satisfied, for this
-   bounded internal accounting model, by governance's reviewed implementation or
-   adoption declaration itself. This is governance accounting, not evidence of an
-   independently observable implementation fact.
+1. **Governance-declared** — the represented obligation is decided, for this bounded
+   internal accounting model, by governance's reviewed determination about its own
+   implementation or adoption. The determination may be affirmative, conclusively
+   negative, or insufficient to establish either. This is governance accounting, not
+   evidence of an independently observable implementation fact.
 2. **Evidence-assessed Objective** — exact ordinary `ControlRequirement` meaning,
    its complete selected `ControlRealization`, and its evidence-backed assessment
    establish the company basis.
 3. **Direct technical policy basis** — exact `Baseline` / `BaselineOverlay` policy
    and its ordinary technical assessment are the complete declared company basis.
-4. **Mixed governance + assessed basis** — both an attributable governance
-   implementation declaration/reference and exact ordinary evidence-backed Objective
-   or direct-policy assessment are required.
+4. **Mixed governance + assessed basis** — both an attributable reviewed governance
+   determination, with its applicable implementation or gap reference, and exact
+   ordinary evidence-backed Objective or direct-policy assessment are required.
 5. **External judgment** — satisfaction depends on an authority, recognition, or
    judgment the product does not establish.
 
@@ -132,17 +134,43 @@ Use this decision rule:
 > Could satisfaction change independently of governance's declared implementation
 > without governance changing the declaration?
 
-If no, governance declaration is normally sufficient for the bounded internal
-framework-accounting model. A synthetic Objective and assertion evidence should not
-be created merely to re-prove governance's declaration. Examples include a reviewed
-board security direction or adoption of an internal governance process when the
-obligation being represented is exactly that governed adoption.
+If no, the reviewed governance determination is normally sufficient for the bounded
+internal framework-accounting model. It can establish affirmative adoption,
+conclusive non-adoption, or that governance has not established either. A synthetic
+Objective and assertion evidence should not be created merely to re-prove the
+determination. Examples include a reviewed board security direction or adoption of
+an internal governance process when the obligation being represented is exactly that
+governed adoption.
 
 If yes, the independently observable fact remains assessment evidence. A requirement
 that a process be adopted can be governance-declared while an actual periodic review,
 training completion for a required population, successful restore exercise, or
 deployed technical posture remains assessed. When both portions are required, use the
 mixed category rather than treating governance as evidence.
+
+### Governance determination semantics
+
+Every applicable governance portion, whether governance-declared or mixed, is
+interpreted through an attributable governance determination. Only a valid reviewed
+determination can establish an affirmative or conclusive negative conclusion. The
+semantic model must distinguish at least:
+
+1. **Affirmatively satisfied** — governance reviewed and determined that the required
+   process, policy, direction, or other governance implementation is adopted or
+   implemented.
+2. **Conclusively unsatisfied** — governance reviewed and determined that the required
+   implementation is not adopted or not implemented. This is a known governance gap,
+   not missing declaration state.
+3. **Not established** — the determination is absent, invalid, ambiguous, unreviewed,
+   or otherwise insufficient to establish either an affirmative or negative
+   conclusion.
+
+These are semantic distinctions, not accepted JSON names, enum values, schema
+layout, or wire representation. A governance-negative determination remains entirely
+declaration-side. It is not an assessment `fail`, does not create an
+`AssessmentResult`, Control, Objective, evidence document, or result dependency, and
+does not change assessment `pass` / `fail` / `unknown` / `error` / `waived`
+semantics.
 
 Excluded and not-applicable entries retain their explicit category, interpretation,
 rationale and review provenance for closed-ledger history, but they do not enter the
@@ -175,7 +203,7 @@ Objective is required solely for framework symmetry.
 A mixed basis is deliberately a conjunction of different authorities:
 
 ```text
-governance implementation declaration/reference
+reviewed governance determination + implementation/gap reference
         +
 ordinary exact evidence-backed assessment
         -> bounded obligation satisfaction
@@ -184,9 +212,11 @@ ordinary exact evidence-backed assessment
 The governance portion is governance state, not evidence. The assessed portion is an
 ordinary validated plan/result interpretation. Results do not consume other results,
 and this decision introduces no result dependency graph, cross-time result
-equivalence, richer realization algebra, or alternative roll-up.
+equivalence, richer realization algebra, or alternative assessment roll-up. Either
+portion can conclusively prevent mixed-obligation satisfaction; uncertainty in one
+portion cannot erase a conclusive failure in the other.
 
-### Scope binding and exact assessed denominator
+### Scope binding and frozen subject denominator
 
 The declaration belongs to exactly one project scope. Its declared coverage reuses
 stable project and `InventoryGroup` identities to name the governed scope and to bind
@@ -257,21 +287,43 @@ decision locally.
 
 ### Status and qualification semantics
 
-The projection has exactly three top-level framework-satisfaction states, with
-conclusive failure taking precedence over lack of establishment:
+The projection has exactly three top-level framework-satisfaction states. A required
+basis means every governance and assessed/direct portion required by the applicable
+obligation's declared category. Roll-up is fail-first:
+
+```text
+any conclusive required basis failure
+    -> not_satisfied
+
+no conclusive failure,
+but one or more required bases are not established
+    -> not_established
+
+every required basis affirmatively satisfied
+    -> satisfied
+```
 
 | State | Meaning |
 | --- | --- |
-| `satisfied` | Every applicable declared obligation has every governance and/or assessed basis required by its category satisfied, with no required waiver/deviation or unresolved external judgment. |
-| `not_satisfied` | At least one applicable required assessed basis has a conclusive failure. |
-| `not_established` | No conclusive required failure exists, but declaration/accounting is incomplete or invalid, required support is missing/unknown/error/stale/misaligned, a required failure is waived, or an applicable external judgment remains outside what the product can establish. |
+| `satisfied` | Every applicable declared obligation has every required governance and assessed/direct portion affirmatively satisfied, with no required waiver/deviation or unresolved external judgment. |
+| `not_satisfied` | At least one applicable required basis has a conclusive governance-negative determination or assessed failure. |
+| `not_established` | No conclusive required failure exists, but at least one required governance determination or assessed/direct basis is not established; this also covers incomplete/invalid accounting, a required waived failure, or an applicable external judgment outside what the product can establish. |
 
 Consequently:
 
-- conclusive required assessed `fail` produces `not_satisfied`, even if another
-  required basis is missing or inconclusive;
-- missing, `unknown`, `error`, stale, invalid, incomplete, or scope/plan/policy-
-  misaligned support produces `not_established` when no conclusive failure exists;
+- an affirmative reviewed governance determination may contribute satisfaction;
+- explicit reviewed governance non-implementation/non-adoption produces
+  `not_satisfied`, even if another required basis passes or is not established;
+- an absent, invalid, ambiguous, unreviewed, or otherwise insufficient governance
+  determination produces `not_established` when no conclusive failure exists;
+- conclusive required evidence-assessed or direct technical `fail` produces
+  `not_satisfied`, even if another required governance or assessed basis is missing
+  or inconclusive;
+- assessed/direct `unknown`, `error`, missing, stale, invalid, incomplete, or
+  scope/plan/policy-misaligned support produces `not_established` when no conclusive
+  failure exists;
+- assessed/direct `pass` may contribute satisfaction when every other required basis
+  is established;
 - a waived required failure produces `not_established` and exposes the internally
   accepted deviation;
 - governance cannot override an assessed failure or uncertainty;
@@ -280,6 +332,15 @@ Consequently:
 - empty applicable scope, incomplete ledger accounting, or a non-assessable/missing
   denominator where an assessed/direct basis requires support cannot manufacture
   `satisfied`.
+
+For a mixed obligation, governance affirmative plus assessed pass may contribute
+satisfaction. Governance negative plus assessed pass is `not_satisfied`; governance
+affirmative plus assessed fail is `not_satisfied`; and governance negative plus
+assessed unknown, missing, stale, invalid, or errored support remains
+`not_satisfied` because the conclusive governance failure wins. Governance unresolved
+plus assessed pass is `not_established`, as is governance affirmative plus assessed
+support that is unknown, missing, stale, invalid, or errored. The same fail-first rule
+means an assessed failure remains `not_satisfied` when governance is unresolved.
 
 Internal waivers/deviations and separately attributable external-recognition records
 are qualifications, not additional top-level states and not successful states. A

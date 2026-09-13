@@ -133,9 +133,10 @@ current-plan/latest-result reporting path.
 
 [ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md)
 accepts a future ephemeral framework-satisfaction projection without changing this
-operation contract. The exact operation supplies the historical assessed subject
-denominator for declaration portions bound to project `InventoryGroup` scope. The
-projection must use the exact frozen selection witness, memberships, dispositions,
+operation contract. The exact operation supplies the frozen scope witness and
+historical subject denominator for declaration portions bound to project
+`InventoryGroup` scope. It does not imply governance-only obligations were assessed.
+The projection must use the exact frozen selection witness, memberships, dispositions,
 member commitments and valid bound plan/result pairs; another operation, current
 inventory, current Coverage, a latest result, or a convenient subset cannot fill a
 missing or misaligned slot.

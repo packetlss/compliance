@@ -61,8 +61,10 @@ The toolset should answer four different questions without conflating them:
   future `FrameworkObligationDeclaration` accepted by system ADR 0021 owns a closed,
   versioned ledger and declared project scope outside ordinary policy sources and
   assessment plans. Pure governance declarations need no circular assertion evidence;
-  independently observable facts remain assessed. Its bounded satisfaction view is
-  ephemeral and cannot establish external conformity or population completeness.
+  their reviewed determination may be affirmative, conclusively negative, or not
+  established without becoming an assessment result. Independently observable facts
+  remain assessed. Its bounded satisfaction view is ephemeral and cannot establish
+  external conformity or population completeness.
 - **Verification is scenario-first and claim-aware.** Stable verification
   projects use deterministic, real-world-shaped synthetic situations and map
   implemented features onto those stories. They expose the complete path from
@@ -542,7 +544,11 @@ The accepted framework-satisfaction interpretation is ephemeral over an exact
 declaration, an exact retained operation anchor as scope witness, exact bound
 plans/results required by assessed/direct portions, and explicit query time where
 needed. Its states are `satisfied`, `not_satisfied`, and `not_established`;
-waivers/deviations and external recognition remain qualifications. The declaration is
+any conclusive required governance or assessed failure is `not_satisfied`, unresolved
+support without a conclusive failure is `not_established`, and only every required
+basis affirmatively satisfied is `satisfied`. Governance-negative remains declaration-
+side and creates no assessment result. Waivers/deviations and external recognition
+remain qualifications. The declaration is
 not embedded in plans and does not alter current Coverage, policy/composition/member/
 operation/plan/result identity, or historical outcomes. This documentation decision
 implements no resource, schema, path, runtime, CLI, view, migration, generic framework

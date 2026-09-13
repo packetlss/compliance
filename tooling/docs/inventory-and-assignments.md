@@ -468,13 +468,14 @@ scope, not persisted current `Coverage`. User-facing **declared coverage** means
 scope governance recorded in that declaration; it does not mean the current Coverage
 projection was saved, versioned, made identity-bearing, or given assessment ownership.
 
-The declaration should bind assessed portions through stable project and existing
-`InventoryGroup` identities rather than add selectors or another subject hierarchy.
-For historical framework interpretation, the exact operation's frozen selection
-witness, group membership, member commitments and dispositions provide the assessed
-subject denominator. Current inventory or Coverage cannot replace it. That denominator
-is complete only against supplied governed inventory and never proves that the
-real-world population was exhaustive.
+The declaration should bind its scope, including assessed/direct portions where
+present, through stable project and existing `InventoryGroup` identities rather than
+add selectors or another subject hierarchy. For historical framework interpretation,
+the exact operation's frozen selection witness, group membership, member commitments
+and dispositions provide the frozen scope witness and historical subject denominator.
+This does not imply governance-only obligations were assessed. Current inventory or
+Coverage cannot replace it. That denominator is complete only against supplied
+governed inventory and never proves that the real-world population was exhaustive.
 
 The root development registry defaults to `mock-fleet`, which exercises the
 contract with `aws-account` and `saas-tenant` subjects. Root-registered projects
