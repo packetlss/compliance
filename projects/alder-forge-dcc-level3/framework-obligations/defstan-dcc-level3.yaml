@@ -1,0 +1,111 @@
+apiVersion: compliance.example/v1alpha1
+kind: FrameworkObligationDeclaration
+metadata:
+  name: alder-forge-defstan-dcc-level3
+  revision: "2026-09"
+  owner: alder-forge-governance
+  review:
+    reference: alder-forge-governance/FRAMEWORK-LEDGER-2026-09
+    approvedBy: alder-forge-board
+    approvedAt: "2026-09-01T00:00:00Z"
+spec:
+  framework:
+    id: DEFSTAN-05-138-ISSUE-4
+    profile: DCC-level-3-representative-slice
+    version: issue-4-2026-09-13
+  scope:
+    id: alder-forge-dcc-level3-representative
+    description: Supplied Alder Forge representative legal-entity, critical SaaS, and Linux build scope.
+    groupRefs:
+      - name: alder-forge-legal-entity
+      - name: corporate-linux-build-systems
+      - name: critical-saas-administration
+  obligations:
+    - id: "0002"
+      disposition: applicable
+      interpretation: Alder Forge depends on an external Cyber Essentials Plus judgment for this bounded accounting entry.
+      basis:
+        category: external-judgment
+        externalReference: alder-forge-certification/ce-plus-scope
+    - id: "1101"
+      disposition: applicable
+      interpretation: Board adoption of the Alder Forge security direction is governance's reviewed implementation determination.
+      basis:
+        category: governance-declared
+        governance:
+          subject: alder-forge-governance/board-security-direction
+          owner: alder-forge-board
+          determination: affirmative
+          review:
+            reference: alder-forge-governance/BOARD-SEC-2026-03
+            approvedBy: alder-forge-board
+            approvedAt: "2026-09-01T00:00:00Z"
+    - id: "1202"
+      disposition: applicable
+      interpretation: Reviewed risk-assessment adoption and the bounded supplied assessment assertion are both required.
+      basis:
+        category: mixed-governance-assessed
+        governance:
+          subject: alder-forge-assurance/periodic-risk-assessment
+          owner: alder-forge-risk-owner
+          determination: affirmative
+          review:
+            reference: alder-forge-governance/RISK-2026-09
+            approvedBy: alder-forge-governance
+            approvedAt: "2026-09-01T00:00:00Z"
+        objectivePins:
+          - reference: alder-forge.periodic-risk-assessment@1
+            digest: sha256:f4441ea9df00ce5f22ba35701cd2b3e143c5b248c6b486569521b7cb573d9223
+            groupRefs: [{name: alder-forge-legal-entity}]
+    - id: "2201"
+      disposition: applicable
+      interpretation: The critical SaaS MFA Objective is the complete declared company basis.
+      basis:
+        category: evidence-assessed-objective
+        objectivePins:
+          - reference: alder-forge.critical-access.mfa@1
+            digest: sha256:4ec573c59dde2183a4fa35650f71015d503bba4402cdcd38be1521a6440fc5ab
+            groupRefs: [{name: critical-saas-administration}]
+    - id: "2409"
+      disposition: applicable
+      interpretation: The pinned direct Linux authorised-software baseline is the complete declared company basis.
+      basis:
+        category: direct-technical-policy
+        directPolicyPins:
+          - reference: alder-forge.corporate-linux.authorized-software@1
+            digest: sha256:fcdd64dc33cd322a0b5ac2f068009c2652dbf6d37e60023dd8a588cacff59d42
+            groupRefs: [{name: corporate-linux-build-systems}]
+    - id: "2410"
+      disposition: applicable
+      interpretation: Reviewed authorised-software-list review adoption and the bounded supplied assessment assertion are both required.
+      basis:
+        category: mixed-governance-assessed
+        governance:
+          subject: alder-forge-platform/authorized-software-review
+          owner: alder-forge-platform-policy-owner
+          determination: affirmative
+          review:
+            reference: alder-forge-governance/ASL-2026-Q3
+            approvedBy: alder-forge-governance
+            approvedAt: "2026-09-01T00:00:00Z"
+        objectivePins:
+          - reference: alder-forge.authorized-software-review@1
+            digest: sha256:658de2f55ed8d44ac3c518df13b335917c2ae9b20cf2177faa37c2a05fdaa181
+            groupRefs: [{name: alder-forge-legal-entity}]
+    - id: "2602"
+      disposition: applicable
+      interpretation: Reviewed awareness-training adoption and the bounded supplied assessment assertion are both required.
+      basis:
+        category: mixed-governance-assessed
+        governance:
+          subject: alder-forge-assurance/annual-awareness-training
+          owner: alder-forge-people-security-owner
+          determination: affirmative
+          review:
+            reference: alder-forge-governance/TRAINING-2026-09
+            approvedBy: alder-forge-governance
+            approvedAt: "2026-09-01T00:00:00Z"
+        objectivePins:
+          - reference: alder-forge.awareness-training@1
+            digest: sha256:84fc054e492e04bd115b002037a40759cd6775fa6a8670f8a25b7995280bd186
+            groupRefs: [{name: alder-forge-legal-entity}]

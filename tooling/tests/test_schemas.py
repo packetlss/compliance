@@ -29,6 +29,7 @@ class JsonSchemaTests(unittest.TestCase):
             "tools/schemas/assessment-results-v4.schema.json": "assessment-results/v4",
             "tools/schemas/composition-lock-v1alpha1.schema.json": "composition-lock/v1alpha1",
             "tools/schemas/composition.schema.json": "composition/v1alpha1",
+            "tools/schemas/framework-obligation-declaration-v1alpha1.schema.json": "framework-obligation-declaration/v1alpha1",
             "tools/schemas/policy-diff-set.schema.json": "policy-diff-set/v1alpha1",
             "tools/schemas/policy-diff.schema.json": "policy-diff/v1alpha1",
             "tools/schemas/policy-source-release-manifest.schema.json": "policy-source-release-manifest/v1",

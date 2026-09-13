@@ -1,6 +1,6 @@
 # ADR 0021: Project-governed framework obligation declarations and bounded satisfaction
 
-- **Status:** Accepted architecture under [#159](https://github.com/packetlss/compliance/issues/159); not implemented, experimental, not frozen
+- **Status:** Accepted architecture under [#159](https://github.com/packetlss/compliance/issues/159); implemented by [#161](https://github.com/packetlss/compliance/issues/161), experimental, not frozen
 - **Date:** 2026-09-13
 - **Refines:** [ADR 0006](0006-regulatory-assurance-and-external-adapter-boundary.md), [ADR 0011](0011-historical-assessment-and-operational-evidence-timeliness.md), [ADR 0016](0016-closed-world-policy-assessment.md), and [ADR 0018](0018-durable-assessment-explanation-facts.md)
 - **Exploration:** [#158](https://github.com/packetlss/compliance/issues/158)

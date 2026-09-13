@@ -14,3 +14,4 @@ paths:
   plan: generated/plans
   results: generated/results
   waivers: waivers
+  frameworkDeclarations: framework-obligations
