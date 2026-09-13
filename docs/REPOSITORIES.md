@@ -11,7 +11,7 @@ Repository layout is not semantic policy, release, or runtime identity. This doc
 | Tooling | `tooling/` | CLI, planner/evaluator, collectors, tooling-owned schemas, provenance/release implementation and tests; Python distribution `compliance-tooling` |
 | Shared policy | `policy-sources/control-library/` | Reusable controls/helpers, policy/evidence/parameter contracts, provider-neutral policy release/archive construction; semantic source `control-library` |
 | Verification policy | `policy-sources/verification-policy/` | Synthetic baselines, requirements/realizations, mappings, deliberate conflicts and verification-only resources; semantic source `verification-policy`; source-only lifecycle |
-| Ordinary projects | `projects/mock-fleet/`, `projects/server-personas/` | Independent exploratory project inventory, assignments, fixtures, waivers and generated-state paths |
+| Ordinary projects | `projects/mock-fleet/`, `projects/server-personas/`, `projects/alder-forge-dcc-level3/` | Independent exploratory/reference project inventory, assignments, fixtures, waivers and generated-state paths |
 | IAM synthetic boundary | `verification/fixtures/iam-private-boundary/` | Synthetic proof of a separately materialized `environment-private` source; not a real private-data repository |
 | Canonical scenarios | `verification/scenarios/` | Deterministic complete integration, expected outcomes, all 21 public CLI leaves and 19 domain features |
 | System architecture/workflow | `docs/`, root `AGENTS.md` | Current normative architecture, ADRs, workflow, repository/trust boundaries and migration provenance |

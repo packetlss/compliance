@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: InventoryGroup
+metadata:
+  name: alder-forge-legal-entity
+spec:
+  selector:
+    matchLabels:
+      company: alder-forge
+      scope: legal-entity

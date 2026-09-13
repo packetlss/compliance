@@ -390,6 +390,8 @@ projects:
     config: projects/mock-fleet/compliance.yaml
   server-personas:
     config: projects/server-personas/compliance.yaml
+  alder-forge-dcc-level3:
+    config: projects/alder-forge-dcc-level3/compliance.yaml
   iam-realization:
     config: verification/fixtures/iam-private-boundary/compliance.yaml
 ```

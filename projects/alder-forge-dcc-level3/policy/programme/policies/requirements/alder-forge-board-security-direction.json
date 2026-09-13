@@ -1,0 +1,16 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "ControlRequirement",
+  "metadata": {
+    "id": "alder-forge.board-security-direction",
+    "revision": 1,
+    "origin": {"type": "alder-forge-company-interpretation", "name": "Alder Forge board security direction"}
+  },
+  "spec": {
+    "title": "Board security direction is attributable and current",
+    "statement": "Alder Forge's board security direction is supported by an attributable, current company assertion for the supplied legal-entity scope.",
+    "rationale": "This bounded objective records the company interpretation used for the mapped DEFSTAN control; it does not model governance workflow completeness.",
+    "external_refs": ["DEFSTAN-05-138-ISSUE-4:1101"],
+    "parameters": {}
+  }
+}

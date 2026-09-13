@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: Subject
+metadata:
+  name: alder-build-01
+  labels:
+    company: alder-forge
+    platform: corporate
+    role: build-administration
+  annotations:
+    compliance.example/description: Fictional Linux build and administration system in the supplied Alder Forge scope
+spec:
+  id: host/alder-build-01
+  type: linux-host
+  lifecycle: active
+  source:
+    name: alder-forge-synthetic-platform-catalog
+    externalId: LNX-BUILD-01
+    observedAt: "2026-09-01T00:00:00Z"
+    revision: synthetic-snapshot-1

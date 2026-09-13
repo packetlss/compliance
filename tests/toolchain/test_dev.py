@@ -160,7 +160,7 @@ class CliAdapterTests(unittest.TestCase):
         self.assertEqual(config["selected_project"], "mock-fleet")
         self.assertEqual(
             [project["name"] for project in config["projects"]],
-            ["mock-fleet", "server-personas"],
+            ["alder-forge-dcc-level3", "mock-fleet", "server-personas"],
         )
 
         coverage_result = run_dev(

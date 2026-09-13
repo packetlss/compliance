@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: Subject
+metadata:
+  name: alder-forge-defence-systems
+  labels:
+    company: alder-forge
+    scope: legal-entity
+  annotations:
+    compliance.example/description: Fictional Alder Forge Defence Systems Ltd legal-entity scope supplied for this representative slice
+spec:
+  id: entity/alder-forge-defence-systems
+  type: entity
+  lifecycle: active
+  source:
+    name: alder-forge-synthetic-entity-register
+    externalId: AFDS-001
+    observedAt: "2026-09-01T00:00:00Z"
+    revision: synthetic-snapshot-1

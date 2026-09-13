@@ -1,0 +1,16 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "ControlRequirement",
+  "metadata": {
+    "id": "alder-forge.critical-access.mfa",
+    "revision": 1,
+    "origin": {"type": "alder-forge-corporate-platform-interpretation", "name": "Alder Forge critical access MFA"}
+  },
+  "spec": {
+    "title": "Critical access is protected by multi-factor authentication",
+    "statement": "Interactive access to the supplied critical Alder Forge administration scope requires multi-factor authentication.",
+    "rationale": "The objective is technology-neutral; this tranche selects only a SaaS realization whose existing observation reports the MFA property.",
+    "external_refs": ["DEFSTAN-05-138-ISSUE-4:2201"],
+    "parameters": {}
+  }
+}

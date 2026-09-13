@@ -1,0 +1,14 @@
+{
+  "subject": {"id": "entity/alder-forge-defence-systems", "type": "entity"},
+  "type": "organization.assertion/v1",
+  "collector": {"id": "mock/alder-forge-training-register", "version": "0.1.0"},
+  "payload": {
+    "beneficiary": "entity/alder-forge-defence-systems",
+    "asserted_by": "Alder Forge people-security owner (synthetic)",
+    "source_locator": "synthetic://alder-forge/training/ANNUAL-2026-09",
+    "scheme": "alder-forge.defstan-2602.awareness-training",
+    "outcome": "negative",
+    "valid_from": "2026-08-01T00:00:00Z",
+    "valid_until": "2026-10-31T23:59:59Z"
+  }
+}

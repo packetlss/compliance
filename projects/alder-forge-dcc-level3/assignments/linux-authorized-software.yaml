@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: PolicyAssignment
+metadata:
+  name: alder-forge-linux-authorized-software
+spec:
+  targetRef:
+    kind: InventoryGroup
+    name: corporate-linux-build-systems
+  baselineRefs:
+    - name: alder-forge.corporate-linux.authorized-software
+      revision: "1"

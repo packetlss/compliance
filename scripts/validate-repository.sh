@@ -54,6 +54,7 @@ require_file projects/README.md
 require_file projects/.gitignore
 require_file projects/mock-fleet/compliance.yaml
 require_file projects/server-personas/compliance.yaml
+require_file projects/alder-forge-dcc-level3/compliance.yaml
 require_file scripts/validate-development-projects.sh
 require_file scripts/development-projects/validation_inputs.py
 require_file scripts/development-projects/validate-all-development-projects.sh
@@ -134,7 +135,7 @@ unexpected_policy_source="$(
 unexpected_project_entry="$(
   find projects -mindepth 1 -maxdepth 1 \
     ! -name .gitignore ! -name AGENTS.md ! -name README.md \
-    ! -name mock-fleet ! -name server-personas -print -quit
+    ! -name mock-fleet ! -name server-personas ! -name alder-forge-dcc-level3 -print -quit
 )"
 [[ -z "$unexpected_project_entry" ]] \
   || fail "unapproved ordinary project entry appeared: $unexpected_project_entry"
