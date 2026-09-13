@@ -104,7 +104,7 @@ plan provenance, or add a second resolver, persistent Coverage state or cache.
 Historical `assessment` explanation continues to use only the exact retained,
 relationally validated plan/result pair and never re-resolves current policy.
 For each bound Objective slot, JSON explanation includes `slot`, `effective_value`,
-`binding_mode`, and `sealed`. Additive slots also include bounded `composition`
+and `binding_mode`. Additive slots also include bounded `composition`
 with the base value and applicability, semantic contributions and all applicability
 paths, and effective member origins. It omits frozen resource documents, digests,
 and policy-source locators from the ordinary view.

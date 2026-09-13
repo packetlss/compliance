@@ -80,7 +80,6 @@ states what changed, and includes the required governance metadata.
 | `substitute` | Use a different implementation/evidence contract for the same desired outcome | Not necessarily |
 | `annotate` | Change company-facing severity, text, mappings, or remediation | No |
 | `add` | Add a new company control instance | No deviation from the parent |
-| `seal` | Prevent selected operation types in lower overlays | No |
 | `resolve_conflict` | Proposed explicit resolution for divergent multiple-parent definitions; not accepted by the current schema or resolver | Depends on resolution |
 
 There is deliberately no unqualified `remove` or arbitrary `replace` operation.
@@ -373,8 +372,6 @@ whole-framework claim additionally requires complete declared framework scope.
 
 ## 10. Governance choices still open
 
-- Whether a company baseline can be marked `sealed`, preventing lower use-case
-  overlays from tailoring or excluding selected controls.
 - Which deviation fields are mandatory and whether approvals live in Git,
   another governance system, or both.
 - Whether `review_after` is mandatory for every deviation or only selected
@@ -388,7 +385,7 @@ whole-framework claim additionally requires complete declared framework scope.
 The executable suite implements this inheritance chain with a small
 tooling-owned synthetic macOS fixture and the active mock-fleet project. The
 resolver currently supports pinned parent digests, control fingerprints, `tailor`,
-`exclude`, `substitute`, `annotate`, `add`, and `seal`. Its rendered plan keeps
+`exclude`, `substitute`, `annotate`, and `add`. Its rendered plan keeps
 active and excluded controls separate while preserving both baseline and group
 assignment provenance.
 
@@ -401,9 +398,9 @@ Assessment plans retain structured validation failures as resolution errors
 rather than crashing or evaluating partially valid policy.
 
 Automated tests cover successful tailoring and exclusion, stale fingerprints
-after an upstream rebase, and rejection of lower overlays that modify sealed
-controls. Conflict resolution, review-date enforcement, and external approval
-verification remain future work.
+after an upstream rebase, and divergent independently applicable definitions.
+Conflict resolution, review-date enforcement, and external approval verification
+remain future work.
 
 The mock cloud fleet adds two framework-derived profiles mapped to CSA CCM
 v4.1: one for an AWS account and one for a generic SaaS tenant. They deliberately

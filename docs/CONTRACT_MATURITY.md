@@ -104,7 +104,7 @@ ADR 0010's assessment-time corrections remain its existing responsibility.
 
 [ADR 0012](adr/0012-explicit-policy-parameter-resolution.md) is **Experimental, implemented**, promoted under #37 with the single bounded migration contract [#73](https://github.com/packetlss/compliance/issues/73). It accepts explicit declarations, bindings, descendant tailoring, typed requirement-slot consumption, policy-owned effective freshness and immutable resolved-plan provenance. It does not freeze wire syntax, schema/artifact versions or identity algorithms.
 
-Current requirement/realization schemas support explicit pinned slots and direct typed consumption. Policy bindings own effective `max_age`; Control manifests provide dependency contracts. The experimental frozen records are specified in [policy parameters](../tooling/docs/policy-parameters.md). Successor schema, fingerprint, validation, explanation and policy-diff obligations are in ADR 0012's migration table. Development artifacts may need regeneration; historical artifacts retain their original identity and meaning. ADR 0016 below supersedes ADRs 0013–0015 and narrows core responsibility. ADR 0012's original parameter-resolution model, including sealing and fixed/sealed additive-set closure, remains the current executable contract until #144 completes.
+Current requirement/realization schemas support explicit pinned slots and direct typed consumption. Policy bindings own effective `max_age`; Control manifests provide dependency contracts. The experimental frozen records are specified in [policy parameters](../tooling/docs/policy-parameters.md). Successor schema, fingerprint, validation, explanation and policy-diff obligations are in ADR 0012's migration table. Development artifacts may need regeneration; historical artifacts retain their original identity and meaning. ADR 0016 below supersedes ADRs 0013–0015 and narrows core responsibility. ADR 0020's #144 cutover removes sealing and makes fixed base ownership compatible with valid descendant tailoring and independently applicable contributions.
 
 The string-only additive-set extension accepted under
 [#127](https://github.com/packetlss/compliance/issues/127) is **Experimental,
@@ -112,13 +112,12 @@ implemented under [#129](https://github.com/packetlss/compliance/issues/129)**.
 It is the sole accepted exception to atomic complete-value
 composition and requires explicit declaration opt-in, exactly one current compatible
 declaration and base, order-independent canonical union, complete contribution/path/
-member attribution, and frozen-plan validation. Its fixed/sealed closure remains
-the current executable behavior. [ADR 0020](adr/0020-governed-policy-composition-without-sealing.md)
-is **Accepted design, not yet implemented**: #144 will remove sealing and make
-fixed base ownership compatible with valid tailoring and independently applicable
+member attribution, and frozen-plan validation. ADR 0020's #144 amendment removes
+sealing and fixed/sealed contribution closure while preserving monotonic union:
+fixed bases may be tailored and receive compatible independently applicable
 contributions. Atomic default semantics remain intact. The coordinated in-place
-schema/runtime/frozen-plan/Coverage cutover will change no artifact version or
-identity algorithm and will introduce no compatibility reader or freeze.
+schema/runtime/frozen-plan/Coverage cutover changes no artifact version or identity
+algorithm and introduces no compatibility reader or freeze.
 
 ## Typed identifier namespaces and schema URI ownership
 

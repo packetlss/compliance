@@ -194,24 +194,37 @@ class PolicyParameterTests(unittest.TestCase):
         fixed = copy.deepcopy(self.requirement)
         fixed['spec']['parameters']['age'].update(binding_mode='fixed', value='30d')
         state = p.declarations(fixed)['age']
-        self.assertTrue(state['sealed'])
+        self.assertNotIn('sealed', state)
         self.assertEqual(state['value'], '2592000s')
         self.baseline['metadata']['id'] = 'outsider'
         with self.assertRaisesRegex(p.ParameterResolutionError, 'scope'): self.states()
 
-    def test_seal_is_retained_in_descendants(self):
-        child = self.derive()
-        state = self.states('enclave@1')['age']
-        grandchild = {'metadata': {'id': 'enclave', 'revision': 2}, 'spec': {
-            'requirements': [self.pin], 'extends': {'baseline': 'enclave@1', 'digest': p.digest(child)},
-            'parameter_operations': [self.operation('seal', state)]}}
-        self.catalog['enclave@2'] = grandchild
-        sealed = self.states('enclave@2')['age']
-        self.assertTrue(sealed['sealed'])
-        self.catalog['enclave@3'] = {'metadata': {'id': 'enclave', 'revision': 3}, 'spec': {
-            'requirements': [self.pin], 'extends': {'baseline': 'enclave@2', 'digest': p.digest(grandchild)},
-            'parameter_operations': [self.operation('bind', sealed, to='1d')]}}
-        with self.assertRaisesRegex(p.ParameterResolutionError, 'sealed'): self.states('enclave@3')
+    def test_fixed_value_can_be_tailored_by_a_governed_descendant(self):
+        fixed = copy.deepcopy(self.requirement)
+        fixed['spec']['parameters']['age'].update(
+            binding_mode='fixed', value='30d', binding_scope=['enclave'],
+        )
+        self.requirements['objective@1'] = fixed
+        self.pin['digest'] = p.digest(fixed)
+        self.baseline['spec']['requirements'] = [self.pin]
+        self.baseline['spec']['parameter_operations'] = []
+        state = self.states()['age']
+        child = {
+            'metadata': {'id': 'enclave', 'revision': 1},
+            'spec': {
+                'requirements': [self.pin],
+                'extends': {'baseline': 'company@1', 'digest': p.digest(self.baseline)},
+                'parameter_operations': [self.operation(
+                    'tailor', state, **{'from': '30d', 'to': '15d', 'deviation': {
+                        'id': 'DEV-1', 'classification': 'specialization',
+                        'rationale': 'Synthetic enclave intent',
+                        'approval_ref': 'provenance-only', 'review_after': '2027-01-01',
+                    }},
+                )],
+            },
+        }
+        self.catalog['enclave@1'] = child
+        self.assertEqual(self.states('enclave@1')['age']['value'], '1296000s')
 
     def test_missing_edges_and_literal_imitation_fail(self):
         for mutate in [lambda r: r['spec'].update(parameter_links=[]),
@@ -427,35 +440,8 @@ class PolicyParameterTests(unittest.TestCase):
                 self.selected('contributor@1', baselines, atomic_requirements, 'feature'),
             ], baselines)
 
-    def test_additive_set_refuses_fixed_sealed_and_ambiguous_bases(self):
+    def test_additive_set_accepts_fixed_bases_and_rejects_ambiguous_bases(self):
         requirement, requirements, baselines = self.additive_inputs()
-        baselines['contributor@1'] = self.contribution_baseline(['member'])
-        initial = p.declarations(requirement)['allowed']
-        sealed_state = self.selected('base@1', baselines, requirements, 'base')['states']['objective@1']['allowed']
-        sealed_base = {
-            'metadata': {'id': 'base', 'revision': 2},
-            'spec': {
-                'requirements': copy.deepcopy(baselines['base@1']['spec']['requirements']),
-                'extends': {
-                    'baseline': 'base@1',
-                    'digest': p.digest(p.document(baselines['base@1'])),
-                },
-                'parameter_operations': [{
-                    'id': 'seal-allowed',
-                    'op': 'seal',
-                    'target': copy.deepcopy(initial['pin']),
-                    'expected_parent_fingerprint': p.fingerprint(sealed_state),
-                }],
-            },
-            '_sources': [{'policy_source': 'test', 'path': 'sealed.json'}],
-        }
-        baselines['base@2'] = sealed_base
-        with self.assertRaisesRegex(p.ParameterResolutionError, 'sealed'):
-            p.compose_selected([
-                self.selected('base@2', baselines, requirements, 'base'),
-                self.selected('contributor@1', baselines, requirements, 'feature'),
-            ], baselines)
-
         fixed = copy.deepcopy(requirement)
         fixed_declaration = fixed['spec']['parameters']['allowed']
         fixed_declaration.update(binding_mode='fixed', value=['fixed'])
@@ -474,11 +460,12 @@ class PolicyParameterTests(unittest.TestCase):
             'fixed-policy@1': fixed_base,
             'contributor@1': self.contribution_baseline(['member']),
         }
-        with self.assertRaisesRegex(p.ParameterResolutionError, 'fixed or sealed'):
-            p.compose_selected([
-                self.selected('fixed-policy@1', fixed_baselines, fixed_requirements, 'fixed'),
-                self.selected('contributor@1', fixed_baselines, fixed_requirements, 'feature'),
-            ], fixed_baselines)
+        selections = [
+            self.selected('fixed-policy@1', fixed_baselines, fixed_requirements, 'fixed'),
+            self.selected('contributor@1', fixed_baselines, fixed_requirements, 'feature'),
+        ]
+        p.compose_selected(selections, fixed_baselines, fixed_requirements)
+        self.assertEqual(selections[0]['states']['objective@1']['allowed']['value'], ['fixed', 'member'])
 
         _, requirements, baselines = self.additive_inputs()
         duplicate = copy.deepcopy(baselines['base@1'])

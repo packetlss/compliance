@@ -1556,7 +1556,6 @@ def control_definition_fingerprint(control: JsonObject) -> str:
         "deviations",
         "disposition",
         "lineage",
-        "overlay_policy",
     }
     return content_digest({key: value for key, value in control.items() if key not in ignored})
 
@@ -1741,16 +1740,6 @@ def resolve_baseline(
                 target=target,
             )
 
-        blocked = control.get("overlay_policy", {}).get("blocked_operations", [])
-        if operation_name in blocked:
-            raise BaselineResolutionError(
-                "sealed-control",
-                baseline=reference,
-                operation=operation_name,
-                target=target,
-                sealed_by=control["overlay_policy"]["sealed_by"],
-            )
-
         expected_fingerprint = operation.get("expected_parent_fingerprint")
         if expected_fingerprint != control["definition_fingerprint"]:
             raise BaselineResolutionError(
@@ -1814,16 +1803,6 @@ def resolve_baseline(
             control.update(copy.deepcopy(annotations))
             if control["alignment"] == "unaltered":
                 control["alignment"] = "annotated"
-        elif operation_name == "seal":
-            blocked_operations = operation.get(
-                "blocked_operations",
-                ["tailor", "exclude", "substitute"],
-            )
-            control["overlay_policy"] = {
-                "blocked_operations": sorted(set(blocked_operations)),
-                "reason": operation["reason"],
-                "sealed_by": reference,
-            }
         else:
             raise BaselineResolutionError(
                 "unsupported-overlay-operation",
@@ -2243,9 +2222,6 @@ def render_plan(
                         "provenance": [baseline_provenance],
                         "implementation_sources": definition.get("_sources", []),
                     }
-                    if "overlay_policy" in instance:
-                        excluded_candidate["overlay_policy"] = instance["overlay_policy"]
-
                     existing_excluded = excluded_controls.get(instance["instance_id"])
                     if existing_excluded is None:
                         excluded_controls[instance["instance_id"]] = excluded_candidate
@@ -2299,8 +2275,6 @@ def render_plan(
                     "provenance": [baseline_provenance],
                     "implementation_sources": definition.get("_sources", []),
                 }
-                if "overlay_policy" in instance:
-                    candidate["overlay_policy"] = instance["overlay_policy"]
                 if "external_refs" in instance:
                     candidate["external_refs"] = instance["external_refs"]
                 if "equivalence_ref" in instance:

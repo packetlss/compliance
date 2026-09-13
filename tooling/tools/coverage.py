@@ -259,7 +259,6 @@ def _objective_parameters(requirement: JsonObject) -> list[JsonObject]:
             "slot": slot,
             "effective_value": copy.deepcopy(state["value"]),
             "binding_mode": state["declaration"]["binding_mode"],
-            "sealed": state["sealed"],
         }
         composition = state.get("composition")
         if composition is not None:
@@ -320,7 +319,6 @@ _FAILURE_CONTEXT_FIELDS = {
     "implementation": "check_implementation",
     "target": "target_check_id",
     "operation": "policy_operation",
-    "sealed_by": "sealing_policy_reference",
     "path": "authored_path",
     "fields": "affected_fields",
 }

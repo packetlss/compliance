@@ -574,7 +574,6 @@ class CoverageOperatorViewTests(unittest.TestCase):
                 "states": {
                     "allowed": {
                         "bound": True,
-                        "sealed": False,
                         "value": ["base", "postgresql"],
                         "declaration": {"binding_mode": "open"},
                         "composition": {

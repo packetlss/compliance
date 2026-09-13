@@ -42,17 +42,6 @@
         }
       },
       {
-        "op": "seal",
-        "target": "benchmark.example.macos.gatekeeper-enabled",
-        "expected_parent_fingerprint": "sha256:17be544c770413c1cb3f5ac757dcf35d25031aa95dca85e636b84c5a62cdb8ae",
-        "blocked_operations": [
-          "tailor",
-          "exclude",
-          "substitute"
-        ],
-        "reason": "Use-case overlays may not weaken the company Gatekeeper requirement."
-      },
-      {
         "op": "add",
         "control": {
           "instance_id": "company.macos.opa-required",

@@ -251,7 +251,7 @@ def declarations(requirement):
                'declaration_digest': digest(declaration), 'schema_digest': declaration['schema_digest']}
         state = {'identity': {'requirement': clean['metadata']['id'], 'slot': name},
                  'pin': pin, 'declaration': copy.deepcopy(declaration),
-                 'bound': fixed, 'sealed': fixed, 'history': []}
+                 'bound': fixed, 'history': []}
         if fixed:
             state['value'] = value_for(declaration, declaration['value'])
         states[name] = state
@@ -296,8 +296,11 @@ def resolve(reference, baselines, requirements, stack=()):
         require(state is not None, 'missing parameter target')
         require(equal(target, state['pin']), 'stale declaration/schema pin')
         require(operation['expected_parent_fingerprint'] == fingerprint(state), 'stale parameter parent fingerprint')
-        require(not state['sealed'], 'fixed or sealed parameter cannot change')
-        require(clean_baseline['metadata']['id'] in state['declaration']['binding_scope'], 'parameter operation outside structural scope')
+        require(
+            state['declaration'].get('binding_scope') is not None
+            and clean_baseline['metadata']['id'] in state['declaration']['binding_scope'],
+            'parameter operation outside structural scope',
+        )
         before = fingerprint(state)
         op = operation['op']
         if op == 'bind':
@@ -311,9 +314,6 @@ def resolve(reference, baselines, requirements, stack=()):
             require(all(deviation.get(key) for key in ('id', 'classification', 'rationale', 'approval_ref', 'review_after')),
                     'tailoring requires complete deviation provenance')
             state['value'] = value_for(state['declaration'], operation['to'])
-        elif op == 'seal':
-            require(state['bound'], 'cannot seal an unresolved required value')
-            state['sealed'] = True
         else:
             raise ParameterResolutionError('unsupported parameter operation')
         state['history'].append({'baseline': reference, 'operation': copy.deepcopy(operation),
@@ -409,7 +409,6 @@ def compose_selected(resolutions, baselines, requirements=None):
         require(validate_composition(representative['declaration']) == 'additive-set',
                 'additive contribution targets an atomic or incompatible slot')
         require(representative['bound'], 'additive contribution has no applicable declaration or base')
-        require(not representative['sealed'], 'fixed or sealed parameter rejects additive contributions')
         record['applicability'].sort(key=canonical_json_bytes)
         contributions_by_slot.setdefault(identity, []).append(record)
 
@@ -741,8 +740,7 @@ def validate_control_instance_identities(instance):
         )
     validate_control_lineage_identities(instance.get('lineage', []))
     validate_control_derivation_identities(instance.get('derivations', []))
-    if 'overlay_policy' in instance:
-        validate_control_overlay_policy_identities(instance['overlay_policy'])
+    require('overlay_policy' not in instance, 'frozen Control contains removed overlay policy')
 
 
 def validate_control_lineage_identities(lineage):
@@ -809,18 +807,6 @@ def validate_control_derivation_identities(derivations):
         )
         for snapshot_name in ('before', 'after'):
             validate_control_criteria_identities(derivation.get(snapshot_name))
-
-
-def validate_control_overlay_policy_identities(overlay_policy):
-    require(
-        isinstance(overlay_policy, dict),
-        'frozen Control overlay policy must be an object',
-    )
-    require_identity(
-        overlay_policy.get('sealed_by'),
-        REFERENCE,
-        'invalid frozen Control sealing reference',
-    )
 
 
 def validate_requirement_declaration_identities(
@@ -925,6 +911,7 @@ def validate_parameter_state_identities(
         state['pin'].get('schema_digest') == state['declaration'].get('schema_digest'),
         'stale frozen parameter schema pin',
     )
+    require('sealed' not in state, 'frozen parameter state contains removed sealed field')
     for history in state.get('history', []):
         require(isinstance(history, dict), 'frozen parameter history must be an object')
         require_identity(
@@ -934,6 +921,7 @@ def validate_parameter_state_identities(
         )
         operation = history.get('operation')
         require(isinstance(operation, dict), 'frozen parameter history operation must be an object')
+        require(operation.get('op') != 'seal', 'frozen parameter history contains removed seal operation')
         validate_parameter_pin_identities(
             operation.get('target'),
             requirement=requirement_reference,
@@ -1210,8 +1198,7 @@ def validate_frozen_contract_identities(plan):
             controls[control['implementation']] = definition
             validate_control_lineage_identities(control.get('lineage', []))
             validate_control_derivation_identities(control.get('derivations', []))
-            if 'overlay_policy' in control:
-                validate_control_overlay_policy_identities(control['overlay_policy'])
+            require('overlay_policy' not in control, 'frozen Control contains removed overlay policy')
             if control['alignment'] == 'realization':
                 require(
                     all(
@@ -1223,7 +1210,6 @@ def validate_frozen_contract_identities(plan):
                             'deviations',
                             'disposition',
                             'lineage',
-                            'overlay_policy',
                         )
                     ),
                     'frozen realization check contains technical derivation facts',
@@ -1256,13 +1242,8 @@ def validate_frozen_contract_identities(plan):
                     ),
                     'frozen technical deviations differ from retained instance',
                 )
-                require(
-                    equal(
-                        instance.get('overlay_policy'),
-                        control.get('overlay_policy'),
-                    ),
-                    'frozen technical overlay policy differs from retained instance',
-                )
+                require('overlay_policy' not in instance,
+                        'frozen technical instance contains removed overlay policy')
 
             technical_lineage = set()
             realization_lineage = set()
@@ -1370,11 +1351,6 @@ def validate_frozen_contract_identities(plan):
                             lineage_entry['baseline'] in technical_lineage,
                             'frozen inherited lineage has no selected baseline ancestry',
                         )
-            if 'overlay_policy' in control:
-                require(
-                    control['overlay_policy']['sealed_by'] in technical_lineage,
-                    'frozen Control seal has no selected baseline ancestry',
-                )
             require(
                 all(
                     deviation in technical_deviations

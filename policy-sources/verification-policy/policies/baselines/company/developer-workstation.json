@@ -10,7 +10,7 @@
     "extends": [
       {
         "baseline": "company.macos-policy@1",
-        "digest": "sha256:66a2faae762d3e73bb747e6776b8f6558ca2b92f2cfb6f6c9fb1dd3420dbd3bf"
+        "digest": "sha256:9444dce4d26bbe8c2acc6741d0da56045c05a93a7386c9f1e3ad74db454ef44e"
       }
     ],
     "operations": [

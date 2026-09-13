@@ -325,7 +325,6 @@ class PolicyDiffTests(unittest.TestCase):
                 "lineage",
             )
         })
-        active["policy_inputs"]["instance"].pop("overlay_policy", None)
         before["controls"].append(active)
         before["controls"].sort(key=lambda item: item["instance_id"])
         self.resign(before)
@@ -385,7 +384,6 @@ class PolicyDiffTests(unittest.TestCase):
                 "lineage",
             )
         })
-        active["policy_inputs"]["instance"].pop("overlay_policy", None)
         before["controls"].append(active)
         before["controls"].sort(key=lambda item: item["instance_id"])
         self.resign(before)

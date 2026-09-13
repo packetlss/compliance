@@ -1,6 +1,6 @@
 # ADR 0012: Explicit policy-parameter resolution and policy-owned evidence freshness
 
-- **Status:** Implemented under #73; additive-set extension implemented under #129; accepted successor amendment in [ADR 0020](0020-governed-policy-composition-without-sealing.md) is not yet implemented (#144); experimental, not frozen
+- **Status:** Implemented under #73; additive-set extension implemented under #129 and amended under [#144](https://github.com/packetlss/compliance/issues/144); experimental, not frozen
 - **Date:** 2026-09-05
 - **Promotion history:** [#37](https://github.com/packetlss/compliance/issues/37)
 - **Runtime/schema migration:** [#73](https://github.com/packetlss/compliance/issues/73); no runtime change in this promotion
@@ -18,13 +18,10 @@ starting point. [The implementation contract](../../tooling/docs/policy-paramete
 specifies the resulting experimental representation and implemented additive-set
 extension.
 
-> **Accepted successor amendment, not current executable behavior.** ADR 0020
-> deletes parameter sealing and replaces only the former fixed/sealed additive-set
-> closure clauses with monotonic governed contribution composition. The
-> declaration/binding/tailoring/consumption model of this ADR remains current.
-> Until #144 merges, current runtime/schema behavior still includes sealing and
-> fixed/sealed contribution closure; the successor clauses below are normative
-> target semantics rather than a claim of completed implementation.
+> **Implemented successor amendment.** ADR 0020 deletes parameter sealing and
+> replaces the former fixed/sealed additive-set closure clauses with monotonic
+> governed contribution composition. The declaration/binding/tailoring/consumption
+> model of this ADR remains current.
 
 ## Context and authority
 
@@ -510,12 +507,10 @@ is frozen by this summary.
 | Fingerprints, validation, explanation and policy diff | Current literal instance fingerprints and frozen derivations | Include applicable slot/schema/operation/linkage/destination/freshness facts; explain and compare frozen facts without mutable-policy resolution |
 | Maintained policy/projects/fixtures/scenarios | Current literals, pins and Control-owned ages | Explicit synthetic bindings/edges/freshness, coordinated schema and consumer cutover, deliberate changed expectations and regenerated development artifacts |
 
-The additive-set extension accepted under #127 and implemented under #129 is part
-of the current executable contract, including its predecessor fixed/sealed closure.
-ADR 0020's seal-free successor is accepted design, not yet implemented; #144 owns
-its coordinated schema/runtime/frozen-plan/Coverage cutover. That cutover preserves
-the table above while removing sealing and retaining only the bounded declaration
-opt-in, contributions, union, attribution and frozen-plan validation defined here.
+The additive-set extension accepted under #127 and implemented under #129 is
+amended by ADR 0020's coordinated #144 schema/runtime/frozen-plan/Coverage cutover.
+It retains only the bounded declaration opt-in, contributions, union, attribution
+and frozen-plan validation defined here.
 
 The checked current sources include the policy schemas under
 [`policy-sources/control-library/policies/schemas/policy/`](../../policy-sources/control-library/policies/schemas/policy/),

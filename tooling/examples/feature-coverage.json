@@ -73,7 +73,7 @@
       "features": [
         "policy.overlay-provenance",
         "policy.overlay-substitute",
-        "policy.seal-enforcement"
+        "policy.governed-tailoring"
       ]
     },
     "cross-project-coverage": {

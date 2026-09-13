@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from jsonschema import Draft202012Validator
+
 from contract_fixtures import evidence_schema, fixture_root
 
 from tools.artifact_validation import validate_assessment_plan
@@ -365,19 +367,8 @@ class BaselineOverlayTests(unittest.TestCase):
 
         self.assertEqual(raised.exception.details["type"], "parent-control-fingerprint-mismatch")
 
-    def test_lower_overlay_cannot_change_sealed_control(self):
+    def test_governed_descendant_can_tailor_inherited_control(self):
         company = self.company_overlay()
-        company["spec"]["operations"].append({
-            "op": "seal",
-            "target": "benchmark.setting",
-            "expected_parent_fingerprint": control_definition_fingerprint({
-                "instance_id": "benchmark.setting",
-                "implementation": "test.setting-equals",
-                "parameters": {"expected": "company"},
-            }),
-            "blocked_operations": ["tailor", "exclude", "substitute"],
-            "reason": "Test company control is mandatory.",
-        })
         self.catalog["company.test@1"] = catalog_document(company)
         resolved_company = resolve_baseline("company.test@1", self.catalog)
 
@@ -402,10 +393,11 @@ class BaselineOverlayTests(unittest.TestCase):
         }
         self.catalog["company.child@1"] = catalog_document(child)
 
-        with self.assertRaises(BaselineResolutionError) as raised:
-            resolve_baseline("company.child@1", self.catalog)
-
-        self.assertEqual(raised.exception.details["type"], "sealed-control")
+        resolved = resolve_baseline("company.child@1", self.catalog)
+        self.assertEqual(
+            resolved["controls"]["benchmark.setting"]["parameters"],
+            {"expected": "weaker"},
+        )
 
 
 class PolicySchemaTests(unittest.TestCase):
@@ -436,6 +428,40 @@ class PolicySchemaTests(unittest.TestCase):
 
         self.assertEqual(len(catalog), 10)
         self.assertEqual(errors, [])
+
+    def test_policy_schemas_reject_removed_seal_operations(self):
+        overlay = {
+            "op": "seal",
+            "target": "test.control",
+            "expected_parent_fingerprint": "sha256:" + "0" * 64,
+            "reason": "obsolete",
+        }
+        parameter = {
+            "id": "obsolete",
+            "op": "seal",
+            "target": {
+                "requirement": "test.requirement@1",
+                "digest": "sha256:" + "0" * 64,
+                "slot": "age",
+                "declaration_digest": "sha256:" + "0" * 64,
+                "schema_digest": "sha256:" + "0" * 64,
+            },
+            "expected_parent_fingerprint": "sha256:" + "0" * 64,
+        }
+        overlay_schema = load_json(self.schemas / "baseline-overlay.schema.json")
+        requirement_schema = load_json(
+            self.schemas / "requirement-baseline.schema.json"
+        )
+        self.assertFalse(
+            Draft202012Validator(overlay_schema).is_valid(
+                {"operations": [overlay]}
+            )
+        )
+        self.assertFalse(
+            Draft202012Validator(requirement_schema).is_valid(
+                {"parameter_operations": [parameter]}
+            )
+        )
 
 
     def test_repository_control_manifests_validate(self):

@@ -101,7 +101,7 @@ class ExampleCoverageTests(unittest.TestCase):
             "policy.multi-source-realization",
             "policy.overlay-provenance",
             "policy.overlay-substitute",
-            "policy.seal-enforcement",
+            "policy.governed-tailoring",
             "requirements.all-of",
             "requirements.missing-evidence",
             "requirements.realization-roll-up",
