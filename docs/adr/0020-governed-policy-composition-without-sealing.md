@@ -1,6 +1,6 @@
 # ADR 0020: Governed policy composition without sealing
 
-- **Status:** Accepted; implementation tracked by [#144](https://github.com/packetlss/compliance/issues/144); experimental, not frozen
+- **Status:** Accepted design, not yet implemented; implementation tracked by [#144](https://github.com/packetlss/compliance/issues/144); experimental, not frozen
 - **Date:** 2026-09-13
 - **Amends:** [ADR 0012](0012-explicit-policy-parameter-resolution.md)
 - **Refines:** [ADR 0019](0019-typed-identifier-namespaces-and-schema-uri-ownership.md)
@@ -101,7 +101,7 @@ algorithm, or artifact family.
 
 ## Consequences and implementation boundary
 
-The coordinated implementation in #144 removes sealing from authoring, runtime,
+The coordinated implementation in #144 will remove sealing from authoring, runtime,
 frozen-plan admission/validation, current operator/explanation surfaces, maintained
 synthetic policy, and seal-only verification. It regenerates naturally affected
 provisional state/resource/source/content/composition/member-plan/operation/plan/

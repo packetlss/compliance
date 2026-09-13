@@ -34,7 +34,7 @@ Accepted destination decisions:
 
 - [ADR 0019 — Typed identifier namespaces and schema URI ownership](0019-typed-identifier-namespaces-and-schema-uri-ownership.md) — implemented under #136; experimental, not frozen. Its architecture contract is #134 and exploration is #132.
 
-- [ADR 0020 — Governed policy composition without sealing](0020-governed-policy-composition-without-sealing.md) — accepted; implementation is tracked by [#144](https://github.com/packetlss/compliance/issues/144). It amends ADR 0012's sealing/additive-set closure clauses and refines ADR 0019's pre-freeze schema-evolution rule.
+- [ADR 0020 — Governed policy composition without sealing](0020-governed-policy-composition-without-sealing.md) — accepted design, not yet implemented; [#144](https://github.com/packetlss/compliance/issues/144) owns the coordinated cutover. It amends ADR 0012's sealing/additive-set closure clauses and refines ADR 0019's pre-freeze schema-evolution rule.
 
 Current system-level documents:
 
