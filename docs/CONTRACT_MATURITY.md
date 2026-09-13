@@ -279,7 +279,8 @@ interpretations and exactly one governance, assessed Objective, direct technical
 mixed or external-judgment basis per obligation.
 
 The associated framework-satisfaction surface is an ephemeral projection over an
-explicit exact declaration plus exact retained operation-bearing plans/results. It
+explicit exact declaration, an exact retained operation anchor as its historical
+scope witness, and exact bound plan/results required by assessed/direct portions. It
 has only `satisfied`, `not_satisfied` and `not_established`; the successful operator
 wording is **Satisfied under declared coverage**. This does not change current
 `Coverage`, AssessmentResult or plan/result identity, infer completeness from

@@ -332,8 +332,9 @@ ownership, acquisition/materialization, repository access, and deployment contro
 the assessment engine does not make access decisions from a semantic label.
 
 If central governance needs framework-level status, the future ADR 0021 projection
-must receive the exact retained declaration and the exact independently valid
-operation-bearing plans/results needed by its assessed portions. A downstream signed
+must receive the exact retained declaration, an exact operation anchor as the scope
+witness, and the exact independently valid bound plans/results needed by its assessed
+or direct portions. A downstream signed
 export would remain an attestation or presentation from that environment, not a new
 core result, central re-evaluation, external certification, or substitute for those
 exact inputs. Raw evidence, parameters, implementation names, group names, and

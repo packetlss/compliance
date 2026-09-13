@@ -347,8 +347,9 @@ basis only when the declaration explicitly says so; `external_refs` remain
 traceability.
 
 Framework satisfaction is an ephemeral interpretation over the exact declaration,
-the exact retained operation-bearing plans/results required by its assessed portions,
-and an explicit query/as-of instant where qualification is needed. The declaration
+an exact retained operation anchor as the historical scope witness, the exact bound
+plans/results required by assessed/direct portions, and an explicit query/as-of instant
+where qualification is needed. The declaration
 reuses project and `InventoryGroup` scope concepts; the frozen operation provides the
 historical assessed subject denominator. Missing scope, results, policy-pin alignment,
 or other required support fails closed. Neither this denominator nor the declaration

@@ -621,8 +621,9 @@ mapping-completeness, conformity, certification, audit-opinion, or legal conclus
 ADR 0021 does not add declaration content to this plan. A future framework-
 satisfaction projection must consume the exact retained declaration separately,
 match its exact company-policy pins and existing `InventoryGroup` scope bindings to
-the exact operation-bearing plans/results, and use the frozen operation as the
-assessed subject denominator. A declaration-only edit must not change policy-source,
+an exact operation anchor and the exact bound plans/results required by assessed/direct
+portions, and use the frozen operation as the historical subject denominator. A
+declaration-only edit must not change policy-source,
 planning-composition, member-plan, operation, bound-plan, or result identity.
 
 Accounting disposition is derived from frozen lifecycle, relevant assignment,

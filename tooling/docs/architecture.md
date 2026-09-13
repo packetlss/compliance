@@ -539,8 +539,9 @@ judgment basis per entry. The decision rule is whether satisfaction can change
 independently from governance's declared implementation.
 
 The accepted framework-satisfaction interpretation is ephemeral over an exact
-declaration, exact retained operation-bearing plans/results, and explicit query time
-where needed. Its states are `satisfied`, `not_satisfied`, and `not_established`;
+declaration, an exact retained operation anchor as scope witness, exact bound
+plans/results required by assessed/direct portions, and explicit query time where
+needed. Its states are `satisfied`, `not_satisfied`, and `not_established`;
 waivers/deviations and external recognition remain qualifications. The declaration is
 not embedded in plans and does not alter current Coverage, policy/composition/member/
 operation/plan/result identity, or historical outcomes. This documentation decision

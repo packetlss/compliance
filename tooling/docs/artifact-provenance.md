@@ -24,8 +24,9 @@ is deliberately outside this pair. Ordinary plans do not embed its ledger, decla
 scope, governance references, or identity. A declaration-only edit must not change
 policy-source composition, `member_plan_digest`, `operation_id`, bound `plan_id`, or
 result identity. A future bounded framework-satisfaction projection explicitly
-receives the exact retained declaration alongside the exact pair set required by its
-assessed portions; it is not another result artifact.
+receives the exact retained declaration, an exact operation-bearing plan as its scope
+witness, and the exact pair set required by its assessed/direct portions; it is not
+another result artifact.
 
 The minimum result retains its explicit schema/version and identity discriminator,
 `plan_id`, `subject_id`, `evaluated_at`, immutable outcome, actual evaluation

@@ -194,20 +194,23 @@ assessed/direct portions to their required subject scope. It must not embed a se
 selector language, infer scope from policy mappings, or treat entity identity as an
 asset population.
 
-For a historical projection, the exact operation's frozen selection witness,
-resolved group memberships, member commitments and dispositions provide the assessed
-subject denominator. The projection must verify that the supplied operation contains
-the declaration-required assessed group scope and that every `result_required` member
-has the exact valid bound plan/result support required by the pinned basis. A different
-operation, current inventory, current `Coverage`, an approximate group match, or a
-subset of convenient results cannot fill a missing slot. An assessed scope mismatch
-is `not_established`.
+For every historical projection, an exact operation anchor is required as the frozen
+scope witness. Its selection witness, resolved group memberships, member commitments
+and dispositions provide the historical subject denominator. The projection must
+verify that the supplied operation contains the declaration-required group scope and
+that every `result_required` member needed by an assessed/direct basis has the exact
+valid bound plan/result support required by the pinned basis. A different operation,
+current inventory, current `Coverage`, an approximate group match, or a subset of
+convenient results cannot fill a missing slot. A scope mismatch is
+`not_established`.
 
-An all-governance declaration need not manufacture an empty assessment operation.
-Whenever an applicable obligation has an assessed or direct portion, exact operation
-accounting is required. The operation can prove completeness only against the supplied
-governed inventory and selection semantics. It never proves that all real-world
-subjects or the correct real-world population were supplied.
+An all-governance declaration still uses the exact operation anchor to bind the
+declared project scope at the historical instant, but it does not manufacture an
+assessment result, synthetic Objective, or evidence dependency. Exact plan/result
+pairs are required only for assessed/direct portions. The operation can prove
+completeness only against the supplied governed inventory and selection semantics. It
+never proves that all real-world subjects or the correct real-world population were
+supplied.
 
 ### Ephemeral framework-satisfaction projection
 
@@ -215,7 +218,8 @@ Framework satisfaction is an interpretation, not a new durable result:
 
 ```text
 exact FrameworkObligationDeclaration
-+ exact retained operation-bearing plans/results for assessed portions
++ exact retained operation anchor as scope witness
++ exact bound plans/results required by assessed/direct portions
 + explicit query/as-of instant where qualification is required
 -> ephemeral framework-satisfaction projection
 ```
@@ -273,8 +277,9 @@ Consequently:
 - governance cannot override an assessed failure or uncertainty;
 - an applicable external-judgment entry that the product cannot establish produces
   `not_established`; and
-- empty applicable scope, incomplete ledger accounting, or an all-non-assessable
-  assessed denominator cannot manufacture `satisfied`.
+- empty applicable scope, incomplete ledger accounting, or a non-assessable/missing
+  denominator where an assessed/direct basis requires support cannot manufacture
+  `satisfied`.
 
 Internal waivers/deviations and separately attributable external-recognition records
 are qualifications, not additional top-level states and not successful states. A
