@@ -1,6 +1,6 @@
 # System architecture
 
-This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 and 0016–0019 (ADRs 0013–0015 are superseded) in `docs/adr/`.
+This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 and 0016–0020 (ADRs 0013–0015 are superseded) in `docs/adr/`.
 
 Historical `packetlss-labs/compliance-workspace` architecture remains migration/design provenance. After this documentation-authority transfer, this repository owns current normative system architecture.
 
@@ -57,10 +57,12 @@ fail before planning without precedence or fallback. This rule is implemented un
 #136 and is independent of policy-source, file, and traversal order.
 
 JSON Schema `$id` is a predictable absolute HTTPS schema-contract URI, separate
-from semantic resource lookup and exact schema content. Digests and enclosing
-provenance identify exact bytes; compatible schema changes may retain a contract
-URI, while incompatible changes mint a new schema-contract version. Runtime network
-discovery is not required. The experimental `https://compliance.example` host and
+from semantic resource lookup and exact schema content. Before explicit
+compatibility freeze, schema-contract identifiers and versions are provisional and
+may be replaced in place by coordinated reviewed semantic migration; historical
+artifacts require historical tooling. After a schema contract is explicitly frozen,
+compatible changes may retain a contract URI while incompatible changes mint a new
+schema-contract version. Runtime network discovery is not required. The experimental `https://compliance.example` host and
 platform-owned `apiVersion`, evidence-envelope/artifact discriminators and digest
 domains remain unchanged pending separate promotion.
 
@@ -177,8 +179,9 @@ parameter may explicitly declare string-only additive-set semantics. Resolution
 then requires exactly one compatible current declaration and exactly one applicable
 base after ordinary valid base tailoring, accumulates every independently applicable
 contribution, and produces a deterministic canonical union. Duplicate members
-coalesce while every origin and applicability path remains attributable. Fixed or
-sealed slots reject contributions. Ordinary arrays, objects, scalars, direct
+coalesce while every origin and applicability path remains attributable. Fixed
+base ownership does not reject contributions; every compatible independently
+applicable contribution participates. Ordinary arrays, objects, scalars, direct
 technical-baseline values and declarations without the explicit opt-in remain
 atomic.
 
@@ -187,10 +190,9 @@ current resolution binds them to the exact supplied declaration and base. A
 contribution neither imports nor selects its requirement, does not mutate or tailor
 the base, and carries no exact-version or parent-state coupling. Source/file/
 assignment/traversal order grants no precedence. Removal, denial, suppression,
-override, subtraction, non-string members, generic merge/reducer behavior, direct
-technical-Baseline composition and fixed-base-but-contribution-open semantics remain
-outside the accepted model. The runtime fails closed on absent,
-ambiguous, incompatible, fixed/sealed, invalid or unconsumable resolution.
+override, subtraction, non-string members, generic merge/reducer behavior, and direct
+technical-Baseline composition remain outside the accepted model. The runtime fails
+closed on absent, ambiguous, incompatible, invalid or unconsumable resolution.
 
 Effective evidence `max_age` belongs to policy/baseline/requirement intent. Controls retain evidence dependency contracts and optional capability restrictions; realizations link semantic freshness slots where applicable. Maintained baselines bind effective ages explicitly; objective realizations consume pinned semantic freshness slots. Controls no longer provide effective-age defaults. ADR 0010 still owns assessment-time evidence semantics and ADR 0011 immutable historical selection attribution; the future-timestamp question is unchanged.
 

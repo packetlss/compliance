@@ -1,6 +1,6 @@
 # ADR 0012: Explicit policy-parameter resolution and policy-owned evidence freshness
 
-- **Status:** Implemented under #73; additive-set extension implemented under #129; experimental, not frozen
+- **Status:** Implemented under #73; additive-set extension implemented under #129; amended by [ADR 0020](0020-governed-policy-composition-without-sealing.md); experimental, not frozen
 - **Date:** 2026-09-05
 - **Promotion history:** [#37](https://github.com/packetlss/compliance/issues/37)
 - **Runtime/schema migration:** [#73](https://github.com/packetlss/compliance/issues/73); no runtime change in this promotion
@@ -17,6 +17,12 @@ The initial-current descriptions and migration table below record the pre-#73
 starting point. [The implementation contract](../../tooling/docs/policy-parameters.md)
 specifies the resulting experimental representation and implemented additive-set
 extension.
+
+> **Current amendment.** ADR 0020 deletes parameter sealing and replaces only the
+> former fixed/sealed additive-set closure clauses with monotonic governed
+> contribution composition. The declaration/binding/tailoring/consumption model of
+> this ADR remains current; references below to seals, sealed state, or fixed-slot
+> contribution rejection are historical except where this amendment updates them.
 
 ## Context and authority
 
@@ -116,14 +122,14 @@ Tailoring must retain and validate, as applicable:
 - exact target declaration/definition and expected parent state/fingerprint;
 - explicit before/from and after/to values;
 - operation identity;
-- applicable structural restrictions/seals;
+- applicable structural restrictions;
 - required deviation rationale/governance metadata; and
 - complete derivation/source provenance.
 
 A descendant gains no override authority merely because it is more specific.
 A stale parent pin, target, fingerprint or from-value is a failure requiring an
-explicit reviewed update, not permission to rebase silently. Restrictions and
-seals remain effective along the derivation. Open binding cannot be used as an
+explicit reviewed update, not permission to rebase silently. Restrictions remain
+effective along the derivation. Open binding cannot be used as an
 alias for replacing a value that is already bound.
 
 ### Derivation is distinct from assignment
@@ -306,8 +312,8 @@ The canonical effective array is then validated against the complete current
 parameter contract; canonicalization never drops an invalid member to make the
 set valid.
 
-An additive contribution is ordinary policy composition. It is not a `bind`,
-`tailor` or `seal` `parameter_operation`; it is not a deviation, overlay mutation,
+An additive contribution is ordinary policy composition. It is not a `bind` or
+`tailor` `parameter_operation`; it is not a deviation, overlay mutation,
 inheritance edge, precedence rule or parent-state mutation. Conceptually:
 
 ```yaml
@@ -335,7 +341,7 @@ operation. This bounded loose coupling allows an unrelated requirement revision,
 requirement-text change, compatible declaration change or base-member addition to
 proceed without reauthoring the contribution. It does not weaken the exact pins
 used where correctness depends on prior state or interface, including existing
-bind/tailor/seal derivation and realization consumption.
+bind/tailor derivation and realization consumption.
 
 ### Additive-set resolution and failure boundary
 
@@ -353,17 +359,15 @@ For each stable semantic slot, resolution must:
    without coercion or transformation;
 7. require exactly one compatible base binding under existing ADR 0012 rules,
    whether fixed or produced by ordinary bind/tailor derivation;
-8. reject every independently applicable contribution when the whole slot is fixed
-   or sealed;
-9. form the canonical set union of the selected base after any valid base tailoring
+8. form the canonical set union of the selected base after any valid base tailoring
    and every independently applicable contribution;
-10. coalesce duplicate members while retaining every base/contribution origin and
+9. coalesce duplicate members while retaining every base/contribution origin and
     every applicability path;
-11. validate the complete canonical union against the current parameter contract;
-12. materialize that value through the existing exact realization-consumption
+10. validate the complete canonical union against the current parameter contract;
+11. materialize that value through the existing exact realization-consumption
     edges; and
-13. fail closed before an assessable plan for any missing, ambiguous, atomic,
-    incompatible, fixed, sealed, invalid-member, invalid-final-set or consumer-
+12. fail closed before an assessable plan for any missing, ambiguous, atomic,
+    incompatible, invalid-member, invalid-final-set or consumer-
     resolution state.
 
 The same authored contribution reached through several membership or assignment
@@ -379,8 +383,8 @@ effective set = tailored base ∪ independently applicable contributions
 ```
 
 Tailoring cannot suppress, remove or override a contribution. Removal, denial,
-suppression, exclusion, priority, override, subtraction, fixed-base-but-
-contribution-open behavior, structured/keyed/numeric/mixed members, generic merge,
+suppression, exclusion, priority, override, subtraction, structured/keyed/numeric/
+mixed members, generic merge,
 reducer or expression behavior require new architecture review. Unsupported author
 syntax for those behaviors is an authoring failure, not an ignored extension.
 
@@ -444,10 +448,10 @@ policy. Preserve at minimum, as applicable:
 - stable semantic slot identity and the exact resolved `ControlRequirement`
   revision, complete document and digest;
 - exact declaration/composition/schema documents and digests;
-- exact base binding, binding mode/origin, selected derivation, existing parent-
-  state operations/tailoring and fixed/sealed state;
+- exact base binding, binding mode/origin, selected derivation, and existing parent-
+  state operations/tailoring;
 - parent pins, explicit tailoring operations, before/after values, expected
-  fingerprints, restrictions/seals and governance/deviation provenance;
+  fingerprints, restrictions and governance/deviation provenance;
 - for every contribution, the exact owning resource revision/document/digest,
   authored members and identity `(owning RequirementBaseline identity, local
   contribution ID, target requirement ID, target slot)`;
@@ -535,7 +539,7 @@ not restored. See [contract maturity](../CONTRACT_MATURITY.md).
 | Structurally permitted explicit open binding | Concrete typed value, with binding provenance |
 | Valid selected descendant tailoring `30d -> 15d` | Resolve `15d` with complete explicit derivation |
 | Independently assigned divergent company and enclave values | Conflict, regardless of ancestry or specificity |
-| Stale declaration/schema/parent/fingerprint/from-value; missing target or restricted operation | Resolution failure; no implicit rebase or seal bypass |
+| Stale declaration/schema/parent/fingerprint/from-value; missing target or restricted operation | Resolution failure; no implicit rebase |
 | Fixed external value silently rebound, or open binding outside declared scope | Resolution failure |
 | Wrong type, violated pinned constraint, implicit merge/default, expression or transformed consumption | Resolution failure |
 | Missing required consumption edge; copied equal literal only; absent/ambiguous or stale post-substitution destination | Resolution failure |
@@ -556,7 +560,7 @@ not restored. See [contract maturity](../CONTRACT_MATURITY.md).
 | Slot is removed, renamed or becomes atomic | Resolution failure |
 | Several applicable requirement revisions own the same stable slot | Ambiguity/conflict; no newest-revision selection |
 | Contribution has no applicable declaration or base | Resolution failure; it does not import policy |
-| Fixed or sealed slot has an applicable contribution | Resolution failure; closure applies to the whole slot |
+| Fixed or open-bound slot has an applicable contribution | Canonical union; fixed owns the base, not contribution authority |
 | Valid base tailoring plus contribution | Canonical union of the tailored base and contribution |
 | Tailoring attempts to suppress a contribution | Authoring/resolution failure; contribution remains independently applicable |
 | Combined set violates the complete schema | Resolution failure without dropping members |

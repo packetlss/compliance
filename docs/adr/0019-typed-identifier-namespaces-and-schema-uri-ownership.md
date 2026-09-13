@@ -178,10 +178,13 @@ Here `{kind-kebab}` matches `SEGMENT`; `{family}` matches `SEGMENT`; `{ID}` matc
 
 `$id` identifies a schema contract and supplies a URI base. It does not identify a
 policy resource, prove publishing or policy authority, or identify exact bytes.
-Schema and resource digests plus enclosing provenance commit exact content. Schema
-contract version is separate from the owning resource revision: compatible schema
-evolution may retain one `$id` while its exact digest changes; incompatible schema
-evolution mints a new schema-contract version. `$id` alone is not a global catalog
+Schema and resource digests plus enclosing provenance commit exact content. Before
+an explicit compatibility freeze, schema-contract identifiers and versions are
+provisional and may be replaced in place by a coordinated reviewed semantic
+migration; historical artifacts require historical tooling. After an explicit
+schema-contract freeze, compatible schema evolution may retain one `$id` while its
+exact digest changes, and incompatible evolution mints a new schema-contract
+version. `$id` alone is not a global catalog
 or composition-admission key. Where an existing resolver selects schemas for one
 catalog role, competing candidates must satisfy that resolver's exact-definition
 rule; in particular, one composition requires one exact schema definition for an
