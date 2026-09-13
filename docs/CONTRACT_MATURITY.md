@@ -34,6 +34,13 @@ For cryptographic identity algorithms:
 
 For semantic JSON digests, contract-specific domain normalization occurs before RFC 8785/JCS serialization. JCS defines canonical JSON bytes; it does not decide domain semantics such as array ordering or field inclusion.
 
+Before freeze, technical `BaselineOverlay.spec.extends` is the bounded
+exception: complete exact parent pins are an unordered set and are sorted by
+their JCS bytes only for the technical overlay semantic projection. Technical
+operations retain authored order. This clarification does not normalize other
+arrays, `RequirementBaseline` inheritance, technology-neutral policy, or raw
+source-tree identity.
+
 Raw source-tree, executable, wheel/archive and other byte/path digest algorithms retain their own exact construction and do not use JCS merely because they are content-addressed.
 
 ## Current accepted core
