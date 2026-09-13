@@ -108,7 +108,7 @@ actual_toolchain="$(cat toolchain/versions.env)"
 [[ "$actual_toolchain" == "$expected_toolchain" ]] || fail "toolchain/versions.env does not match the accepted migration toolchain"
 
 # Maintained source includes the independently named control-library and
-# verification-policy producers, two ordinary project roots, and the approved
+# verification-policy producers, three ordinary project roots, and the approved
 # synthetic IAM fixture. environment-private exists only as a temporary,
 # independently copied execution root.
 [[ -d policy-sources/control-library/policies ]] \
