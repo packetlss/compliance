@@ -1,0 +1,22 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "RequirementBaseline",
+  "metadata": {
+    "id": "company.administrative-access-objectives",
+    "revision": 1,
+    "origin": {
+      "type": "company-baseline",
+      "name": "Company administrative access objectives"
+    }
+  },
+  "spec": {
+    "title": "Company administrative access objectives",
+    "requirements": [
+      {
+        "requirement": "company.administrative-access.identity-gated@1",
+        "digest": "sha256:c7aab5b7f10e6df44c7bc48cfd5c2ae9cb3d3c29bb7bb209d36963afc4da8b04",
+        "required": true
+      }
+    ]
+  }
+}

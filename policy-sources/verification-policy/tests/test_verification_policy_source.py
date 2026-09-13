@@ -79,6 +79,7 @@ class VerificationPolicySourceTests(unittest.TestCase):
             "verification.technical-packages@1",
         })
         self.assertEqual(set(requirements), {
+            "company.administrative-access.identity-gated@1",
             "company.authorized-software@1",
             "company.iam.role-based-access@1",
             "verification.operation.entity.o1@1",
@@ -87,6 +88,7 @@ class VerificationPolicySourceTests(unittest.TestCase):
             "verification.operation.system.o1@1",
         })
         self.assertEqual(set(objectives), {
+            "company.administrative-access-objectives@1",
             "company.authorized-software-base@1",
             "company.database-software@1",
             "company.identity-access-objectives@1",
@@ -94,8 +96,10 @@ class VerificationPolicySourceTests(unittest.TestCase):
             "verification.operation.system@1",
         })
         self.assertEqual(set(realizations), {
+            "company.linux.administrative-access-identity-gated@1",
             "company.linux.authorized-software@1",
             "company.linux.central-role-access@1",
+            "company.saas.administrative-access-identity-gated@1",
             "verification.operation.entity.o1.realization@1",
             "verification.operation.entity.o2.realization@1",
             "verification.operation.entity.o3.realization@1",

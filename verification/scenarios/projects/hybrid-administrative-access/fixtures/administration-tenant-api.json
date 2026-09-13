@@ -1,0 +1,11 @@
+{
+  "subject": {"id": "saas/administration-tenant", "type": "saas-tenant"},
+  "type": "saas.tenant.configuration/v1",
+  "collector": {"id": "synthetic/saas-tenant", "version": "1"},
+  "payload": {
+    "tenant": {"id": "administration-tenant", "provider": "synthetic-saas"},
+    "authentication": {"sso_enforced": true, "mfa_enforced": true},
+    "audit_log": {"retention_days": 180},
+    "guest_access": {"allowed": true}
+  }
+}

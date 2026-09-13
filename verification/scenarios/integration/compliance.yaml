@@ -10,6 +10,8 @@ projects:
     config: verification/scenarios/projects/technical-only-packages/compliance.yaml
   authorized-software-composition:
     config: verification/scenarios/projects/authorized-software-composition/compliance.yaml
+  hybrid-administrative-access:
+    config: verification/scenarios/projects/hybrid-administrative-access/compliance.yaml
   mock-fleet:
     config: projects/mock-fleet/compliance.yaml
   server-personas:

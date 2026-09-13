@@ -1,0 +1,17 @@
+apiVersion: compliance.example/v1alpha1
+kind: Subject
+metadata:
+  name: admin-bastion-01
+  labels:
+    administrative-access: managed
+    environment: production
+    platform: linux
+    role: administrative-bastion
+spec:
+  id: host/admin-bastion-01
+  type: linux-host
+  lifecycle: active
+  source:
+    name: synthetic-inventory
+    externalId: admin-bastion-01
+    observedAt: "2026-09-01T00:00:00Z"
