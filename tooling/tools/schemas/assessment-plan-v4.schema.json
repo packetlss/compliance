@@ -1464,8 +1464,7 @@
                 "exclude",
                 "substitute",
                 "annotate",
-                "add",
-                "seal"
+                "add"
               ]
             }
           }
@@ -1607,38 +1606,6 @@
         }
       ]
     },
-    "overlayPolicy": {
-      "type": "object",
-      "required": [
-        "blocked_operations",
-        "reason",
-        "sealed_by"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "blocked_operations": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {
-            "enum": [
-              "tailor",
-              "exclude",
-              "substitute",
-              "annotate",
-              "seal"
-            ]
-          }
-        },
-        "reason": {
-          "type": "string",
-          "minLength": 1
-        },
-        "sealed_by": {
-          "$ref": "#/$defs/reference"
-        }
-      }
-    },
     "control": {
       "type": "object",
       "required": [
@@ -1758,9 +1725,6 @@
             "$ref": "#/$defs/policyLocator"
           }
         },
-        "overlay_policy": {
-          "$ref": "#/$defs/overlayPolicy"
-        },
         "external_refs": {
           "$ref": "#/$defs/externalRefs"
         },
@@ -1859,9 +1823,6 @@
           "items": {
             "$ref": "#/$defs/policyLocator"
           }
-        },
-        "overlay_policy": {
-          "$ref": "#/$defs/overlayPolicy"
         },
         "policy_inputs": {
           "type": "object"

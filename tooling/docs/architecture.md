@@ -552,8 +552,8 @@ resolution requires exactly one compatible declaration and base, accumulates eve
 independently applicable contribution without precedence, and freezes a canonical
 union with complete member-origin and applicability-path attribution. Contributions
 target stable requirement-slot identity, do not import their target or mutate the
-base, and remain distinct from bind/tailor/seal operations and deviations. Fixed or
-sealed slots reject contributions. Coverage owns only current ephemeral projection;
+base, and remain distinct from bind/tailor operations and deviations. Fixed bases
+may receive compatible contributions. Coverage owns only current ephemeral projection;
 historical explanation uses the exact frozen plan/result. Schema/runtime behavior is
 deferred to a dedicated successor issue, with no new artifact, resource, cache,
 digest/identity family, trust rule, compatibility path or contract freeze.

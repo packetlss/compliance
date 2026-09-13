@@ -100,8 +100,7 @@
               "op": {
                 "enum": [
                   "bind",
-                  "tailor",
-                  "seal"
+                  "tailor"
                 ]
               },
               "target": {
@@ -226,36 +225,6 @@
                     "to",
                     "deviation"
                   ]
-                }
-              },
-              {
-                "if": {
-                  "properties": {
-                    "op": {
-                      "const": "seal"
-                    }
-                  }
-                },
-                "then": {
-                  "not": {
-                    "anyOf": [
-                      {
-                        "required": [
-                          "from"
-                        ]
-                      },
-                      {
-                        "required": [
-                          "to"
-                        ]
-                      },
-                      {
-                        "required": [
-                          "deviation"
-                        ]
-                      }
-                    ]
-                  }
                 }
               }
             ]

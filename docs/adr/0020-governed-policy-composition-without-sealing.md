@@ -1,6 +1,6 @@
 # ADR 0020: Governed policy composition without sealing
 
-- **Status:** Accepted design, not yet implemented; implementation tracked by [#144](https://github.com/packetlss/compliance/issues/144); experimental, not frozen
+- **Status:** Implemented under [#144](https://github.com/packetlss/compliance/issues/144); experimental, not frozen
 - **Date:** 2026-09-13
 - **Amends:** [ADR 0012](0012-explicit-policy-parameter-resolution.md)
 - **Refines:** [ADR 0019](0019-typed-identifier-namespaces-and-schema-uri-ownership.md)

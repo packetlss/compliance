@@ -170,25 +170,21 @@ remains experimental and is not frozen.
 
 [ADR 0012](adr/0012-explicit-policy-parameter-resolution.md) is implemented under [#73](https://github.com/packetlss/compliance/issues/73). The [experimental parameter contract](../tooling/docs/policy-parameters.md) defines the coordinated schema/runtime/consumer representation. Its common model is declaration → explicit binding → optional explicit descendant tailoring → concrete effective value → explicit dependency consumption → resolved assessment plan. Required unresolved parameters and independently applicable divergent bindings prevent an assessable plan. Source/file order, ancestry, assignment scope or specificity, strictness and min/max never choose values; constraints and JSON Schema defaults cannot manufacture them.
 
-[ADR 0020](adr/0020-governed-policy-composition-without-sealing.md) is **Accepted
-design, not yet implemented**. Until its coordinated [#144](https://github.com/packetlss/compliance/issues/144)
-cutover merges, the current runtime and schemas retain the predecessor technical
-and parameter sealing and fixed/sealed additive-set closure behavior implemented
-under #129. The seal-free successor clauses below are normative target semantics,
-not a claim about the current executable contract.
+[ADR 0020](adr/0020-governed-policy-composition-without-sealing.md) is implemented
+under [#144](https://github.com/packetlss/compliance/issues/144). Technical and
+parameter sealing are absent: valid governed descendants tailor inherited policy
+through the existing exact pins, fingerprints and provenance facts.
 
 Requirement slots have stable technology-neutral identity with exact declaration/revision/type-schema pins. Realizations retain explicit typed links into required dependency inputs; plans materialize every linked value with immutable provenance, and evaluation does not resolve parameters again. Technical destinations belong to an exact resolved implementation/interface, including after substitution. Selected derivation permits explicit tailoring; independently assigning divergent ancestor and descendant policies is a conflict.
 
 [#127](https://github.com/packetlss/compliance/issues/127) accepted one bounded
 exception to atomic complete-value composition, implemented under
-[#129](https://github.com/packetlss/compliance/issues/129). Its current executable
-form retains fixed/sealed contribution closure. ADR 0020's accepted #144 successor
-keeps the explicit string-only opt-in, exactly one compatible declaration and base,
-deterministic canonical union, and complete attribution, but permits every
-compatible independently applicable contribution after valid base tailoring,
+[#129](https://github.com/packetlss/compliance/issues/129), then amended by #144.
+It keeps the explicit string-only opt-in, exactly one compatible declaration and
+base, deterministic canonical union, and complete attribution, while permitting
+every compatible independently applicable contribution after valid base tailoring,
 including for a fixed base. Ordinary arrays, objects, scalars, direct technical-
-baseline values, and declarations without the explicit opt-in remain atomic in both
-the current and successor contracts.
+baseline values, and declarations without the explicit opt-in remain atomic.
 
 Contributions target only stable `(ControlRequirement ID, slot name)` identity;
 current resolution binds them to the exact supplied declaration and base. A

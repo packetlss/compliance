@@ -29,7 +29,7 @@
           "declaration_digest": "sha256:35ed20fc37f7aa59c704626924711a1f156e6ce70dde22c93b507fb1b4df0115",
           "schema_digest": "sha256:c4b547904c80c90e4d9ff5e335f672c55b77072a86049f1f748bd408baf49e5c"
         },
-        "expected_parent_fingerprint": "sha256:d09ad7a69d475d9519a4e7817165028614c774400814ba4e5a77018d758e613f",
+        "expected_parent_fingerprint": "sha256:19a51f25d8f62b9db6b67e6059904bbd76968284e3d157c3687e05592eb55e85",
         "to": "24h"
       }
     ]

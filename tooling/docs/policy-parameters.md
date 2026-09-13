@@ -1,19 +1,19 @@
 # Explicit policy parameters
 
 Current implementation contract: [#73](https://github.com/packetlss/compliance/issues/73),
-under [ADR 0012](../../docs/adr/0012-explicit-policy-parameter-resolution.md).
-The additive-set extension accepted under
-[#127](https://github.com/packetlss/compliance/issues/127) is implemented under
-[#129](https://github.com/packetlss/compliance/issues/129). The complete contract
-remains experimental and pre-freeze.
+as amended by [ADR 0020](../../docs/adr/0020-governed-policy-composition-without-sealing.md)
+and implemented under [#144](https://github.com/packetlss/compliance/issues/144).
+The complete contract remains experimental and pre-freeze.
 
 ## Current implemented representation
 
 Requirement declarations use a `parameters` object keyed by slot name. Each
 declaration contains `required`, `binding_mode` (`open` or `fixed`), an inline
 `schema` with its own `$id`, and `schema_digest`. Fixed declarations contain an
-explicit `value`. Open declarations name permitted baseline identities in
-`binding_scope`; those identities constrain structure, not issuer authority.
+explicit `value`. Open declarations require permitted baseline identities in
+`binding_scope`; fixed declarations may also use `binding_scope` to permit explicit
+governed descendant tailoring. Those identities constrain structure, not issuer
+authority.
 An optional `representation: duration` validates fixed positive integral
 `s`, `m`, `h`, or `d` values. A day is exactly 86400 seconds.
 
@@ -34,10 +34,11 @@ all materialize `86400s`; `1.5h`, `P1D`, and `1M` fail.
 Requirement baselines retain an explicit, unchanged requirement membership list.
 An optional exact `extends` parent pin permits parameter-only derivation. Each
 operation has an `id`, exact `target` slot reference, `expected_parent_fingerprint`,
-and `op` of `bind`, `tailor`, or `seal`. Binding requires open unbound state;
-tailoring requires explicit `from`, `to`, and the existing complete deviation
-record. A seal cannot be removed by descendants. Multiple operations targeting
-one slot in a single baseline fail. Operations have no list-order precedence.
+and `op` of `bind` or `tailor`. Binding requires open unbound state; tailoring
+requires explicit `from`, `to`, and the existing complete deviation record. Fixed
+base ownership is not descendant authority: a valid governed descendant may tailor
+an inherited fixed value. Multiple operations targeting one slot in a single
+baseline fail. Operations have no list-order precedence.
 
 Realization consumption links target one named control instance, exact
 implementation ID/version/content fingerprint, and a JSON object path in its
@@ -125,10 +126,10 @@ canonical(tailored base ∪ every independently applicable contribution)
 ```
 
 Exactly one compatible current declaration and exactly one compatible applicable
-base are required. The base continues to use the current exact bind/tailor/seal
-contract. A fixed or sealed slot rejects any independently applicable contribution;
-there is no fixed-base-but-contribution-open state. With no contributions, the
-canonical effective value is the selected base.
+base are required. The base uses the exact bind/tailor contract. Every compatible,
+independently applicable contribution participates after valid base tailoring,
+including for a fixed base. With no contributions, the canonical effective value
+is the selected base.
 
 Members are strings and are compared by exact JSON-string value, without case
 folding, Unicode normalization, coercion or transformation. Duplicates coalesce.
@@ -162,8 +163,8 @@ binds the target to the unique exact current declaration supplied for the operat
 Compatible unrelated requirement or declaration changes therefore do not require
 contribution reauthoring; incompatible current meaning fails closed.
 
-Contributions are not current `parameter_operations`. They do not bind, tailor or
-seal; do not mutate a parent or base; and do not create an inheritance, deviation,
+Contributions are not current `parameter_operations`. They do not bind or tailor;
+do not mutate a parent or base; and do not create an inheritance, deviation,
 overlay, precedence or authority edge. Tailoring affects only the base and cannot
 suppress, remove or override independently applicable contributions.
 
@@ -194,17 +195,17 @@ classifications and assignments accumulate without precedence.
 
 The implementation collects all applicable declarations, bases and
 contributions; resolve each stable target; require the unique compatible opted-in
-declaration and base; validate members; apply valid base tailoring; reject fixed or
-sealed contribution attempts; compute and validate the canonical union; and
+declaration and base; validate members; apply valid base tailoring; compute and
+validate the canonical union; and
 materialize it through the current exact realization links. Missing, ambiguous,
-atomic, incompatible, fixed, sealed, invalid-member, invalid-final-set and consumer-
-resolution conditions prevent an assessable plan.
+atomic, incompatible, invalid-member, invalid-final-set and consumer-resolution
+conditions prevent an assessable plan.
 
 The exact plan must retain:
 
 - stable slot identity and the exact requirement revision/document/digest;
 - exact declaration/composition/schema documents and digests;
-- exact base binding, derivation/operations/tailoring and fixed/sealed state;
+- exact base binding, derivation/operations and tailoring;
 - exact contribution owner revision/document/digest, authored members and semantic
   contribution identity;
 - every group/assignment/policy applicability path;

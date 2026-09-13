@@ -386,45 +386,6 @@
         }
       }
     },
-    "sealOperation": {
-      "type": "object",
-      "required": [
-        "op",
-        "target",
-        "expected_parent_fingerprint",
-        "reason"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "op": {
-          "const": "seal"
-        },
-        "target": {
-          "$ref": "#/$defs/target"
-        },
-        "expected_parent_fingerprint": {
-          "$ref": "#/$defs/digest"
-        },
-        "blocked_operations": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {
-            "type": "string",
-            "enum": [
-              "tailor",
-              "exclude",
-              "substitute",
-              "annotate"
-            ]
-          }
-        },
-        "reason": {
-          "type": "string",
-          "minLength": 1
-        }
-      }
-    },
     "operation": {
       "type": "object",
       "required": [
@@ -438,8 +399,7 @@
             "exclude",
             "substitute",
             "annotate",
-            "add",
-            "seal"
+            "add"
           ]
         }
       },
@@ -517,21 +477,6 @@
           },
           "then": {
             "$ref": "#/$defs/addOperation"
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "op": {
-                "const": "seal"
-              }
-            },
-            "required": [
-              "op"
-            ]
-          },
-          "then": {
-            "$ref": "#/$defs/sealOperation"
           }
         }
       ]

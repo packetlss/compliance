@@ -190,7 +190,6 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             "operation": "defined",
         }]
         control["derivations"] = []
-        control.pop("overlay_policy", None)
 
         requirement["parameter_facts"] = {
             "document": requirement_document,
@@ -353,7 +352,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                     "bad__slot",
                 ),
             ),
-            "instance sealing reference": lambda plan: plan["controls"][0][
+            "removed overlay policy": lambda plan: plan["controls"][0][
                 "policy_inputs"
             ]["instance"].update(overlay_policy={
                 "blocked_operations": ["tailor"],
@@ -376,6 +375,12 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             "state pin": lambda plan: plan["requirements"][0]["parameter_facts"][
                 "states"
             ]["age"]["pin"].update(requirement="bad_requirement@1"),
+            "removed parameter sealed state": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["states"]["age"].update(sealed=True),
+            "removed parameter seal history": lambda plan: plan["requirements"][0][
+                "parameter_facts"
+            ]["states"]["age"]["history"][0]["operation"].update(op="seal"),
             "state history": lambda plan: plan["requirements"][0][
                 "parameter_facts"
             ]["states"]["age"]["history"][0].update(baseline="bad_baseline@1"),
@@ -778,7 +783,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                     disposition="excluded"
                 )
             ),
-            "nested-only overlay policy": lambda: macos_plan(
+            "nested removed overlay policy": lambda: macos_plan(
                 lambda plan: plan["controls"][0]["policy_inputs"]["instance"].update(
                     overlay_policy={
                         "blocked_operations": ["tailor"],

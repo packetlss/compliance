@@ -88,9 +88,9 @@ DOMAIN_EXAMPLES = {
     "policy.multi-source-realization": "private realization over verification intent",
     "policy.control-implementations": "every reusable implementation appears in a plan",
     "policy.invalid-resolution": "conflicting assignments fail plan resolution closed",
-    "policy.overlay-provenance": "tailor, annotate, add, exclude, and seal lineage",
+    "policy.overlay-provenance": "tailor, annotate, add, and exclude lineage",
     "policy.overlay-substitute": "equivalent implementation substitution freezes both sides",
-    "policy.seal-enforcement": "lower overlays cannot change sealed controls",
+    "policy.governed-tailoring": "a governed descendant explicitly tailors inherited policy",
     "waiver.application": "only an underlying failure becomes waived",
     "waiver.filters": "subject and lifecycle filters compose deterministically",
     "requirements.all-of": "technical decisions roll up conservatively",
@@ -121,7 +121,7 @@ EXAMPLE_EVIDENCE_TYPES = {
     "macos.system/v1": "synthetic-fixture",
 }
 EXAMPLE_OVERLAY_OPERATIONS = frozenset(
-    ("tailor", "exclude", "substitute", "annotate", "add", "seal")
+    ("tailor", "exclude", "substitute", "annotate", "add")
 )
 SHOW_SELECTIONS = frozenset(
     {
@@ -421,69 +421,45 @@ class ExampleRunner:
             and derivation["equivalence_ref"] == "example-review/EQUIV-001",
         )
 
-        sealed = {
+        tailored_child = {
             "apiVersion": "compliance.example/v1",
             "kind": "BaselineOverlay",
-            "metadata": {"id": "example.sealed", "revision": 1},
+            "metadata": {"id": "example.tailored-child", "revision": 1},
             "spec": {
-                "title": "Example sealed policy",
+                "title": "Example governed descendant policy",
                 "extends": [{
                     "baseline": "example.base@1",
                     "digest": catalog["example.base@1"]["_digest"],
                 }],
                 "operations": [{
-                    "op": "seal",
-                    "target": "example.setting",
-                    "expected_parent_fingerprint": fingerprint,
-                    "blocked_operations": ["tailor", "exclude", "substitute"],
-                    "reason": "The example parent requires this exact criterion.",
-                }],
-            },
-        }
-        catalog["example.sealed@1"] = catalog_document(sealed)
-        sealed_control = resolve_baseline("example.sealed@1", catalog)["controls"][
-            "example.setting"
-        ]
-        blocked_child = {
-            "apiVersion": "compliance.example/v1",
-            "kind": "BaselineOverlay",
-            "metadata": {"id": "example.blocked-child", "revision": 1},
-            "spec": {
-                "title": "Example rejected policy",
-                "extends": [{
-                    "baseline": "example.sealed@1",
-                    "digest": catalog["example.sealed@1"]["_digest"],
-                }],
-                "operations": [{
                     "op": "tailor",
                     "target": "example.setting",
-                    "expected_parent_fingerprint": sealed_control[
-                        "definition_fingerprint"
-                    ],
+                    "expected_parent_fingerprint": fingerprint,
                     "parameters": {"expected": "weaker"},
                     "deviation": {
                         "id": "DEV-EXAMPLE-001",
                         "classification": "runnable-example",
-                        "rationale": "Demonstrate that sealing rejects this change.",
+                        "rationale": "Demonstrate explicit governed tailoring.",
                         "approval_ref": "example-approval/DEV-EXAMPLE-001",
                         "review_after": "2027-08-29",
                     },
                 }],
             },
         }
-        catalog["example.blocked-child@1"] = catalog_document(blocked_child)
-        rejected = False
-        try:
-            resolve_baseline("example.blocked-child@1", catalog)
-        except BaselineResolutionError as error:
-            rejected = error.details["type"] == "sealed-control"
-        self.domain("policy.seal-enforcement", rejected)
+        catalog["example.tailored-child@1"] = catalog_document(tailored_child)
+        child_control = resolve_baseline("example.tailored-child@1", catalog)["controls"][
+            "example.setting"
+        ]
+        self.domain(
+            "policy.governed-tailoring",
+            child_control["parameters"] == {"expected": "weaker"}
+            and child_control["derivations"][0]["deviation"]["id"] == "DEV-EXAMPLE-001",
+        )
 
         for name, document in (
             ("base", base),
             ("substitute", substitute),
-            ("sealed", sealed),
-            ("blocked-child", blocked_child),
+            ("tailored-child", tailored_child),
         ):
             (output / f"{name}.json").write_text(
                 json.dumps(document, indent=2, sort_keys=True) + "\n",

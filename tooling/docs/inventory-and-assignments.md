@@ -365,8 +365,8 @@ For one subject and one point in time, the planner performs:
    and overlay operations.
 6. Accumulate active, excluded, and eventually not-applicable controls.
 7. Coalesce identical control instances and retain all provenance paths.
-8. Reject unresolved conflicts, cycles, missing references, stale overlay
-   fingerprints, or prohibited sealed-control changes.
+8. Reject unresolved conflicts, cycles, missing references, or stale overlay
+   fingerprints.
 9. Produce a canonical, content-addressed assessment plan.
 
 No filesystem ordering, group traversal order, assignment order, or parent

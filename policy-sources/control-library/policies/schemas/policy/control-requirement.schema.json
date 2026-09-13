@@ -142,12 +142,7 @@
                 },
                 "required": [
                   "value"
-                ],
-                "not": {
-                  "required": [
-                    "binding_scope"
-                  ]
-                }
+                ]
               },
               {
                 "properties": {
