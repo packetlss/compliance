@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-from collections import Counter
 import json
 from pathlib import Path
 
@@ -87,8 +86,8 @@ def assert_coverage(run_root: Path) -> None:
     expected = {ENTITY, LINUX, SAAS, "workstation/alder-dev-mac-01"}
     if set(assets) != expected:
         fail(f"inventory coverage lost or added supplied subjects: {set(assets)}")
-    if (assets[ENTITY]["objective_count"], assets[ENTITY]["assessable_check_count"]) != (1, 5):
-        fail("entity coverage did not distinguish its board objective and direct checks")
+    if (assets[ENTITY]["objective_count"], assets[ENTITY]["assessable_check_count"]) != (5, 5):
+        fail("entity coverage did not expose all five organisational Objectives")
     if (assets[LINUX]["objective_count"], assets[LINUX]["assessable_check_count"]) != (0, 1):
         fail("Linux 2409 direct-policy coverage changed")
     if (assets[SAAS]["objective_count"], assets[SAAS]["assessable_check_count"]) != (1, 1):
@@ -98,25 +97,28 @@ def assert_coverage(run_root: Path) -> None:
 
     entity = load(run_root / "coverage-entity.json")
     kinds = {item["policy_type"] for assignment in entity["assignments"] for item in assignment["policies"]}
-    if kinds != {"technical", "objective"}:
-        fail("entity Coverage did not keep direct policy and Objective paths distinct")
+    if kinds != {"objective"}:
+        fail("entity Coverage classified an organisational obligation as technical policy")
     if any("historical_result" in json.dumps(assignment) for assignment in entity["assignments"]):
         fail("Coverage explanation inspected evidence or results")
 
 
 def assert_organisation_cases(run_root: Path) -> None:
     cases = {
-        "certification": ("alder-forge.programme.certification-0002", "pass", None),
-        "board-direction": (
-            "alder-forge.entity.board-security-direction.assertion",
-            "pass",
-            "alder-forge.board-security-direction@1",
-        ),
-        "risk-assessment": ("alder-forge.programme.risk-assessment-1202", "unknown", None),
-        "software-review": ("alder-forge.programme.authorized-software-review-2410", "pass", None),
-        "awareness-training": ("alder-forge.programme.awareness-training-2602", "fail", None),
+        "certification": ("alder-forge.certification.ce-plus-scope@1", "pass", "unknown", "unknown"),
+        "board-direction": ("alder-forge.board-security-direction@1", "pass", "unknown", "unknown"),
+        "risk-assessment": ("alder-forge.periodic-risk-assessment@1", "unknown", "unknown", "unknown"),
+        "software-review": ("alder-forge.authorized-software-review@1", "pass", "unknown", "unknown"),
+        "awareness-training": ("alder-forge.awareness-training@1", "fail", "fail", "fail"),
     }
-    for name, (instance_id, expected_status, objective) in cases.items():
+    objectives = {
+        "alder-forge.authorized-software-review@1",
+        "alder-forge.awareness-training@1",
+        "alder-forge.board-security-direction@1",
+        "alder-forge.certification.ce-plus-scope@1",
+        "alder-forge.periodic-risk-assessment@1",
+    }
+    for name, (selected_objective, expected_status, programme_status, overall_status) in cases.items():
         root = run_root / "organization" / name
         plan = load(root / "plans" / "entity__alder-forge-defence-systems.json")
         report = load(root / "results" / "entity__alder-forge-defence-systems.json")
@@ -125,15 +127,22 @@ def assert_organisation_cases(run_root: Path) -> None:
             fail(f"{name} assessment was not fixed-time")
         if any(result["status"] == "error" for result in report["results"]):
             fail(f"{name} manufactured an error outcome")
-        if result_by_instance(report, instance_id)["status"] != expected_status:
-            fail(f"{name} did not retain its expected bounded assertion outcome")
-        if objective is not None:
-            if requirement_statuses(report) != {objective: "pass"}:
-                fail("board assertion did not roll up to exactly its entity Objective")
-            if baseline_statuses(report) != {"alder-forge.board-security-direction@1": "pass"}:
-                fail("board Objective baseline did not retain its exact pass")
-        elif set(requirement_statuses(report)) != {"alder-forge.board-security-direction@1"}:
-            fail(f"{name} lost the entity-only board Objective boundary")
+        statuses = requirement_statuses(report)
+        if set(statuses) != objectives:
+            fail(f"{name} did not retain every applicable organisational Objective")
+        if statuses[selected_objective] != expected_status or any(
+            status != "unknown" for objective, status in statuses.items()
+            if objective != selected_objective
+        ):
+            fail(f"{name} did not preserve one supplied assertion fact against sibling unknown Objectives")
+        baselines = baseline_statuses(report)
+        if baselines.get("alder-forge.programme.assurance@1") != programme_status:
+            fail(f"{name} lost the programme Objective roll-up status")
+        expected_board = "pass" if selected_objective == "alder-forge.board-security-direction@1" else "unknown"
+        if baselines.get("alder-forge.board-security-direction@1") != expected_board:
+            fail(f"{name} lost the board Objective roll-up status")
+        if report.get("outcome") != overall_status:
+            fail(f"{name} did not retain accepted aggregate roll-up semantics")
 
 
 def assert_technical_cases(run_root: Path) -> None:
@@ -166,14 +175,14 @@ def assert_frozen_operator_views(run_root: Path) -> None:
         fail("frozen entity explanation lost its aggregate unknown outcome")
     certification = next(
         item for item in explanation["checks"]
-        if item["check"]["instance_id"] == "alder-forge.programme.certification-0002"
+        if item["check"]["instance_id"] == "alder-forge.entity.certification-0002.assertion"
     )
     if certification["historical_result"]["historical_outcome"] != "pass":
         fail("frozen explanation lost certification's exact pass")
     if "no external conformity conclusion" not in certification["historical_result"]["reason"]:
         fail("assertion explanation overclaimed an external conclusion")
-    if certification["policy_alignment"] != "unaltered":
-        fail("direct assertion was presented as an Objective realization")
+    if certification["policy_alignment"] != "realization":
+        fail("certification assertion was not presented as an Objective realization")
 
     mappings = load(run_root / "entity-mappings.json")
     expected_refs = {f"DEFSTAN-05-138-ISSUE-4:{control}" for control in ("0002", "1101", "1202", "2410", "2602")}
@@ -181,6 +190,8 @@ def assert_frozen_operator_views(run_root: Path) -> None:
         fail("mapping view did not use the frozen operation")
     if {item["external_ref"] for item in mappings["mappings"]} != expected_refs:
         fail("entity mapping traceability lost an implemented obligation")
+    if {item["mapping_level"] for item in mappings["mappings"]} != {"objective"}:
+        fail("entity framework mappings retained a technical-policy level")
     if {item["asset_id"] for item in mappings["mappings"]} != {ENTITY}:
         fail("mapping result leaked across project members")
     if "do not establish" not in mappings.get("note", ""):
@@ -189,10 +200,10 @@ def assert_frozen_operator_views(run_root: Path) -> None:
 
 def assert_private_sources(project: Path, control_library: Path) -> None:
     sources = {
-        "alder-forge-programme": project / "policy/programme/policies",
-        "alder-forge-corporate-platform": project / "policy/corporate-platform/policies",
+        "alder-forge-programme": (project / "policy/programme/policies", (0, 5, 2, 5)),
+        "alder-forge-corporate-platform": (project / "policy/corporate-platform/policies", (1, 1, 1, 1)),
     }
-    for name, path in sources.items():
+    for name, (path, expected) in sources.items():
         controls, baselines, errors = load_policy_catalogs((
             PolicySource("control-library", control_library), PolicySource(name, path),
         ))
@@ -206,8 +217,9 @@ def assert_private_sources(project: Path, control_library: Path) -> None:
         requirements, requirement_baselines, realizations, errors = load_requirement_catalogs(
             (PolicySource("control-library", control_library), PolicySource(name, path)), controls,
         )
-        if errors or not baselines or not requirements or not requirement_baselines or not realizations:
-            fail(f"{name} did not independently validate its complete private policy slice")
+        actual = (len(baselines), len(requirements), len(requirement_baselines), len(realizations))
+        if errors or actual != expected:
+            fail(f"{name} did not independently validate its intended private policy ownership: {actual}")
 
 
 def main() -> int:

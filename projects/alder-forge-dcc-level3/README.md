@@ -32,17 +32,17 @@ The #153 exploration found a discrepancy that remains explicit here: the MOD spr
 
 | DEFSTAN control | Alder Forge representation | Existing contract |
 | --- | --- | --- |
-| `0002` | Direct entity assertion for the supplied CE Plus scope | `organization.assertion.required` + `organization.assertion/v1` |
+| `0002` | Entity Objective with one CE Plus scope assertion realization | `organization.assertion.required` + `organization.assertion/v1` |
 | `1101` | Entity-scoped board-direction Objective and one complete assertion realization | same assertion contract |
-| `1202` | Direct bounded risk-assessment assertion | same assertion contract |
+| `1202` | Entity Objective with one bounded risk-assessment assertion realization | same assertion contract |
 | `2201` | Technology-neutral MFA Objective with one critical-SaaS realization | `saas.tenant.setting-equals` + `saas.tenant.configuration/v1` |
 | `2409` | Direct Linux authorised-package policy | `linux.packages.only-allowed` + `linux.packages/v1` |
-| `2410` | Direct bounded authorised-software-list review assertion, separate from package state | assertion contract |
-| `2602` | Direct bounded annual awareness assertion | assertion contract |
+| `2410` | Entity Objective with one bounded authorised-software-list review assertion realization, separate from package state | assertion contract |
+| `2602` | Entity Objective with one bounded annual awareness assertion realization | assertion contract |
 
 `1202`, `2410` and `2602` deliberately do not invent records, histories, population tables, completion tables or arbitrary assertion properties. Each assertion provides only the existing attributable beneficiary, source locator, scheme, outcome and validity interval. A `negative` awareness assertion can truthfully report the bounded supplied training check as failed; it does not prove complete personnel population coverage. The `inconclusive` risk snapshot becomes `unknown`, never `pass`.
 
-The reusable assertion Control accepts one assertion document of its type for an entity evidence snapshot. Accordingly, each organisational fixture is run as its own exact, frozen single-fact assessment snapshot. This is an existing capability boundary, not a project-private evidence schema or a claim that the separate snapshots constitute a combined programme result.
+The current organisation-assertion evidence contract represents one bounded entity assertion fact per supplied snapshot. A programme with several simultaneously applicable organisational Objectives therefore leaves nonmatching sibling Objectives unknown in that snapshot. This is a capability/authoring finding for post-#155 reassessment, not a programme roll-up or conformity mechanism. Each organisational fixture is an exact frozen run of the full applicable entity policy with one supplied assertion fact; it is not a run with only one applicable obligation and the separate snapshots do not constitute a combined programme result.
 
 ## Operator proof
 
@@ -55,12 +55,12 @@ scripts/dev cli --config projects/alder-forge-dcc-level3/compliance.yaml coverag
 scripts/dev cli --config projects/alder-forge-dcc-level3/compliance.yaml policy validate
 ```
 
-Coverage shows the board and MFA paths as Objectives/Realizations, while 0002, 1202, 2409, 2410 and 2602 remain direct policy. It reads current inventory and policy only; it does not read evidence or results. The focused project gate collects deterministic fixtures, performs frozen assessments and uses public `assessment explain` and `assessment mappings` views. It demonstrates:
+Coverage shows all five organisational paths and the MFA path as Objectives/Realizations; only 2409 remains direct technical policy. It reads current inventory and policy only; it does not read evidence or results. The focused project gate collects deterministic fixtures, performs frozen assessments and uses public `assessment explain` and `assessment mappings` views. It demonstrates:
 
 - `0002`, `1101`, `2201` and `2410` passing in their respective exact snapshots;
 - `1202` unknown from an attributable inconclusive assertion;
 - `2602` and `2409` failing from a negative bounded assertion and an unexpected Linux package;
-- entity, Linux and SaaS results retaining only their own direct checks and applicable Objective; and
+- entity, Linux and SaaS results retaining only their own applicable Objectives or direct checks; and
 - historical explanation retaining the frozen reason, source-backed evidence, policy-source attribution and mapping context without treating an assertion as a direct package/MFA check.
 
 There are no waivers in this slice. In particular, no waiver is used for uncertain evidence, unknown scope or assessor judgment.
