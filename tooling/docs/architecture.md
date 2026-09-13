@@ -1,7 +1,7 @@
 # OPA Compliance Toolset — Architecture
 
 Status: **Working draft (v0.1)**  
-Last updated: **2026-09-12**
+Last updated: **2026-09-13**
 
 This document is a shared design surface, not a finished specification. It
 records our current model, the reasoning behind it, and the questions that
@@ -57,6 +57,14 @@ The toolset should answer four different questions without conflating them:
   concerns may also exist without any external mapping. When external wording
   is broad, a reviewed company interpretation and complete realization bridge
   it to attributable checks; the framework prose is not executable policy.
+- **Framework accounting is project governance, not policy composition.** The
+  future `FrameworkObligationDeclaration` accepted by system ADR 0021 owns a closed,
+  versioned ledger and declared project scope outside ordinary policy sources and
+  assessment plans. Pure governance declarations need no circular assertion evidence;
+  their reviewed determination may be affirmative, conclusively negative, or not
+  established without becoming an assessment result. Independently observable facts
+  remain assessed. Its bounded satisfaction view is ephemeral and cannot establish
+  external conformity or population completeness.
 - **Verification is scenario-first and claim-aware.** Stable verification
   projects use deterministic, real-world-shaped synthetic situations and map
   implemented features onto those stories. They expose the complete path from
@@ -522,6 +530,30 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-13 — Project-governed framework obligation declaration (#159)
+
+System [ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md)
+accepts `FrameworkObligationDeclaration` as separately versioned project-governance
+state outside ordinary policy sources and plans. It owns exact declared framework
+scope, a closed applicable/excluded/not-applicable obligation ledger, and exactly one
+governance-declared, evidence-assessed Objective, direct technical, mixed, or external-
+judgment basis per entry. The decision rule is whether satisfaction can change
+independently from governance's declared implementation.
+
+The accepted framework-satisfaction interpretation is ephemeral over an exact
+declaration, an exact retained operation anchor as scope witness, exact bound
+plans/results required by assessed/direct portions, and explicit query time where
+needed. Its states are `satisfied`, `not_satisfied`, and `not_established`;
+any conclusive required governance or assessed failure is `not_satisfied`, unresolved
+support without a conclusive failure is `not_established`, and only every required
+basis affirmatively satisfied is `satisfied`. Governance-negative remains declaration-
+side and creates no assessment result. Waivers/deviations and external recognition
+remain qualifications. The declaration is
+not embedded in plans and does not alter current Coverage, policy/composition/member/
+operation/plan/result identity, or historical outcomes. This documentation decision
+implements no resource, schema, path, runtime, CLI, view, migration, generic framework
+engine, process evidence abstraction, conformity claim, or freeze.
+
 ### 2026-09-13 — Canonical technical BaselineOverlay parent pins (#147)
 
 `BaselineOverlay.spec.extends` alone is an unordered exact set of complete
@@ -824,8 +856,8 @@ and commands are unsupported, and adaptation is external.
 | 2026-08-29 | Compare two strict project plan snapshots by stable subject identity, reuse the immutable per-subject policy diff, report valid additions/removals and effective modifications, and fail the aggregate comparison closed for invalid-resolution subjects, mixed artifacts, empty sets, or duplicate identities | Accepted and implemented as `policy diff-set`; authored baseline diff remains future work |
 | 2026-08-29 | Enforce the pinned evidence-type JSON Schemas after exact subject routing and before freshness selection; preserve valid extension fields, report matching schema failures as independently attributable control errors without invoking OPA, and refuse unreadable or non-object evidence that cannot be routed safely | Historical implemented rule; schema-invalid evidence → `error` classification superseded by system [ADR 0010](../../docs/adr/0010-required-evidence-status-and-assessment-refusal.md). Runtime correction to `unknown` is implemented by #32; historical rationale retained |
 | 2026-08-29 | Separate stable scenario-first verification from exploratory development and boundary examples; use credible deterministic synthetic situations, explicit feature coverage, normal production contracts, and project isolation even when several projects share one repository | Accepted verification strategy; first scenario migration implemented, broader repository migration remains proposed |
-| 2026-08-29 | Explain external assurance as a chain from versioned framework scope through company intent, documented operating practice, complete technical realization, evidence, conservative results, deviations, waivers, and gaps; never infer whole-framework fulfillment from mapped technical checks | Accepted documentation and claim boundary; no new resource kind or joined CLI view yet |
-| 2026-08-29 | Treat internal policy and external obligations as complementary inputs that converge on reviewed company requirements and technical baselines; external mappings are many-to-many and broad framework language requires an explicit company interpretation, complete realization, intended-configuration trace, and evidence-backed result | Accepted authoring and explanation boundary; structured framework-coverage catalog remains future work |
+| 2026-08-29 | Explain external assurance as a chain from versioned framework scope through company intent, documented operating practice, complete technical realization, evidence, conservative results, deviations, waivers, and gaps; never infer whole-framework fulfillment from mapped technical checks | Accepted documentation and claim boundary; ADR 0021 later accepts a separate project-governed declaration and ephemeral bounded projection, still without mapping inference or a joined current/latest view |
+| 2026-08-29 | Treat internal policy and external obligations as complementary inputs that converge on reviewed company requirements and technical baselines; external mappings are many-to-many and broad framework language requires an explicit company interpretation, complete realization, intended-configuration trace, and evidence-backed result | Accepted authoring and explanation boundary; ADR 0021 now accepts the separately owned `FrameworkObligationDeclaration` design, with implementation still future work |
 | 2026-08-29 | Create an independently versioned verification-scenarios repository, keep development projects non-normative, implement the first Linux hardening rollout project, assign every registered example feature to one primary scenario, and use fixed mock collection/evaluation instants | Implemented transitional repository; canonical integration ownership, deterministic scenarios, and feature mapping remain accepted across consolidation, while repository placement follows workspace ADR 0005 |
 | 2026-08-29 | Keep tooling, policy, and stable verification scenarios on the core release path while treating end-user examples as downstream consumers of supported releases that can be copied or forked and must never feed back into core verification | Logical release/dependency boundary accepted; source-repository placement follows workspace ADR 0005, and external starter UX remains future work |
 | 2026-08-29 | Separate released reusable policy, verification-only policy, and released example-company policy into independent lifecycle and repository roles; use the shared library as their only common policy dependency, prohibit verification/example cross-dependencies and copied reusable controls, and have the starter workspace pin supported shared and example-policy releases | Policy-source identity, lifecycle, and dependency separation accepted; separate Git repositories are not required by workspace ADR 0005, and example-company policy remains proposed |

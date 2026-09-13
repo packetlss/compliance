@@ -1,7 +1,7 @@
 # Baseline Inheritance and Overlays
 
 Status: **Working proposal with prototype (v0.2)**  
-Last updated: **2026-08-23**
+Last updated: **2026-09-13**
 
 This document proposes how an internal company policy can inherit from an
 external hardening benchmark, document deliberate deviations, and produce a
@@ -397,7 +397,12 @@ map to several external requirements without changing their company ownership
 or introducing an external parent baseline. Those mappings demonstrate
 technical alignment only. A complete objective-level claim requires a reviewed
 company `ControlRequirement` and complete selected `ControlRealization`; a
-whole-framework claim additionally requires complete declared framework scope.
+bounded framework-level conclusion instead requires the exact closed project-owned
+`FrameworkObligationDeclaration` accepted by
+[ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md).
+A direct technical Baseline is a complete company basis for one declared obligation
+only when that declaration explicitly pins it as such; mappings alone never confer
+completeness or external conformity.
 
 ## 10. Governance choices still open
 

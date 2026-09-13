@@ -1,7 +1,7 @@
 # Policy and Baseline Model
 
 Status: **Working draft (v0.1)**  
-Last updated: **2026-09-06**
+Last updated: **2026-09-13**
 
 This document describes how policy as code can represent host configuration,
 software baselines, SaaS settings, and other state expressible as JSON without
@@ -107,6 +107,7 @@ The practical authoring rule is:
 | Report a complete company or framework objective | `ControlRequirement`, `ControlRealization`, and `RequirementBaseline` |
 | Do both on the same subject | Assign both; render them into one subject plan |
 | Associate a check with a framework without claiming completeness | Technical `external_refs` mapping |
+| Declare a closed framework/profile obligation ledger and each obligation's reviewed company basis | Future project-owned `FrameworkObligationDeclaration` responsibility from [ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md), outside policy sources and ordinary plans |
 
 The objective result is an evidence-backed internal assurance claim. Whether
 it is sufficient for certification, audit acceptance, or a legal compliance
@@ -146,12 +147,30 @@ the scenario and report must identify that step as unverified.
 
 An objective assessment claims only that its selected complete realization
 satisfied the declared company requirement for the assessed subject and time.
-Whole-framework fulfillment additionally requires a complete, versioned scope
-of applicable requirements and visible treatment of omissions and
-not-applicable determinations. Technical `external_refs`, illustrative
-profiles, and passing company policy remain insufficient on their own. The
-scenario documentation and verification rules are defined in
+Bounded framework satisfaction additionally requires the exact closed, versioned
+project-governance ledger accepted by ADR 0021, including declared project scope,
+applicable/excluded/not-applicable accounting and an exact basis for every obligation.
+Technical `external_refs`, illustrative profiles, and passing company policy remain
+insufficient on their own. The product establishes completeness against governance's
+declared ledger, not the authoritative external framework universe. The scenario
+documentation and verification rules are defined in
 [`verification-scenarios.md`](verification-scenarios.md).
+
+Pure governance obligations should not normally receive a synthetic Objective and
+assertion evidence merely to round-trip governance's own declaration. Ask whether
+satisfaction could change independently from the declared implementation without a
+declaration change. If not, a reviewed governance determination is normally sufficient
+for the bounded internal accounting model and may record affirmative adoption,
+conclusive non-adoption, or insufficient establishment. That determination remains
+declaration-side and creates no evidence, Objective, or assessment result. If yes, the
+independently observable occurrence, completion, outcome, population fact, or technical
+posture remains assessed. A mixed obligation keeps its governance determination and
+ordinary evidence-backed assessment as separate required authorities.
+
+`FrameworkObligationDeclaration` is accepted architecture, not implemented policy.
+It may pin Requirements/Realizations or technical policy as its assessed basis but
+does not replace them. A direct technical Baseline is a complete framework-obligation
+basis only when the declaration explicitly says it is; a mapping alone never is.
 
 For requirements with a technical implementation, the explanation has two
 related branches from the same resolved control parameters:
@@ -601,6 +620,14 @@ company result and plan-owned `TAILORED` alignment rather than being reported
 as unaltered parent-framework conformance. This is bounded traceability, not a
 mapping-completeness, conformity, certification, audit-opinion, or legal conclusion.
 
+ADR 0021 does not add declaration content to this plan. A future framework-
+satisfaction projection must consume the exact retained declaration separately,
+match its exact company-policy pins and existing `InventoryGroup` scope bindings to
+an exact operation anchor and the exact bound plans/results required by assessed/direct
+portions, and use the frozen operation as the historical subject denominator. A
+declaration-only edit must not change policy-source,
+planning-composition, member-plan, operation, bound-plan, or result identity.
+
 Accounting disposition is derived from frozen lifecycle, relevant assignment,
 active-control, and requirement membership. Retired, unassigned, and
 no-assessable-policy members require no result and receive no synthetic pass or
@@ -678,6 +705,15 @@ inventory and policy without persisting a Coverage artifact. `assessment status
 --by group` aggregates exact frozen group membership, accounting disposition, and
 exact retained results from one operation anchor; it does not join a current plan
 to a latest result or claim that DAG group totals are mutually exclusive.
+
+The future ADR 0021 framework projection is a third, explicitly supplied
+interpretation over an exact declaration and exact assessment history. It does not
+persist `Coverage`, create a new assessment result, or mutate the historical result.
+Its only top-level states are `satisfied`, `not_satisfied`, and `not_established`;
+any conclusive required governance or assessed failure wins as `not_satisfied`, lack
+of establishment wins next as `not_established`, and only every required basis
+affirmatively satisfied produces `satisfied`. The preferred successful wording is
+**Satisfied under declared coverage**.
 
 The same operator CLI exposes `plan render` for inspecting the immutable input
 to evaluation and `assessment run` for rendering, persisting, and evaluating a

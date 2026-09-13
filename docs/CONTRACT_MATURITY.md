@@ -266,6 +266,38 @@ Issue #37 is closed architecture history. New semantics or escalation require a
 new focused architecture promotion. Historical artifacts require their historical
 tooling; no historical result is reinterpreted.
 
+## Framework obligation declaration and bounded satisfaction
+
+[ADR 0021](adr/0021-project-governed-framework-obligation-declarations.md) is
+**Accepted design, not yet implemented; experimental and not frozen** under
+[#159](https://github.com/packetlss/compliance/issues/159), following exploration
+[#158](https://github.com/packetlss/compliance/issues/158). It accepts the durable
+`FrameworkObligationDeclaration` responsibility as project-governance state outside
+ordinary named policy sources and ordinary assessment plans. Its closed ledger owns
+declared framework/profile/version scope, explicit obligation accounting, reviewed
+interpretations and exactly one governance, assessed Objective, direct technical,
+mixed or external-judgment basis per obligation. Every applicable governance portion
+requires a reviewed determination capable of affirmative satisfaction, conclusive
+non-implementation, or insufficient establishment without creating evidence or an
+assessment result.
+
+The associated framework-satisfaction surface is an ephemeral projection over an
+explicit exact declaration, an exact retained operation anchor as its historical
+scope witness, and exact bound plan/results required by assessed/direct portions. It
+has only `satisfied`, `not_satisfied` and `not_established`; the successful operator
+wording is **Satisfied under declared coverage**. Any conclusive required governance
+or assessed failure is `not_satisfied`; otherwise unresolved required governance or
+assessed support is `not_established`; only every required basis affirmatively
+satisfied is `satisfied`. This does not change current
+`Coverage`, AssessmentResult or plan/result identity, infer completeness from
+`external_refs`, or establish external conformity, certification, legal applicability,
+framework-universe completeness or real-world population completeness.
+
+No declaration resource, schema, project path, identity algorithm, CLI, projection,
+operator view or Alder Forge migration is currently implemented. Those require a
+separately promoted coordinated tranche. If implementation needs declaration content
+in ordinary plans or changed plan/result semantics, it returns to architecture.
+
 ## Accepted vocabulary convergence
 
 [ADR 0009](adr/0009-active-compliance-vocabulary.md), implementing #57's architecture decision, makes `control-library` the maintained reusable semantic source name. This intentional pre-freeze rename changes name-bearing composition/provenance identity without changing policy-tree bytes/content digest or the `compliance-control-library` distribution. Historical `shared-library` artifacts remain distinct; no alias is added.
@@ -295,6 +327,9 @@ Residual assurance questions, including methodology, sampling, N/A changes and
 any direct result dependency graphs, require a new focused architecture promotion.
 #78 implements only bounded frozen accounting and typed assertions. Any new common
 abstraction, semantics or trust boundary requires renewed architecture review.
+ADR 0021 resolves only the bounded project-governance declaration and ephemeral
+satisfaction interpretation; external authority/recognition, generic framework/GRC
+behavior, and declaration implementation remain outside current runtime authority.
 
 ### Experimental generated/public views
 

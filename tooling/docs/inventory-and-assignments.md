@@ -1,7 +1,7 @@
 # Inventory, Groups, and Policy Assignments
 
 Status: **Working proposal with prototype (v0.1)**  
-Last updated: **2026-09-12**
+Last updated: **2026-09-13**
 
 This document defines how governed assets enter the inventory, how they become
 members of a group DAG, and how group-level policy assignments resolve to
@@ -461,6 +461,22 @@ not resources, snapshots, digests, caches, plans, assessment inputs, or durable
 facts, and no query writes generated state. Supplied inventory is never presented
 as proof of external inventory exhaustiveness.
 
+[ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md)
+does not change this `Coverage` responsibility. Its future
+`FrameworkObligationDeclaration` is separate project-governance state with a declared
+scope, not persisted current `Coverage`. User-facing **declared coverage** means the
+scope governance recorded in that declaration; it does not mean the current Coverage
+projection was saved, versioned, made identity-bearing, or given assessment ownership.
+
+The declaration should bind its scope, including assessed/direct portions where
+present, through stable project and existing `InventoryGroup` identities rather than
+add selectors or another subject hierarchy. For historical framework interpretation,
+the exact operation's frozen selection witness, group membership, member commitments
+and dispositions provide the frozen scope witness and historical subject denominator.
+This does not imply governance-only obligations were assessed. Current inventory or
+Coverage cannot replace it. That denominator is complete only against supplied
+governed inventory and never proves that the real-world population was exhaustive.
+
 The root development registry defaults to `mock-fleet`, which exercises the
 contract with `aws-account` and `saas-tenant` subjects. Root-registered projects
 are selected from the checkout root with `--project`. The `iam-realization`
@@ -566,3 +582,6 @@ queried separately through `coverage`.
 - Coverage is deliberately calculated from the current supplied file projection and
   is never persisted as historical state. Frozen assessment history is interpreted
   only through its exact operation, retained plans, and results.
+- The accepted `FrameworkObligationDeclaration` and its ephemeral satisfaction
+  projection are not yet implemented; they do not create a second Coverage algorithm,
+  selector language, or latest compliance state.

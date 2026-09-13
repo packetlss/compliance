@@ -6,11 +6,11 @@ in [Actual composition and expected enforcement](composition.md). All maintained
 consumers use successor contracts; historical artifacts require historical tooling.
 
 Status: **Accepted convention (v0.3)**
-Last updated: **2026-09-11**
+Last updated: **2026-09-13**
 
 A project is the smallest independently operable compliance scope. It owns one
 inventory projection, its policy assignments, collected evidence, rendered
-plans, and assessment results. A project registry may select one project
+plans, assessment results, and reviewed project-governance inputs. A project registry may select one project
 at a time, but it does not merge these catalogs or artifacts and does not
 require a particular repository topology.
 
@@ -139,6 +139,20 @@ content:
 | `waivers` | Project governance | No; exceptions are approved within this subject and visibility boundary |
 | `policySources` | Shared releases plus optional project-private policy | Shared sources yes; private sources remain project-scoped |
 
+[ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md)
+accepts `FrameworkObligationDeclaration` as another project-governance input with a
+distinct responsibility: the closed, versioned framework/profile obligation ledger,
+declared project scope, and reviewed satisfaction basis for every entry. It must not
+be placed beneath `policySources` or `policy/`; doing so would couple framework
+accounting edits to unrelated policy composition and assessment-plan identities.
+
+The declaration's eventual project path and configuration field remain for the
+separately promoted implementation and are intentionally absent from the canonical
+layout and six current operational paths above. Conceptually, it belongs in a
+dedicated authored project-governance location alongside `assignments/` and
+`waivers/`, never under `generated/`. The path itself, filenames and repository
+placement will not substitute for the declaration's semantic identity.
+
 Paths make this a logical contract rather than a filesystem sandbox. Shared
 policy sources and schemas may sit outside the project directory, as all
 maintained repository examples demonstrate. A deployment may also place
@@ -186,7 +200,9 @@ Waivers are reviewed project governance inputs and must not be placed under
 approval data determine whether an observed failure is reported as waived. See
 [`waivers.md`](waivers.md). Future project-owned locations such as
 source-snapshot definitions should likewise be added only when their domain
-contract exists.
+contract exists. ADR 0021 now supplies the declaration's semantic domain contract,
+but not its path/schema/runtime contract; the canonical tree must not add that path
+until the implementation is separately promoted.
 
 Inventory labels may select stable operational personas, but the policy
 difference itself does not belong in inventory. The development

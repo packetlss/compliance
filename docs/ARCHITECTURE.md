@@ -1,6 +1,6 @@
 # System architecture
 
-This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 and 0016–0020 (ADRs 0013–0015 are superseded) in `docs/adr/`.
+This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 and 0016–0021 (ADRs 0013–0015 are superseded) in `docs/adr/`.
 
 Historical `packetlss-labs/compliance-workspace` architecture remains migration/design provenance. After this documentation-authority transfer, this repository owns current normative system architecture.
 
@@ -83,6 +83,7 @@ These jobs describe the intended product scope of the accepted core, not a claim
 - **Security operator:** determine whether decided technical controls are actually satisfied and understand policy and assessment coverage. Keep a decided criterion's `pass` / `fail` / `unknown` / `error` assessment state distinct from unassigned scope, explicit exclusions or deviations, an absent realization for an assigned objective, missing or stale evidence, and broader security conditions with no identified active criterion. Passing assigned controls does not prove complete security-policy coverage. Discovery of observed-but-unaddressed security conditions is a separate future capability, not an implemented assessment claim.
 - **Infrastructure operator:** consume exact resolved, subject-scoped technical intent with provenance and integrate it into independently owned infrastructure tooling. External systems may translate the assessment plan into Ansible, Terraform, MDM, cloud-init, ticketing, configuration-management, or other delivery mechanisms, within the [external-adapter boundary](#external-adapter-boundary). Backend capability selection, configuration compilation, credentials, approvals, execution/apply, and provider state remain outside the core. Generated configuration does not establish that intended state was deployed or remains effective.
 - **Auditor / reviewer:** obtain attributable evidence and explanations of whether decided controls were satisfied, failed, unknown, waived, or otherwise qualified, with the provenance needed to understand the conclusion. Provenance identifies the inputs and execution used; it does not itself authenticate observation truth or approval authority. A point-in-time assessment is not automatically proof of continuous effectiveness. Framework mappings are attributable reporting content, not engine-established certification or legal-compliance conclusions.
+- **Governance reviewer:** maintain a closed, versioned declaration of the framework/profile obligations accounted for under a declared project scope and the reviewed governance, assessed, direct, mixed, or external-judgment basis assigned to each. The resulting framework-satisfaction projection is bounded to that declaration and exact retained assessment history; it is not conformity, certification, legal applicability, or population completeness.
 - **Evidence operator:** understand evidence demand and health: required evidence types, the subjects and controls requiring them, freshness requirements, missing/stale/invalid/otherwise unusable evidence, and the assessment outcomes blocked by those problems. This is an intended product job even though the current CLI does not provide a complete evidence-operator workflow. It does not introduce a new evidence resource or collection-failure taxonomy.
 
 These jobs do not themselves settle evidence or temporal interpretation. [ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns assessment-time evidence validity/status/refusal, and [ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) owns immutable history, exact plan alignment and derived operational evidence timeliness. ADR 0016 below owns the closed-world responsibility boundary; manual/procedural methodology, sampling inference, policy-gap discovery, evidence-operator CLI design, collector failure taxonomy and durable evidence retention require separately promoted work. Point-in-time assessments cannot establish continuous effectiveness.
@@ -96,6 +97,11 @@ The plan is not:
 - a complete inventory of all security concerns or proof that all meaningful security decisions have been made;
 - a backend configuration specification or authorization to apply changes; or
 - evidence that settings were deployed or remain effective at the present moment.
+
+It also does not embed the project-owned `FrameworkObligationDeclaration` accepted
+by [ADR 0021](adr/0021-project-governed-framework-obligation-declarations.md).
+Framework-accounting changes do not alter ordinary plan or result identity when
+resolved assessed policy is unchanged.
 
 This clarifies existing artifact meaning, not a new payload or readiness claim: #31 established the composition foundation, and #32 implemented v1alpha3 assessment generation through provenance-bearing v4 plans/results.
 
@@ -272,8 +278,11 @@ Framework/reference mappings are attributable policy-authoring/reporting content
 A supplied company target P revision R containing O1/O2/O3 cannot silently omit O2;
 its list is not an authoritative external obligation universe. Report only exact
 resolved company policy/scope, for example: “All required instances in company
-target P revision R passed for resolved subjects A and B.” Do not upgrade this to
-all-assets compliance, framework satisfaction or certification/legal conformity.
+target P revision R passed for resolved subjects A and B.” Mappings and passing
+policy alone cannot upgrade this to all-assets compliance, framework satisfaction or
+certification/legal conformity. ADR 0021 separately permits the narrower **Satisfied
+under declared coverage** projection only from an exact closed project-governance
+declaration plus exact retained assessment support.
 External conformity comparison is outside the generic core unless a future explicit
 company-policy dependency models a concrete condition. ADR 0012 remains unchanged.
 
@@ -315,6 +324,59 @@ The [operation contract](../tooling/docs/operation-accounting.md) specifies exac
 selection, membership, plan identity, result matching and historical reporting.
 Any direct result graph, external conformity engine, certificate subsystem, or
 other residual assurance architecture requires a new focused exploration and promotion.
+
+## Project-governed framework obligation accounting
+
+[ADR 0021](adr/0021-project-governed-framework-obligation-declarations.md) accepts,
+but does not yet implement, `FrameworkObligationDeclaration`. It is durable,
+versioned project-governance state outside ordinary named policy sources and ordinary
+assessment plans. It owns an exact declared framework/profile/version reference, one
+declared project scope, a closed applicable/excluded/not-applicable obligation ledger,
+reviewed company interpretations, and exactly one satisfaction-basis category for
+each obligation: governance-declared, evidence-assessed Objective, direct technical
+policy, mixed governance plus assessed, or external judgment.
+
+The declaration references existing company policy without replacing it.
+`ControlRequirement`, `ControlRealization`, `RequirementBaseline`, technical
+`Baseline` / `BaselineOverlay`, reusable Controls, and evidence retain their current
+responsibilities. Pure governance adoption normally needs no synthetic Objective or
+assertion evidence when it cannot vary independently from the reviewed declaration.
+Its reviewed governance determination can be affirmative, conclusively negative, or
+insufficiently established; a known governance-negative remains declaration-side and
+creates no assessment result.
+Independently observable occurrence, completion, outcome, or technical state remains
+ordinary assessment evidence. A direct technical policy is a complete obligation
+basis only when the declaration explicitly says so; `external_refs` remain
+traceability.
+
+Framework satisfaction is an ephemeral interpretation over the exact declaration,
+an exact retained operation anchor as the historical scope witness, the exact bound
+plans/results required by assessed/direct portions, and an explicit query/as-of instant
+where qualification is needed. The declaration
+reuses project and `InventoryGroup` scope concepts; the frozen operation provides the
+frozen scope witness and historical subject denominator. It does not imply that
+governance-only obligations were assessed. Missing scope, results, policy-pin alignment,
+or other required support fails closed. Neither this denominator nor the declaration
+proves external framework-universe or real-world population completeness.
+
+The only top-level states are `satisfied`, `not_satisfied`, and `not_established`.
+Any conclusive required governance or assessed failure produces `not_satisfied`, even
+if another basis is unresolved. With no conclusive failure, an absent, invalid,
+ambiguous, unreviewed or insufficient governance determination, missing/unknown/error/
+stale/invalid/misaligned assessed support, a waived required failure, or unresolved
+external judgment produces `not_established`. Only affirmative governance
+determinations plus passing assessed/direct support for every required portion can
+produce `satisfied`. Governance cannot override assessed failure or uncertainty, and
+governance uncertainty is not synthetic assessment `unknown`. Waivers, internal
+deviations, and external-recognition facts are qualifications, never successful
+top-level states. The preferred successful wording is **Satisfied under declared
+coverage**, not normative `compliant`.
+
+Declaration revisions never rewrite historical outcomes or reinterpret an old
+category. Historical use explicitly retains and supplies the exact declaration
+alongside exact plans/results; current qualification remains separate. There is no
+new result artifact, declaration content in ordinary plan identity, persistent
+`Coverage`, or mutable latest compliance state.
 
 ## Historical assessment and operational interpretation
 
