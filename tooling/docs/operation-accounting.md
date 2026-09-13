@@ -131,6 +131,23 @@ accounting remain separate, and mappings never produce external conformity. Curr
 inventory policy expectation belongs only to Coverage; Assessment has no non-anchored
 current-plan/latest-result reporting path.
 
+[ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md)
+accepts a future ephemeral framework-satisfaction projection without changing this
+operation contract. The exact operation supplies the historical assessed subject
+denominator for declaration portions bound to project `InventoryGroup` scope. The
+projection must use the exact frozen selection witness, memberships, dispositions,
+member commitments and valid bound plan/result pairs; another operation, current
+inventory, current Coverage, a latest result, or a convenient subset cannot fill a
+missing or misaligned slot.
+
+The exact `FrameworkObligationDeclaration` remains a separately retained input and is
+not embedded in the operation or ordinary plans. A declaration-only edit therefore
+does not change `member_plan_digest`, `operation_id`, bound `plan_id`, or result
+identity. Deleting the declaration may remove later framework interpretability just
+as deleting a required assessed plan does, without rewriting immutable results.
+Operation completeness remains bounded to supplied governed inventory and does not
+prove real-world population completeness.
+
 Historical operation views require explicit `--as-of q` and may accept
 a validated `--comparison-plan`. They derive, without changing artifacts or accounting,
 exact operation-bound plan alignment, selected required-evidence timeliness, and the

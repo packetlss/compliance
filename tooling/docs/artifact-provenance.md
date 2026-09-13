@@ -18,6 +18,15 @@ mappings, and all other plan semantics. The result references only the exact
 ADR 0018's atomic cutover is implemented by
 [#102](https://github.com/packetlss/compliance/issues/102).
 
+The project-owned `FrameworkObligationDeclaration` accepted by
+[ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md)
+is deliberately outside this pair. Ordinary plans do not embed its ledger, declared
+scope, governance references, or identity. A declaration-only edit must not change
+policy-source composition, `member_plan_digest`, `operation_id`, bound `plan_id`, or
+result identity. A future bounded framework-satisfaction projection explicitly
+receives the exact retained declaration alongside the exact pair set required by its
+assessed portions; it is not another result artifact.
+
 The minimum result retains its explicit schema/version and identity discriminator,
 `plan_id`, `subject_id`, `evaluated_at`, immutable outcome, actual evaluation
 composition plus evaluation enforcement, exact evaluator, complete subject evidence
@@ -151,6 +160,13 @@ composition lock without treating distribution/version/acquisition metadata as
 composition identity. Release preparation remains independently validated.
 
 ## Historical reproduction
+
+Framework-level historical interpretation, once implemented, additionally requires
+the exact separately retained declaration revision. Losing it can make the bounded
+framework projection unavailable but cannot rewrite the exact plan/result assertion.
+Supplying a later declaration is a new explicit interpretation and must expose scope,
+policy-pin, category and time misalignment rather than retroactively relabel history.
+There is no current/latest compliance-result store.
 
 #33 removed project-config v1alpha1/v1alpha2, release-lock v1alpha2, and assessment
 plan/results v1/v3 schemas, readers and compatibility fixtures after consumer cutover.

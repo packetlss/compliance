@@ -1,7 +1,7 @@
 # Control Requirements and Environment Realizations
 
 Status: **Implemented initial contract (v0.1)**  
-Last updated: **2026-09-12**
+Last updated: **2026-09-13**
 
 This document defines how a high-level regulatory or company control objective
 can receive a defensible top-level result from environment-private technical
@@ -125,17 +125,26 @@ generated output nor an apply receipt replaces observed evidence.
 Likewise, the rolled-up result is an evidence-backed assessment of the mapped
 company objective for one environment, subject, plan, and evaluation time. It
 does not by itself establish that every requirement in an external framework
-was in scope or satisfied. Complete framework claims require versioned scope,
-accounting for applicable and omitted requirements, and visible
-not-applicable determinations in addition to objective results.
+was in scope or satisfied. [ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md)
+accepts a separate project-owned `FrameworkObligationDeclaration` responsibility for
+the closed, versioned scope and obligation ledger. Its bounded satisfaction
+projection requires the exact declaration in addition to exact retained assessment
+support; it does not turn an Objective result into external conformity.
 
 Verification scenarios should demonstrate this chain with credible synthetic
 operational stories and document the exact limit of each claim. The accepted
 scenario rules are in
-[`verification-scenarios.md`](verification-scenarios.md). A separate
-machine-readable operating-practice or framework-coverage resource remains
-deferred until these scenarios reveal a stable contract that the current
-requirement, realization, plan, and explanation artifacts cannot express.
+[`verification-scenarios.md`](verification-scenarios.md). ADR 0021 records the
+minimum declaration responsibility semantically but does not implement or freeze its
+wire form, project path, schema, identity algorithm, runtime, or CLI.
+
+A pure governance obligation needs no synthetic `ControlRequirement`, realization,
+or assertion evidence merely to re-prove the reviewed declaration when satisfaction
+cannot vary independently from it. Where actual occurrence, completion, outcome,
+population, or technical state can drift independently, that portion remains an
+ordinary evidence-backed Objective or direct technical assessment. A mixed obligation
+requires both authorities; the governance reference is not evidence and does not
+alter complete `satisfaction.allOf` semantics.
 
 The existing `Baseline` and `BaselineOverlay` contracts continue to describe
 technical desired state and explicit changes to it. A realization is not a
@@ -322,12 +331,13 @@ carries an information-classification enum. Confidentiality is enforced by sourc
 ownership, acquisition/materialization, repository access, and deployment controls;
 the assessment engine does not make access decisions from a semantic label.
 
-If central governance needs framework-level status, the environment may export
-a signed minimal assurance claim containing requirement identity, result,
-assessment time, policy digests, and an opaque subject reference. Such a claim
-is an attestation from the local evaluator, not a central re-evaluation. Raw
-evidence, parameters, implementation names, group names, and remediation may
-remain local.
+If central governance needs framework-level status, the future ADR 0021 projection
+must receive the exact retained declaration and the exact independently valid
+operation-bearing plans/results needed by its assessed portions. A downstream signed
+export would remain an attestation or presentation from that environment, not a new
+core result, central re-evaluation, external certification, or substitute for those
+exact inputs. Raw evidence, parameters, implementation names, group names, and
+remediation may remain local under a separately designed disclosure boundary.
 
 ## 9. Implemented contracts and limitations
 
@@ -374,8 +384,10 @@ physically materializes `environment-private` separately before execution. The c
 does not yet:
 
 - support nested, threshold, or alternative satisfaction expressions;
-- sign shared releases or exported assurance claims; or
-- define inheritance or overlays on realizations themselves.
+- sign shared releases or exported assurance claims;
+- define inheritance or overlays on realizations themselves;
+- implement `FrameworkObligationDeclaration` or its satisfaction projection; or
+- provide a generic process/GRC/activity-history evidence abstraction.
 
 Complete embedded checks and non-inheriting `based_on` provenance are the
 accepted initial authoring model. ADR 0012 promotes explicit parameter binding
