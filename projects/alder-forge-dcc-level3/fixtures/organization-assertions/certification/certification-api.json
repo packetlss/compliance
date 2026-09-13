@@ -1,0 +1,14 @@
+{
+  "subject": {"id": "entity/alder-forge-defence-systems", "type": "entity"},
+  "type": "organization.assertion/v1",
+  "collector": {"id": "mock/alder-forge-certification-register", "version": "0.1.0"},
+  "payload": {
+    "beneficiary": "entity/alder-forge-defence-systems",
+    "asserted_by": "Alder Forge certification register (synthetic)",
+    "source_locator": "synthetic://alder-forge/certification/CE-PLUS-2026-001",
+    "scheme": "alder-forge.defstan-0002.ce-plus-scope",
+    "outcome": "positive",
+    "valid_from": "2026-01-01T00:00:00Z",
+    "valid_until": "2026-12-31T23:59:59Z"
+  }
+}

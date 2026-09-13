@@ -1,0 +1,10 @@
+{
+  "subject": {"id": "saas/alder-admin-tenant", "type": "saas-tenant"},
+  "type": "saas.tenant.configuration/v1",
+  "collector": {"id": "mock/alder-forge-saas-security-api", "version": "0.1.0"},
+  "payload": {
+    "tenant": {"id": "AF-ADMIN-TENANT", "provider": "alder-forge-synthetic"},
+    "authentication": {"sso_enforced": true, "mfa_enforced": true},
+    "audit_log": {"retention_days": 180}
+  }
+}

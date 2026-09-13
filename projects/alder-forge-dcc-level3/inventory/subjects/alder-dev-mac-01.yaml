@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: Subject
+metadata:
+  name: alder-dev-mac-01
+  labels:
+    company: alder-forge
+    platform: corporate
+    role: managed-development
+  annotations:
+    compliance.example/description: Fictional managed macOS development endpoint retained as factual supplied scope only in this tranche
+spec:
+  id: workstation/alder-dev-mac-01
+  type: macos-workstation
+  lifecycle: active
+  source:
+    name: alder-forge-synthetic-endpoint-catalog
+    externalId: MAC-DEV-01
+    observedAt: "2026-09-01T00:00:00Z"
+    revision: synthetic-snapshot-1

@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=../../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: Subject
+metadata:
+  name: alder-admin-tenant
+  labels:
+    company: alder-forge
+    platform: corporate
+    access-scope: critical
+  annotations:
+    compliance.example/description: Fictional SaaS identity and administration tenant in the supplied Alder Forge scope
+spec:
+  id: saas/alder-admin-tenant
+  type: saas-tenant
+  lifecycle: active
+  source:
+    name: alder-forge-synthetic-saas-catalog
+    externalId: AF-ADMIN-TENANT
+    observedAt: "2026-09-01T00:00:00Z"
+    revision: synthetic-snapshot-1

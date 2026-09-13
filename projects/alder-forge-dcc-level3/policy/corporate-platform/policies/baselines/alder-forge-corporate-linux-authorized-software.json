@@ -1,0 +1,21 @@
+{
+  "apiVersion": "compliance.example/v1",
+  "kind": "Baseline",
+  "metadata": {
+    "id": "alder-forge.corporate-linux.authorized-software",
+    "revision": 1,
+    "origin": {"type": "alder-forge-corporate-platform-policy", "name": "Alder Forge Linux authorised software"}
+  },
+  "spec": {
+    "title": "Alder Forge Linux authorised software",
+    "controls": [
+      {
+        "instance_id": "alder-forge.corporate-linux.authorized-software-2409",
+        "implementation": "linux.packages.only-allowed",
+        "external_refs": ["DEFSTAN-05-138-ISSUE-4:2409"],
+        "parameters": {"ecosystem": "linux-native", "allowed": ["bash", "curl", "openssh-server"]},
+        "evidence": {"observation": {"max_age": "24h"}}
+      }
+    ]
+  }
+}

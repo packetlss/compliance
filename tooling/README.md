@@ -65,6 +65,9 @@ Runnable end-to-end examples are available for:
 - synthetic standard and container-runtime server personas, including an
   invalid overlapping classification, in
   [`server-personas/`](../projects/server-personas/README.md); and
+- a fictional DEFSTAN/DCC reference slice with project-private policy sources,
+  direct technical policy and Objectives/Realizations, in
+  [`alder-forge-dcc-level3/`](../projects/alder-forge-dcc-level3/README.md); and
 - the stable synthetic Linux hardening rollout in
   [canonical scenarios](../verification/scenarios/projects/linux-hardening-rollout/README.md).
 
@@ -102,6 +105,7 @@ contract:
 scripts/dev cli config list
 scripts/dev cli --project mock-fleet inventory validate
 scripts/dev cli --project server-personas coverage list assets
+scripts/dev cli --project alder-forge-dcc-level3 coverage explain entity/alder-forge-defence-systems
 scripts/dev cli --project server-personas waiver list
 ```
 

@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=../../../tooling/schemas/inventory/resource.schema.json
+apiVersion: compliance.example/v1alpha1
+kind: PolicyAssignment
+metadata:
+  name: alder-forge-critical-access-mfa
+spec:
+  targetRef:
+    kind: InventoryGroup
+    name: critical-saas-administration
+  baselineRefs:
+    - name: alder-forge.critical-access-mfa
+      revision: "1"

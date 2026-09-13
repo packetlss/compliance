@@ -54,6 +54,7 @@ require_file projects/README.md
 require_file projects/.gitignore
 require_file projects/mock-fleet/compliance.yaml
 require_file projects/server-personas/compliance.yaml
+require_file projects/alder-forge-dcc-level3/compliance.yaml
 require_file scripts/validate-development-projects.sh
 require_file scripts/development-projects/validation_inputs.py
 require_file scripts/development-projects/validate-all-development-projects.sh
@@ -107,7 +108,7 @@ actual_toolchain="$(cat toolchain/versions.env)"
 [[ "$actual_toolchain" == "$expected_toolchain" ]] || fail "toolchain/versions.env does not match the accepted migration toolchain"
 
 # Maintained source includes the independently named control-library and
-# verification-policy producers, two ordinary project roots, and the approved
+# verification-policy producers, three ordinary project roots, and the approved
 # synthetic IAM fixture. environment-private exists only as a temporary,
 # independently copied execution root.
 [[ -d policy-sources/control-library/policies ]] \
@@ -134,7 +135,7 @@ unexpected_policy_source="$(
 unexpected_project_entry="$(
   find projects -mindepth 1 -maxdepth 1 \
     ! -name .gitignore ! -name AGENTS.md ! -name README.md \
-    ! -name mock-fleet ! -name server-personas -print -quit
+    ! -name mock-fleet ! -name server-personas ! -name alder-forge-dcc-level3 -print -quit
 )"
 [[ -z "$unexpected_project_entry" ]] \
   || fail "unapproved ordinary project entry appeared: $unexpected_project_entry"

@@ -5,3 +5,5 @@ projects:
     config: projects/mock-fleet/compliance.yaml
   server-personas:
     config: projects/server-personas/compliance.yaml
+  alder-forge-dcc-level3:
+    config: projects/alder-forge-dcc-level3/compliance.yaml

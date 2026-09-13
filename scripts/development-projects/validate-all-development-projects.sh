@@ -48,6 +48,7 @@ else
 fi
 "$SCRIPT_ROOT/validate-development-projects.sh" --assembly-root "$ASSEMBLY_ROOT"
 "$SCRIPT_ROOT/validate-server-personas.sh" --assembly-root "$ASSEMBLY_ROOT"
+"$SCRIPT_ROOT/validate-alder-forge.sh" --assembly-root "$ASSEMBLY_ROOT"
 cleanup
 if [[ "$OWN_ASSEMBLY" == true && -e "$ASSEMBLY_ROOT" ]]; then
   printf 'ERROR: temporary assembly was not removed\n' >&2

@@ -1,0 +1,14 @@
+{
+  "subject": {"id": "host/alder-build-01", "type": "linux-host"},
+  "type": "linux.packages/v1",
+  "collector": {"id": "mock/alder-forge-linux-package-inventory", "version": "0.1.0"},
+  "payload": {
+    "ecosystem": "linux-native",
+    "packages": [
+      {"id": "bash", "version": "5.2"},
+      {"id": "curl", "version": "8.5"},
+      {"id": "openssh-server", "version": "9.6"},
+      {"id": "telnet", "version": "0.17"}
+    ]
+  }
+}

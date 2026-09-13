@@ -19,7 +19,7 @@ ASSEMBLY_ROOTS = (
 )
 TOP_LEVEL_ENTRIES = {"compliance.yaml", "tooling", "policy-sources", "projects"}
 POLICY_SOURCE_ENTRIES = {"control-library", "verification-policy"}
-PROJECT_ENTRIES = {"mock-fleet", "server-personas"}
+PROJECT_ENTRIES = {"alder-forge-dcc-level3", "mock-fleet", "server-personas"}
 
 
 def require(condition: bool, message: str) -> None:
