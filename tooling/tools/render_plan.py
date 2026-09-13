@@ -282,8 +282,30 @@ def _qualify_catalog(catalog: dict[str, JsonObject], source: PolicySource) -> No
             )
 
 
+def _canonical_overlay_parent_pins(parent_pins: list[JsonObject]) -> list[JsonObject]:
+    """Order only the unordered exact parent set of a technical overlay."""
+    return sorted(
+        (copy.deepcopy(pin) for pin in parent_pins),
+        key=canonical_json_bytes,
+    )
+
+
+def baseline_semantic_document(document: JsonObject) -> JsonObject:
+    """Project a technical baseline into its bounded semantic identity form."""
+    public = {key: copy.deepcopy(value) for key, value in document.items() if not key.startswith("_")}
+    if public.get("kind") == "BaselineOverlay":
+        spec = public.get("spec")
+        if isinstance(spec, dict) and isinstance(spec.get("extends"), list):
+            spec["extends"] = _canonical_overlay_parent_pins(spec["extends"])
+    return public
+
+
+def baseline_semantic_digest(document: JsonObject) -> str:
+    return content_digest(baseline_semantic_document(document))
+
+
 def _semantic_resource_digest(document: JsonObject) -> str:
-    public = {key: value for key, value in document.items() if not key.startswith("_")}
+    public = baseline_semantic_document(document)
     if "_parameters_schema" in document:
         public["parameters_schema_document"] = document["_parameters_schema"]
         public["implementation_modules"] = document.get("_implementation_modules", [])
@@ -1119,7 +1141,7 @@ def load_baseline_catalog(
                 "existing_source": catalog[reference]["_source"],
             })
             continue
-        baseline["_digest"] = content_digest(baseline)
+        baseline["_digest"] = baseline_semantic_digest(baseline)
         baseline["_source"] = source
         catalog[reference] = baseline
     return catalog, errors
@@ -1585,6 +1607,78 @@ def require_deviation(operation: JsonObject, baseline_reference: str) -> JsonObj
     return copy.deepcopy(deviation)
 
 
+def _preflight_overlay_parents(
+    parent_pins: list[JsonObject],
+    baseline_reference: str,
+) -> list[JsonObject]:
+    """Refuse ambiguous technical parent pins before reading their catalog entries."""
+    exact_pins: dict[tuple[str, str], int] = {}
+    digest_sets: dict[str, set[str]] = defaultdict(set)
+    for pin in parent_pins:
+        parent_reference = pin["baseline"]
+        parent_digest = pin["digest"]
+        exact_pins[(parent_reference, parent_digest)] = (
+            exact_pins.get((parent_reference, parent_digest), 0) + 1
+        )
+        digest_sets[parent_reference].add(parent_digest)
+
+    duplicates = sorted(
+        (parent_reference, parent_digest)
+        for (parent_reference, parent_digest), count in exact_pins.items()
+        if count > 1
+    )
+    if duplicates:
+        parent_reference, parent_digest = duplicates[0]
+        raise BaselineResolutionError(
+            "duplicate-parent-pin",
+            baseline=baseline_reference,
+            parent=parent_reference,
+            digest=parent_digest,
+        )
+
+    contradictory = sorted(
+        (parent_reference, sorted(digests, key=canonical_json_bytes))
+        for parent_reference, digests in digest_sets.items()
+        if len(digests) > 1
+    )
+    if contradictory:
+        parent_reference, digests = contradictory[0]
+        raise BaselineResolutionError(
+            "contradictory-parent-pins",
+            baseline=baseline_reference,
+            parent=parent_reference,
+            digests=digests,
+        )
+    return _canonical_overlay_parent_pins(parent_pins)
+
+
+def _append_unique(records: list[JsonObject], incoming: list[JsonObject]) -> None:
+    for item in incoming:
+        if item not in records:
+            records.append(copy.deepcopy(item))
+
+
+def _effective_inherited_control(control: JsonObject) -> JsonObject:
+    """Exclude only attribution and its derived integrity check from coalescence."""
+    return {
+        key: value
+        for key, value in control.items()
+        if key not in {
+            "definition_fingerprint",
+            "lineage",
+            "derivations",
+            "deviations",
+        }
+    }
+
+
+def _compatible_inherited_controls(left: JsonObject, right: JsonObject) -> bool:
+    return (
+        left["definition_fingerprint"] == right["definition_fingerprint"]
+        and _effective_inherited_control(left) == _effective_inherited_control(right)
+    )
+
+
 def resolve_baseline(
     reference: str,
     catalog: dict[str, JsonObject],
@@ -1651,6 +1745,8 @@ def resolve_baseline(
     if not parents:
         raise BaselineResolutionError("overlay-without-parent", baseline=reference)
 
+    parents = _preflight_overlay_parents(parents, reference)
+    inherited_controls: dict[str, list[tuple[JsonObject, JsonObject]]] = {}
     for parent_pin in parents:
         parent_reference = parent_pin["baseline"]
         parent_document = catalog.get(parent_reference)
@@ -1670,32 +1766,44 @@ def resolve_baseline(
             )
 
         parent = resolve_baseline(parent_reference, catalog, next_stack, cache)
-        for lineage_item in parent["lineage"]:
-            if lineage_item not in baseline_lineage:
-                baseline_lineage.append(copy.deepcopy(lineage_item))
-        deviations.extend(copy.deepcopy(parent["deviations"]))
+        _append_unique(baseline_lineage, parent["lineage"])
+        _append_unique(deviations, parent["deviations"])
 
         for instance_id, inherited in parent["controls"].items():
-            existing = controls.get(instance_id)
-            if existing is None:
-                controls[instance_id] = copy.deepcopy(inherited)
-            elif existing["definition_fingerprint"] == inherited["definition_fingerprint"]:
-                for lineage_item in inherited["lineage"]:
-                    if lineage_item not in existing["lineage"]:
-                        existing["lineage"].append(copy.deepcopy(lineage_item))
-                for derivation in inherited["derivations"]:
-                    if derivation not in existing["derivations"]:
-                        existing["derivations"].append(copy.deepcopy(derivation))
-                for deviation in inherited["deviations"]:
-                    if deviation not in existing["deviations"]:
-                        existing["deviations"].append(copy.deepcopy(deviation))
-            else:
-                raise BaselineResolutionError(
-                    "inherited-control-conflict",
-                    baseline=reference,
-                    instance_id=instance_id,
-                    parents=[parent["reference"]],
-                )
+            inherited_controls.setdefault(instance_id, []).append((parent_pin, inherited))
+
+    conflicts = [
+        instance_id
+        for instance_id, candidates in inherited_controls.items()
+        if any(
+            not _compatible_inherited_controls(candidates[0][1], inherited)
+            for _, inherited in candidates[1:]
+        )
+    ]
+    if conflicts:
+        instance_id = min(conflicts, key=canonical_json_bytes)
+        raise BaselineResolutionError(
+            "inherited-control-conflict",
+            baseline=reference,
+            instance_id=instance_id,
+            parents=[
+                {
+                    "reference": parent_pin["baseline"],
+                    "digest": parent_pin["digest"],
+                    "definition_fingerprint": inherited["definition_fingerprint"],
+                    "disposition": inherited["disposition"],
+                }
+                for parent_pin, inherited in inherited_controls[instance_id]
+            ],
+        )
+
+    for instance_id, candidates in inherited_controls.items():
+        control = copy.deepcopy(candidates[0][1])
+        for _, inherited in candidates[1:]:
+            _append_unique(control["lineage"], inherited["lineage"])
+            _append_unique(control["derivations"], inherited["derivations"])
+            _append_unique(control["deviations"], inherited["deviations"])
+        controls[instance_id] = control
 
     seen_operations: set[tuple[str, str]] = set()
     for operation in document["spec"].get("operations", []):
@@ -1763,15 +1871,15 @@ def resolve_baseline(
             if "evidence" in operation:
                 control["evidence"] = copy.deepcopy(operation["evidence"])
             control["alignment"] = "tailored"
-            control["deviations"].append(deviation)
-            deviations.append(deviation)
+            _append_unique(control["deviations"], [deviation])
+            _append_unique(deviations, [deviation])
             derivation_deviation = deviation
         elif operation_name == "exclude":
             deviation = require_deviation(operation, reference)
             control["disposition"] = "excluded"
             control["alignment"] = "deviated"
-            control["deviations"].append(deviation)
-            deviations.append(deviation)
+            _append_unique(control["deviations"], [deviation])
+            _append_unique(deviations, [deviation])
             derivation_deviation = deviation
         elif operation_name == "substitute":
             if not operation.get("equivalence_ref"):

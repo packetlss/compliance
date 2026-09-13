@@ -522,6 +522,18 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-13 — Canonical technical BaselineOverlay parent pins (#147)
+
+`BaselineOverlay.spec.extends` alone is an unordered exact set of complete
+technical parent pins. The semantic projection orders those pins by RFC
+8785/JCS bytes before the existing digest construction; it leaves authored
+operations, raw source identity, RequirementBaseline, additive-set, and all
+technology-neutral semantics unchanged. Resolver preflight rejects duplicate
+and contradictory pins before lookup, compatible parents union only exact
+attribution records, and divergent parents fail without precedence while
+retaining canonical candidate diagnostics. No identity algorithm, compatibility
+reader, generic normalization layer, or new identity family is introduced.
+
 ### 2026-09-12 — Implement canonical identifier and schema URI migration (#136)
 
 ADR 0019's grammar and role/owner-derived schema `$id` layouts are implemented

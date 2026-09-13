@@ -306,6 +306,35 @@ Multiple inheritance is allowed, but parent order has no semantic meaning.
 not implemented or accepted by the current schema, so a divergent inherited
 definition currently remains a hard resolution error.
 
+### 7.1 Technical multiple-parent canonicalization
+
+This rule is limited to technical `BaselineOverlay.spec.extends`. Its complete
+parent pins form an unordered exact set whose member identity is the pair of
+`baseline` reference and pinned `digest`. For the semantic resource digest and
+technical resolution, the validated public overlay is deep-copied and only
+those complete pin objects are ordered by their RFC 8785/JCS bytes before the
+existing semantic digest is computed. `operations` retains authored order.
+Raw source-tree identity remains byte/path exact, so source text with reversed
+parent pins can have a different raw-source digest while describing the same
+technical overlay.
+
+Before a parent is looked up, an exact duplicate pin is rejected and two pins
+for one parent reference with different digests are rejected as contradictory.
+The latter diagnostic names the reference and its canonically ordered distinct
+digests; no source content selects a winner. Missing and stale pins remain
+fail-closed after that preflight.
+
+Direct parents resolve in canonical pin order. Same-instance controls coalesce
+only when their complete resolved states match apart from the unioned
+attribution collections `lineage`, `derivations`, and `deviations`; the
+definition fingerprint remains an integrity check, not a scalar-winner rule.
+Exact duplicate attribution records may coalesce and all distinct records are
+retained. A divergent instance fails with every direct-parent candidate in
+canonical pin order, including its reference, pinned digest, definition
+fingerprint, and effective disposition. This does not apply to
+`RequirementBaseline`, its single parent pin, generic arrays, additive-set
+parameters, or any technology-neutral inheritance semantics.
+
 ## 8. Rendered assessment plan
 
 The fully rendered plan should include both active and excluded inherited

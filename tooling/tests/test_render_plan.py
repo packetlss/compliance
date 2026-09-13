@@ -1,4 +1,5 @@
 import copy
+import itertools
 import json
 import shutil
 import tempfile
@@ -12,6 +13,7 @@ from contract_fixtures import evidence_schema, fixture_root
 from tools.artifact_validation import validate_assessment_plan
 from tools.render_plan import (
     BaselineResolutionError,
+    baseline_semantic_digest,
     content_digest,
     control_definition_fingerprint,
     load_baseline_catalog,
@@ -27,6 +29,7 @@ from tools.render_plan import (
     resource_validation_errors,
     resolve_baseline,
     resolve_groups,
+    source_tree_digest,
     validate_group_dag,
     validate_control_evidence_contracts,
     validate_policy_catalog,
@@ -180,7 +183,7 @@ class GroupResolutionTests(unittest.TestCase):
 
 def catalog_document(document):
     prepared = copy.deepcopy(document)
-    prepared["_digest"] = content_digest(document)
+    prepared["_digest"] = baseline_semantic_digest(document)
     prepared["_source"] = "test"
     return prepared
 
@@ -249,6 +252,29 @@ class BaselineOverlayTests(unittest.TestCase):
                         "deviation": deviation("DEV-TEST-2"),
                     },
                 ],
+            },
+        }
+
+    def add_parent_overlay(self, identifier, *, operations=None):
+        overlay = self.company_overlay()
+        overlay["metadata"]["id"] = identifier
+        overlay["spec"]["operations"] = copy.deepcopy(operations or [])
+        reference = f"{identifier}@1"
+        self.catalog[reference] = catalog_document(overlay)
+        return reference
+
+    def combined_overlay(self, references, identifier="company.combined"):
+        return {
+            "apiVersion": "compliance.example/v1",
+            "kind": "BaselineOverlay",
+            "metadata": {"id": identifier, "revision": 1},
+            "spec": {
+                "title": "Combined test company policy",
+                "extends": [
+                    {"baseline": parent, "digest": self.catalog[parent]["_digest"]}
+                    for parent in references
+                ],
+                "operations": [],
             },
         }
 
@@ -353,6 +379,116 @@ class BaselineOverlayTests(unittest.TestCase):
             {item["id"] for item in control["deviations"]},
             {"DEV-FIRST", "DEV-SECOND"},
         )
+
+    def test_technical_parent_permutations_share_digest_and_resolved_state(self):
+        parents = [
+            self.add_parent_overlay(identifier)
+            for identifier in ("company.parent-a", "company.parent-b", "company.parent-c")
+        ]
+        resolutions = []
+        digests = set()
+        for ordered in itertools.permutations(parents):
+            document = self.combined_overlay(ordered)
+            self.catalog["company.combined@1"] = catalog_document(document)
+            digests.add(self.catalog["company.combined@1"]["_digest"])
+            resolutions.append(resolve_baseline("company.combined@1", self.catalog))
+
+        self.assertEqual(len(digests), 1)
+        self.assertTrue(all(resolution == resolutions[0] for resolution in resolutions))
+
+    def test_operation_order_remains_semantic(self):
+        first = self.company_overlay()
+        first["spec"]["operations"] = [
+            {"op": "add", "control": {
+                "instance_id": "company.first", "implementation": "test.setting-equals",
+                "parameters": {"expected": "first"},
+            }},
+            {"op": "add", "control": {
+                "instance_id": "company.second", "implementation": "test.setting-equals",
+                "parameters": {"expected": "second"},
+            }},
+        ]
+        second = copy.deepcopy(first)
+        second["spec"]["operations"].reverse()
+
+        self.assertNotEqual(baseline_semantic_digest(first), baseline_semantic_digest(second))
+
+    def test_parent_pin_admission_precedes_lookup(self):
+        pin = {"baseline": self.base_reference, "digest": self.catalog[self.base_reference]["_digest"]}
+        duplicate = self.combined_overlay([self.base_reference, self.base_reference])
+        duplicate["spec"]["extends"] = [pin, copy.deepcopy(pin)]
+        self.catalog["company.combined@1"] = catalog_document(duplicate)
+        with self.assertRaises(BaselineResolutionError) as raised:
+            resolve_baseline("company.combined@1", self.catalog)
+        self.assertEqual(raised.exception.details["type"], "duplicate-parent-pin")
+
+        contradictory = self.combined_overlay([self.base_reference])
+        contradictory["spec"]["extends"] = [
+            pin,
+            {"baseline": self.base_reference, "digest": "sha256:" + "0" * 64},
+        ]
+        self.catalog["company.combined@1"] = catalog_document(contradictory)
+        with self.assertRaises(BaselineResolutionError) as raised:
+            resolve_baseline("company.combined@1", self.catalog)
+        self.assertEqual(raised.exception.details, {
+            "type": "contradictory-parent-pins",
+            "baseline": "company.combined@1",
+            "parent": self.base_reference,
+            "digests": sorted([pin["digest"], "sha256:" + "0" * 64]),
+        })
+
+    def test_missing_and_stale_parent_pins_remain_fail_closed(self):
+        missing = self.combined_overlay([self.base_reference])
+        missing["spec"]["extends"][0]["baseline"] = "missing.parent@1"
+        self.catalog["company.combined@1"] = catalog_document(missing)
+        with self.assertRaises(BaselineResolutionError) as raised:
+            resolve_baseline("company.combined@1", self.catalog)
+        self.assertEqual(raised.exception.details["type"], "unknown-baseline")
+
+        stale = self.combined_overlay([self.base_reference])
+        stale["spec"]["extends"][0]["digest"] = "sha256:" + "0" * 64
+        self.catalog["company.combined@1"] = catalog_document(stale)
+        with self.assertRaises(BaselineResolutionError) as raised:
+            resolve_baseline("company.combined@1", self.catalog)
+        self.assertEqual(raised.exception.details["type"], "parent-digest-mismatch")
+
+    def test_complete_effective_state_is_required_for_parent_coalescence(self):
+        excluded = self.company_overlay()
+        excluded["metadata"]["id"] = "company.excluded"
+        excluded["spec"]["operations"] = [excluded["spec"]["operations"][1]]
+        self.catalog["company.excluded@1"] = catalog_document(excluded)
+        combined = self.combined_overlay((self.base_reference, "company.excluded@1"))
+        self.catalog["company.combined@1"] = catalog_document(combined)
+
+        with self.assertRaises(BaselineResolutionError) as raised:
+            resolve_baseline("company.combined@1", self.catalog)
+
+        self.assertEqual(raised.exception.details["type"], "inherited-control-conflict")
+        candidates = raised.exception.details["parents"]
+        self.assertEqual(len(candidates), 2)
+        self.assertEqual(
+            {candidate["disposition"] for candidate in candidates}, {"evaluate", "excluded"},
+        )
+
+    def test_divergent_parent_permutations_have_one_structured_failure(self):
+        second = copy.deepcopy(self.base)
+        second["metadata"]["id"] = "benchmark.second"
+        second["spec"]["controls"][0]["parameters"] = {"expected": "different"}
+        third = copy.deepcopy(self.base)
+        third["metadata"]["id"] = "benchmark.third"
+        third["spec"]["controls"][0]["parameters"] = {"expected": "also-different"}
+        self.catalog["benchmark.second@1"] = catalog_document(second)
+        self.catalog["benchmark.third@1"] = catalog_document(third)
+        parents = (self.base_reference, "benchmark.second@1", "benchmark.third@1")
+        failures = []
+        for ordered in itertools.permutations(parents):
+            self.catalog["company.combined@1"] = catalog_document(self.combined_overlay(ordered))
+            with self.assertRaises(BaselineResolutionError) as raised:
+                resolve_baseline("company.combined@1", self.catalog)
+            failures.append(raised.exception.details)
+
+        self.assertTrue(all(failure == failures[0] for failure in failures))
+        self.assertEqual(len(failures[0]["parents"]), 3)
 
     def test_rebase_rejects_stale_control_fingerprint(self):
         overlay = self.company_overlay()
@@ -613,6 +749,72 @@ class PolicySchemaTests(unittest.TestCase):
             ]["_sources"]],
             ["environment-private", "verification-policy"],
         )
+
+    def test_reversed_technical_parent_copies_coalesce_without_changing_raw_identity(self):
+        selection = self.root / "selection"
+        with tempfile.TemporaryDirectory() as directory:
+            first_source = Path(directory) / "first-copy"
+            private = Path(directory) / "second-copy"
+            shutil.copytree(selection, first_source)
+            for identifier in ("test.parent-a", "test.parent-b"):
+                document = {
+                    "apiVersion": "compliance.example/v1",
+                    "kind": "Baseline",
+                    "metadata": {"id": identifier, "revision": 1},
+                    "spec": {"title": identifier, "controls": []},
+                }
+                target = first_source / f"baselines/{identifier}.json"
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(json.dumps(document), encoding="utf-8")
+
+            parents = [
+                {
+                    "baseline": f"{identifier}@1",
+                    "digest": baseline_semantic_digest({
+                        "apiVersion": "compliance.example/v1",
+                        "kind": "Baseline",
+                        "metadata": {"id": identifier, "revision": 1},
+                        "spec": {"title": identifier, "controls": []},
+                    }),
+                }
+                for identifier in ("test.parent-a", "test.parent-b")
+            ]
+            overlay = {
+                "apiVersion": "compliance.example/v1",
+                "kind": "BaselineOverlay",
+                "metadata": {"id": "test.reversed-copy", "revision": 1},
+                "spec": {"title": "reversed copy", "extends": parents, "operations": []},
+            }
+            first = first_source / "baselines/reversed-copy.json"
+            first.write_text(json.dumps(overlay), encoding="utf-8")
+            second = private / "baselines/reversed-copy.json"
+            second.parent.mkdir(parents=True)
+            reversed_overlay = copy.deepcopy(overlay)
+            reversed_overlay["spec"]["extends"].reverse()
+            second.write_text(json.dumps(reversed_overlay), encoding="utf-8")
+
+            _, catalog, errors = load_policy_catalogs((
+                PolicySource("control-library", self.root / "shared"),
+                PolicySource("first-copy", first_source),
+                PolicySource("second-copy", private),
+            ))
+
+            self.assertEqual(errors, [])
+            self.assertEqual(
+                [source["policy_source"] for source in catalog["test.reversed-copy@1"]["_sources"]],
+                ["first-copy", "second-copy"],
+            )
+            raw_first = Path(directory) / "raw-first"
+            raw_second = Path(directory) / "raw-second"
+            (raw_first / "baselines").mkdir(parents=True)
+            (raw_second / "baselines").mkdir(parents=True)
+            (raw_first / "baselines/overlay.json").write_text(
+                json.dumps(overlay), encoding="utf-8"
+            )
+            (raw_second / "baselines/overlay.json").write_text(
+                json.dumps(reversed_overlay), encoding="utf-8"
+            )
+            self.assertNotEqual(source_tree_digest(raw_first), source_tree_digest(raw_second))
 
     def test_identical_control_meaning_coalesces_but_divergent_meaning_fails(self):
         shared = self.root / "shared"
