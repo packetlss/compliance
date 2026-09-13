@@ -1556,7 +1556,6 @@ def control_definition_fingerprint(control: JsonObject) -> str:
         "deviations",
         "disposition",
         "lineage",
-        "overlay_policy",
     }
     return content_digest({key: value for key, value in control.items() if key not in ignored})
 
