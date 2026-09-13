@@ -204,6 +204,14 @@ immutable requirement outcome and reason. Its JSON is a
 bounded projection and never embeds a whole plan or result. Stable operation, plan,
 result, asset, check, and dependency identities remain available for drill-down.
 
+`framework validate` validates project-governed declarations at the configured
+`paths.frameworkDeclarations` path. `framework status DECLARATION --revision REVISION`
+and `framework explain` require that exact declaration plus `--plan`, repeatable
+`--assessed-plans`, `--results`, `--at`, and `--as-of`, including under `--no-config`.
+They never select a latest declaration/result or resolve current policy. Their only
+top-level words are “Satisfied under declared coverage”, “Not satisfied under declared
+coverage”, and “Satisfaction not established under declared coverage”.
+
 The assessment plan is the machine-readable external-adapter handoff. Its
 active and excluded control records retain stable implementation and instance
 IDs, resolved parameters, definition fingerprints, derivations, deviations,

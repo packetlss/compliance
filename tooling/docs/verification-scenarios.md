@@ -232,7 +232,7 @@ and [repository map](../../docs/REPOSITORIES.md)
 distinguish logical integration ownership from repository placement and preserve
 real information-sharing boundaries.
 
-The tooling feature catalog records the retained 21 CLI leaves and 19 domain
+The tooling feature catalog records the retained 24 CLI leaves and 19 domain
 features. The co-located canonical scenario gate owns their complete composed
 validation without making an adapter a prerequisite for assessment.
 

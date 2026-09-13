@@ -143,7 +143,7 @@ roll-up, resolved Linux package/sysctl controls, assessment-plan adapter handoff
 exact waivers, invalid sibling-policy conflicts, and joined assessment
 explanations. The machine-readable ownership catalog lives in the co-located
 tooling root at `tooling/examples/feature-coverage.json`; the
-final catalog contains 21 public CLI leaves and 19 domain features, each with
+final catalog contains 24 public CLI leaves and 19 domain features, each with
 exactly one primary owner.
 
 All identities and observations are synthetic. Fixtures contain no credentials,

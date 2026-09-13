@@ -28,21 +28,26 @@ This project pins its mapping reading as of **2026-09-13**:
 
 The #153 exploration found a discrepancy that remains explicit here: the MOD spreadsheet mechanically produces a different profile count and treats `2300` differently, whereas the working Applicant Guide reconciles the stated 144-control Level 3 corpus by excluding `2300`, `2502`, `2504` and `3101`. This project uses that 144-control reconciliation only to select this representative workload. It does not normalize the discrepancy into policy, framework identity, inventory, plan semantics or assessment results.
 
-## Seven mapped checks
+## Seven declared obligations
 
 | DEFSTAN control | Alder Forge representation | Existing contract |
 | --- | --- | --- |
-| `0002` | Entity Objective with one CE Plus scope assertion realization | `organization.assertion.required` + `organization.assertion/v1` |
-| `1101` | Entity-scoped board-direction Objective and one complete assertion realization | same assertion contract |
-| `1202` | Entity Objective with one bounded risk-assessment assertion realization | same assertion contract |
-| `2201` | Technology-neutral MFA Objective with one critical-SaaS realization | `saas.tenant.setting-equals` + `saas.tenant.configuration/v1` |
-| `2409` | Direct Linux authorised-package policy | `linux.packages.only-allowed` + `linux.packages/v1` |
-| `2410` | Entity Objective with one bounded authorised-software-list review assertion realization, separate from package state | assertion contract |
-| `2602` | Entity Objective with one bounded annual awareness assertion realization | assertion contract |
+| `0002` | External CE Plus judgment/dependency | external judgment; intentionally not established |
+| `1101` | Reviewed board security-direction adoption | declaration-side governance determination |
+| `1202` | Reviewed risk-assessment adoption plus bounded Objective assertion | mixed governance + assessed Objective |
+| `2201` | Critical-SaaS MFA Objective | evidence-assessed Objective |
+| `2409` | Direct Linux authorised-package policy | direct technical policy basis |
+| `2410` | Reviewed authorised-software review plus bounded Objective assertion | mixed governance + assessed Objective |
+| `2602` | Reviewed awareness adoption plus bounded Objective assertion | mixed governance + assessed Objective |
 
 `1202`, `2410` and `2602` deliberately do not invent records, histories, population tables, completion tables or arbitrary assertion properties. Each assertion provides only the existing attributable beneficiary, source locator, scheme, outcome and validity interval. A `negative` awareness assertion can truthfully report the bounded supplied training check as failed; it does not prove complete personnel population coverage. The `inconclusive` risk snapshot becomes `unknown`, never `pass`.
 
-The current organisation-assertion evidence contract represents one bounded entity assertion fact per supplied snapshot. A programme with several simultaneously applicable organisational Objectives therefore leaves nonmatching sibling Objectives unknown in that snapshot. This is a capability/authoring finding for post-#155 reassessment, not a programme roll-up or conformity mechanism. Each organisational fixture is an exact frozen run of the full applicable entity policy with one supplied assertion fact; it is not a run with only one applicable obligation and the separate snapshots do not constitute a combined programme result.
+The declaration at `framework-obligations/defstan-dcc-level3.yaml` is closed,
+versioned project-governance state, outside `policy/` and generated output. It has its
+own digest and does not change policy-source, composition, member-plan, operation,
+plan, or result identity. `framework status` joins it only to explicitly supplied
+exact retained plans/results and an operation scope witness; it never treats mappings,
+current Coverage, or a latest result as framework satisfaction.
 
 ## Operator proof
 
@@ -55,9 +60,12 @@ scripts/dev cli --config projects/alder-forge-dcc-level3/compliance.yaml coverag
 scripts/dev cli --config projects/alder-forge-dcc-level3/compliance.yaml policy validate
 ```
 
-Coverage shows all five organisational paths and the MFA path as Objectives/Realizations; only 2409 remains direct technical policy. It reads current inventory and policy only; it does not read evidence or results. The focused project gate collects deterministic fixtures, performs frozen assessments and uses public `assessment explain` and `assessment mappings` views. It demonstrates:
+Coverage shows the retained three assessed organisational paths and the MFA path as
+Objectives/Realizations; only 2409 remains direct technical policy. It reads current
+inventory and policy only; it does not read evidence or results. The focused project
+gate also runs `framework status` over exact retained history. It demonstrates:
 
-- `0002`, `1101`, `2201` and `2410` passing in their respective exact snapshots;
+- `1101` as a reviewed governance determination and `0002` as unresolved external judgment;
 - `1202` unknown from an attributable inconclusive assertion;
 - `2602` and `2409` failing from a negative bounded assertion and an unexpected Linux package;
 - entity, Linux and SaaS results retaining only their own applicable Objectives or direct checks; and

@@ -3,7 +3,7 @@
 The tooling feature catalog covers every retained public `compliance` leaf
 command and the important component behaviors that span commands. After removal
 of in-core configuration generation and addition of current coverage views it
-contains 21 CLI leaves and 19 domain features.
+contains 24 CLI leaves and 19 domain features.
 
 The complete composed suite is owned by the co-located canonical scenario root
 at [`verification/scenarios/`](../../verification/scenarios/) under destination

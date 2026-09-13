@@ -2,11 +2,11 @@
 apiVersion: compliance.example/v1alpha1
 kind: PolicyAssignment
 metadata:
-  name: alder-forge-programme-assurance
+  name: alder-forge-bounded-assessed-objectives
 spec:
   targetRef:
     kind: InventoryGroup
     name: alder-forge-legal-entity
   baselineRefs:
-    - name: alder-forge.programme.assurance
+    - name: alder-forge.bounded-assessed-objectives
       revision: "1"

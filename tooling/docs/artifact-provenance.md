@@ -23,7 +23,7 @@ The project-owned `FrameworkObligationDeclaration` accepted by
 is deliberately outside this pair. Ordinary plans do not embed its ledger, declared
 scope, governance references, or identity. A declaration-only edit must not change
 policy-source composition, `member_plan_digest`, `operation_id`, bound `plan_id`, or
-result identity. A future bounded framework-satisfaction projection explicitly
+result identity. The bounded framework-satisfaction projection explicitly
 receives the exact retained declaration, an exact operation-bearing plan as its scope
 witness, and the exact pair set required by its assessed/direct portions; it is not
 another result artifact.
@@ -162,7 +162,7 @@ composition identity. Release preparation remains independently validated.
 
 ## Historical reproduction
 
-Framework-level historical interpretation, once implemented, additionally requires
+Framework-level historical interpretation additionally requires
 the exact separately retained declaration revision. Losing it can make the bounded
 framework projection unavailable but cannot rewrite the exact plan/result assertion.
 Supplying a later declaration is a new explicit interpretation and must expose scope,

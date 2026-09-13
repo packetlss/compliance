@@ -132,7 +132,7 @@ inventory policy expectation belongs only to Coverage; Assessment has no non-anc
 current-plan/latest-result reporting path.
 
 [ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md)
-accepts a future ephemeral framework-satisfaction projection without changing this
+is implemented as an ephemeral framework-satisfaction projection without changing this
 operation contract. The exact operation supplies the frozen scope witness and
 historical subject denominator for declaration portions bound to project
 `InventoryGroup` scope. It does not imply governance-only obligations were assessed.

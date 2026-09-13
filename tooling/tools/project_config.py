@@ -189,6 +189,16 @@ def _load_project_config(
         else Path(value).resolve()
         for key, value in document.get("paths", {}).items()
     }
+    framework_declarations = paths.get("frameworkDeclarations")
+    if framework_declarations is not None:
+        for forbidden in (base / "policy", base / "generated"):
+            try:
+                framework_declarations.relative_to(forbidden.resolve())
+            except ValueError:
+                continue
+            raise ProjectConfigError(
+                "paths.frameworkDeclarations must be project governance outside policy/ and generated/"
+            )
     source_definitions = document["policySources"]
     try:
         policy_sources = normalize_policy_sources(
@@ -202,6 +212,18 @@ def _load_project_config(
         )
     except ValueError as error:
         raise ProjectConfigError(f"invalid policy sources in {source}: {error}") from error
+    if framework_declarations is not None:
+        for policy_source in policy_sources:
+            try:
+                framework_declarations.relative_to(policy_source.path)
+            except ValueError:
+                try:
+                    policy_source.path.relative_to(framework_declarations)
+                except ValueError:
+                    continue
+            raise ProjectConfigError(
+                "paths.frameworkDeclarations must be project governance outside every policy-source path"
+            )
 
     composition_lock = None
     expected_content = {}

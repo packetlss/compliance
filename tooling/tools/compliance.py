@@ -75,6 +75,14 @@ from .waivers import (
     parse_timestamp,
     waiver_catalog_document,
 )
+from .framework import (
+    build_explanation as build_framework_explanation,
+    build_status as build_framework_status,
+    load_declarations,
+    render_status as render_framework_status,
+    select_declaration,
+    validate_project_declarations,
+)
 
 
 Handler = Callable[[argparse.Namespace], None]
@@ -679,6 +687,46 @@ def _run_assessment_view(args: argparse.Namespace) -> None:
     _run_historical_operation_view(args)
 
 
+def _framework_history(args: argparse.Namespace) -> tuple[dict, list[dict], list[dict]]:
+    """Use the ordinary exact-history loader; declarations never reopen policy."""
+    from .operation import account_operation, qualify_operation
+    if not args.plan or not args.at or not args.as_of:
+        raise ValueError('framework historical reporting requires --plan, --at, and --as-of')
+    anchor = load_json(args.plan)
+    validate_assessment_plan(anchor, source=args.plan)
+    instant = parse_timestamp(args.at, field='--at').isoformat().replace('+00:00', 'Z')
+    assessed = load_assessment_plans([args.plan, *args.assessed_plans])
+    reports = load_result_reports(args.results) if args.results and args.results.exists() else []
+    account = qualify_operation(
+        account_operation(anchor, reports, instant, assessed), reports,
+        parse_timestamp(args.as_of, field='--as-of'),
+        load_json(args.comparison_plan) if args.comparison_plan else None, assessed,
+    )
+    return account, assessed, reports
+
+
+def _run_framework(args: argparse.Namespace) -> None:
+    declarations = load_declarations(args.declarations)
+    if args.framework_command == 'validate':
+        if args.project_config.source is None:
+            raise ValueError('framework validate requires a project config for current project admission')
+        validate_project_declarations(
+            declarations, inventory=args.project_config.path('inventory'),
+            assignments=args.project_config.path('assignments'),
+            resource_schema=args.project_config.path('resourceSchema') or default_schema_path(),
+            policy_sources=args.project_config.policy_sources,
+        )
+        print(f'valid framework declaration catalog: {len(declarations)} declaration(s)')
+        return
+    declaration = select_declaration(declarations, args.declaration, args.revision)
+    account, plans, reports = _framework_history(args)
+    document = (build_framework_explanation if args.framework_command == 'explain' else build_framework_status)(declaration, account, plans, reports)
+    if args.format == 'json':
+        print(json.dumps(document, indent=2, sort_keys=True))
+    else:
+        print(render_framework_status(document))
+
+
 def _run_assessment(args: argparse.Namespace) -> None:
     from .operation import InvalidOperationResolution, plan_disposition
     try:
@@ -1125,6 +1173,24 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
     assessment_explain.add_argument("asset_id", metavar="ASSET")
     _add_assessment_view_options(assessment_explain, config, allow_filters=False)
     _set_handler(assessment_explain, _run_assessment_view)
+
+    framework_parser = commands.add_parser(
+        'framework', help='validate declared framework obligations and interpret exact retained history'
+    )
+    framework_commands = framework_parser.add_subparsers(dest='framework_command', required=True)
+    framework_validate = framework_commands.add_parser('validate', help='validate declaration schema and current project admission')
+    _add_path(framework_validate, '--declarations', config, 'frameworkDeclarations', help_text='framework declaration file or directory')
+    _set_handler(framework_validate, _run_framework)
+    for name, help_text in (
+        ('status', 'show bounded satisfaction under declared coverage from exact history'),
+        ('explain', 'explain each declared obligation basis and exact support'),
+    ):
+        child = framework_commands.add_parser(name, help=help_text)
+        child.add_argument('declaration', help='stable declaration name')
+        child.add_argument('--revision', help='required when name has multiple revisions')
+        _add_path(child, '--declarations', config, 'frameworkDeclarations', help_text='framework declaration file or directory')
+        _add_assessment_view_options(child, config, allow_filters=False)
+        _set_handler(child, _run_framework)
     return parser
 
 

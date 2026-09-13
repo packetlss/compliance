@@ -36,7 +36,7 @@ Accepted destination decisions:
 
 - [ADR 0020 — Governed policy composition without sealing](0020-governed-policy-composition-without-sealing.md) — implemented under [#144](https://github.com/packetlss/compliance/issues/144). It amends ADR 0012's sealing/additive-set closure clauses and refines ADR 0019's pre-freeze schema-evolution rule.
 
-- [ADR 0021 — Project-governed framework obligation declarations and bounded satisfaction](0021-project-governed-framework-obligation-declarations.md) — accepted architecture under [#159](https://github.com/packetlss/compliance/issues/159); not implemented, experimental, and not frozen. It introduces `FrameworkObligationDeclaration` as project-governance state outside policy sources and ordinary plans, plus an ephemeral three-state satisfaction projection over an exact declaration and exact retained assessment history.
+- [ADR 0021 — Project-governed framework obligation declarations and bounded satisfaction](0021-project-governed-framework-obligation-declarations.md) — implemented by [#161](https://github.com/packetlss/compliance/issues/161), experimental, and not frozen. It introduces `FrameworkObligationDeclaration` as project-governance state outside policy sources and ordinary plans, plus an ephemeral three-state satisfaction projection over an exact declaration and exact retained assessment history.
 
 Current system-level documents:
 

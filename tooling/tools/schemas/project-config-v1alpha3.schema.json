@@ -49,6 +49,9 @@
         },
         "waivers": {
           "$ref": "#/$defs/path"
+        },
+        "frameworkDeclarations": {
+          "$ref": "#/$defs/path"
         }
       }
     },

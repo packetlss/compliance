@@ -27,11 +27,12 @@ printf '\n== Alder Forge static contracts and current views ==\n'
 "${cli[@]}" inventory validate
 "${cli[@]}" policy validate
 "${cli[@]}" waiver validate
+"${cli[@]}" framework validate
 "${cli[@]}" coverage list assets --format json > "$RUN_ROOT/coverage-assets.json"
 "${cli[@]}" coverage explain entity/alder-forge-defence-systems --format json > "$RUN_ROOT/coverage-entity.json"
 
 printf '\n== Alder Forge bounded organisational assertion snapshots ==\n'
-for case in certification board-direction risk-assessment software-review awareness-training; do
+for case in risk-assessment software-review awareness-training; do
   case_root="$RUN_ROOT/organization/$case"
   mkdir -p "$case_root/evidence" "$case_root/plans" "$case_root/results"
   tooling_run python tooling/collectors/mock-api/collect.py \
@@ -41,6 +42,21 @@ for case in certification board-direction risk-assessment software-review awaren
     --evidence "$case_root/evidence" --plan-output "$case_root/plans" \
     --output "$case_root/results" --at "$FIXED_INSTANT"
 done
+
+printf '\n== Alder Forge declared framework history ==\n'
+mkdir -p "$RUN_ROOT/framework/evidence" "$RUN_ROOT/framework/plans" "$RUN_ROOT/framework/results"
+for fixture in "$PROJECT_ROOT/fixtures/organization-assertions/awareness-training" "$PROJECT_ROOT/fixtures/technical"; do
+  tooling_run python tooling/collectors/mock-api/collect.py "$fixture" "$RUN_ROOT/framework/evidence" --collected-at "$FIXED_INSTANT"
+done
+"${cli[@]}" assessment run --group alder-forge-legal-entity \
+  --group corporate-linux-build-systems --group critical-saas-administration \
+  --evidence "$RUN_ROOT/framework/evidence" \
+  --plan-output "$RUN_ROOT/framework/plans" --output "$RUN_ROOT/framework/results" --at "$FIXED_INSTANT"
+framework_anchor="$RUN_ROOT/framework/plans/entity__alder-forge-defence-systems.json"
+"${cli[@]}" framework status alder-forge-defstan-dcc-level3 --revision 2026-09 \
+  --plan "$framework_anchor" --assessed-plans "$RUN_ROOT/framework/plans" \
+  --results "$RUN_ROOT/framework/results" --at "$FIXED_INSTANT" --as-of "$FIXED_INSTANT" \
+  --format json > "$RUN_ROOT/framework-status.json"
 
 printf '\n== Alder Forge direct technical and MFA Objective checks ==\n'
 mkdir -p "$RUN_ROOT/technical/evidence" "$RUN_ROOT/technical/plans" "$RUN_ROOT/technical/results"
@@ -53,9 +69,9 @@ for subject in host/alder-build-01 saas/alder-admin-tenant; do
 done
 
 printf '\n== Alder Forge frozen historical explanation and mappings ==\n'
-anchor="$RUN_ROOT/organization/certification/plans/entity__alder-forge-defence-systems.json"
-history=(--plan "$anchor" --assessed-plans "$RUN_ROOT/organization/certification/plans" \
-  --results "$RUN_ROOT/organization/certification/results" --at "$FIXED_INSTANT" --as-of "$FIXED_INSTANT")
+anchor="$RUN_ROOT/organization/risk-assessment/plans/entity__alder-forge-defence-systems.json"
+history=(--plan "$anchor" --assessed-plans "$RUN_ROOT/organization/risk-assessment/plans" \
+  --results "$RUN_ROOT/organization/risk-assessment/results" --at "$FIXED_INSTANT" --as-of "$FIXED_INSTANT")
 "${cli[@]}" assessment explain entity/alder-forge-defence-systems "${history[@]}" \
   --format json > "$RUN_ROOT/entity-explain.json"
 "${cli[@]}" assessment mappings "${history[@]}" --format json > "$RUN_ROOT/entity-mappings.json"

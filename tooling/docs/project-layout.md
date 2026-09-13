@@ -137,6 +137,7 @@ content:
 | `plan` | Project runtime | No; plan revisions belong to this project |
 | `results` | Project runtime | No; status views read this project's results |
 | `waivers` | Project governance | No; exceptions are approved within this subject and visibility boundary |
+| `frameworkDeclarations` | Project governance | No; closed declaration ledger, outside `policy/` and `generated/` |
 | `policySources` | Shared releases plus optional project-private policy | Shared sources yes; private sources remain project-scoped |
 
 [ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md)
@@ -146,12 +147,10 @@ declared project scope, and reviewed satisfaction basis for every entry. It must
 be placed beneath `policySources` or `policy/`; doing so would couple framework
 accounting edits to unrelated policy composition and assessment-plan identities.
 
-The declaration's eventual project path and configuration field remain for the
-separately promoted implementation and are intentionally absent from the canonical
-layout and six current operational paths above. Conceptually, it belongs in a
-dedicated authored project-governance location alongside `assignments/` and
-`waivers/`, never under `generated/`. The path itself, filenames and repository
-placement will not substitute for the declaration's semantic identity.
+`paths.frameworkDeclarations` is optional, so projects without a declaration remain
+valid. Maintained declarations live at `framework-obligations/` beside `assignments/`
+and `waivers/`, never under `policy/` or `generated/`. Path, filename and document
+order are not declaration identity.
 
 Paths make this a logical contract rather than a filesystem sandbox. Shared
 policy sources and schemas may sit outside the project directory, as all

@@ -118,6 +118,17 @@ class ProjectConfigTests(unittest.TestCase):
             "sha256:" + "a" * 64,
         )
 
+    def test_rejects_framework_declarations_inside_a_policy_source(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "compliance.yaml"
+            source.write_text(
+                VALID_CONFIG + "  frameworkDeclarations: ../shared/policies/framework-obligations\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ProjectConfigError, "outside every policy-source path"):
+                load_config(source)
+
     def test_rejects_legacy_and_named_policy_sources_together(self):
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary) / "compliance.yaml"

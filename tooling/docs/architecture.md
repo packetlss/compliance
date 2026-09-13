@@ -550,9 +550,11 @@ basis affirmatively satisfied is `satisfied`. Governance-negative remains declar
 side and creates no assessment result. Waivers/deviations and external recognition
 remain qualifications. The declaration is
 not embedded in plans and does not alter current Coverage, policy/composition/member/
-operation/plan/result identity, or historical outcomes. This documentation decision
-implements no resource, schema, path, runtime, CLI, view, migration, generic framework
-engine, process evidence abstraction, conformity claim, or freeze.
+operation/plan/result identity, or historical outcomes. Issue #161 implements the
+pre-freeze resource, independent digest, optional `frameworkDeclarations` path,
+exact-history `framework` operator, and Alder Forge proving-consumer migration. It
+adds no generic framework engine, process evidence abstraction, conformity claim, or
+freeze.
 
 ### 2026-09-13 — Canonical technical BaselineOverlay parent pins (#147)
 

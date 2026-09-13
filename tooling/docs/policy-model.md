@@ -167,7 +167,13 @@ independently observable occurrence, completion, outcome, population fact, or te
 posture remains assessed. A mixed obligation keeps its governance determination and
 ordinary evidence-backed assessment as separate required authorities.
 
-`FrameworkObligationDeclaration` is accepted architecture, not implemented policy.
+`FrameworkObligationDeclaration` is a tooling-owned project-governance resource
+(`compliance.example/v1alpha1`) with the independent
+`compliance.example/framework-obligation-declaration-digest/v1alpha1` identity. It
+is not policy and does not enter composition, member-plan, operation, plan, or result
+identity. `framework validate` admits its exact group and policy pins against the
+current project; `framework status` and `framework explain` interpret only explicitly
+supplied retained history.
 It may pin Requirements/Realizations or technical policy as its assessed basis but
 does not replace them. A direct technical Baseline is a complete framework-obligation
 basis only when the declaration explicitly says it is; a mapping alone never is.
@@ -620,8 +626,8 @@ company result and plan-owned `TAILORED` alignment rather than being reported
 as unaltered parent-framework conformance. This is bounded traceability, not a
 mapping-completeness, conformity, certification, audit-opinion, or legal conclusion.
 
-ADR 0021 does not add declaration content to this plan. A future framework-
-satisfaction projection must consume the exact retained declaration separately,
+ADR 0021 does not add declaration content to this plan. The implemented framework-
+satisfaction projection consumes the exact retained declaration separately,
 match its exact company-policy pins and existing `InventoryGroup` scope bindings to
 an exact operation anchor and the exact bound plans/results required by assessed/direct
 portions, and use the frozen operation as the historical subject denominator. A

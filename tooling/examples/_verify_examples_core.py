@@ -75,6 +75,9 @@ CLI_EXAMPLES = {
     ("assessment", "status"): "exact operation status and current qualification",
     ("assessment", "mappings"): "bounded objective and technical traceability mappings",
     ("assessment", "explain"): "exact policy, result, and qualification explanation",
+    ("framework", "validate"): "strict project-governed declaration admission",
+    ("framework", "status"): "bounded declared satisfaction over exact retained history",
+    ("framework", "explain"): "per-obligation declared basis and exact-history support",
 }
 
 DOMAIN_EXAMPLES = {
@@ -869,6 +872,48 @@ class ExampleRunner:
             "--at", EXAMPLE_INSTANT,
             "--as-of", EXAMPLE_INSTANT,
         ]
+        framework_input = self.root / "framework-declaration.json"
+        framework_input.write_text(json.dumps({
+            "apiVersion": "compliance.example/v1alpha1",
+            "kind": "FrameworkObligationDeclaration",
+            "metadata": {"name": "example-framework", "revision": "1", "owner": "example-owner", "review": {"reference": "example/review", "approvedBy": "example-approver", "approvedAt": EXAMPLE_INSTANT}},
+            "spec": {"framework": {"id": "example-framework", "profile": "example-profile", "version": "1"}, "scope": {"id": "example-scope", "description": "The supplied exact AWS operation scope.", "groupRefs": [{"name": "aws-production-accounts"}]}, "obligations": [{"id": "example-external", "disposition": "applicable", "interpretation": "External judgment remains unresolved.", "basis": {"category": "external-judgment", "externalReference": "example/external"}}]}
+        }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        self.cli(
+            ("framework", "validate"),
+            ["--config", str(WORKSPACE_ROOT / "projects/alder-forge-dcc-level3/compliance.yaml"), "framework", "validate"],
+            contains=("valid framework declaration catalog",),
+        )
+        framework_plans = self.root / "framework/plans"
+        framework_results = self.root / "framework/results"
+        self.cli(
+            ("assessment", "run"),
+            [
+                *mock,
+                "assessment",
+                "run",
+                "--group",
+                "aws-production-accounts",
+                "--evidence",
+                str(mock_evidence),
+                "--plan-output",
+                str(framework_plans),
+                "--output",
+                str(framework_results),
+                "--at",
+                EXAMPLE_INSTANT,
+            ],
+        )
+        framework_history_args = [
+            "--plan", str(framework_plans / "cloud-account__aws-111122223333.json"),
+            "--assessed-plans", str(framework_plans),
+            "--results", str(framework_results),
+            "--at", EXAMPLE_INSTANT,
+            "--as-of", EXAMPLE_INSTANT,
+        ]
+        framework_args = ["--no-config", "framework", "status", "example-framework", "--revision", "1", "--declarations", str(framework_input), *framework_history_args]
+        self.cli(("framework", "status"), framework_args, contains=("Satisfaction not established under declared coverage.",))
+        self.cli(("framework", "explain"), [*framework_args[:2], "explain", *framework_args[3:]], contains=("external-judgment",))
         self.cli(
             ("assessment", "status"),
             [*mock, "assessment", "status", *historical_args],
