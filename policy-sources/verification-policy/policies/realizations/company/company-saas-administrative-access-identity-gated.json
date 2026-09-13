@@ -1,0 +1,65 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "ControlRealization",
+  "metadata": {
+    "id": "company.saas.administrative-access-identity-gated",
+    "revision": 1
+  },
+  "spec": {
+    "requirement": {
+      "requirement": "company.administrative-access.identity-gated@1",
+      "digest": "sha256:c7aab5b7f10e6df44c7bc48cfd5c2ae9cb3d3c29bb7bb209d36963afc4da8b04"
+    },
+    "applies_to": {
+      "subject_types": [
+        "saas-tenant"
+      ]
+    },
+    "adoption": {
+      "status": "implemented",
+      "method": "manual",
+      "owner": "synthetic-saas-platform-team",
+      "implementation_ref": "synthetic/saas-administrative-access-v1"
+    },
+    "checks": [
+      {
+        "instance_id": "company.saas.administrative-access.sso-enforced",
+        "implementation": "saas.tenant.setting-equals",
+        "severity": "critical",
+        "remediation": "Enforce single sign-on for tenant administrative access.",
+        "parameters": {
+          "section": "authentication",
+          "setting": "sso_enforced",
+          "expected": true
+        },
+        "evidence": {
+          "observation": {
+            "max_age": "24h"
+          }
+        }
+      },
+      {
+        "instance_id": "company.saas.administrative-access.guest-access-disabled",
+        "implementation": "saas.tenant.setting-equals",
+        "severity": "critical",
+        "remediation": "Disable guest access in the tenant security administration page.",
+        "parameters": {
+          "section": "guest_access",
+          "setting": "allowed",
+          "expected": false
+        },
+        "evidence": {
+          "observation": {
+            "max_age": "24h"
+          }
+        }
+      }
+    ],
+    "satisfaction": {
+      "allOf": [
+        "company.saas.administrative-access.sso-enforced",
+        "company.saas.administrative-access.guest-access-disabled"
+      ]
+    }
+  }
+}

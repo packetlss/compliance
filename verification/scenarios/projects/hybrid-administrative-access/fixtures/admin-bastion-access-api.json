@@ -1,0 +1,11 @@
+{
+  "subject": {"id": "host/admin-bastion-01", "type": "linux-host"},
+  "type": "linux.access.configuration/v1",
+  "collector": {"id": "synthetic/linux-access", "version": "1"},
+  "payload": {
+    "packages": {"sssd_installed": true},
+    "sssd": {"domain": "company.example"},
+    "ssh": {"allowed_groups": ["company-linux-operators"]},
+    "accounts": {"unmanaged_interactive_accounts": []}
+  }
+}

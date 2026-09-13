@@ -1,0 +1,11 @@
+apiVersion: compliance.example/v1alpha1
+kind: PolicyAssignment
+metadata:
+  name: linux-server-operations
+spec:
+  targetRef:
+    kind: InventoryGroup
+    name: linux-hosts
+  baselineRefs:
+    - name: company.linux-server-operations
+      revision: "1"

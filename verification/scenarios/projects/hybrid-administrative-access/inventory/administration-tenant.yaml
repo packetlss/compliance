@@ -1,0 +1,17 @@
+apiVersion: compliance.example/v1alpha1
+kind: Subject
+metadata:
+  name: administration-tenant
+  labels:
+    administrative-access: managed
+    environment: production
+    platform: saas
+    role: administration-tenant
+spec:
+  id: saas/administration-tenant
+  type: saas-tenant
+  lifecycle: active
+  source:
+    name: synthetic-inventory
+    externalId: administration-tenant
+    observedAt: "2026-09-01T00:00:00Z"
