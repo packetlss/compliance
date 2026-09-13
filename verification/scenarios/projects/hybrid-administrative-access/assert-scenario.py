@@ -158,15 +158,38 @@ def main(root):
                 and saas_report["provenance"]["selectedEvidence"],
                 "enabled guest access was not attributable negative evidence")
 
-        explanation = json.loads(cli("assessment", "explain", SAAS,
-                                     "--plan", str(document_path(plans, LINUX)),
-                                     "--assessed-plans", str(plans), "--results", str(results),
-                                     "--at", AT, "--as-of", AT, "--format", "json", historical=True))
-        require(explanation["historical_outcome"] == "fail"
-                and explanation["objectives"][0]["historical_outcome"] == "fail"
-                and next(row for row in explanation["checks"]
+        saas_explanation = json.loads(cli("assessment", "explain", SAAS,
+                                          "--plan", str(document_path(plans, LINUX)),
+                                          "--assessed-plans", str(plans), "--results", str(results),
+                                          "--at", AT, "--as-of", AT, "--format", "json", historical=True))
+        require(saas_explanation["historical_outcome"] == "fail"
+                and saas_explanation["objectives"][0]["historical_outcome"] == "fail"
+                and next(row for row in saas_explanation["checks"]
                          if row["check"]["instance_id"] == guest["instance_id"])["historical_result"]["historical_outcome"] == "fail",
                 "historical explanation did not retain the SaaS failure")
+        linux_explanation = json.loads(cli("assessment", "explain", LINUX,
+                                           "--plan", str(document_path(plans, LINUX)),
+                                           "--assessed-plans", str(plans), "--results", str(results),
+                                           "--at", AT, "--as-of", AT, "--format", "json", historical=True))
+        linux_checks = {row["check"]["instance_id"]: row for row in linux_explanation["checks"]}
+        linux_objective, = linux_explanation["objectives"]
+        direct = linux_checks["company.linux-server.audit-package"]
+        require(linux_explanation["historical_outcome"] == "pass"
+                and linux_objective["reference"] == OBJECTIVE
+                and linux_objective["realization"] == LINUX_REALIZATION
+                and linux_objective["historical_outcome"] == "pass"
+                and set(linux_objective["check_instance_ids"]) == {
+                    "company.linux.administrative-access.iam-domain-configured",
+                    "company.linux.administrative-access.operator-group-required",
+                    "company.linux.administrative-access.unmanaged-local-accounts-absent",
+                }
+                and direct["historical_result"]["historical_outcome"] == "pass"
+                and direct["policy_alignment"] == "unaltered"
+                and direct["policy_attribution"] == [{
+                    "policy_reference": "company.linux-server-operations@1",
+                    "group": "linux-hosts",
+                    "assignment": "linux-server-operations",
+                }], "historical explanation did not keep Linux Objective and direct policy separate")
 
 
 if __name__ == "__main__":
