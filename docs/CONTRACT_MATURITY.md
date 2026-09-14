@@ -212,7 +212,7 @@ stable fields and labels for applicability, with `spec.attributes` as the rich
 adapter-specific extension point. Inventory remains scope/applicability input;
 evidence remains assessment-outcome input.
 
-The 12 active evidence types retain their identities and self-contained schemas.
+The 13 active evidence types retain their identities and self-contained schemas.
 Each schema conforms to the unchanged seven-field evidence envelope and owns a
 typed payload for one observation/selection unit. Evidence types are collector
 capabilities rather than control identities; already declared facts can support
@@ -257,7 +257,7 @@ plan IDs; it has no catalog-wide inventory/assignment revisions or predecessor
 plan wrapper digests. This pre-freeze cutover adds no compatibility reader and
 promotes no algorithm identifier to `/v1`.
 
-Complete accounting remains separate from assessment success. Typed assertions
+Complete accounting remains separate from assessment success. Typed observations
 and observed consumer relationships use ordinary evidence dependencies. Governance
 owns external applicability, sufficiency and inventory exhaustiveness; mappings
 never establish external conformity. ADR 0010/0012, explicit N/A, missing-realization
@@ -269,8 +269,9 @@ tooling; no historical result is reinterpreted.
 ## Framework obligation declaration and bounded satisfaction
 
 [ADR 0021](adr/0021-project-governed-framework-obligation-declarations.md) is
-**Accepted design, not yet implemented; experimental and not frozen** under
-[#159](https://github.com/packetlss/compliance/issues/159), following exploration
+**Experimental, implemented and not frozen** by
+[#161](https://github.com/packetlss/compliance/issues/161), following
+[#159](https://github.com/packetlss/compliance/issues/159) and exploration
 [#158](https://github.com/packetlss/compliance/issues/158). It accepts the durable
 `FrameworkObligationDeclaration` responsibility as project-governance state outside
 ordinary named policy sources and ordinary assessment plans. Its closed ledger owns
@@ -293,10 +294,11 @@ satisfied is `satisfied`. This does not change current
 `external_refs`, or establish external conformity, certification, legal applicability,
 framework-universe completeness or real-world population completeness.
 
-No declaration resource, schema, project path, identity algorithm, CLI, projection,
-operator view or Alder Forge migration is currently implemented. Those require a
-separately promoted coordinated tranche. If implementation needs declaration content
-in ordinary plans or changed plan/result semantics, it returns to architecture.
+The implemented pre-freeze surface includes its tooling-owned schema and independent
+digest, project `frameworkDeclarations` path, exact-history `framework` operator and
+Alder Forge proving consumer. It remains outside ordinary plans and results. Any
+change that requires declaration content in ordinary plans or changed plan/result
+semantics returns to architecture.
 
 ## Accepted vocabulary convergence
 
@@ -327,9 +329,9 @@ Residual assurance questions, including methodology, sampling, N/A changes and
 any direct result dependency graphs, require a new focused architecture promotion.
 #78 implements only bounded frozen accounting and typed assertions. Any new common
 abstraction, semantics or trust boundary requires renewed architecture review.
-ADR 0021 resolves only the bounded project-governance declaration and ephemeral
-satisfaction interpretation; external authority/recognition, generic framework/GRC
-behavior, and declaration implementation remain outside current runtime authority.
+ADR 0021 implements only the bounded project-governance declaration and ephemeral
+satisfaction interpretation; external authority/recognition and generic framework/GRC
+behavior remain outside current runtime authority.
 
 ### Experimental generated/public views
 

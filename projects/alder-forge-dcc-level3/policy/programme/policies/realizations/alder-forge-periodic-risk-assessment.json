@@ -3,12 +3,12 @@
   "kind": "ControlRealization",
   "metadata": {"id": "alder-forge.entity.periodic-risk-assessment", "revision": 1},
   "spec": {
-    "requirement": {"requirement": "alder-forge.periodic-risk-assessment@1", "digest": "sha256:f4441ea9df00ce5f22ba35701cd2b3e143c5b248c6b486569521b7cb573d9223"},
+    "requirement": {"requirement": "alder-forge.periodic-risk-assessment@1", "digest": "sha256:68ba6937e4dd35d4b745b5d83bc6a63197f8673cb32ef78edd4ba05d2cfa5307"},
     "applies_to": {"subject_types": ["entity"]},
     "adoption": {"status": "implemented", "method": "manual", "owner": "alder-forge-risk-owner", "implementation_ref": "alder-forge-assurance/periodic-risk-assessment"},
     "checks": [
-      {"instance_id": "alder-forge.entity.risk-assessment-1202.assertion", "implementation": "organization.assertion.required", "evidence": {"assertion": {"max_age": "30d", "inputs": {"scheme": "alder-forge.defstan-1202.periodic-risk-assessment"}}}}
+      {"instance_id": "alder-forge.entity.risk-assessment-1202.current", "implementation": "organization.risk-assessment.current", "evidence": {"risk_assessment": {"max_age": "30d", "inputs": {"programme_id": "alder-forge.periodic-risk-assessment", "scope_id": "alder-forge-defence-systems-legal-entity", "maximum_assessment_age_seconds": 2592000}}}}
     ],
-    "satisfaction": {"allOf": ["alder-forge.entity.risk-assessment-1202.assertion"]}
+    "satisfaction": {"allOf": ["alder-forge.entity.risk-assessment-1202.current"]}
   }
 }

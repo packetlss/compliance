@@ -7,9 +7,9 @@
     "origin": {"type": "alder-forge-company-interpretation", "name": "Alder Forge annual cyber-awareness training"}
   },
   "spec": {
-    "title": "Annual cyber-awareness training is supported by a bounded attributable assertion",
-    "statement": "The supplied Alder Forge legal-entity scope has an attributable, current annual cyber-awareness training assertion.",
-    "rationale": "This Objective does not establish complete personnel population or training-record sufficiency beyond the supplied bounded assertion.",
+    "title": "Annual cyber-awareness training completion is established",
+    "statement": "The supplied Alder Forge legal-entity scope has a current, attributable annual training report showing completion for every member of the supplied required-population basis.",
+    "rationale": "This Objective evaluates supplied aggregate population and completion facts only. It does not establish the complete real-world employee or contractor population, person-level membership, or training-record sufficiency beyond the bounded report.",
     "external_refs": ["DEFSTAN-05-138-ISSUE-4:2602"],
     "parameters": {}
   }

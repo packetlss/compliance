@@ -180,17 +180,27 @@ disposition, closed error and recorded-waiver facts, plus waiver-window qualific
 derived from the retained waiver timestamps and explicit query instant. It does not reconstruct
 plan-owned Check/dependency meaning or call the Coverage projection.
 
-## Concrete typed assertion contracts
+## Concrete typed organization-observation contracts
 
-`organization.assertion.required` consumes ordinary required
-`organization.assertion/v1` evidence for an entity. The named dependency's typed
-`inputs.scheme` is company intent. The payload supplies beneficiary, assertor,
-source locator, scheme, outcome and validity interval. The criterion compares the
-beneficiary with the exact consuming Subject, scheme with required intent, and the
-recorded assessment instant with the inclusive validity interval. A qualifying
-positive assertion passes; a qualifying negative fails. A different beneficiary,
-scheme, expired/not-yet-valid or inconclusive assertion is unknown. These fields
-belong only to this concrete observation contract, not universal certificate fields.
+`organization.risk-assessment.current` consumes one ordinary required
+`organization.risk-assessment/v1` observation for an entity. Its policy-owned inputs
+name the exact programme, bounded source-domain scope and maximum assessment age;
+ordinary dependency `max_age` remains observation freshness. The payload relies on
+the envelope for consuming-subject attribution and supplies assessment/source facts,
+completion status and, when completed, its instant. A matching `not_completed` or a
+past completion older than policy permits fails; a matching completed current record
+passes; inconclusive, wrong programme/scope, future or unusable completion is
+unknown. Findings, treatment and risk acceptance are outside this occurrence check.
+
+`organization.awareness-training.complete` consumes one ordinary required
+`organization.awareness-training/v1` observation for an entity. Policy owns the
+programme, supplied required-population basis and report age limit. The report names
+its campaign/source and supplies population/completion establishment states and
+aggregate counts. It passes only when a current matching report has a positive,
+established denominator and equal completion count; a lower count fails. Unknown
+states, zero denominator, inconsistent counts, wrong programme/basis and future or
+too-old report time are unknown. This does not establish real-world population
+completeness or require person-level evidence.
 
 `iam.integration.required` consumes two ordinary named dependencies for a host:
 `iam.service.observation/v1` and `iam.integration.observation/v1`. The source
@@ -206,7 +216,7 @@ complete-document ambiguity and snapshot identity remain ADR 0010/0012 behavior.
 Dependency inputs never select an issuer or create evidence precedence. Missing or
 unusable required observations are unknown; attributable execution failure is error;
 untrustworthy shared prerequisites refuse publication. No assessment-result graph,
-certificate subsystem, beneficiary resource or common-assurance engine is added.
+certificate subsystem, generic beneficiary resource or common-assurance engine is added.
 
 The canonical [company IAM scenario](../../verification/scenarios/projects/company-iam-policy-assessment/README.md)
 keeps reusable contracts in control-library, company policy in verification-policy,

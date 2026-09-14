@@ -1,0 +1,25 @@
+{
+  "apiVersion": "compliance.example/v1",
+  "kind": "Control",
+  "metadata": {"id": "organization.risk-assessment.current", "version": 1},
+  "spec": {
+    "title": "Periodic risk assessment is current",
+    "purpose": "Verify an attributable completed risk assessment for the exact governed programme and bounded scope.",
+    "entrypoint": "data.compliance.controls.organization_risk_assessment_current.evaluate",
+    "applies_to": ["entity"],
+    "evidence": [{
+      "id": "risk_assessment", "type": "organization.risk-assessment/v1",
+      "inputs_schema": {
+        "$id": "https://compliance.example/schemas/controls/organization.risk-assessment.current/evidence/risk_assessment/inputs/v1.schema.json",
+        "type": "object", "required": ["programme_id", "scope_id", "maximum_assessment_age_seconds"], "additionalProperties": false,
+        "properties": {
+          "programme_id": {"type": "string", "minLength": 1},
+          "scope_id": {"type": "string", "minLength": 1},
+          "maximum_assessment_age_seconds": {"type": "integer", "minimum": 1}
+        }
+      }
+    }],
+    "parameters_schema": "parameters.schema.json",
+    "defaults": {"severity": "high", "remediation": "Obtain a current, attributable risk-assessment record for the governed programme and scope."}
+  }
+}

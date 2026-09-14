@@ -9,9 +9,8 @@
   "spec": {
     "title": "Alder Forge bounded assessed objectives",
     "requirements": [
-      {"requirement": "alder-forge.authorized-software-review@1", "digest": "sha256:658de2f55ed8d44ac3c518df13b335917c2ae9b20cf2177faa37c2a05fdaa181", "required": true},
-      {"requirement": "alder-forge.awareness-training@1", "digest": "sha256:84fc054e492e04bd115b002037a40759cd6775fa6a8670f8a25b7995280bd186", "required": true},
-      {"requirement": "alder-forge.periodic-risk-assessment@1", "digest": "sha256:f4441ea9df00ce5f22ba35701cd2b3e143c5b248c6b486569521b7cb573d9223", "required": true}
+      {"requirement": "alder-forge.awareness-training@1", "digest": "sha256:5e85372bd955b3e6f157a280d36963814fc6d1d71c2a8db388a1cc9162bbc4fe", "required": true},
+      {"requirement": "alder-forge.periodic-risk-assessment@1", "digest": "sha256:68ba6937e4dd35d4b745b5d83bc6a63197f8673cb32ef78edd4ba05d2cfa5307", "required": true}
     ]
   }
 }

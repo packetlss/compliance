@@ -9,7 +9,7 @@
 
 The first Alder Forge DEFSTAN/DCC tranche represented several organizational
 obligations as synthetic `ControlRequirement` / `ControlRealization` paths backed by
-`organization.assertion/v1` evidence. This was a useful pre-freeze proving consumer,
+a former generic organization-assertion evidence contract. This was a useful pre-freeze proving consumer,
 but it exposed a circular pattern when the obligation is exactly governance's own
 reviewed adoption or implementation declaration:
 
@@ -388,27 +388,28 @@ outcomes and the declaration revision.
 
 ## Alder Forge migration direction
 
-After a separately promoted implementation, migrate the pre-freeze Alder Forge
-proving consumers as follows; this ADR does not perform or authorize that migration:
+The #161 implementation migrated the pre-freeze Alder Forge proving consumer. Its
+post-#164 obligation responsibility is:
 
-- `1101` becomes governance-declared instead of an assertion-backed synthetic
-  Objective.
+- `1101` is governance-declared instead of an assertion-backed synthetic Objective.
 - `0002` remains an external-judgment/dependency case unless a separate architecture
   decision accepts stronger bounded external-fact semantics.
-- `1202` becomes mixed when actual periodic assessment occurrence is independently
-  observed.
-- `2410` becomes mixed when dated authorized-software review occurrence is
+- `1202` is mixed because actual periodic assessment occurrence/currentness is
   independently observed.
-- `2602` becomes mixed when training completion and required-population facts are
-  independently observed.
-- The synthetic organizational programme `RequirementBaseline` is removed when the
-  declaration owns the closed obligation ledger.
+- `2410` is governance-declared: when the governed policy revision itself is the
+  authoritative record of authorised-software-list issuance, review or adoption,
+  that fact does not independently require evidence or an AssessmentResult.
+- `2602` is mixed because training completion and supplied required-population facts
+  are independently observed.
 - `2201` remains an evidence-assessed Objective.
 - `2409` remains direct technical policy whose complete obligation role is explicit
   in the declaration.
 
-Superseded #157 project resources may be deleted rather than preserved through
-compatibility aliases. No current project resource is changed by this ADR.
+Superseded project resources may be deleted rather than preserved through
+compatibility aliases. A governance-owned fact remains governance-owned when the
+governed revision itself is the authoritative record of issuance, review or adoption.
+Evidence is required when the relevant fact exists independently and can change
+without governance changing that governed state.
 
 ## Capability implications
 
@@ -433,15 +434,11 @@ abstraction.
 ## Consequences, implementation boundary, and non-goals
 
 The architecture gains one durable governance input and one ephemeral interpretation
-responsibility without redesigning assessment. This is an **accepted design, not yet
-implemented**. It remains pre-freeze and creates no current resource, schema, path,
-runtime, CLI, view, digest, or artifact contract.
-
-A later bounded implementation requires separate promotion for declaration
-admission/identity, project configuration, projection semantics, Alder Forge
-migration, operator explanation, and focused conformance tests. It must preserve the
-identity isolation and exact-history boundaries above. No compatibility aliases or
-dual representations are required pre-freeze.
+responsibility without redesigning assessment. It is **implemented experimentally**
+by #161: declaration admission/identity, project configuration, exact-history
+projection, operator explanation and Alder Forge proving coverage are present. It
+remains pre-freeze and preserves the identity isolation and exact-history boundaries
+above. No compatibility aliases or dual representations are required.
 
 This ADR does not implement or authorize:
 

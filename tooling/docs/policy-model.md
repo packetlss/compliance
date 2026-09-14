@@ -107,7 +107,7 @@ The practical authoring rule is:
 | Report a complete company or framework objective | `ControlRequirement`, `ControlRealization`, and `RequirementBaseline` |
 | Do both on the same subject | Assign both; render them into one subject plan |
 | Associate a check with a framework without claiming completeness | Technical `external_refs` mapping |
-| Declare a closed framework/profile obligation ledger and each obligation's reviewed company basis | Future project-owned `FrameworkObligationDeclaration` responsibility from [ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md), outside policy sources and ordinary plans |
+| Declare a closed framework/profile obligation ledger and each obligation's reviewed company basis | Project-owned `FrameworkObligationDeclaration` from [ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md), outside policy sources and ordinary plans |
 
 The objective result is an evidence-backed internal assurance claim. Whether
 it is sufficient for certification, audit acceptance, or a legal compliance
@@ -341,7 +341,8 @@ The active producer contracts are:
 | `macos.homebrew/v1` | Installed Homebrew formula and cask inventories |
 | `macos.security/v1` | Gatekeeper and System Integrity Protection observations |
 | `macos.system/v1` | macOS product, build, and architecture observations |
-| `organization.assertion/v1` | Time-bounded organizational assertion for an exact beneficiary |
+| `organization.awareness-training/v1` | Attributable training-programme report with a supplied population basis and aggregate completion facts |
+| `organization.risk-assessment/v1` | Attributable periodic risk-assessment occurrence/currentness for one programme and bounded source-domain scope |
 | `saas.tenant.configuration/v1` | Provider-neutral tenant, authentication, audit, and guest-access observations |
 
 The seven common fields are exactly `schema`, `id`, `subject`, `type`,
@@ -488,8 +489,8 @@ would otherwise require unrelated collector results to be merged.
 A new control ID, package name, setting, or threshold is never sufficient reason
 for a new evidence type. This rule preserves the existing distinctions between
 AWS account and S3 observations, Linux access/sysctl/packages, Linux packages and
-macOS Homebrew, IAM service assertions and integration relationships, and
-organizational assertions. Provider-neutral SaaS configuration remains appropriate
+macOS Homebrew, IAM service assertions and integration relationships, and the distinct
+organizational risk-assessment and training observations. Provider-neutral SaaS configuration remains appropriate
 only where normalized facts retain the same meaning.
 
 ## 4. Hierarchy and policy assignment
@@ -712,7 +713,7 @@ inventory and policy without persisting a Coverage artifact. `assessment status
 exact retained results from one operation anchor; it does not join a current plan
 to a latest result or claim that DAG group totals are mutually exclusive.
 
-The future ADR 0021 framework projection is a third, explicitly supplied
+The implemented experimental ADR 0021 framework projection is a third, explicitly supplied
 interpretation over an exact declaration and exact assessment history. It does not
 persist `Coverage`, create a new assessment result, or mutate the historical result.
 Its only top-level states are `satisfied`, `not_satisfied`, and `not_established`;

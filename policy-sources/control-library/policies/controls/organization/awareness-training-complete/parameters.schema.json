@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/controls/organization.awareness-training.complete/parameters/v1.schema.json",
+  "type": "object", "required": [], "additionalProperties": false, "properties": {}
+}

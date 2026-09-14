@@ -1,0 +1,13 @@
+{
+  "subject": {"id": "entity/alder-forge-defence-systems", "type": "entity"},
+  "type": "organization.risk-assessment/v1",
+  "collector": {"id": "mock/alder-forge-risk-register", "version": "0.1.0"},
+  "payload": {
+    "programme_id": "alder-forge.periodic-risk-assessment",
+    "assessment_id": "RISK-SNAPSHOT-2026-09",
+    "scope_id": "alder-forge-defence-systems-legal-entity",
+    "assessor_id": "alder-forge-risk-register",
+    "source_locator": "synthetic://alder-forge/risk/RISK-SNAPSHOT-2026-09",
+    "completion_status": "inconclusive"
+  }
+}

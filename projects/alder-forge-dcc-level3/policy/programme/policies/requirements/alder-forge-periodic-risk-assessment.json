@@ -7,9 +7,9 @@
     "origin": {"type": "alder-forge-company-interpretation", "name": "Alder Forge periodic risk assessment"}
   },
   "spec": {
-    "title": "Periodic risk assessment is supported by a bounded attributable assertion",
-    "statement": "The supplied Alder Forge legal-entity scope has an attributable, current bounded periodic risk-assessment assertion.",
-    "rationale": "This Objective does not model assessment records, scheduling, retention or completeness beyond the supplied bounded assertion.",
+    "title": "Periodic risk assessment occurrence is current",
+    "statement": "The supplied Alder Forge legal-entity scope has a current, attributable completed periodic risk assessment for the governed programme and bounded scope.",
+    "rationale": "This Objective evaluates supplied occurrence/currentness only. It does not model findings, treatment, risk acceptance, review scheduling, retention or completeness beyond the bounded source record.",
     "external_refs": ["DEFSTAN-05-138-ISSUE-4:1202"],
     "parameters": {}
   }

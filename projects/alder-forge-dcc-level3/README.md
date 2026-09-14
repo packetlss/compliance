@@ -10,7 +10,7 @@ The project has three independent named policy inputs:
 
 ```text
 control-library/                              reusable existing Controls and evidence schemas
-policy/programme/policies/                    Alder Forge interpretations, objectives and assertion policy
+policy/programme/policies/                    Alder Forge interpretations and assessed programme policy
 policy/corporate-platform/policies/           Alder Forge technical baseline, critical-access Objective and SaaS realization
 ```
 
@@ -34,13 +34,13 @@ The #153 exploration found a discrepancy that remains explicit here: the MOD spr
 | --- | --- | --- |
 | `0002` | External CE Plus judgment/dependency | external judgment; intentionally not established |
 | `1101` | Reviewed board security-direction adoption | declaration-side governance determination |
-| `1202` | Reviewed risk-assessment adoption plus bounded Objective assertion | mixed governance + assessed Objective |
+| `1202` | Reviewed risk-assessment adoption plus bounded occurrence/currentness observation | mixed governance + assessed Objective |
 | `2201` | Critical-SaaS MFA Objective | evidence-assessed Objective |
 | `2409` | Direct Linux authorised-package policy | direct technical policy basis |
-| `2410` | Reviewed authorised-software review plus bounded Objective assertion | mixed governance + assessed Objective |
-| `2602` | Reviewed awareness adoption plus bounded Objective assertion | mixed governance + assessed Objective |
+| `2410` | Reviewed authoritative authorised-software policy/list review and reissue | governance-declared |
+| `2602` | Reviewed awareness adoption plus bounded population/completion report | mixed governance + assessed Objective |
 
-`1202`, `2410` and `2602` deliberately do not invent records, histories, population tables, completion tables or arbitrary assertion properties. Each assertion provides only the existing attributable beneficiary, source locator, scheme, outcome and validity interval. A `negative` awareness assertion can truthfully report the bounded supplied training check as failed; it does not prove complete personnel population coverage. The `inconclusive` risk snapshot becomes `unknown`, never `pass`.
+`1202` and `2602` use distinct typed observations. The risk record supplies one programme, bounded source-domain scope, stable assessment and assessor identities, source locator and completion/currentness fact; it does not model findings, treatment, acceptance, scheduling or lifecycle. The training report supplies one programme, campaign/report attribution, source locator and aggregate supplied-population/completion facts; it does not prove the complete real-world employee or contractor population. The envelope already attributes each observation to the consuming entity, so neither payload repeats that subject. The inconclusive risk snapshot becomes `unknown`; the supplied training denominator is positive but its completion count is lower, so it fails.
 
 The declaration at `framework-obligations/defstan-dcc-level3.yaml` is closed,
 versioned project-governance state, outside `policy/` and generated output. It has its
@@ -60,16 +60,17 @@ scripts/dev cli --config projects/alder-forge-dcc-level3/compliance.yaml coverag
 scripts/dev cli --config projects/alder-forge-dcc-level3/compliance.yaml policy validate
 ```
 
-Coverage shows the retained three assessed organisational paths and the MFA path as
+Coverage shows the retained two assessed organisational paths and the MFA path as
 Objectives/Realizations; only 2409 remains direct technical policy. It reads current
 inventory and policy only; it does not read evidence or results. The focused project
 gate also runs `framework status` over exact retained history. It demonstrates:
 
 - `1101` as a reviewed governance determination and `0002` as unresolved external judgment;
-- `1202` unknown from an attributable inconclusive assertion;
-- `2602` and `2409` failing from a negative bounded assertion and an unexpected Linux package;
+- `1202` unknown from an attributable inconclusive risk-assessment observation;
+- `2410` as a governance-established policy/list review with no AssessmentResult;
+- `2602` and `2409` failing from an incomplete supplied training population report and an unexpected Linux package;
 - entity, Linux and SaaS results retaining only their own applicable Objectives or direct checks; and
-- historical explanation retaining the frozen reason, source-backed evidence, policy-source attribution and mapping context without treating an assertion as a direct package/MFA check.
+- historical explanation retaining the frozen reason, source-backed evidence, policy-source attribution and mapping context without treating organizational observations as direct package/MFA checks.
 
 There are no waivers in this slice. In particular, no waiver is used for uncertain evidence, unknown scope or assessor judgment.
 

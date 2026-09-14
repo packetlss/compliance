@@ -1,0 +1,22 @@
+{
+  "subject": {"id": "entity/alder-forge-defence-systems", "type": "entity"},
+  "type": "organization.awareness-training/v1",
+  "collector": {"id": "mock/alder-forge-training-register", "version": "0.1.0"},
+  "payload": {
+    "programme_id": "alder-forge.annual-awareness-training",
+    "report_id": "ANNUAL-2026-09",
+    "campaign_id": "annual-awareness-2026",
+    "as_of": "2026-09-01T00:00:00Z",
+    "reporting_source_id": "alder-forge-training-register",
+    "source_locator": "synthetic://alder-forge/training/ANNUAL-2026-09",
+    "population": {
+      "basis_id": "alder-forge-supplied-required-population-2026",
+      "status": "established",
+      "required_count": 12
+    },
+    "completion": {
+      "status": "established",
+      "completed_count": 10
+    }
+  }
+}

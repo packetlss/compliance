@@ -35,8 +35,8 @@ The gate retains:
 - All retained library resource, parameter, policy, and evidence schemas,
   common evidence-envelope conformance, reference compatibility, and compiled
   Rego entrypoint validation.
-- Minimal valid producer documents for all 12 active evidence types, including
-  macOS and organizational assertions, plus typed optional AWS security-contact
+- Minimal valid producer documents for all 13 active evidence types, including
+  macOS and the distinct organizational risk-assessment and training observations, plus typed optional AWS security-contact
   and SaaS guest-access facts.
 - Direct current-state source-boundary checks, exhaustive reusable-file coverage,
   unique identities, resolved references, and adoption-specific resource and

@@ -16,7 +16,8 @@ from tools.render_plan import load_policy_catalogs, validate_rego_entrypoints
 ROOT = Path(__file__).resolve().parents[1]
 POLICIES = ROOT / "policies"
 EXPECTED_CONTROL_IDS = {
-    "organization.assertion.required",
+    "organization.awareness-training.complete",
+    "organization.risk-assessment.current",
     "iam.integration.required",
     "aws.account.number-at-least",
     "aws.account.setting-equals",
@@ -87,14 +88,24 @@ EXPECTED_EVIDENCE_PAYLOADS = {
         "build_version": "24A000",
         "architecture": "arm64",
     },
-    "organization.assertion/v1": {
-        "beneficiary": "entity/test",
-        "asserted_by": "test-collector",
-        "source_locator": "assertion://organization/current",
-        "scheme": "test-assurance",
-        "outcome": "positive",
-        "valid_from": "2026-09-01T00:00:00Z",
-        "valid_until": "2026-10-01T00:00:00Z",
+    "organization.awareness-training/v1": {
+        "programme_id": "annual-awareness",
+        "report_id": "training-2026",
+        "campaign_id": "annual-2026",
+        "as_of": "2026-09-01T00:00:00Z",
+        "reporting_source_id": "test-training-register",
+        "source_locator": "report://training/2026",
+        "population": {"basis_id": "people-2026", "status": "established", "required_count": 10},
+        "completion": {"status": "established", "completed_count": 10},
+    },
+    "organization.risk-assessment/v1": {
+        "programme_id": "annual-risk",
+        "assessment_id": "risk-2026",
+        "scope_id": "legal-entity",
+        "assessor_id": "test-risk-register",
+        "source_locator": "report://risk/2026",
+        "completion_status": "completed",
+        "completed_at": "2026-09-01T00:00:00Z",
     },
     "saas.tenant.configuration/v1": {
         "tenant": {"id": "test", "provider": "example"},
@@ -379,7 +390,7 @@ class PolicyResourceTests(unittest.TestCase):
             read_json(path)["properties"]["type"]["const"] for path in schemas
         }
         self.assertEqual(actual_types, set(EXPECTED_EVIDENCE_PAYLOADS))
-        self.assertEqual(len(schemas), 12)
+        self.assertEqual(len(schemas), 13)
 
         for path in schemas:
             with self.subTest(schema=path.relative_to(ROOT)):
@@ -685,9 +696,9 @@ class PolicyResourceTests(unittest.TestCase):
                 "control-parameters-schema-identity-invalid",
             ),
             (
-                "controls/organization/assertion-required/control.json",
+                "controls/organization/risk-assessment-current/control.json",
                 lambda document: document["spec"]["evidence"][0]["inputs_schema"].update({
-                    "$id": "https://compliance.example/schemas/controls/organization.other/evidence/assertion/inputs/v1.schema.json",
+                    "$id": "https://compliance.example/schemas/controls/organization.other/evidence/risk_assessment/inputs/v1.schema.json",
                 }),
                 "control-evidence-inputs-schema-identity-invalid",
             ),

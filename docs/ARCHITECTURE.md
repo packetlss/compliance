@@ -327,8 +327,9 @@ other residual assurance architecture requires a new focused exploration and pro
 
 ## Project-governed framework obligation accounting
 
-[ADR 0021](adr/0021-project-governed-framework-obligation-declarations.md) accepts,
-but does not yet implement, `FrameworkObligationDeclaration`. It is durable,
+[ADR 0021](adr/0021-project-governed-framework-obligation-declarations.md) is
+implemented experimentally by [#161](https://github.com/packetlss/compliance/issues/161).
+`FrameworkObligationDeclaration` is durable,
 versioned project-governance state outside ordinary named policy sources and ordinary
 assessment plans. It owns an exact declared framework/profile/version reference, one
 declared project scope, a closed applicable/excluded/not-applicable obligation ledger,

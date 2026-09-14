@@ -23,12 +23,14 @@ not to wrap every useful technical check in governance ceremony.
 concrete assertion contracts. Realization selection chooses demonstration; Subject,
 group and baseline assignment determine requirement targeting.
 
-Organization assertions and shared IAM observations use the existing named typed
-evidence dependencies and normal criteria. Policy requires an assertion; evidence
-supplies the actual beneficiary, source and outcome. An observed relationship must
-correlate an IAM consumer to the original service assertion. Authored integration
-intent is insufficient. No certificate subsystem, authority engine or direct result
-graph exists. Mappings report supplied company policy only.
+Organization risk-assessment and awareness-training observations, and shared IAM
+observations, use named typed evidence dependencies and normal criteria. The entity
+envelope supplies the consuming subject; policy supplies programme, scope or supplied
+population-basis expectations and the domain threshold; evidence supplies the source
+facts. An observed IAM relationship must correlate a consumer to the original service
+assertion. Authored integration intent is insufficient. No certificate subsystem,
+authority engine or direct result graph exists. Mappings report supplied company
+policy only.
 
 ADR 0010/0012, exactly-one realization selection, missing-realization failure,
 explicit N/A and fail-only waivers retain their existing semantics. Any residual
