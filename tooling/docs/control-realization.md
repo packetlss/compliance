@@ -23,12 +23,13 @@ not to wrap every useful technical check in governance ceremony.
 concrete assertion contracts. Realization selection chooses demonstration; Subject,
 group and baseline assignment determine requirement targeting.
 
-Organization assertions and shared IAM observations use the existing named typed
-evidence dependencies and normal criteria. Policy requires an assertion; evidence
-supplies the actual beneficiary, source and outcome. An observed relationship must
-correlate an IAM consumer to the original service assertion. Authored integration
-intent is insufficient. No certificate subsystem, authority engine or direct result
-graph exists. Mappings report supplied company policy only.
+Organization assertions and shared IAM observations are existing historical runtime
+contracts, not new admission authority. ADR 0022 rejects the generic
+organization-assertion family for its replacement migration and separately routes the
+conclusion-shaped IAM service assertion. An observed consumer-to-service relationship
+remains legitimate descriptive material; authored integration intent is insufficient.
+No certificate subsystem, authority engine or direct result graph exists. Mappings
+report supplied company policy only.
 
 ADR 0010/0012, exactly-one realization selection, missing-realization failure,
 explicit N/A and fail-only waivers retain their existing semantics. Any residual
@@ -135,18 +136,21 @@ Verification scenarios should demonstrate this chain with credible synthetic
 operational stories and document the exact limit of each claim. The accepted
 scenario rules are in
 [`verification-scenarios.md`](verification-scenarios.md). ADR 0021 records the
-minimum declaration responsibility semantically but does not implement or freeze its
-wire form, project path, schema, identity algorithm, runtime, or CLI.
+minimum declaration responsibility semantically. #161 implements its experimental
+wire form, project path, schema, identity algorithm, runtime, and CLI; ADR 0022's
+four-category target and subsequent migration remain separate and are not frozen.
 
 A pure governance obligation needs no synthetic `ControlRequirement`, realization,
-or assertion evidence merely to re-prove the reviewed declaration when satisfaction
-cannot vary independently from it. Its reviewed governance determination may be
-affirmative, conclusively negative, or not established; all three remain declaration-
-side rather than assessment outcomes. Where actual occurrence, completion, outcome,
-population, or technical state can drift independently, that portion remains an
-ordinary evidence-backed Objective or direct technical assessment. A mixed obligation
-requires both authorities; the governance determination is not evidence and does not
-alter complete `satisfaction.allOf` semantics.
+or assertion evidence merely to re-prove the reviewed declaration. Its reviewed
+governance determination may be affirmative, conclusively negative, or not
+established; all three remain declaration-side rather than assessment outcomes. Drift
+is not sufficient for assessment: actual occurrence, completion, outcome, population,
+or technical material may become ordinary evidence only when company Compliance
+policy owns the complete criterion and evaluates Control-unaware descriptive facts.
+Otherwise it remains a Governance or other-domain determination. A mixed obligation
+requires both authorities only when its assessed portion independently passes that
+admission test; the governance determination is not evidence and does not alter
+complete `satisfaction.allOf` semantics.
 
 The existing `Baseline` and `BaselineOverlay` contracts continue to describe
 technical desired state and explicit changes to it. A realization is not a
