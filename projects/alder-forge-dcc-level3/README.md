@@ -10,11 +10,12 @@ The project has three independent named policy inputs:
 
 ```text
 control-library/                              reusable existing Controls and evidence schemas
-policy/programme/policies/                    Alder Forge interpretations, objectives and assertion policy
 policy/corporate-platform/policies/           Alder Forge technical baseline, critical-access Objective and SaaS realization
 ```
 
-The latter two are project-private semantic roots. Their order in `compliance.yaml` carries no precedence or authority. There is deliberately no empty secure-engineering source: that ownership boundary is deferred with the later programme work.
+The corporate-platform source is a project-private semantic root. Its order in
+`compliance.yaml` carries no precedence or authority. Governance-only framework
+accounting is deliberately outside policy sources.
 
 Inventory contains factual supplied scope only: one fictional legal entity, a Linux build/administration host, a critical SaaS administration tenant, and a managed macOS developer endpoint. Labels do not encode DEFSTAN IDs, desired settings, realization selection or evidence conclusions. The macOS endpoint is intentionally unassigned in this tranche: the current Homebrew-required fact does not establish an authorised-software block-by-default property, so the project does not manufacture a macOS 2409 realization.
 
@@ -32,15 +33,19 @@ The #153 exploration found a discrepancy that remains explicit here: the MOD spr
 
 | DEFSTAN control | Alder Forge representation | Existing contract |
 | --- | --- | --- |
-| `0002` | External CE Plus judgment/dependency | external judgment; intentionally not established |
+| `0002` | CE Plus dependency accounting | governance-declared; not established |
 | `1101` | Reviewed board security-direction adoption | declaration-side governance determination |
-| `1202` | Reviewed risk-assessment adoption plus bounded Objective assertion | mixed governance + assessed Objective |
+| `1202` | Periodic risk-assessment accounting | governance-declared; not established |
 | `2201` | Critical-SaaS MFA Objective | evidence-assessed Objective |
 | `2409` | Direct Linux authorised-package policy | direct technical policy basis |
-| `2410` | Reviewed authorised-software review plus bounded Objective assertion | mixed governance + assessed Objective |
-| `2602` | Reviewed awareness adoption plus bounded Objective assertion | mixed governance + assessed Objective |
+| `2410` | Reviewed authorised-software review adoption | governance-declared; affirmative |
+| `2602` | External training-basis adoption accounting | governance-declared; not established |
 
-`1202`, `2410` and `2602` deliberately do not invent records, histories, population tables, completion tables or arbitrary assertion properties. Each assertion provides only the existing attributable beneficiary, source locator, scheme, outcome and validity interval. A `negative` awareness assertion can truthfully report the bounded supplied training check as failed; it does not prove complete personnel population coverage. The `inconclusive` risk snapshot becomes `unknown`, never `pass`.
+`0002`, `1202`, `2410` and `2602` are declaration-side governance accounting and
+never produce an AssessmentResult. In particular, this project does not recreate
+risk completeness, software-review workflow, training completion or personnel
+population semantics in Compliance. `2602` is not established because this proving
+slice does not record Governance's review and adoption of an external training basis.
 
 The declaration at `framework-obligations/defstan-dcc-level3.yaml` is closed,
 versioned project-governance state, outside `policy/` and generated output. It has its
@@ -60,16 +65,15 @@ scripts/dev cli --config projects/alder-forge-dcc-level3/compliance.yaml coverag
 scripts/dev cli --config projects/alder-forge-dcc-level3/compliance.yaml policy validate
 ```
 
-Coverage shows the retained three assessed organisational paths and the MFA path as
-Objectives/Realizations; only 2409 remains direct technical policy. It reads current
-inventory and policy only; it does not read evidence or results. The focused project
-gate also runs `framework status` over exact retained history. It demonstrates:
+Coverage shows no assessable entity policy for the governance-only entries, the MFA
+Objective, and the direct 2409 technical policy. It reads current inventory and
+policy only; it does not read evidence or results. The focused project gate also runs
+`framework status` over exact retained history. It demonstrates:
 
-- `1101` as a reviewed governance determination and `0002` as unresolved external judgment;
-- `1202` unknown from an attributable inconclusive assertion;
-- `2602` and `2409` failing from a negative bounded assertion and an unexpected Linux package;
-- entity, Linux and SaaS results retaining only their own applicable Objectives or direct checks; and
-- historical explanation retaining the frozen reason, source-backed evidence, policy-source attribution and mapping context without treating an assertion as a direct package/MFA check.
+- `1101` and `2410` as affirmative governance determinations;
+- `0002`, `1202` and `2602` as not established governance accounting;
+- retained MFA passing and the unexpected Linux package failing; and
+- no entity AssessmentResult for the governance-only obligations.
 
 There are no waivers in this slice. In particular, no waiver is used for uncertain evidence, unknown scope or assessor judgment.
 

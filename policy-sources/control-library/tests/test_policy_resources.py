@@ -16,7 +16,6 @@ from tools.render_plan import load_policy_catalogs, validate_rego_entrypoints
 ROOT = Path(__file__).resolve().parents[1]
 POLICIES = ROOT / "policies"
 EXPECTED_CONTROL_IDS = {
-    "organization.assertion.required",
     "iam.integration.required",
     "aws.account.number-at-least",
     "aws.account.setting-equals",
@@ -86,15 +85,6 @@ EXPECTED_EVIDENCE_PAYLOADS = {
         "product_version": "15.0",
         "build_version": "24A000",
         "architecture": "arm64",
-    },
-    "organization.assertion/v1": {
-        "beneficiary": "entity/test",
-        "asserted_by": "test-collector",
-        "source_locator": "assertion://organization/current",
-        "scheme": "test-assurance",
-        "outcome": "positive",
-        "valid_from": "2026-09-01T00:00:00Z",
-        "valid_until": "2026-10-01T00:00:00Z",
     },
     "saas.tenant.configuration/v1": {
         "tenant": {"id": "test", "provider": "example"},
@@ -379,7 +369,7 @@ class PolicyResourceTests(unittest.TestCase):
             read_json(path)["properties"]["type"]["const"] for path in schemas
         }
         self.assertEqual(actual_types, set(EXPECTED_EVIDENCE_PAYLOADS))
-        self.assertEqual(len(schemas), 12)
+        self.assertEqual(len(schemas), 11)
 
         for path in schemas:
             with self.subTest(schema=path.relative_to(ROOT)):
@@ -685,9 +675,9 @@ class PolicyResourceTests(unittest.TestCase):
                 "control-parameters-schema-identity-invalid",
             ),
             (
-                "controls/organization/assertion-required/control.json",
+                "controls/iam/integration-required/control.json",
                 lambda document: document["spec"]["evidence"][0]["inputs_schema"].update({
-                    "$id": "https://compliance.example/schemas/controls/organization.other/evidence/assertion/inputs/v1.schema.json",
+                    "$id": "https://compliance.example/schemas/controls/iam.other/evidence/service/inputs/v1.schema.json",
                 }),
                 "control-evidence-inputs-schema-identity-invalid",
             ),

@@ -278,10 +278,7 @@ ordinary named policy sources and ordinary assessment plans. Its closed ledger o
 declared framework/profile/version scope, explicit obligation accounting, reviewed
 interpretations and exactly one target `governance-declared`,
 `evidence-assessed-objective`, `direct-technical-policy`, or
-`mixed-governance-assessed` basis per obligation. The currently implemented
-`external-judgment`/`externalReference` contract is superseded architecture and
-scheduled for removal in the subsequent runtime migration under ADR 0022. Every
-applicable governance portion
+`mixed-governance-assessed` basis per obligation. Every applicable governance portion
 requires a reviewed determination capable of affirmative satisfaction, conclusive
 non-implementation, or insufficient establishment without creating evidence or an
 assessment result.
@@ -298,10 +295,9 @@ satisfied is `satisfied`. This does not change current
 `external_refs`, or establish external conformity, certification, legal applicability,
 framework-universe completeness or real-world population completeness.
 
-The declaration resource/schema/projection is implemented experimentally, but the
-ADR 0022 category retirement and Alder Forge migration are not. They require a
-separately promoted coordinated runtime tranche. If implementation needs declaration
-content in ordinary plans or changed plan/result semantics, it returns to architecture.
+The declaration resource/schema/projection and the ADR 0022 category retirement and
+Alder Forge migration are implemented experimentally. Declaration content remains
+outside ordinary plans and does not change plan/result semantics.
 
 ## Accepted vocabulary convergence
 

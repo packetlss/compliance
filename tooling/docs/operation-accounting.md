@@ -180,24 +180,7 @@ disposition, closed error and recorded-waiver facts, plus waiver-window qualific
 derived from the retained waiver timestamps and explicit query instant. It does not reconstruct
 plan-owned Check/dependency meaning or call the Coverage projection.
 
-## Historical current typed assertion contracts and follow-on boundary
-
-This section documents the currently implemented #78 contracts for reproducibility;
-it is not future admission authority. ADR 0022 supersedes their generic
-conclusion-producing use without changing current schemas, Controls, evidence
-selection, results or immutable history.
-
-`organization.assertion.required` currently consumes ordinary required
-`organization.assertion/v1` evidence for an entity. The named dependency's typed
-`inputs.scheme` is company intent. The payload supplies beneficiary, assertor,
-source locator, scheme, outcome and validity interval. The criterion compares the
-beneficiary with the exact consuming Subject, scheme with required intent, and the
-recorded assessment instant with the inclusive validity interval. A qualifying
-positive assertion passes; a qualifying negative fails. A different beneficiary,
-scheme, expired/not-yet-valid or inconclusive assertion is unknown. These fields
-belong only to this concrete observation contract, not universal certificate fields.
-The replacement migration deletes this generic organization assertion family rather
-than restoring or extending it; PR #165's risk/training contracts are rejected.
+## IAM follow-on boundary
 
 `iam.integration.required` currently consumes two ordinary named dependencies for a host:
 `iam.service.observation/v1` and `iam.integration.observation/v1`. The source

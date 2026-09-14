@@ -3,8 +3,6 @@ schema: compliance.example/project-config/v1alpha3
 policySources:
   - name: control-library
     path: ../../policy-sources/control-library/policies
-  - name: alder-forge-programme
-    path: policy/programme/policies
   - name: alder-forge-corporate-platform
     path: policy/corporate-platform/policies
 paths:

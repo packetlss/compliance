@@ -1,6 +1,6 @@
 # ADR 0022: Criterion ownership is the first assessment admission gate
 
-- **Status:** Accepted architecture under [#167](https://github.com/packetlss/compliance/issues/167); documentation-only, runtime migration pending
+- **Status:** Accepted architecture under [#167](https://github.com/packetlss/compliance/issues/167); runtime cutover implemented by [#169](https://github.com/packetlss/compliance/issues/169)
 - **Date:** 2026-09-14
 - **Supersedes in part:** the unqualified manual/procedural-assurance wording in [ADR 0006](0006-regulatory-assurance-and-external-adapter-boundary.md), the generic assertion/external-conclusion path described by [ADR 0016](0016-closed-world-policy-assessment.md), and the `external-judgment` basis category in [ADR 0021](0021-project-governed-framework-obligation-declarations.md)
 - **Preserves:** ADR 0010 evidence selection, outcome, error and refusal semantics; the seven-field evidence envelope; operation/plan/result identity and immutable history
@@ -23,10 +23,9 @@ Control only recreates the other domain inside Compliance; it does not produce a
 independent Compliance assessment.
 
 ADR 0021 also accepted `external-judgment` as a fifth framework-basis category.
-The implementation under #161 currently retains that category and its
-`externalReference` field. This decision changes the target architecture, not those
-current runtime/schema contracts. A separately promoted migration must make the
-runtime conform without reinterpreting historical declarations or results.
+The #161 implementation retained that category and its `externalReference` field
+until the #169 cutover removed both from the current runtime/schema contract without
+reinterpreting historical declarations or results.
 
 ## Decision
 
@@ -142,19 +141,17 @@ The target `FrameworkObligationDeclaration` model has exactly four basis categor
 
 `mixed-governance-assessed` is valid only when its assessed portion passes the
 criterion-ownership admission test independently. `external-judgment` is superseded
-architecture, not an independently useful target category. The subsequent runtime
-migration must remove it and its `externalReference` framework-basis field. Until
-then, the currently implemented schema/projection retains the historical contract;
-this ADR does not alter it or reinterpret its immutable history.
+architecture, not an independently useful target category. The #169 runtime cutover
+removed it and its `externalReference` framework-basis field without reinterpreting
+historical declarations or results.
 
 The three governance determination states remain declaration-side: affirmative,
 negative and not established. They never create an `AssessmentResult` or change ADR
 0010 `pass`/`fail`/`unknown`/`error`/refusal behavior.
 
-### Alder Forge migration classification
+### Alder Forge migration classification (implemented by #169)
 
-The later bounded migration must use these target classifications; this decision does
-not modify Alder sources, Controls, evidence, schemas or runtime resources:
+The #169 bounded migration uses these classifications:
 
 | Obligation | Target classification | Target state / boundary |
 | --- | --- | --- |
@@ -167,11 +164,11 @@ not modify Alder sources, Controls, evidence, schemas or runtime resources:
 
 ### Rejected and separately routed current contracts
 
-PR #165 must not merge under its current contract. Its proposed
+PR #165 did not merge under its current contract. Its proposed
 `organization.risk-assessment/v1` / `organization.risk-assessment.current` and
 `organization.awareness-training/v1` / `organization.awareness-training.complete`
 contracts are rejected: their decisive fields are other-domain conclusions. The
-eventual replacement migration keeps `organization.assertion/v1` and
+the #169 cutover keeps `organization.assertion/v1` and
 `organization.assertion.required` deleted; it does not restore a generic
 organization conclusion/assertion family. Issue #164's direction is superseded for
 these organizational semantics.
@@ -193,12 +190,11 @@ generic external/assertion conclusion path is superseded. ADR 0021 retains the
 closed governance declaration and ephemeral projection, but its five-category model
 and external-judgment result wording are superseded by this target model.
 
-This documentation tranche changes no framework schema/projection, evidence schema
-or Control, Alder/IAM source or runtime resource, ADR 0010 selection/outcome/refusal
-semantics, evidence envelope, plan/operation/result identity, immutable historical
-meaning, or compatibility behavior. The runtime migration and PR #165 closure are
-separate promoted work; they must preserve historical declarations and results rather
-than reinterpret them.
+The architecture documentation tranche initially changed no runtime source. The #169
+runtime migration removes the retired current schema, Control and Alder resources
+while preserving ADR 0010 selection/outcome/refusal semantics, the evidence envelope,
+plan/operation/result identity, immutable historical meaning and compatibility
+behavior. Historical declarations and results are not reinterpreted.
 
 ## Non-decisions
 

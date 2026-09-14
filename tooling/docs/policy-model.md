@@ -361,7 +361,6 @@ The current runtime producer contracts are:
 | `macos.homebrew/v1` | Installed Homebrew formula and cask inventories |
 | `macos.security/v1` | Gatekeeper and System Integrity Protection observations |
 | `macos.system/v1` | macOS product, build, and architecture observations |
-| `organization.assertion/v1` | Time-bounded organizational assertion for an exact beneficiary |
 | `saas.tenant.configuration/v1` | Provider-neutral tenant, authentication, audit, and guest-access observations |
 
 The seven common fields are exactly `schema`, `id`, `subject`, `type`,
@@ -372,11 +371,10 @@ that every active, self-contained evidence schema preserves this envelope before
 it can satisfy a control dependency. This is a conformance rule, not a shared
 runtime base schema or evidence-family hierarchy.
 
-The current `organization.assertion/v1` and conclusion-shaped portion of
-`iam.service.observation/v1` are historical current-runtime contracts, not approved
-future producer patterns. ADR 0022 rejects the generic organization assertion family
-for the replacement migration and separately routes IAM correction. This
-documentation does not change their schemas, Controls, selection or historical use.
+The conclusion-shaped portion of `iam.service.observation/v1` is a historical
+current-runtime contract, not an approved future producer pattern. ADR 0022
+separately routes its correction; this documentation does not change its schema,
+selection or historical use.
 
 An evidence type names a collector capability and one semantic observation and
 selection unit. It is not a control ID. Collectors report observations without
