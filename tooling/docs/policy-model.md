@@ -107,11 +107,13 @@ The practical authoring rule is:
 | Report a complete company or framework objective | `ControlRequirement`, `ControlRealization`, and `RequirementBaseline` |
 | Do both on the same subject | Assign both; render them into one subject plan |
 | Associate a check with a framework without claiming completeness | Technical `external_refs` mapping |
-| Declare a closed framework/profile obligation ledger and each obligation's reviewed company basis | Future project-owned `FrameworkObligationDeclaration` responsibility from [ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md), outside policy sources and ordinary plans |
+| Declare a closed framework/profile obligation ledger and each obligation's reviewed company basis | Project-owned `FrameworkObligationDeclaration` responsibility from [ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md), outside policy sources and ordinary plans |
 
-The objective result is an evidence-backed internal assurance claim. Whether
-it is sufficient for certification, audit acceptance, or a legal compliance
-conclusion remains a governance decision outside OPA.
+The objective result is an evidence-backed internal assurance claim only where
+company Compliance policy owns the complete normative criterion and evaluates
+Control-unaware descriptive observations. Whether it is sufficient for certification,
+audit acceptance, or a legal compliance conclusion remains a governance decision
+outside OPA.
 
 ### Internal policy, external assurance, and the intended way of working
 
@@ -141,9 +143,11 @@ waivers, unknowns, and uncovered gaps remain visible.
 The intended operating practice describes ownership, approvals, change
 workflow, and the relationship between people and technical systems. It is not
 currently a normative policy resource and does not count as evidence. When a
-manual or procedural step is necessary to prove the objective, the realization
-needs a suitable independently attributable check and evidence contract, or
-the scenario and report must identify that step as unverified.
+manual or procedural step is necessary to prove the objective, it needs a suitable
+independently attributable *descriptive* observation and evidence contract under
+ADR 0022's criterion-ownership rule, or the scenario and report must identify that
+step as unverified. An upstream adequacy, completion, approval or certification
+conclusion belongs to Governance or its owning domain rather than an OPA result.
 
 An objective assessment claims only that its selected complete realization
 satisfied the declared company requirement for the assessed subject and time.
@@ -157,17 +161,20 @@ documentation and verification rules are defined in
 [`verification-scenarios.md`](verification-scenarios.md).
 
 Pure governance obligations should not normally receive a synthetic Objective and
-assertion evidence merely to round-trip governance's own declaration. Ask whether
-satisfaction could change independently from the declared implementation without a
-declaration change. If not, a reviewed governance determination is normally sufficient
+assertion evidence merely to round-trip governance's own declaration. Ask first who
+owns the complete criterion: independent drift alone is not enough where another
+domain owns the normative conclusion. If Governance owns it, a reviewed governance
+determination is normally sufficient
 for the bounded internal accounting model and may record affirmative adoption,
 conclusive non-adoption, or insufficient establishment. That determination remains
 declaration-side and creates no evidence, Objective, or assessment result. If yes, the
-independently observable occurrence, completion, outcome, population fact, or technical
-posture remains assessed. A mixed obligation keeps its governance determination and
+independently observable descriptive occurrence, measurement, event, relationship,
+count, population fact, or technical posture remains assessed only if Compliance owns
+the complete criterion. A mixed obligation keeps its governance determination and
 ordinary evidence-backed assessment as separate required authorities.
 
-`FrameworkObligationDeclaration` is a tooling-owned project-governance resource
+`FrameworkObligationDeclaration` is a project-governance resource interpreted by
+tooling
 (`compliance.example/v1alpha1`) with the independent
 `compliance.example/framework-obligation-declaration-digest/v1alpha1` identity. It
 is not policy and does not enter composition, member-plan, operation, plan, or result
@@ -327,7 +334,20 @@ payload:
 }
 ```
 
-The active producer contracts are:
+### Criterion-ownership admission precedes producer contracts
+
+Before adding a Control or evidence type, apply ADR 0022's admission test: state the
+claim a `pass` makes, identify the normative criterion owner, stop for a Governance
+or other-domain conclusion, and identify a Control-unaware descriptive observation.
+Only after that gate apply [#111's](https://github.com/packetlss/compliance/issues/111)
+producer-contract subject/relationship,
+authority, permissions, cadence, atomicity, selection-unit and reuse test below.
+Conclusion-shaped decisive fields such as `positive`, `approved`, `complete`,
+`adequate` or `certified` do not become Compliance evidence merely through a typed
+schema. This adds no evidence-envelope, selector, selection, identity or runtime
+behavior change.
+
+The current runtime producer contracts are:
 
 | Evidence type | Payload represents |
 |---|---|
@@ -351,6 +371,12 @@ the observable fact belongs to the typed payload. The schema catalog validates
 that every active, self-contained evidence schema preserves this envelope before
 it can satisfy a control dependency. This is a conformance rule, not a shared
 runtime base schema or evidence-family hierarchy.
+
+The current `organization.assertion/v1` and conclusion-shaped portion of
+`iam.service.observation/v1` are historical current-runtime contracts, not approved
+future producer patterns. ADR 0022 rejects the generic organization assertion family
+for the replacement migration and separately routes IAM correction. This
+documentation does not change their schemas, Controls, selection or historical use.
 
 An evidence type names a collector capability and one semantic observation and
 selection unit. It is not a control ID. Collectors report observations without
@@ -472,8 +498,9 @@ The relevant part of its schema would be intentionally open:
 
 ### Evidence reuse and new-type rule
 
-A new control reuses an existing evidence type when it asks a different policy
-question about an already declared observable fact, the subject type is
+A new Control reaches this representation/reuse rule only after it passes ADR 0022's
+criterion-ownership admission gate. It then reuses an existing evidence type when it
+asks a different policy question about an already declared observable fact, the subject type is
 compatible, and the authority, permissions, cadence, atomicity, and one-document
 selection unit remain the same. Reuse must not require the collector to know the
 control ID or desired policy value.
@@ -486,11 +513,12 @@ selection unit, value semantics/cardinality/units/unknown representation, or
 would otherwise require unrelated collector results to be merged.
 
 A new control ID, package name, setting, or threshold is never sufficient reason
-for a new evidence type. This rule preserves the existing distinctions between
-AWS account and S3 observations, Linux access/sysctl/packages, Linux packages and
-macOS Homebrew, IAM service assertions and integration relationships, and
-organizational assertions. Provider-neutral SaaS configuration remains appropriate
-only where normalized facts retain the same meaning.
+for a new evidence type. This rule preserves the existing distinctions between AWS
+account and S3 observations, Linux access/sysctl/packages, Linux packages and macOS
+Homebrew, and the legitimate IAM integration relationship observation. It does not
+preserve conclusion-shaped IAM service or organizational assertion contracts as
+future patterns. Provider-neutral SaaS configuration remains appropriate only where
+normalized facts retain the same meaning.
 
 ## 4. Hierarchy and policy assignment
 

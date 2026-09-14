@@ -38,6 +38,8 @@ Accepted destination decisions:
 
 - [ADR 0021 — Project-governed framework obligation declarations and bounded satisfaction](0021-project-governed-framework-obligation-declarations.md) — implemented by [#161](https://github.com/packetlss/compliance/issues/161), experimental, and not frozen. It introduces `FrameworkObligationDeclaration` as project-governance state outside policy sources and ordinary plans, plus an ephemeral three-state satisfaction projection over an exact declaration and exact retained assessment history.
 
+- [ADR 0022 — Criterion ownership is the first assessment admission gate](0022-criterion-ownership-and-external-judgment-retirement.md) — accepted under [#167](https://github.com/packetlss/compliance/issues/167), documentation-only and pending runtime migration. It requires a complete Compliance-owned criterion and Control-unaware descriptive observations before an `AssessmentResult` is admissible; it retires the ADR 0021 `external-judgment` target architecture while preserving the current runtime/history until separately migrated.
+
 Current system-level documents:
 
 - [`../ARCHITECTURE.md`](../ARCHITECTURE.md)

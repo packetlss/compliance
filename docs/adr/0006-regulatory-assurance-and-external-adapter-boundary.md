@@ -17,6 +17,12 @@ is not a generic core responsibility. Framework mappings are attributable compan
 policy/reporting content. Existing explicit N/A behavior remains unchanged and
 is not reopened by this ADR; any successor change requires focused promotion.
 
+[ADR 0022](0022-criterion-ownership-and-external-judgment-retirement.md)
+supersedes this ADR's unqualified manual/procedural-assurance wording. Such material
+can support an assessment only when Compliance owns the complete criterion and
+evaluates Control-unaware descriptive observations; it cannot translate another
+domain's conclusion into an objective result.
+
 ## Context
 
 The compliance core supports evidence-backed technical assessment and an optional requirement/realization assurance layer. A separate prototype previously added configuration intent compilation and backend renderers. The resolved assessment plan already contains the stable, provenance-bearing information an external configuration/policy adapter needs.
@@ -60,7 +66,8 @@ Preserve these constraints:
 
 - authored adoption/implementation labels cannot create pass;
 - technical results remain independently attributable;
-- manual/hybrid assurance requires typed, attributable, freshness-bounded evidence;
+- manual/hybrid assurance requires typed, attributable, freshness-bounded,
+  Control-unaware descriptive evidence under ADR 0022's criterion-ownership rule;
 - missing, stale, invalid, or inconclusive required evidence is `unknown`, never pass;
 - not-applicable requires deterministic applicability or an attributable reviewed determination;
 - ownership, implementation references, and organizational labels are annotations unless an authority contract explicitly makes them assessment inputs;

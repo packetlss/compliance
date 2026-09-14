@@ -180,9 +180,14 @@ disposition, closed error and recorded-waiver facts, plus waiver-window qualific
 derived from the retained waiver timestamps and explicit query instant. It does not reconstruct
 plan-owned Check/dependency meaning or call the Coverage projection.
 
-## Concrete typed assertion contracts
+## Historical current typed assertion contracts and follow-on boundary
 
-`organization.assertion.required` consumes ordinary required
+This section documents the currently implemented #78 contracts for reproducibility;
+it is not future admission authority. ADR 0022 supersedes their generic
+conclusion-producing use without changing current schemas, Controls, evidence
+selection, results or immutable history.
+
+`organization.assertion.required` currently consumes ordinary required
 `organization.assertion/v1` evidence for an entity. The named dependency's typed
 `inputs.scheme` is company intent. The payload supplies beneficiary, assertor,
 source locator, scheme, outcome and validity interval. The criterion compares the
@@ -191,8 +196,10 @@ recorded assessment instant with the inclusive validity interval. A qualifying
 positive assertion passes; a qualifying negative fails. A different beneficiary,
 scheme, expired/not-yet-valid or inconclusive assertion is unknown. These fields
 belong only to this concrete observation contract, not universal certificate fields.
+The replacement migration deletes this generic organization assertion family rather
+than restoring or extending it; PR #165's risk/training contracts are rejected.
 
-`iam.integration.required` consumes two ordinary named dependencies for a host:
+`iam.integration.required` currently consumes two ordinary named dependencies for a host:
 `iam.service.observation/v1` and `iam.integration.observation/v1`. The source
 observation retains the original service-scoped assertion unchanged, including its
 subject, assertor, condition, outcome and source locator. Its consumer wrapper does
@@ -200,6 +207,10 @@ not relabel the underlying assertion. A separate attributable relationship obser
 must name the consumer, service and exact source assertion locator. Authored service
 integration intent alone cannot pass. The same source assertion can support A/B
 only through each explicit named dependency and its own relationship observation.
+The consumer-to-service relationship is a legitimate descriptive observation, but the
+source's arbitrary condition plus `positive`/`negative`/`inconclusive` conclusion is
+a separately routed ADR 0022 boundary violation. A later bounded migration must
+remove or rework that assertion path without redesigning IAM here.
 
 All-matching-candidate validation, policy-owned freshness, unique latest selection,
 complete-document ambiguity and snapshot identity remain ADR 0010/0012 behavior.
