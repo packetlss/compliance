@@ -257,9 +257,11 @@ plan IDs; it has no catalog-wide inventory/assignment revisions or predecessor
 plan wrapper digests. This pre-freeze cutover adds no compatibility reader and
 promotes no algorithm identifier to `/v1`.
 
-Complete accounting remains separate from assessment success. Typed assertions
-and observed consumer relationships use ordinary evidence dependencies. Governance
-owns external applicability, sufficiency and inventory exhaustiveness; mappings
+Complete accounting remains separate from assessment success. Typed descriptive
+observations and observed consumer relationships may use ordinary evidence
+dependencies only after ADR 0022's criterion-ownership admission gate. Governance
+owns external applicability, sufficiency, inventory exhaustiveness, issuance/review/
+adoption and reviewed external/non-core determinations; mappings
 never establish external conformity. ADR 0010/0012, explicit N/A, missing-realization
 failure, fail-only waivers and technical-only assessment remain unchanged.
 Issue #37 is closed architecture history. New semantics or escalation require a
@@ -269,14 +271,17 @@ tooling; no historical result is reinterpreted.
 ## Framework obligation declaration and bounded satisfaction
 
 [ADR 0021](adr/0021-project-governed-framework-obligation-declarations.md) is
-**Accepted design, not yet implemented; experimental and not frozen** under
-[#159](https://github.com/packetlss/compliance/issues/159), following exploration
-[#158](https://github.com/packetlss/compliance/issues/158). It accepts the durable
+**Experimental, implemented under [#161](https://github.com/packetlss/compliance/issues/161), and not frozen**.
+It accepts the durable
 `FrameworkObligationDeclaration` responsibility as project-governance state outside
 ordinary named policy sources and ordinary assessment plans. Its closed ledger owns
 declared framework/profile/version scope, explicit obligation accounting, reviewed
-interpretations and exactly one governance, assessed Objective, direct technical,
-mixed or external-judgment basis per obligation. Every applicable governance portion
+interpretations and exactly one target `governance-declared`,
+`evidence-assessed-objective`, `direct-technical-policy`, or
+`mixed-governance-assessed` basis per obligation. The currently implemented
+`external-judgment`/`externalReference` contract is superseded architecture and
+scheduled for removal in the subsequent runtime migration under ADR 0022. Every
+applicable governance portion
 requires a reviewed determination capable of affirmative satisfaction, conclusive
 non-implementation, or insufficient establishment without creating evidence or an
 assessment result.
@@ -293,10 +298,10 @@ satisfied is `satisfied`. This does not change current
 `external_refs`, or establish external conformity, certification, legal applicability,
 framework-universe completeness or real-world population completeness.
 
-No declaration resource, schema, project path, identity algorithm, CLI, projection,
-operator view or Alder Forge migration is currently implemented. Those require a
-separately promoted coordinated tranche. If implementation needs declaration content
-in ordinary plans or changed plan/result semantics, it returns to architecture.
+The declaration resource/schema/projection is implemented experimentally, but the
+ADR 0022 category retirement and Alder Forge migration are not. They require a
+separately promoted coordinated runtime tranche. If implementation needs declaration
+content in ordinary plans or changed plan/result semantics, it returns to architecture.
 
 ## Accepted vocabulary convergence
 
@@ -325,7 +330,9 @@ None of these are frozen merely by this classification.
 
 Residual assurance questions, including methodology, sampling, N/A changes and
 any direct result dependency graphs, require a new focused architecture promotion.
-#78 implements only bounded frozen accounting and typed assertions. Any new common
+#78 implements only bounded frozen accounting and historical typed assertion
+contracts; ADR 0022 rejects their conclusion-producing generic use pending migration.
+Any new common
 abstraction, semantics or trust boundary requires renewed architecture review.
 ADR 0021 resolves only the bounded project-governance declaration and ephemeral
 satisfaction interpretation; external authority/recognition, generic framework/GRC

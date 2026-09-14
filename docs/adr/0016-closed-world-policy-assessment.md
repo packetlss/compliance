@@ -6,6 +6,7 @@
 - **Promotion history:** [#37](https://github.com/packetlss/compliance/issues/37)
 - **Supersedes:** [ADR 0013](0013-scoped-assurance-and-obligation-instances.md), [ADR 0014](0014-attributable-applicability-and-authority-acceptance.md), [ADR 0015](0015-bounded-external-claims-and-assurance-recognition.md)
 - **Clarifies:** [ADR 0006](0006-regulatory-assurance-and-external-adapter-boundary.md)
+- **Superseded in part by:** [ADR 0022](0022-criterion-ownership-and-external-judgment-retirement.md), for generic external/assertion conclusions as PASS-producing evidence
 
 Current runtime routing: [#78](https://github.com/packetlss/compliance/issues/78)
 implements the bounded successor. [Operation accounting](../../tooling/docs/operation-accounting.md)
@@ -139,13 +140,21 @@ resolved parameters and direct typed dependency consumption, policy-owned freshn
 independently attributable technical results, conservative roll-up and fail-only
 waivers. Neither adoption nor a waiver manufactures a passing observation.
 
-### Typed external and procedural assurance evidence
+### Typed descriptive and procedural assurance evidence
+
+The original promotion language in this section permitted ordinary typed external
+and assertion evidence where an evidence contract selected it. ADR 0022 preserves
+the evidence qualification and attribution rules below, but supersedes their use for
+another domain's conclusion. A required dependency can determine an
+`AssessmentResult` only after the criterion-ownership admission gate: Compliance
+must own the complete criterion and the evidence must be a Control-unaware,
+descriptive observation. Governance owns reviewed external/non-core determinations.
 
 > A required dependency identifies its evidence contract; only attributable
 > evidence satisfying that contract may determine it.
 
-Explicit assurance/certificate evidence dependencies are ordinary policy dependencies
-where selected policy requires them. Apply normal evidence qualification and
+Explicit descriptive assurance evidence dependencies are ordinary policy dependencies
+where selected policy requires them after that admission gate. Apply normal evidence qualification and
 [ADR 0010](0010-required-evidence-status-and-assessment-refusal.md) outcomes.
 There are no universal certificate semantics. Issuer, scheme, holder, covered
 subjects, exclusions, validity, signatures or similar fields are required only
@@ -159,7 +168,7 @@ contract legitimately establish that beneficiary relationship. A familiar issuer
 matching framework ID, corporate relationship or signature reference is insufficient.
 No generic recognition, certificate, authority or external-claim engine follows.
 
-### Common assurance cannot broaden automatically
+### Common descriptive assurance cannot broaden automatically
 
 ```text
 broad service assurance
@@ -172,7 +181,9 @@ assurance and required correlation/integration evidence. A shared IAM service's
 assurance does not establish that every application actually integrates with it.
 Authored integration intent cannot replace evidence of the required relationship.
 
-The initial successor may use appropriately typed attributable evidence if sufficient.
+The initial successor may use appropriately typed attributable *descriptive* evidence
+if sufficient and only for a Compliance-owned criterion. It cannot use an upstream
+service or assurance conclusion as an assessment outcome.
 This ADR does **not** require direct assessment-result-to-assessment-result
 consumption. Such consumption introduces dependency graphs, cycle handling and
 temporal semantics; if implementation exploration finds it necessary, obtain a
@@ -290,10 +301,11 @@ removed from the successor core responsibility. Retaining them would reintroduce
 the superseded external-claim design under different names.
 
 The mitigation is exact supplied-policy/scope provenance, bounded result wording
-and governance's ability to model additional assurance requirements as ordinary
-explicit policy dependencies. A limited or poorly chosen policy can pass; the
-core does not endorse its completeness or legal sufficiency. Conversely, policy
-cannot author a passing reality assertion: required evidence must still qualify.
+and governance's ability to record reviewed non-core determinations or model
+Compliance-owned criteria through ordinary explicit policy dependencies. A limited
+or poorly chosen policy can pass; the core does not endorse its completeness or legal
+sufficiency. Conversely, policy cannot author a passing reality assertion: required
+descriptive evidence must still qualify under ADR 0022.
 
 ## Ownership, next exploration and non-goals
 

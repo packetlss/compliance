@@ -58,13 +58,16 @@ The toolset should answer four different questions without conflating them:
   is broad, a reviewed company interpretation and complete realization bridge
   it to attributable checks; the framework prose is not executable policy.
 - **Framework accounting is project governance, not policy composition.** The
-  future `FrameworkObligationDeclaration` accepted by system ADR 0021 owns a closed,
-  versioned ledger and declared project scope outside ordinary policy sources and
-  assessment plans. Pure governance declarations need no circular assertion evidence;
-  their reviewed determination may be affirmative, conclusively negative, or not
-  established without becoming an assessment result. Independently observable facts
-  remain assessed. Its bounded satisfaction view is ephemeral and cannot establish
-  external conformity or population completeness.
+  implemented experimental `FrameworkObligationDeclaration` from system ADR 0021
+  owns a closed, versioned ledger and declared project scope outside ordinary policy
+  sources and assessment plans. Pure governance declarations need no circular
+  assertion evidence; their reviewed determination may be affirmative, conclusively
+  negative, or not established without becoming an assessment result. Under ADR 0022,
+  independently observable material remains assessed only when company Compliance
+  policy owns the complete criterion and evaluates Control-unaware descriptive facts;
+  drift alone is not sufficient. Its bounded satisfaction view is ephemeral and cannot
+  establish external conformity or population completeness. The current
+  `external-judgment` runtime category is historical pending its later removal.
 - **Verification is scenario-first and claim-aware.** Stable verification
   projects use deterministic, real-world-shaped synthetic situations and map
   implemented features onto those stories. They expose the complete path from
@@ -530,15 +533,19 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
-### 2026-09-13 — Project-governed framework obligation declaration (#159)
+### 2026-09-13 — Project-governed framework obligation declaration (#159; superseded in part by ADR 0022)
 
 System [ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md)
 accepts `FrameworkObligationDeclaration` as separately versioned project-governance
 state outside ordinary policy sources and plans. It owns exact declared framework
-scope, a closed applicable/excluded/not-applicable obligation ledger, and exactly one
-governance-declared, evidence-assessed Objective, direct technical, mixed, or external-
-judgment basis per entry. The decision rule is whether satisfaction can change
-independently from governance's declared implementation.
+scope and a closed applicable/excluded/not-applicable obligation ledger. The original
+five-category/drift test is historical rationale for #161, not current admission
+authority: ADR 0022 now permits only `governance-declared`,
+`evidence-assessed-objective`, `direct-technical-policy`, or
+`mixed-governance-assessed` target categories. It requires complete criterion
+ownership and Control-unaware descriptive observations before assessment; drift alone
+does not admit another domain's conclusion. The implemented `external-judgment`
+category remains readable current runtime until separately migrated away.
 
 The accepted framework-satisfaction interpretation is ephemeral over an exact
 declaration, an exact retained operation anchor as scope witness, exact bound

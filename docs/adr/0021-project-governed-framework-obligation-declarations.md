@@ -3,6 +3,7 @@
 - **Status:** Accepted architecture under [#159](https://github.com/packetlss/compliance/issues/159); implemented by [#161](https://github.com/packetlss/compliance/issues/161), experimental, not frozen
 - **Date:** 2026-09-13
 - **Refines:** [ADR 0006](0006-regulatory-assurance-and-external-adapter-boundary.md), [ADR 0011](0011-historical-assessment-and-operational-evidence-timeliness.md), [ADR 0016](0016-closed-world-policy-assessment.md), and [ADR 0018](0018-durable-assessment-explanation-facts.md)
+- **Superseded in part by:** [ADR 0022](0022-criterion-ownership-and-external-judgment-retirement.md), for the basis-category model and external-judgment architecture
 - **Exploration:** [#158](https://github.com/packetlss/compliance/issues/158)
 
 ## Context
@@ -108,7 +109,15 @@ framework universe, decide legal or contractual applicability, or prove that the
 declared ledger exhausts that universe. Explicit excluded and not-applicable entries
 are governance accounting and do not imply external-authority acceptance.
 
-### Five satisfaction-basis categories
+### Historical five-category model and superseding target
+
+The original accepted model below had five basis categories. ADR 0022 preserves this
+section as historical rationale for the #161 implementation, but supersedes it as
+target architecture: the next runtime migration retains only
+`governance-declared`, `evidence-assessed-objective`, `direct-technical-policy`, and
+`mixed-governance-assessed`. It removes `external-judgment` and `externalReference`
+without reinterpreting historical declarations. Until that migration, the current
+schema/projection retains its implemented historical category.
 
 Each ledger entry has exactly one of these categories, independently of its
 applicable/excluded/not-applicable disposition:
@@ -126,8 +135,9 @@ applicable/excluded/not-applicable disposition:
 4. **Mixed governance + assessed basis** — both an attributable reviewed governance
    determination, with its applicable implementation or gap reference, and exact
    ordinary evidence-backed Objective or direct-policy assessment are required.
-5. **External judgment** — satisfaction depends on an authority, recognition, or
-   judgment the product does not establish.
+5. **External judgment** — historical #161 category for satisfaction depending on an
+   authority, recognition, or judgment the product does not establish; superseded by
+   ADR 0022 and scheduled for removal in the next runtime migration.
 
 Use this decision rule:
 
@@ -142,7 +152,8 @@ determination. Examples include a reviewed board security direction or adoption 
 an internal governance process when the obligation being represented is exactly that
 governed adoption.
 
-If yes, the independently observable fact remains assessment evidence. A requirement
+If yes, the independently observable *descriptive* fact may remain assessment evidence
+only if Compliance owns the complete criterion under ADR 0022. A requirement
 that a process be adopted can be governance-declared while an actual periodic review,
 training completion for a required population, successful restore exercise, or
 deployed technical posture remains assessed. When both portions are required, use the
@@ -305,9 +316,9 @@ every required basis affirmatively satisfied
 
 | State | Meaning |
 | --- | --- |
-| `satisfied` | Every applicable declared obligation has every required governance and assessed/direct portion affirmatively satisfied, with no required waiver/deviation or unresolved external judgment. |
+| `satisfied` | Every applicable declared obligation has every required governance and assessed/direct portion affirmatively satisfied, with no required waiver/deviation. The historical external-judgment qualification is superseded by ADR 0022's target model. |
 | `not_satisfied` | At least one applicable required basis has a conclusive governance-negative determination or assessed failure. |
-| `not_established` | No conclusive required failure exists, but at least one required governance determination or assessed/direct basis is not established; this also covers incomplete/invalid accounting, a required waived failure, or an applicable external judgment outside what the product can establish. |
+| `not_established` | No conclusive required failure exists, but at least one required governance determination or assessed/direct basis is not established; this also covers incomplete/invalid accounting or a required waived failure. Historical external-judgment handling remains readable only until its separately promoted removal. |
 
 Consequently:
 
@@ -327,8 +338,8 @@ Consequently:
 - a waived required failure produces `not_established` and exposes the internally
   accepted deviation;
 - governance cannot override an assessed failure or uncertainty;
-- an applicable external-judgment entry that the product cannot establish produces
-  `not_established`; and
+- a historical applicable external-judgment entry that the product cannot establish
+  produces `not_established` until the separately promoted removal; and
 - empty applicable scope, incomplete ledger accounting, or a non-assessable/missing
   denominator where an assessed/direct basis requires support cannot manufacture
   `satisfied`.
@@ -345,9 +356,11 @@ means an assessed failure remains `not_satisfied` when governance is unresolved.
 Internal waivers/deviations and separately attributable external-recognition records
 are qualifications, not additional top-level states and not successful states. A
 recognition record may explain an external authority's position but does not let the
-core manufacture `satisfied` for an external-judgment basis. Current qualification,
-including timeliness, declaration drift, comparison-plan mismatch, waiver expiry, or
-external recognition, is shown separately from historical satisfaction.
+core authenticate or independently establish that proposition. Governance preserves
+such attribution through its determination `subject` and review reference/context.
+Current qualification, including timeliness, declaration drift, comparison-plan
+mismatch, waiver expiry, or external recognition, is shown separately from historical
+satisfaction.
 
 Do not use `compliant` as normative core terminology. The preferred short operator
 wording for `satisfied` is:
@@ -375,7 +388,7 @@ waivers, or external recognition do not rewrite those assessment outcomes or the
 declaration under which they were interpreted.
 
 Changing an obligation from governance-declared to evidence-assessed, direct,
-mixed, or external judgment (or in the other direction) requires a new declaration
+mixed, or the historical external judgment category (or in the other direction) requires a new declaration
 revision. It never retroactively reinterprets an older declaration. A caller may
 explicitly project a different declaration against compatible retained assessment
 facts as a new interpretation, but must identify that exact declaration and expose
@@ -393,14 +406,14 @@ proving consumers as follows; this ADR does not perform or authorize that migrat
 
 - `1101` becomes governance-declared instead of an assertion-backed synthetic
   Objective.
-- `0002` remains an external-judgment/dependency case unless a separate architecture
-  decision accepts stronger bounded external-fact semantics.
-- `1202` becomes mixed when actual periodic assessment occurrence is independently
-  observed.
-- `2410` becomes mixed when dated authorized-software review occurrence is
-  independently observed.
-- `2602` becomes mixed when training completion and required-population facts are
-  independently observed.
+- `0002` becomes governance-declared and `not_established`; Governance may name the
+  CE Plus dependency as its determination subject.
+- `1202` becomes governance-declared and `not_established` in the proving case;
+  Compliance does not recompute the risk-management judgment.
+- `2410` becomes governance-declared and affirmative from governed software-policy
+  issuance/review/adoption state.
+- `2602` becomes governance-declared; it is negative only after Governance explicitly
+  reviews/adopts the external training basis, otherwise not established.
 - The synthetic organizational programme `RequirementBaseline` is removed when the
   declaration owns the closed obligation ledger.
 - `2201` remains an evidence-assessed Objective.
