@@ -358,7 +358,7 @@ def iam(root, private_source):
             "Access is granted through centrally governed roles (company.iam.role-based-access@1)",
             "Interactive access to governed systems must be authorized through centrally governed role or group membership",
             "IAM service integrations satisfy policy (restricted.linux.rbac.company-iam-integration) [PASS]",
-            "Purpose: Verify that required identity-service conditions and their governed relationships are supported by attributable evidence.",
+            "Purpose: Verify that the exact subject is integrated with the IAM service designated by governed policy.",
         ):
             require(expected in explanation, f"IAM explanation lost {expected!r}")
         require(
@@ -380,19 +380,53 @@ def iam(root, private_source):
             else: change(doc); path.write_text(json.dumps(doc))
             _, _, out = s.assess("host/A", evidence=evidence, tag=tag)
             return json.loads((out / "host__A.json").read_text())
+        def iam_result(report):
+            return next(row for row in report["results"]
+                        if row["instance_id"] == "restricted.linux.rbac.company-iam-integration")
+        def iam_disposition(report):
+            return next(row for row in report["dependency_dispositions"]
+                        if row["instance_id"] == "restricted.linux.rbac.company-iam-integration")
         local = mutate("host-A-linux*", lambda d:d["payload"]["packages"].update(sssd_installed=False), tag="local-fail")
         require("fail" in statuses(local)
                 and local["requirement_assessments"][0]["status"] == "fail",
                 "local failure roll-up")
-        negative = mutate("host-A-iam-service*", lambda d:d["payload"]["source_assertion"].update(outcome="negative"), tag="service-fail")
-        require("fail" in statuses(negative)
-                and negative["requirement_assessments"][0]["status"] == "fail",
-                "service failure roll-up")
-        wrong = mutate("host-A-iam-service*", lambda d:d["payload"]["source_assertion"].update(subject_id="service/other"), tag="wrong-service")
+        wrong = mutate("host-A-iam-relationship*", lambda d:d["payload"].update(service="service/other"), tag="wrong-service")
         require("unknown" in statuses(wrong), "wrong service was substituted by routing")
         require("unknown" in statuses(mutate("host-A-iam-relationship*", remove=True, tag="missing-relationship")), "missing relationship")
+        unknown = mutate("host-A-iam-relationship*", lambda d:d["payload"].update(integrated=None), tag="unknown-relationship")
+        require("unknown" in statuses(unknown), "unknown relationship")
         relationship = mutate("host-A-iam-relationship*", lambda d:d["payload"].update(integrated=False), tag="negative-relationship")
         require("fail" in statuses(relationship), "negative relationship")
+        stale = mutate("host-A-iam-relationship*", lambda d:d.update(collected_at="2026-08-30T00:00:00Z"), tag="stale-relationship")
+        stale_disposition = iam_disposition(stale)
+        require(iam_result(stale)["status"] == "unknown"
+                and stale_disposition["disposition"] == "stale"
+                and stale_disposition["latest_candidates"][0]["collected_at"] == "2026-08-30T00:00:00Z",
+                "stale relationship")
+
+        restore(); relationship_path = next(evidence.glob("host-A-iam-relationship*")); invalid = json.loads(relationship_path.read_text())
+        invalid["id"] += "-invalid"; invalid["payload"]["integrated"] = "invalid"
+        (evidence / "host-A-iam-relationship-invalid.json").write_text(json.dumps(invalid))
+        _, _, invalid_results = s.assess("host/A", evidence=evidence, tag="invalid-relationship")
+        invalid_report = json.loads((invalid_results / "host__A.json").read_text()); invalid_disposition = iam_disposition(invalid_report)
+        require(iam_result(invalid_report)["status"] == "unknown"
+                and invalid_disposition["disposition"] == "invalid"
+                and invalid_disposition["diagnostics"]
+                and iam_result(invalid_report)["observed"] == {}
+                and not any(item["instance_id"] == "restricted.linux.rbac.company-iam-integration"
+                            for item in invalid_report["provenance"]["selectedEvidence"]),
+                "invalid relationship bypassed all-candidate validation")
+
+        restore(); relationship_path = next(evidence.glob("host-A-iam-relationship*")); duplicate = json.loads(relationship_path.read_text())
+        duplicate["id"] += "-ambiguous"
+        (evidence / "host-A-iam-relationship-ambiguous.json").write_text(json.dumps(duplicate))
+        _, _, ambiguous_results = s.assess("host/A", evidence=evidence, tag="ambiguous-relationship")
+        ambiguous_report = json.loads((ambiguous_results / "host__A.json").read_text()); ambiguity = iam_disposition(ambiguous_report)
+        require(iam_result(ambiguous_report)["status"] == "unknown"
+                and ambiguity["disposition"] == "ambiguous"
+                and len(ambiguity["candidates"]) == 2
+                and iam_result(ambiguous_report)["observed"] == {},
+                "ambiguous relationship was not unknown")
 
         waiver_root = s.work / "waivers"; waiver_root.mkdir()
         (waiver_root / "local-failure.json").write_text(json.dumps({
@@ -415,10 +449,6 @@ def iam(root, private_source):
 
         restore()
         for path in list(evidence.glob("host-A-iam-*.json")): path.unlink()
-        for name, doc in original.items():
-            if name.startswith("host-B-iam-"):
-                other = copy.deepcopy(doc); other["subject"] = {"id":"host/A","type":"linux-host"}
-                (evidence / name.replace("host-B", "host-A-routed-B")).write_text(json.dumps(other))
         _, _, isolated_results = s.assess("host/A", evidence=evidence, tag="beneficiary-isolation")
         require("unknown" in statuses(json.loads((isolated_results / "host__A.json").read_text())), "B evidence satisfied A")
 
@@ -477,7 +507,7 @@ def iam(root, private_source):
         s.cli("assessment","run","host/A","--at",AT,"--evidence",str(evidence),"--output",str(unresolved_output),success=False)
         require(not (unresolved_output/"host__A.json").exists(), "unresolved parameter produced an assessment result")
 
-        restore(); unsafe = next(evidence.glob("host-A-iam-service*")); doc=json.loads(unsafe.read_text());doc["subject"]=None;unsafe.write_text(json.dumps(doc))
+        restore(); unsafe = next(evidence.glob("host-A-iam-relationship*")); doc=json.loads(unsafe.read_text());doc["subject"]=None;unsafe.write_text(json.dumps(doc))
         _, _, refused = s.assess("host/A", evidence=evidence, tag="refused", success=False)
         require(not (refused / "host__A.json").exists(), "unsafe routing published a result")
     finally:

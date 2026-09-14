@@ -80,5 +80,6 @@ separate authorized environments.
 
 The additional `company-iam-policy-assessment` realization belongs to the canonical
 two-host IAM scenario. It remains in this separately materialized private root and
-introduces a named shared IAM dependency plus an attributable consumer relationship.
+supplies the governed required IAM service input to one descriptive consumer-to-service
+relationship dependency.
 The original restricted Linux scenario and its four checks remain unchanged.

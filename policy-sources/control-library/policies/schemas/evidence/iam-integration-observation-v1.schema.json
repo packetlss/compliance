@@ -65,27 +65,12 @@
     "payload": {
       "type": "object",
       "required": [
-        "consumer",
         "service",
-        "asserted_by",
-        "source_assertion_locator",
         "integrated"
       ],
       "additionalProperties": false,
       "properties": {
-        "consumer": {
-          "type": "string",
-          "minLength": 1
-        },
         "service": {
-          "type": "string",
-          "minLength": 1
-        },
-        "asserted_by": {
-          "type": "string",
-          "minLength": 1
-        },
-        "source_assertion_locator": {
           "type": "string",
           "minLength": 1
         },
