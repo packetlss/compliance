@@ -7,38 +7,29 @@
   },
   "spec": {
     "title": "IAM service integrations satisfy policy",
-    "purpose": "Verify that required identity-service conditions and their governed relationships are supported by attributable evidence.",
+    "purpose": "Verify that the exact subject is integrated with the IAM service designated by governed policy.",
     "entrypoint": "data.compliance.controls.iam_integration_required.evaluate",
     "applies_to": [
       "linux-host"
     ],
     "evidence": [
       {
-        "id": "service",
-        "type": "iam.service.observation/v1",
+        "id": "relationship",
+        "type": "iam.integration.observation/v1",
         "inputs_schema": {
           "type": "object",
           "required": [
-            "service",
-            "condition"
+            "service"
           ],
           "additionalProperties": false,
           "properties": {
             "service": {
               "type": "string",
               "minLength": 1
-            },
-            "condition": {
-              "type": "string",
-              "minLength": 1
             }
           },
-          "$id": "https://compliance.example/schemas/controls/iam.integration.required/evidence/service/inputs/v1.schema.json"
+          "$id": "https://compliance.example/schemas/controls/iam.integration.required/evidence/relationship/inputs/v1.schema.json"
         }
-      },
-      {
-        "id": "relationship",
-        "type": "iam.integration.observation/v1"
       }
     ],
     "parameters_schema": "parameters.schema.json",

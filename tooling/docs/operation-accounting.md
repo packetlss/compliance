@@ -182,18 +182,13 @@ plan-owned Check/dependency meaning or call the Coverage projection.
 
 ## IAM follow-on boundary
 
-`iam.integration.required` currently consumes two ordinary named dependencies for a host:
-`iam.service.observation/v1` and `iam.integration.observation/v1`. The source
-observation retains the original service-scoped assertion unchanged, including its
-subject, assertor, condition, outcome and source locator. Its consumer wrapper does
-not relabel the underlying assertion. A separate attributable relationship observation
-must name the consumer, service and exact source assertion locator. Authored service
-integration intent alone cannot pass. The same source assertion can support A/B
-only through each explicit named dependency and its own relationship observation.
-The consumer-to-service relationship is a legitimate descriptive observation, but the
-source's arbitrary condition plus `positive`/`negative`/`inconclusive` conclusion is
-a separately routed ADR 0022 boundary violation. A later bounded migration must
-remove or rework that assertion path without redesigning IAM here.
+`iam.integration.required` consumes one ordinary named relationship dependency for a
+host: `iam.integration.observation/v1`. Governed policy supplies the exact required
+service as that dependency's input. The full evidence envelope supplies exact host
+subject identity and collector attribution; the payload reports only the observed
+service and whether integration is true, false, or unknown. The Control compares the
+descriptive relationship to the governed service and maps only that relationship's
+`integrated` value to its ordinary result.
 
 All-matching-candidate validation, policy-owned freshness, unique latest selection,
 complete-document ambiguity and snapshot identity remain ADR 0010/0012 behavior.

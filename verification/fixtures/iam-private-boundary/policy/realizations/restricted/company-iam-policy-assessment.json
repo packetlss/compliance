@@ -82,13 +82,11 @@
         "remediation": "Restore the host relationship to the reviewed company IAM service.",
         "parameters": {},
         "evidence": {
-          "service": {
+          "relationship": {
             "inputs": {
-              "service": "service/company-iam",
-              "condition": "centrally-governed-privileged-access"
+              "service": "service/company-iam"
             }
-          },
-          "relationship": {}
+          }
         }
       }
     ],
@@ -187,27 +185,6 @@
         }
       },
       {
-        "id": "restricted.linux.rbac.company-iam-service.freshness",
-        "source": {
-          "requirement": "company.iam.role-based-access@1",
-          "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7",
-          "slot": "privileged_evidence_max_age",
-          "declaration_digest": "sha256:35ed20fc37f7aa59c704626924711a1f156e6ce70dde22c93b507fb1b4df0115",
-          "schema_digest": "sha256:c4b547904c80c90e4d9ff5e335f672c55b77072a86049f1f748bd408baf49e5c"
-        },
-        "destination": {
-          "instance_id": "restricted.linux.rbac.company-iam-integration",
-          "implementation": {
-            "id": "iam.integration.required",
-            "version": 1,
-            "fingerprint": "sha256:4e30a5c17a93878279f9866e581714aee725edf63f3c8fd36273d63e00d814d5"
-          },
-          "kind": "freshness",
-          "dependency": "service",
-          "path": "/max_age"
-        }
-      },
-      {
         "id": "restricted.linux.rbac.company-iam-relationship.freshness",
         "source": {
           "requirement": "company.iam.role-based-access@1",
@@ -221,7 +198,7 @@
           "implementation": {
             "id": "iam.integration.required",
             "version": 1,
-            "fingerprint": "sha256:4e30a5c17a93878279f9866e581714aee725edf63f3c8fd36273d63e00d814d5"
+            "fingerprint": "sha256:4eda17c70eeab97654a01323ecd336d8c5af57e979c143088e745727a8b34a1e"
           },
           "kind": "freshness",
           "dependency": "relationship",

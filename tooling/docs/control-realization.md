@@ -23,13 +23,13 @@ not to wrap every useful technical check in governance ceremony.
 concrete assertion contracts. Realization selection chooses demonstration; Subject,
 group and baseline assignment determine requirement targeting.
 
-Organization assertions and shared IAM observations are existing historical runtime
-contracts, not new admission authority. ADR 0022 rejects the generic
-organization-assertion family for its replacement migration and separately routes the
-conclusion-shaped IAM service assertion. An observed consumer-to-service relationship
-remains legitimate descriptive material; authored integration intent is insufficient.
-No certificate subsystem, authority engine or direct result graph exists. Mappings
-report supplied company policy only.
+Organization assertions are existing historical runtime contracts, not new admission
+authority. ADR 0022 rejects the generic organization-assertion family for its
+replacement migration. IAM integration is assessed from the descriptive exact
+consumer-to-service relationship against the service designated by governed policy;
+authored integration intent alone is insufficient. No certificate subsystem,
+authority engine or direct result graph exists. Mappings report supplied company
+policy only.
 
 ADR 0010/0012, exactly-one realization selection, missing-realization failure,
 explicit N/A and fail-only waivers retain their existing semantics. Any residual

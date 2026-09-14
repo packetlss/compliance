@@ -43,21 +43,8 @@ EXPECTED_EVIDENCE_PAYLOADS = {
         "restrict_public_buckets": True,
     },
     "iam.integration.observation/v1": {
-        "consumer": "host/test",
         "service": "service/iam",
-        "asserted_by": "test-collector",
-        "source_assertion_locator": "assertion://iam/current",
         "integrated": True,
-    },
-    "iam.service.observation/v1": {
-        "consumer": "host/test",
-        "source_assertion": {
-            "subject_id": "service/iam",
-            "asserted_by": "test-collector",
-            "source_locator": "assertion://iam/current",
-            "condition": "available",
-            "outcome": "positive",
-        },
     },
     "linux.access.configuration/v1": {
         "packages": {"sssd_installed": True},
@@ -369,7 +356,7 @@ class PolicyResourceTests(unittest.TestCase):
             read_json(path)["properties"]["type"]["const"] for path in schemas
         }
         self.assertEqual(actual_types, set(EXPECTED_EVIDENCE_PAYLOADS))
-        self.assertEqual(len(schemas), 11)
+        self.assertEqual(len(schemas), 10)
 
         for path in schemas:
             with self.subTest(schema=path.relative_to(ROOT)):

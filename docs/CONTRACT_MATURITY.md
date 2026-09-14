@@ -212,7 +212,7 @@ stable fields and labels for applicability, with `spec.attributes` as the rich
 adapter-specific extension point. Inventory remains scope/applicability input;
 evidence remains assessment-outcome input.
 
-The 12 active evidence types retain their identities and self-contained schemas.
+The 10 active evidence types retain their identities and self-contained schemas.
 Each schema conforms to the unchanged seven-field evidence envelope and owns a
 typed payload for one observation/selection unit. Evidence types are collector
 capabilities rather than control identities; already declared facts can support

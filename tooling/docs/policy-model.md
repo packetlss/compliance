@@ -354,7 +354,6 @@ The current runtime producer contracts are:
 | `aws.account.configuration/v1` | Normalized AWS account, root-user, CloudTrail, and security-contact observations |
 | `aws.s3.account-public-access-block/v1` | Account-level Amazon S3 Block Public Access settings |
 | `iam.integration.observation/v1` | Independently observed consumer-to-service integration relationship |
-| `iam.service.observation/v1` | Named service assertion attributed to its source |
 | `linux.access.configuration/v1` | Linux access packages, identity domain, SSH groups, and unmanaged accounts |
 | `linux.packages/v1` | Linux-native installed package inventory |
 | `linux.sysctl/v1` | Effective Linux kernel-parameter observations |
@@ -370,11 +369,6 @@ the observable fact belongs to the typed payload. The schema catalog validates
 that every active, self-contained evidence schema preserves this envelope before
 it can satisfy a control dependency. This is a conformance rule, not a shared
 runtime base schema or evidence-family hierarchy.
-
-The conclusion-shaped portion of `iam.service.observation/v1` is a historical
-current-runtime contract, not an approved future producer pattern. ADR 0022
-separately routes its correction; this documentation does not change its schema,
-selection or historical use.
 
 An evidence type names a collector capability and one semantic observation and
 selection unit. It is not a control ID. Collectors report observations without
