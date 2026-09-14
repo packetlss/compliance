@@ -71,7 +71,7 @@ def assert_plan(plan: dict, subject_id: str) -> None:
         fail(f"{subject_id} plan lost exact content identities")
     sources = plan.get("provenance", {}).get("planningComposition", {}).get("actual", {}).get("policySources", [])
     if {source.get("name") for source in sources} != {
-        "control-library", "alder-forge-programme", "alder-forge-corporate-platform"
+        "control-library", "alder-forge-corporate-platform"
     }:
         fail(f"{subject_id} plan lost independently named policy source provenance")
     if any(not is_digest(source.get("content", {}).get("digest")) for source in sources):
@@ -86,8 +86,8 @@ def assert_coverage(run_root: Path) -> None:
     expected = {ENTITY, LINUX, SAAS, "workstation/alder-dev-mac-01"}
     if set(assets) != expected:
         fail(f"inventory coverage lost or added supplied subjects: {set(assets)}")
-    if (assets[ENTITY]["objective_count"], assets[ENTITY]["assessable_check_count"]) != (3, 3):
-        fail("entity coverage did not expose the retained assessed Objectives")
+    if (assets[ENTITY]["objective_count"], assets[ENTITY]["assessable_check_count"]) != (0, 0):
+        fail("governance-only entity obligations became assessable policy")
     if (assets[LINUX]["objective_count"], assets[LINUX]["assessable_check_count"]) != (0, 1):
         fail("Linux 2409 direct-policy coverage changed")
     if (assets[SAAS]["objective_count"], assets[SAAS]["assessable_check_count"]) != (1, 1):
@@ -97,45 +97,10 @@ def assert_coverage(run_root: Path) -> None:
 
     entity = load(run_root / "coverage-entity.json")
     kinds = {item["policy_type"] for assignment in entity["assignments"] for item in assignment["policies"]}
-    if kinds != {"objective"}:
-        fail("entity Coverage classified an organisational obligation as technical policy")
+    if kinds:
+        fail("entity Coverage turned governance-only obligations into policy")
     if any("historical_result" in json.dumps(assignment) for assignment in entity["assignments"]):
         fail("Coverage explanation inspected evidence or results")
-
-
-def assert_organisation_cases(run_root: Path) -> None:
-    cases = {
-        "risk-assessment": ("alder-forge.periodic-risk-assessment@1", "unknown", "unknown", "unknown"),
-        "software-review": ("alder-forge.authorized-software-review@1", "pass", "unknown", "unknown"),
-        "awareness-training": ("alder-forge.awareness-training@1", "fail", "fail", "fail"),
-    }
-    objectives = {
-        "alder-forge.authorized-software-review@1",
-        "alder-forge.awareness-training@1",
-        "alder-forge.periodic-risk-assessment@1",
-    }
-    for name, (selected_objective, expected_status, programme_status, overall_status) in cases.items():
-        root = run_root / "organization" / name
-        plan = load(root / "plans" / "entity__alder-forge-defence-systems.json")
-        report = load(root / "results" / "entity__alder-forge-defence-systems.json")
-        assert_plan(plan, ENTITY)
-        if report.get("evaluated_at") != FIXED_INSTANT:
-            fail(f"{name} assessment was not fixed-time")
-        if any(result["status"] == "error" for result in report["results"]):
-            fail(f"{name} manufactured an error outcome")
-        statuses = requirement_statuses(report)
-        if set(statuses) != objectives:
-            fail(f"{name} did not retain every applicable organisational Objective")
-        if statuses[selected_objective] != expected_status or any(
-            status != "unknown" for objective, status in statuses.items()
-            if objective != selected_objective
-        ):
-            fail(f"{name} did not preserve one supplied assertion fact against sibling unknown Objectives")
-        baselines = baseline_statuses(report)
-        if baselines.get("alder-forge.bounded-assessed-objectives@1") != programme_status:
-            fail(f"{name} lost the bounded assessed-Objective roll-up status")
-        if report.get("outcome") != overall_status:
-            fail(f"{name} did not retain accepted aggregate roll-up semantics")
 
 
 def assert_technical_cases(run_root: Path) -> None:
@@ -160,38 +125,31 @@ def assert_technical_cases(run_root: Path) -> None:
         fail("technical cases manufactured an error outcome")
 
 
-def assert_frozen_operator_views(run_root: Path) -> None:
-    explanation = load(run_root / "entity-explain.json")
-    if explanation.get("schema") != "compliance.example/assessment-explanation-view/v1alpha1":
-        fail("assessment explanation did not use the public exact-history view")
-    if explanation.get("historical_outcome") != "unknown":
-        fail("frozen entity explanation lost its aggregate unknown outcome")
-    risk_assessment = next(
-        item for item in explanation["checks"]
-        if item["check"]["instance_id"] == "alder-forge.entity.risk-assessment-1202.assertion"
-    )
-    if risk_assessment["historical_result"]["historical_outcome"] != "unknown":
-        fail("frozen explanation lost risk assessment's exact unknown")
-    if risk_assessment["policy_alignment"] != "realization":
-        fail("risk assessment assertion was not presented as an Objective realization")
-
-    mappings = load(run_root / "entity-mappings.json")
-    expected_refs = {f"DEFSTAN-05-138-ISSUE-4:{control}" for control in ("1202", "2410", "2602")}
-    if mappings.get("scope") != "exact_frozen_operation":
-        fail("mapping view did not use the frozen operation")
-    if {item["external_ref"] for item in mappings["mappings"]} != expected_refs:
-        fail("entity mapping traceability lost an implemented obligation")
-    if {item["mapping_level"] for item in mappings["mappings"]} != {"objective"}:
-        fail("entity framework mappings retained a technical-policy level")
-    if {item["asset_id"] for item in mappings["mappings"]} != {ENTITY}:
-        fail("mapping result leaked across project members")
-    if "do not establish" not in mappings.get("note", ""):
-        fail("mapping view lost its traceability-only boundary")
+def assert_framework_accounting(run_root: Path) -> None:
+    framework = load(run_root / "framework-status.json")
+    if framework.get("state") != "not_satisfied":
+        fail("declared framework projection did not preserve the direct package failure")
+    rows = {row["id"]: row for row in framework.get("obligations", [])}
+    expected_states = {
+        "0002": "unknown", "1101": "pass", "1202": "unknown", "2201": "pass",
+        "2409": "fail", "2410": "pass", "2602": "unknown",
+    }
+    expected_bases = {
+        "0002": "governance-declared", "1101": "governance-declared",
+        "1202": "governance-declared", "2201": "evidence-assessed-objective",
+        "2409": "direct-technical-policy", "2410": "governance-declared",
+        "2602": "governance-declared",
+    }
+    if {item: rows.get(item, {}).get("state") for item in expected_states} != expected_states:
+        fail("framework declaration did not retain exact ADR 0022 obligation states")
+    if {item: rows.get(item, {}).get("basis") for item in expected_bases} != expected_bases:
+        fail("framework declaration did not retain exact ADR 0022 obligation bases")
+    if (run_root / "framework/results/entity__alder-forge-defence-systems.json").exists():
+        fail("governance-only Alder obligations produced AssessmentResults")
 
 
 def assert_private_sources(project: Path, control_library: Path) -> None:
     sources = {
-        "alder-forge-programme": (project / "policy/programme/policies", (0, 3, 1, 3)),
         "alder-forge-corporate-platform": (project / "policy/corporate-platform/policies", (1, 1, 1, 1)),
     }
     for name, (path, expected) in sources.items():
@@ -222,19 +180,12 @@ def main() -> int:
     root = args.run_root.resolve()
     project = args.project_root.resolve()
     control_library = args.control_library_root.resolve()
-    for source in (project / "policy/programme/policies", project / "policy/corporate-platform/policies"):
+    for source in (project / "policy/corporate-platform/policies",):
         if (source / "controls").exists() or (source / "schemas").exists():
             fail("project source introduced a reusable Control or evidence schema")
     assert_coverage(root)
-    assert_organisation_cases(root)
     assert_technical_cases(root)
-    assert_frozen_operator_views(root)
-    framework = load(root / "framework-status.json")
-    if framework.get("state") != "not_satisfied":
-        fail("declared framework projection did not preserve the direct/awareness failures")
-    rows = {row["id"]: row for row in framework.get("obligations", [])}
-    if rows.get("0002", {}).get("state") != "unknown" or rows.get("1101", {}).get("state") != "pass":
-        fail("framework declaration did not retain external and governance accounting")
+    assert_framework_accounting(root)
     assert_private_sources(project, control_library)
     print("Alder Forge deterministic current-capability assertions passed.")
     return 0

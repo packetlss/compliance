@@ -31,21 +31,9 @@ printf '\n== Alder Forge static contracts and current views ==\n'
 "${cli[@]}" coverage list assets --format json > "$RUN_ROOT/coverage-assets.json"
 "${cli[@]}" coverage explain entity/alder-forge-defence-systems --format json > "$RUN_ROOT/coverage-entity.json"
 
-printf '\n== Alder Forge bounded organisational assertion snapshots ==\n'
-for case in risk-assessment software-review awareness-training; do
-  case_root="$RUN_ROOT/organization/$case"
-  mkdir -p "$case_root/evidence" "$case_root/plans" "$case_root/results"
-  tooling_run python tooling/collectors/mock-api/collect.py \
-    "$PROJECT_ROOT/fixtures/organization-assertions/$case" "$case_root/evidence" \
-    --collected-at "$FIXED_INSTANT"
-  "${cli[@]}" assessment run entity/alder-forge-defence-systems \
-    --evidence "$case_root/evidence" --plan-output "$case_root/plans" \
-    --output "$case_root/results" --at "$FIXED_INSTANT"
-done
-
 printf '\n== Alder Forge declared framework history ==\n'
 mkdir -p "$RUN_ROOT/framework/evidence" "$RUN_ROOT/framework/plans" "$RUN_ROOT/framework/results"
-for fixture in "$PROJECT_ROOT/fixtures/organization-assertions/awareness-training" "$PROJECT_ROOT/fixtures/technical"; do
+for fixture in "$PROJECT_ROOT/fixtures/technical"; do
   tooling_run python tooling/collectors/mock-api/collect.py "$fixture" "$RUN_ROOT/framework/evidence" --collected-at "$FIXED_INSTANT"
 done
 "${cli[@]}" assessment run --group alder-forge-legal-entity \
@@ -67,14 +55,6 @@ for subject in host/alder-build-01 saas/alder-admin-tenant; do
     --plan-output "$RUN_ROOT/technical/plans" --output "$RUN_ROOT/technical/results" \
     --at "$FIXED_INSTANT"
 done
-
-printf '\n== Alder Forge frozen historical explanation and mappings ==\n'
-anchor="$RUN_ROOT/organization/risk-assessment/plans/entity__alder-forge-defence-systems.json"
-history=(--plan "$anchor" --assessed-plans "$RUN_ROOT/organization/risk-assessment/plans" \
-  --results "$RUN_ROOT/organization/risk-assessment/results" --at "$FIXED_INSTANT" --as-of "$FIXED_INSTANT")
-"${cli[@]}" assessment explain entity/alder-forge-defence-systems "${history[@]}" \
-  --format json > "$RUN_ROOT/entity-explain.json"
-"${cli[@]}" assessment mappings "${history[@]}" --format json > "$RUN_ROOT/entity-mappings.json"
 
 printf '\n== Alder Forge runtime assertions ==\n'
 tooling_run python "$SOURCE_ROOT/scripts/development-projects/assert-alder-forge.py" \

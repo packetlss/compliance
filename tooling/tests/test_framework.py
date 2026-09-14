@@ -104,12 +104,45 @@ class FrameworkDeclarationTests(unittest.TestCase):
                 item["digest"] = declaration_digest(item)
                 self.assertEqual(build_status(item, account(), [], [])["state"], expected)
 
-    def test_external_judgment_cannot_become_satisfied(self):
-        item = declaration()
-        item["spec"]["obligations"][0]["basis"] = {"category": "external-judgment", "externalReference": "external/authority"}
-        item["digestAlgorithm"] = "compliance.example/framework-obligation-declaration-digest/v1alpha1"
-        item["digest"] = declaration_digest(item)
-        self.assertEqual(build_status(item, account(), [], [])["state"], "not_established")
+    def test_retired_framework_basis_and_field_are_rejected(self):
+        governance = declaration()["spec"]["obligations"][0]["basis"]["governance"]
+        for basis in (
+            {"category": "external-judgment"},
+            {"category": "governance-declared", "governance": governance, "externalReference": "external/authority"},
+        ):
+            with self.subTest(basis=basis):
+                item = declaration()
+                item["spec"]["obligations"][0]["basis"] = basis
+                with tempfile.TemporaryDirectory() as temporary:
+                    path = Path(temporary) / "declaration.json"
+                    path.write_text(json.dumps(item), encoding="utf-8")
+                    with self.assertRaisesRegex(ValueError, "invalid FrameworkObligationDeclaration"):
+                        load_declarations(path)
+
+    def test_each_current_framework_basis_validates_and_projects(self):
+        pin = {
+            "reference": "example.objective@1", "digest": "sha256:" + "a" * 64,
+            "groupRefs": [{"name": "scope-group"}],
+        }
+        bases = {
+            "governance-declared": declaration()["spec"]["obligations"][0]["basis"],
+            "evidence-assessed-objective": {"category": "evidence-assessed-objective", "objectivePins": [pin]},
+            "direct-technical-policy": {"category": "direct-technical-policy", "directPolicyPins": [pin]},
+            "mixed-governance-assessed": {
+                "category": "mixed-governance-assessed",
+                "governance": declaration()["spec"]["obligations"][0]["basis"]["governance"],
+                "objectivePins": [pin],
+            },
+        }
+        for category, basis in bases.items():
+            with self.subTest(category=category), tempfile.TemporaryDirectory() as temporary:
+                item = declaration()
+                item["spec"]["obligations"][0]["basis"] = basis
+                path = Path(temporary) / "declaration.json"
+                path.write_text(json.dumps(item), encoding="utf-8")
+                loaded = load_declarations(path)[0]
+                status = build_status(loaded, account(), [], [])
+                self.assertEqual(status["obligations"][0]["basis"], category)
 
     def test_excluded_assessed_row_remains_visible_without_history(self):
         item = declaration()

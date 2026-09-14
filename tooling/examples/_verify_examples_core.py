@@ -571,12 +571,12 @@ class ExampleRunner:
         self.cli(
             ("policy", "validate"),
             [*rollout, "policy", "validate"],
-            contains=("7 realization(s)", "14 control manifest(s)"),
+            contains=("4 realization(s)", "13 control manifest(s)"),
         )
         self.cli(
             ("policy", "validate"),
             [*iam, "policy", "validate"],
-            contains=("9 realization(s)", "14 control manifest(s)"),
+            contains=("6 realization(s)", "13 control manifest(s)"),
         )
         self.domain("policy.multi-source-realization", True)
         self.verify_overlay_edges()
@@ -877,7 +877,7 @@ class ExampleRunner:
             "apiVersion": "compliance.example/v1alpha1",
             "kind": "FrameworkObligationDeclaration",
             "metadata": {"name": "example-framework", "revision": "1", "owner": "example-owner", "review": {"reference": "example/review", "approvedBy": "example-approver", "approvedAt": EXAMPLE_INSTANT}},
-            "spec": {"framework": {"id": "example-framework", "profile": "example-profile", "version": "1"}, "scope": {"id": "example-scope", "description": "The supplied exact AWS operation scope.", "groupRefs": [{"name": "aws-production-accounts"}]}, "obligations": [{"id": "example-external", "disposition": "applicable", "interpretation": "External judgment remains unresolved.", "basis": {"category": "external-judgment", "externalReference": "example/external"}}]}
+            "spec": {"framework": {"id": "example-framework", "profile": "example-profile", "version": "1"}, "scope": {"id": "example-scope", "description": "The supplied exact AWS operation scope.", "groupRefs": [{"name": "aws-production-accounts"}]}, "obligations": [{"id": "example-governance", "disposition": "applicable", "interpretation": "Governance has not established this accounting entry.", "basis": {"category": "governance-declared", "governance": {"subject": "example/governance-subject", "owner": "example-owner", "determination": "not_established"}}}]}
         }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         self.cli(
             ("framework", "validate"),
@@ -913,7 +913,7 @@ class ExampleRunner:
         ]
         framework_args = ["--no-config", "framework", "status", "example-framework", "--revision", "1", "--declarations", str(framework_input), *framework_history_args]
         self.cli(("framework", "status"), framework_args, contains=("Satisfaction not established under declared coverage.",))
-        self.cli(("framework", "explain"), [*framework_args[:2], "explain", *framework_args[3:]], contains=("external-judgment",))
+        self.cli(("framework", "explain"), [*framework_args[:2], "explain", *framework_args[3:]], contains=("governance-declared",))
         self.cli(
             ("assessment", "status"),
             [*mock, "assessment", "status", *historical_args],

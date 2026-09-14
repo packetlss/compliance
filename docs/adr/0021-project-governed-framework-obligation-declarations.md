@@ -112,12 +112,11 @@ are governance accounting and do not imply external-authority acceptance.
 ### Historical five-category model and superseding target
 
 The original accepted model below had five basis categories. ADR 0022 preserves this
-section as historical rationale for the #161 implementation, but supersedes it as
-target architecture: the next runtime migration retains only
+section as historical rationale for the #161 implementation. The #169 runtime
+cutover retains only
 `governance-declared`, `evidence-assessed-objective`, `direct-technical-policy`, and
 `mixed-governance-assessed`. It removes `external-judgment` and `externalReference`
-without reinterpreting historical declarations. Until that migration, the current
-schema/projection retains its implemented historical category.
+without reinterpreting historical declarations.
 
 Each ledger entry has exactly one of these categories, independently of its
 applicable/excluded/not-applicable disposition:
@@ -137,7 +136,7 @@ applicable/excluded/not-applicable disposition:
    ordinary evidence-backed Objective or direct-policy assessment are required.
 5. **External judgment** — historical #161 category for satisfaction depending on an
    authority, recognition, or judgment the product does not establish; superseded by
-   ADR 0022 and scheduled for removal in the next runtime migration.
+   ADR 0022 and removed from current runtime by #169.
 
 Use this decision rule:
 
@@ -338,8 +337,6 @@ Consequently:
 - a waived required failure produces `not_established` and exposes the internally
   accepted deviation;
 - governance cannot override an assessed failure or uncertainty;
-- a historical applicable external-judgment entry that the product cannot establish
-  produces `not_established` until the separately promoted removal; and
 - empty applicable scope, incomplete ledger accounting, or a non-assessable/missing
   denominator where an assessed/direct basis requires support cannot manufacture
   `satisfied`.
@@ -399,10 +396,9 @@ There is no mutable “latest compliance result.” Current qualification is der
 an explicit query/as-of instant and stays separate from both the immutable assessment
 outcomes and the declaration revision.
 
-## Alder Forge migration direction
+## Alder Forge migration direction (implemented by #169)
 
-After a separately promoted implementation, migrate the pre-freeze Alder Forge
-proving consumers as follows; this ADR does not perform or authorize that migration:
+The #169 cutover migrated the pre-freeze Alder Forge proving consumers as follows:
 
 - `1101` becomes governance-declared instead of an assertion-backed synthetic
   Objective.
@@ -420,8 +416,8 @@ proving consumers as follows; this ADR does not perform or authorize that migrat
 - `2409` remains direct technical policy whose complete obligation role is explicit
   in the declaration.
 
-Superseded #157 project resources may be deleted rather than preserved through
-compatibility aliases. No current project resource is changed by this ADR.
+Superseded #157 project resources were deleted rather than preserved through
+compatibility aliases.
 
 ## Capability implications
 

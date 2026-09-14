@@ -83,7 +83,7 @@ These jobs describe the intended product scope of the accepted core, not a claim
 - **Security operator:** determine whether decided technical controls are actually satisfied and understand policy and assessment coverage. Keep a decided criterion's `pass` / `fail` / `unknown` / `error` assessment state distinct from unassigned scope, explicit exclusions or deviations, an absent realization for an assigned objective, missing or stale evidence, and broader security conditions with no identified active criterion. Passing assigned controls does not prove complete security-policy coverage. Discovery of observed-but-unaddressed security conditions is a separate future capability, not an implemented assessment claim.
 - **Infrastructure operator:** consume exact resolved, subject-scoped technical intent with provenance and integrate it into independently owned infrastructure tooling. External systems may translate the assessment plan into Ansible, Terraform, MDM, cloud-init, ticketing, configuration-management, or other delivery mechanisms, within the [external-adapter boundary](#external-adapter-boundary). Backend capability selection, configuration compilation, credentials, approvals, execution/apply, and provider state remain outside the core. Generated configuration does not establish that intended state was deployed or remains effective.
 - **Auditor / reviewer:** obtain attributable evidence and explanations of whether decided controls were satisfied, failed, unknown, waived, or otherwise qualified, with the provenance needed to understand the conclusion. Provenance identifies the inputs and execution used; it does not itself authenticate observation truth or approval authority. A point-in-time assessment is not automatically proof of continuous effectiveness. Framework mappings are attributable reporting content, not engine-established certification or legal-compliance conclusions.
-- **Governance reviewer:** maintain a closed, versioned declaration of the framework/profile obligations accounted for under a declared project scope and one reviewed `governance-declared`, `evidence-assessed-objective`, `direct-technical-policy`, or `mixed-governance-assessed` basis for each. Governance owns issuance/review/adoption and reviewed external or other non-core determinations; its `subject` and review context preserve attribution without claiming that Compliance authenticated the external proposition. The resulting framework-satisfaction projection is bounded to that declaration and exact retained assessment history; it is not conformity, certification, legal applicability, or population completeness. The current `external-judgment` runtime category is superseded target architecture pending its later removal.
+- **Governance reviewer:** maintain a closed, versioned declaration of the framework/profile obligations accounted for under a declared project scope and one reviewed `governance-declared`, `evidence-assessed-objective`, `direct-technical-policy`, or `mixed-governance-assessed` basis for each. Governance owns issuance/review/adoption and reviewed external or other non-core determinations; its `subject` and review context preserve attribution without claiming that Compliance authenticated the external proposition. The resulting framework-satisfaction projection is bounded to that declaration and exact retained assessment history; it is not conformity, certification, legal applicability, or population completeness.
 - **Evidence operator:** understand evidence demand and health: required evidence types, the subjects and controls requiring them, freshness requirements, missing/stale/invalid/otherwise unusable evidence, and the assessment outcomes blocked by those problems. This is an intended product job even though the current CLI does not provide a complete evidence-operator workflow. It does not introduce a new evidence resource or collection-failure taxonomy.
 
 These jobs do not themselves settle evidence or temporal interpretation. [ADR 0022](adr/0022-criterion-ownership-and-external-judgment-retirement.md) makes company Compliance ownership of the complete criterion the first semantic admission gate: only Control-unaware descriptive observations can determine an `AssessmentResult`. [ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) then owns assessment-time evidence validity/status/refusal, and [ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) owns immutable history, exact plan alignment and derived operational evidence timeliness. Manual/procedural methodology, sampling inference, policy-gap discovery, evidence-operator CLI design, collector failure taxonomy and durable evidence retention require separately promoted work. Point-in-time assessments cannot establish continuous effectiveness.
@@ -318,8 +318,8 @@ There is no separate runtime applicability/authority-acceptance/recognition engi
 or mandatory external completeness gate.
 
 [#78](https://github.com/packetlss/compliance/issues/78) implements embedded frozen
-operation accounting and historical typed assertion contracts; [ADR 0022](adr/0022-criterion-ownership-and-external-judgment-retirement.md)
-supersedes their generic conclusion-producing use pending a separate migration;
+operation accounting and the historical typed assertion contracts then in use; [ADR 0022](adr/0022-criterion-ownership-and-external-judgment-retirement.md)
+supersedes and removes the generic conclusion-producing assertion family;
 [#87](https://github.com/packetlss/compliance/issues/87) simplifies its pre-freeze
 selection, member commitment, operation identity and bound-plan representation.
 The [operation contract](../tooling/docs/operation-accounting.md) specifies exact
@@ -336,9 +336,7 @@ assessment plans. It owns an exact declared framework/profile/version reference,
 declared project scope, a closed applicable/excluded/not-applicable obligation ledger,
 reviewed company interpretations, and exactly one target satisfaction-basis category
 for each obligation: `governance-declared`, `evidence-assessed-objective`,
-`direct-technical-policy`, or `mixed-governance-assessed`. The implemented
-`external-judgment`/`externalReference` contract is historical current runtime and
-is scheduled for removal by the subsequent migration under ADR 0022.
+`direct-technical-policy`, or `mixed-governance-assessed`.
 
 The declaration references existing company policy without replacing it.
 `ControlRequirement`, `ControlRealization`, `RequirementBaseline`, technical
@@ -371,8 +369,7 @@ Any conclusive required governance or assessed failure produces `not_satisfied`,
 if another basis is unresolved. With no conclusive failure, an absent, invalid,
 ambiguous, unreviewed or insufficient governance determination, missing/unknown/error/
 stale/invalid/misaligned assessed support, or a waived required failure produces
-`not_established`. Historical current-runtime external-judgment handling remains
-readable until removed and cannot become target architecture. Only affirmative governance
+`not_established`. Only affirmative governance
 determinations plus passing assessed/direct support for every required portion can
 produce `satisfied`. Governance cannot override assessed failure or uncertainty, and
 governance uncertainty is not synthetic assessment `unknown`. Waivers, internal

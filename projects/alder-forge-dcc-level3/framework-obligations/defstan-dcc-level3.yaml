@@ -23,10 +23,13 @@ spec:
   obligations:
     - id: "0002"
       disposition: applicable
-      interpretation: Alder Forge depends on an external Cyber Essentials Plus judgment for this bounded accounting entry.
+      interpretation: Governance has not established the CE Plus dependency accounting entry.
       basis:
-        category: external-judgment
-        externalReference: alder-forge-certification/ce-plus-scope
+        category: governance-declared
+        governance:
+          subject: alder-forge-certification/ce-plus-scope
+          owner: alder-forge-governance
+          determination: not_established
     - id: "1101"
       disposition: applicable
       interpretation: Board adoption of the Alder Forge security direction is governance's reviewed implementation determination.
@@ -42,21 +45,13 @@ spec:
             approvedAt: "2026-09-01T00:00:00Z"
     - id: "1202"
       disposition: applicable
-      interpretation: Reviewed risk-assessment adoption and the bounded supplied assessment assertion are both required.
+      interpretation: Governance has not established periodic-risk-assessment accounting for this entry.
       basis:
-        category: mixed-governance-assessed
+        category: governance-declared
         governance:
           subject: alder-forge-assurance/periodic-risk-assessment
           owner: alder-forge-risk-owner
-          determination: affirmative
-          review:
-            reference: alder-forge-governance/RISK-2026-09
-            approvedBy: alder-forge-governance
-            approvedAt: "2026-09-01T00:00:00Z"
-        objectivePins:
-          - reference: alder-forge.periodic-risk-assessment@1
-            digest: sha256:f4441ea9df00ce5f22ba35701cd2b3e143c5b248c6b486569521b7cb573d9223
-            groupRefs: [{name: alder-forge-legal-entity}]
+          determination: not_established
     - id: "2201"
       disposition: applicable
       interpretation: The critical SaaS MFA Objective is the complete declared company basis.
@@ -77,9 +72,9 @@ spec:
             groupRefs: [{name: corporate-linux-build-systems}]
     - id: "2410"
       disposition: applicable
-      interpretation: Reviewed authorised-software-list review adoption and the bounded supplied assessment assertion are both required.
+      interpretation: Reviewed authorised-software-list review adoption is governance's affirmative determination.
       basis:
-        category: mixed-governance-assessed
+        category: governance-declared
         governance:
           subject: alder-forge-platform/authorized-software-review
           owner: alder-forge-platform-policy-owner
@@ -88,24 +83,12 @@ spec:
             reference: alder-forge-governance/ASL-2026-Q3
             approvedBy: alder-forge-governance
             approvedAt: "2026-09-01T00:00:00Z"
-        objectivePins:
-          - reference: alder-forge.authorized-software-review@1
-            digest: sha256:658de2f55ed8d44ac3c518df13b335917c2ae9b20cf2177faa37c2a05fdaa181
-            groupRefs: [{name: alder-forge-legal-entity}]
     - id: "2602"
       disposition: applicable
-      interpretation: Reviewed awareness-training adoption and the bounded supplied assessment assertion are both required.
+      interpretation: Governance has not established adoption of the supplied external training basis for this entry.
       basis:
-        category: mixed-governance-assessed
+        category: governance-declared
         governance:
           subject: alder-forge-assurance/annual-awareness-training
           owner: alder-forge-people-security-owner
-          determination: affirmative
-          review:
-            reference: alder-forge-governance/TRAINING-2026-09
-            approvedBy: alder-forge-governance
-            approvedAt: "2026-09-01T00:00:00Z"
-        objectivePins:
-          - reference: alder-forge.awareness-training@1
-            digest: sha256:84fc054e492e04bd115b002037a40759cd6775fa6a8670f8a25b7995280bd186
-            groupRefs: [{name: alder-forge-legal-entity}]
+          determination: not_established

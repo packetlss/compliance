@@ -95,10 +95,6 @@ def _validate_semantics(document: dict, source: Path) -> None:
             raise ValueError(f"direct-policy pins do not match basis category: {row['id']}")
         if category == "mixed-governance-assessed" and not (basis.get("objectivePins") or basis.get("directPolicyPins")):
             raise ValueError(f"mixed basis requires an assessed objective or direct-policy pin: {row['id']}")
-        if category == "external-judgment" and not basis.get("externalReference"):
-            raise ValueError(f"external judgment requires attributable reference: {row['id']}")
-        if category != "external-judgment" and "externalReference" in basis:
-            raise ValueError(f"external reference only belongs to external judgment: {row['id']}")
         if has_governance:
             governance = basis["governance"]
             determination = governance["determination"]
@@ -230,9 +226,6 @@ def _basis_state(obligation: dict, account: dict, plans: dict, reports: dict) ->
         state = {"affirmative": "pass", "negative": "fail", "not_established": "unknown"}[determination]
         facts.append({"kind": "governance", "determination": determination, "state": state})
         states.append(state)
-    if category == "external-judgment":
-        facts.append({"kind": "external-judgment", "state": "unknown", "reference": basis["externalReference"]})
-        return "unknown", facts
     memberships = frozen_group_memberships(account["operation"])
     member_by_id = {member["subject_id"]: member for member in account["members"]}
     for field, kind in (("objectivePins", "objective"), ("directPolicyPins", "direct-policy")):

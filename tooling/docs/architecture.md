@@ -66,8 +66,7 @@ The toolset should answer four different questions without conflating them:
   independently observable material remains assessed only when company Compliance
   policy owns the complete criterion and evaluates Control-unaware descriptive facts;
   drift alone is not sufficient. Its bounded satisfaction view is ephemeral and cannot
-  establish external conformity or population completeness. The current
-  `external-judgment` runtime category is historical pending its later removal.
+  establish external conformity or population completeness.
 - **Verification is scenario-first and claim-aware.** Stable verification
   projects use deterministic, real-world-shaped synthetic situations and map
   implemented features onto those stories. They expose the complete path from
@@ -544,8 +543,8 @@ authority: ADR 0022 now permits only `governance-declared`,
 `evidence-assessed-objective`, `direct-technical-policy`, or
 `mixed-governance-assessed` target categories. It requires complete criterion
 ownership and Control-unaware descriptive observations before assessment; drift alone
-does not admit another domain's conclusion. The implemented `external-judgment`
-category remains readable current runtime until separately migrated away.
+does not admit another domain's conclusion. The four ADR 0022 basis categories are
+the current runtime contract.
 
 The accepted framework-satisfaction interpretation is ephemeral over an exact
 declaration, an exact retained operation anchor as scope witness, exact bound
