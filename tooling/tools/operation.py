@@ -35,8 +35,9 @@ def _invalid_resolution_message(plans):
             code = str(error.get('type', 'resolution-failed'))
             lines.append(f'  Failure: {code.replace("-", " ").capitalize()}')
             lines.append(f'    Code: {code}')
-            if isinstance(error.get('instance_id'), str):
-                lines.append(f'    Check: {error["instance_id"]}')
+            check_id = error.get('instance_id') or error.get('target')
+            if isinstance(check_id, str) and check_id:
+                lines.append(f'    Check: {check_id}')
             policies = {
                 provenance['baseline']
                 for provenance in (error.get('incoming_provenance') or [])

@@ -13,7 +13,8 @@ from tools.assessment_provenance import artifact_digest, digest, validate_result
 from tools.evaluator import EvaluatorIdentity
 from tools.evaluate_plan import evaluate_plan_document, control_error_result
 from tools.operation import (
-    account_operation, freeze_operation, freeze_selection_witness,
+    _invalid_resolution_message, account_operation, freeze_operation,
+    freeze_selection_witness,
     frozen_group_memberships, normalize_request, qualify_operation,
     member_disposition, plan_disposition, select_from_witness, select_subjects,
 )
@@ -93,6 +94,27 @@ class OperationTests(unittest.TestCase):
             '--all is exclusive of explicit assets and groups',
         ):
             normalize_request({'all': True, 'subjects': ['host/A'], 'groups': []})
+
+    def test_overlay_refusal_retains_target_check_attribution(self):
+        rendered = _invalid_resolution_message([{
+            'subject': {'id': 'host/A'},
+            'resolution': {
+                'status': 'invalid',
+                'errors': [{
+                    'type': 'parent-control-fingerprint-mismatch',
+                    'baseline': 'test.overlay@1',
+                    'target': 'test.check',
+                    'expected': 'sha256:' + '1' * 64,
+                    'actual': 'sha256:' + '2' * 64,
+                }],
+            },
+        }])
+
+        self.assertIn('Code: parent-control-fingerprint-mismatch', rendered)
+        self.assertIn('Check: test.check', rendered)
+        self.assertIn('Policy: test.overlay@1', rendered)
+        self.assertNotIn('expected', rendered)
+        self.assertNotIn('sha256:', rendered)
 
     def test_explicit_selection_ignores_supplied_nonselected_candidate(self):
         plans = self.plans()
