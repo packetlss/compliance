@@ -20,7 +20,8 @@ its tailored child to the same subject.
 
 Run this bounded waiver and refusal walkthrough from the checkout root. Both
 assessment instants recollect the same existing fixture so evidence remains timely;
-all runtime output stays in a temporary directory.
+all runtime output stays in a temporary directory. The first `scripts/dev cli` call
+prepares the managed `.dev/venv` used by the collector.
 
 ```sh
 persona_run="$(mktemp -d "${TMPDIR:-/tmp}/compliance-server-personas.XXXXXX")"
@@ -33,7 +34,7 @@ scripts/dev cli --config "$persona_config" policy validate
 scripts/dev cli --config "$persona_config" waiver validate
 scripts/dev cli --config "$persona_config" waiver list
 
-uv run --project tooling --frozen python tooling/collectors/mock-api/collect.py \
+.dev/venv/bin/python tooling/collectors/mock-api/collect.py \
   projects/server-personas/fixtures \
   "$persona_run/active-evidence" --collected-at "$persona_active_at"
 scripts/dev cli --config "$persona_config" assessment run \
@@ -46,7 +47,7 @@ scripts/dev cli --no-config assessment explain host/standard-app-01 \
   --results "$persona_run/active-results" \
   --at "$persona_active_at" --as-of "$persona_active_at"
 
-uv run --project tooling --frozen python tooling/collectors/mock-api/collect.py \
+.dev/venv/bin/python tooling/collectors/mock-api/collect.py \
   projects/server-personas/fixtures \
   "$persona_run/expired-evidence" --collected-at "$persona_expired_at"
 scripts/dev cli --config "$persona_config" assessment run \

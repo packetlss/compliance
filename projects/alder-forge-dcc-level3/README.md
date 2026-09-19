@@ -60,7 +60,8 @@ governance determination or assessed support.
 
 Run this deterministic walkthrough from the repository root. It places every
 runtime artifact in a new temporary directory; it does not write generated state
-below the project.
+below the project. The first `scripts/dev cli` call prepares the repository-managed
+`.dev/venv`, whose Python runs the existing mock collector.
 
 ```sh
 alder_run="$(mktemp -d "${TMPDIR:-/tmp}/compliance-alder-forge.XXXXXX")"
@@ -76,8 +77,7 @@ scripts/dev cli --config "$alder_config" \
 scripts/dev cli --config "$alder_config" \
   coverage explain saas/alder-admin-tenant
 
-uv run --project tooling --frozen python \
-  tooling/collectors/mock-api/collect.py \
+.dev/venv/bin/python tooling/collectors/mock-api/collect.py \
   projects/alder-forge-dcc-level3/fixtures/technical \
   "$alder_run/evidence" --collected-at "$alder_at"
 

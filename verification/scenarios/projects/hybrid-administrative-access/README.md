@@ -22,7 +22,8 @@ conformity, inventory completeness, continuous effectiveness, or remediation.
 ## Operator walkthrough
 
 Run from the repository root. The maintained scenario registry selects the
-project, while evidence, plans and results go only to a temporary directory.
+project, while evidence, plans and results go only to a temporary directory. The
+first `scripts/dev cli` call prepares the managed `.dev/venv` used by the collector.
 
 ```sh
 hybrid_run="$(mktemp -d "${TMPDIR:-/tmp}/compliance-hybrid-access.XXXXXX")"
@@ -38,8 +39,7 @@ scripts/dev cli --config "$hybrid_registry" \
   --project hybrid-administrative-access \
   coverage explain saas/administration-tenant
 
-uv run --project tooling --frozen python \
-  tooling/collectors/mock-api/collect.py \
+.dev/venv/bin/python tooling/collectors/mock-api/collect.py \
   verification/scenarios/projects/hybrid-administrative-access/fixtures \
   "$hybrid_run/evidence" --collected-at "$hybrid_at"
 

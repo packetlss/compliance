@@ -45,7 +45,8 @@ collector at `2026-09-01T00:00:00Z`. Machine-readable assertions prove:
 
 Run from the repository root. This keeps the original evidence, plans and results
 in a temporary retained-history view, then copies only Inventory into a separate
-temporary current-input view and removes the database classification there.
+temporary current-input view and removes the database classification there. The
+first `scripts/dev cli` call prepares the managed `.dev/venv` used by the collector.
 
 ```sh
 authorized_run="$(mktemp -d "${TMPDIR:-/tmp}/compliance-authorized.XXXXXX")"
@@ -60,8 +61,8 @@ scripts/dev cli --config "$authorized_registry" \
   --project authorized-software-composition \
   coverage explain host/authorized-database
 
-uv run --project tooling --frozen python \
-  tooling/collectors/mock-api/collect.py "$authorized_project/fixtures" \
+.dev/venv/bin/python tooling/collectors/mock-api/collect.py \
+  "$authorized_project/fixtures" \
   "$authorized_run/evidence" --collected-at "$authorized_at"
 scripts/dev cli --config "$authorized_registry" \
   --project authorized-software-composition assessment run \

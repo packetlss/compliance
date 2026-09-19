@@ -113,7 +113,8 @@ then applies type and freshness requirements.
 From the destination repository root, run this deterministic mixed-operation
 walkthrough. Only the existing AWS fixtures are copied into the temporary
 collection input. The SaaS member is still selected by `--all`, but it has no
-eligible observation and must remain attributable `UNKNOWN`.
+eligible observation and must remain attributable `UNKNOWN`. The first
+`scripts/dev cli` call prepares the managed `.dev/venv` used by the collector.
 
 ```sh
 mock_run="$(mktemp -d "${TMPDIR:-/tmp}/compliance-mock-fleet.XXXXXX")"
@@ -127,7 +128,7 @@ scripts/dev cli --config "$mock_config" policy validate
 
 mkdir -p "$mock_run/aws-fixtures"
 cp projects/mock-fleet/fixtures/aws-*-api.json "$mock_run/aws-fixtures/"
-uv run --project tooling --frozen python tooling/collectors/mock-api/collect.py \
+.dev/venv/bin/python tooling/collectors/mock-api/collect.py \
   "$mock_run/aws-fixtures" "$mock_run/evidence" \
   --collected-at "$mock_at"
 
