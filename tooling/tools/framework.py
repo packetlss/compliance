@@ -532,7 +532,8 @@ def _render_recorded_waivers(lines: list[str], qualification: dict) -> None:
         )
         lines.append(
             f"        Recorded waiver {waiver['waiver_id']} for {waiver['instance_id']}: "
-            f"{condition}; valid from {waiver['valid_from']} through {waiver['expires_at']}."
+            f"{condition}; valid from {waiver['valid_from']} until "
+            f"{waiver['expires_at']} (exclusive)."
         )
 
 

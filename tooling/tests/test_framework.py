@@ -346,7 +346,7 @@ class FrameworkDeclarationTests(unittest.TestCase):
         self.assertIn("Recorded waivers: None.", rendered)
         self.assertIn(
             "Recorded waiver waiver/b for example.check-b: expired; valid from "
-            "2026-08-01T00:00:00Z through 2026-08-31T00:00:00Z.",
+            "2026-08-01T00:00:00Z until 2026-08-31T00:00:00Z (exclusive).",
             rendered,
         )
         for internal in (
@@ -354,6 +354,31 @@ class FrameworkDeclarationTests(unittest.TestCase):
             '"qualification":', '"dependencies":', "{",
         ):
             self.assertNotIn(internal, rendered)
+
+        for qualification, operator_text in (
+            ("within_window", "within its recorded validity window"),
+            ("expired", "expired"),
+            ("not_yet_in_window", "not yet within its recorded validity window"),
+        ):
+            with self.subTest(waiver_qualification=qualification):
+                qualified = copy.deepcopy(explanation)
+                waiver = qualified["obligations"][0]["support"][0]["subject_support"][0]
+                waiver["qualifications"]["recorded_waiver_qualification"] = {
+                    "waivers": [{
+                        "instance_id": "example.check-a", "waiver_id": "waiver/a",
+                        "valid_from": "2026-08-01T00:00:00Z",
+                        "expires_at": "2026-09-01T00:00:00Z",
+                        "qualification": qualification,
+                    }],
+                    "counts": {qualification: 1},
+                }
+                waiver_text = render_explanation(qualified)
+                self.assertIn(
+                    f"Recorded waiver waiver/a for example.check-a: {operator_text}; "
+                    "valid from 2026-08-01T00:00:00Z until "
+                    "2026-09-01T00:00:00Z (exclusive).",
+                    waiver_text,
+                )
 
     def test_missing_assessed_history_is_attributable_and_not_established(self):
         item = declaration()
