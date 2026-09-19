@@ -116,6 +116,39 @@ class OperationTests(unittest.TestCase):
         self.assertNotIn('expected', rendered)
         self.assertNotIn('sha256:', rendered)
 
+    def test_catalog_conflict_refusal_retains_typed_resource_identity(self):
+        baseline = _invalid_resolution_message([{
+            'subject': {'id': 'host/A'},
+            'resolution': {
+                'status': 'invalid',
+                'errors': [{
+                    'type': 'policy-resource-conflict',
+                    'kind': 'Baseline',
+                    'identity': 'test.baseline@1',
+                    'existing_sources': [{'policy_source': 'first'}],
+                    'incoming_sources': [{'policy_source': 'second'}],
+                }],
+            },
+        }])
+        control = _invalid_resolution_message([{
+            'subject': {'id': 'host/A'},
+            'resolution': {
+                'status': 'invalid',
+                'errors': [{
+                    'type': 'policy-resource-conflict',
+                    'kind': 'Control',
+                    'identity': 'test.control',
+                    'existing_sources': [{'policy_source': 'first'}],
+                    'incoming_sources': [{'policy_source': 'second'}],
+                }],
+            },
+        }])
+
+        self.assertIn('Policy: test.baseline@1', baseline)
+        self.assertIn('Resource: test.control (Control)', control)
+        self.assertNotIn('existing_sources', baseline)
+        self.assertNotIn('policy_source', control)
+
     def test_explicit_selection_ignores_supplied_nonselected_candidate(self):
         plans = self.plans()
         groups = [{'id':'test-hosts','parents':[],'members':['host/A','host/B']}]

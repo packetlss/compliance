@@ -46,8 +46,21 @@ def _invalid_resolution_message(plans):
             }
             if isinstance(error.get('baseline'), str):
                 policies.add(error['baseline'])
+            identity = error.get('identity')
+            resource_kind = error.get('kind')
+            if (
+                resource_kind in {'Baseline', 'RequirementBaseline'}
+                and isinstance(identity, str)
+                and identity
+            ):
+                policies.add(identity)
             if policies:
                 lines.append('    Policy: ' + ', '.join(sorted(policies)))
+            elif isinstance(identity, str) and identity:
+                resource = f'    Resource: {identity}'
+                if isinstance(resource_kind, str) and resource_kind:
+                    resource += f' ({resource_kind})'
+                lines.append(resource)
         lines.append(
             f'  Next: inspect current resolution with `coverage explain {subject_id}`.'
         )
