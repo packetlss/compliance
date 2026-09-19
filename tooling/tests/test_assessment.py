@@ -280,6 +280,46 @@ class AssessmentOperatorViewTests(unittest.TestCase):
                 self.assertNotIn("instance_path", serialized)
                 self.assertNotIn("message", serialized)
 
+    def test_invalid_dependency_human_output_attributes_safe_retained_diagnostics(self):
+        report = self.result(status="unknown", disposition="invalid")
+        account = self.account_with_result(report)
+        view = build_explanation_view(account, account["members"][0], self.plan, report)
+
+        rendered = render_explanation_view(view)
+
+        self.assertIn("Synthetic test check (test.check) [UNKNOWN]", rendered)
+        self.assertIn(
+            "Required evidence: test.evidence/v1 (dependency observation, max age 86400s)",
+            rendered,
+        )
+        self.assertIn("Rejected evidence: evidence:invalid", rendered)
+        self.assertIn("digest sha256:" + "3" * 64, rendered)
+        self.assertIn(
+            "Schema constraint: keyword type at /properties/payload/type; "
+            "code evidence_schema_invalid",
+            rendered,
+        )
+        self.assertNotIn("instance_path", rendered)
+        self.assertNotIn("is not of type", rendered)
+
+    def test_ambiguous_dependency_human_output_attributes_every_unselected_candidate(self):
+        report = self.result(status="unknown", disposition="ambiguous")
+        account = self.account_with_result(report)
+        view = build_explanation_view(account, account["members"][0], self.plan, report)
+
+        rendered = render_explanation_view(view)
+
+        self.assertIn("Selected evidence: none", rendered)
+        first = rendered.index("Competing candidate: evidence:a")
+        second = rendered.index("Competing candidate: evidence:b")
+        self.assertLess(first, second)
+        for name, digit in (("a", "4"), ("b", "5")):
+            self.assertIn(
+                f"Competing candidate: evidence:{name}; digest sha256:{digit * 64}; "
+                f"collected at {self.instant}",
+                rendered,
+            )
+
     def test_criterion_unknown_is_distinct_from_dependency_unknown(self):
         report = self.result(status="unknown")
         account = self.account_with_result(report)

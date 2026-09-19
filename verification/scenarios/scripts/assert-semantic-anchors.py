@@ -186,7 +186,7 @@ def technical(root):
             "Required system packages are installed (verification.technical-packages.required) [PASS]",
             "Purpose: Verify that the packages mandated by policy are present.",
             'Effective parameters: {"ecosystem":"linux-native","required":[{"id":"auditd"}]}',
-            "Required evidence: linux.packages/v1 (max age 86400s)",
+            "Required evidence: linux.packages/v1 (dependency observation, max age 86400s)",
         ):
             require(expected in explanation, f"technical explanation lost {expected!r}")
         require("Objectives:" not in explanation, "technical explanation synthesized an Objective")
@@ -230,7 +230,9 @@ def technical(root):
 
         package.write_text(original); doc = json.loads(original); doc["payload"]["packages"] = "invalid"
         package.write_text(json.dumps(doc))
-        _, _, invalid_results = s.assess("host/technical-A", evidence=evidence, tag="invalid")
+        _, invalid_plans, invalid_results = s.assess(
+            "host/technical-A", evidence=evidence, tag="invalid"
+        )
         invalid = json.loads((invalid_results / "host__technical-A.json").read_text())
         invalid_disposition, = invalid["dependency_dispositions"]
         diagnostics = invalid_disposition.get("diagnostics", [])
@@ -244,11 +246,31 @@ def technical(root):
                 and invalid["provenance"]["selectedEvidence"] == []
                 and "criterion not determined" in invalid["results"][0]["reason"],
                 "schema-invalid evidence was not attributable pre-criterion unknown")
+        invalid_explanation = s.cli(
+            "assessment", "explain", "host/technical-A",
+            "--plan", str(invalid_plans / "host__technical-A.json"),
+            "--results", str(invalid_results), "--at", AT, "--as-of", AT,
+            historical=True,
+        )
+        invalid_diagnostic = diagnostics[0]
+        require(
+            "Required evidence: linux.packages/v1 (dependency observation" in invalid_explanation
+            and invalid_diagnostic["evidence_id"] in invalid_explanation
+            and invalid_diagnostic["evidence_digest"] in invalid_explanation
+            and invalid_diagnostic["schema_path"] in invalid_explanation
+            and f'keyword {invalid_diagnostic["keyword"]}' in invalid_explanation
+            and invalid_diagnostic["code"] in invalid_explanation
+            and "instance_path" not in invalid_explanation
+            and "is not of type" not in invalid_explanation,
+            "schema-invalid human explanation lost safe attribution or exposed raw validator detail",
+        )
 
         base = json.loads(original); package.write_text(json.dumps(base))
         second = copy.deepcopy(base); second["id"] = "synthetic:distinct-copy"
         (evidence / "distinct.json").write_text(json.dumps(second))
-        _, _, ambiguous_results = s.assess("host/technical-A", evidence=evidence, tag="ambiguous")
+        _, ambiguous_plans, ambiguous_results = s.assess(
+            "host/technical-A", evidence=evidence, tag="ambiguous"
+        )
         ambiguous = json.loads((ambiguous_results / "host__technical-A.json").read_text())
         ambiguity, = ambiguous["dependency_dispositions"]
         require(statuses(ambiguous) == ["unknown"]
@@ -256,6 +278,22 @@ def technical(root):
                 and len(ambiguity["candidates"]) == 2
                 and ambiguous["results"][0]["observed"] == {},
                 "greatest-instant ambiguity was not unknown")
+        ambiguous_explanation = s.cli(
+            "assessment", "explain", "host/technical-A",
+            "--plan", str(ambiguous_plans / "host__technical-A.json"),
+            "--results", str(ambiguous_results), "--at", AT, "--as-of", AT,
+            historical=True,
+        )
+        require(
+            "Selected evidence: none" in ambiguous_explanation
+            and all(
+                candidate["evidence_id"] in ambiguous_explanation
+                and candidate["evidence_digest"] in ambiguous_explanation
+                and candidate["collected_at"] in ambiguous_explanation
+                for candidate in ambiguity["candidates"]
+            ),
+            "ambiguous human explanation did not attribute every unselected candidate",
+        )
 
         second["id"] = base["id"]; (evidence / "distinct.json").write_text(json.dumps(second))
         _, copy_plans, copy_results = s.assess("host/technical-A", evidence=evidence, tag="copies")
