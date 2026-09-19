@@ -80,6 +80,7 @@ from .framework import (
     build_status as build_framework_status,
     load_declarations,
     render_status as render_framework_status,
+    render_explanation as render_framework_explanation,
     select_declaration,
     validate_project_declarations,
 )
@@ -724,7 +725,12 @@ def _run_framework(args: argparse.Namespace) -> None:
     if args.format == 'json':
         print(json.dumps(document, indent=2, sort_keys=True))
     else:
-        print(render_framework_status(document))
+        renderer = (
+            render_framework_explanation
+            if args.framework_command == 'explain'
+            else render_framework_status
+        )
+        print(renderer(document))
 
 
 def _run_assessment(args: argparse.Namespace) -> None:

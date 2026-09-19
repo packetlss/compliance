@@ -222,9 +222,10 @@ def _basis_state(obligation: dict, account: dict, plans: dict, reports: dict) ->
     facts: list[dict] = []
     states: list[str] = []
     if category in ("governance-declared", "mixed-governance-assessed"):
-        determination = basis["governance"]["determination"]
+        governance = basis["governance"]
+        determination = governance["determination"]
         state = {"affirmative": "pass", "negative": "fail", "not_established": "unknown"}[determination]
-        facts.append({"kind": "governance", "determination": determination, "state": state})
+        facts.append({"kind": "governance", **copy.deepcopy(governance), "state": state})
         states.append(state)
     memberships = frozen_group_memberships(account["operation"])
     member_by_id = {member["subject_id"]: member for member in account["members"]}
@@ -238,6 +239,9 @@ def _basis_state(obligation: dict, account: dict, plans: dict, reports: dict) ->
             subject_support = []
             if not subjects:
                 pin_states.append("unknown")
+                missing_scope_reason = "declared_group_scope_has_no_frozen_subjects"
+            else:
+                missing_scope_reason = None
             for subject in subjects:
                 member = member_by_id.get(subject)
                 if member is None or member.get("accounting_disposition") != "result_required":
@@ -272,6 +276,15 @@ def _basis_state(obligation: dict, account: dict, plans: dict, reports: dict) ->
                 if kind == "objective":
                     found = [item for item in plan["requirements"] if item["reference"] == pin["reference"] and item["digest"] == pin["digest"] and any(p["group"] in group_names for p in item["provenance"])]
                     outcome_rows = [item for item in report["requirement_assessments"] if item["requirement"] == pin["reference"]]
+                    technical_instance_ids = {
+                        instance_id
+                        for item in found
+                        for instance_id in item.get("technical_instance_ids", [])
+                    }
+                    technical_outcomes = [
+                        item for item in report.get("results", [])
+                        if item["instance_id"] in technical_instance_ids
+                    ]
                 else:
                     found = [
                         item for item in plan["resolved_baselines"]
@@ -290,6 +303,7 @@ def _basis_state(obligation: dict, account: dict, plans: dict, reports: dict) ->
                         )
                     }
                     outcome_rows = [item for item in report["results"] if item["instance_id"] in control_ids]
+                    technical_outcomes = []
                     if not control_ids:
                         found = []
                 outcomes = [item["status"] for item in outcome_rows]
@@ -318,15 +332,28 @@ def _basis_state(obligation: dict, account: dict, plans: dict, reports: dict) ->
                 subject_support.append({
                     "subject_id": subject,
                     "outcomes": copy.deepcopy(outcome_rows),
+                    **(
+                        {"technical_outcomes": copy.deepcopy(technical_outcomes)}
+                        if kind == "objective" else {}
+                    ),
                     "qualifications": qualification,
                 })
             state = "fail" if "fail" in pin_states else "pass" if pin_states and all(s == "pass" for s in pin_states) else "unknown"
-            facts.append({"kind": kind, "reference": pin["reference"], "digest": pin["digest"], "subjects": subjects, "state": state, "subject_support": subject_support})
+            facts.append({
+                "kind": kind,
+                "reference": pin["reference"],
+                "digest": pin["digest"],
+                "groups": group_names,
+                "subjects": subjects,
+                "state": state,
+                **({"reason": missing_scope_reason} if missing_scope_reason else {}),
+                "subject_support": subject_support,
+            })
             states.append(state)
     return ("fail" if "fail" in states else "pass" if states and all(s == "pass" for s in states) else "unknown"), facts
 
 
-def build_status(declaration: dict, account: dict, plans: list[dict], reports: list[dict]) -> dict:
+def _build_projection(declaration: dict, account: dict, plans: list[dict], reports: list[dict]) -> dict:
     plan_by_id = {plan["id"]: plan for plan in plans}
     report_by_id = {report["id"]: report for report in reports}
     scope = set(_refs(declaration["spec"]["scope"]["groupRefs"]))
@@ -348,17 +375,136 @@ def build_status(declaration: dict, account: dict, plans: list[dict], reports: l
         rows.append({"id": obligation["id"], "disposition": obligation["disposition"], "interpretation": obligation["interpretation"], "basis": obligation["basis"]["category"], "state": effective, "support": support, **({"rationale": obligation["rationale"]} if "rationale" in obligation else {})})
     required_states = [row["state"] for row in rows if row["disposition"] == "applicable"]
     state = "not_satisfied" if "fail" in required_states else "not_established" if not required_states or "unknown" in required_states else "satisfied"
-    return {"schema": STATUS_SCHEMA, "declaration": {"name": declaration["metadata"]["name"], "revision": declaration["metadata"]["revision"], "digestAlgorithm": declaration["digestAlgorithm"], "digest": declaration["digest"]}, "framework": copy.deepcopy(declaration["spec"]["framework"]), "scope": copy.deepcopy(declaration["spec"]["scope"]), "operation": {"operation_id": account["operation"]["operation_id"], "evaluated_at": account["evaluated_at"], "query_instant": account.get("query_instant")}, "state": state, "statement": {"satisfied": "Satisfied under declared coverage.", "not_satisfied": "Not satisfied under declared coverage.", "not_established": "Satisfaction not established under declared coverage."}[state], "obligations": rows}
+    return {"declaration": {"name": declaration["metadata"]["name"], "revision": declaration["metadata"]["revision"], "digestAlgorithm": declaration["digestAlgorithm"], "digest": declaration["digest"]}, "framework": copy.deepcopy(declaration["spec"]["framework"]), "scope": copy.deepcopy(declaration["spec"]["scope"]), "operation": {"operation_id": account["operation"]["operation_id"], "evaluated_at": account["evaluated_at"], "query_instant": account.get("query_instant")}, "state": state, "statement": {"satisfied": "Satisfied under declared coverage.", "not_satisfied": "Not satisfied under declared coverage.", "not_established": "Satisfaction not established under declared coverage."}[state], "obligations": rows}
 
 
-def build_explanation(*args, **kwargs) -> dict:
-    document = build_status(*args, **kwargs)
-    document["schema"] = EXPLANATION_SCHEMA
-    return document
+def build_status(declaration: dict, account: dict, plans: list[dict], reports: list[dict]) -> dict:
+    """Build the concise bounded framework-ledger projection."""
+    detailed = _build_projection(declaration, account, plans, reports)
+    return {
+        "schema": STATUS_SCHEMA,
+        **{key: copy.deepcopy(detailed[key]) for key in (
+            "declaration", "framework", "scope", "operation", "state", "statement",
+        )},
+        "obligations": [
+            {key: row[key] for key in ("id", "disposition", "basis", "state")}
+            for row in detailed["obligations"]
+        ],
+    }
+
+
+def build_explanation(declaration: dict, account: dict, plans: list[dict], reports: list[dict]) -> dict:
+    """Build the obligation-by-obligation causal support projection."""
+    return {
+        "schema": EXPLANATION_SCHEMA,
+        **_build_projection(declaration, account, plans, reports),
+    }
 
 
 def render_status(document: dict) -> str:
     lines = [document["statement"], f"Declaration: {document['declaration']['name']}@{document['declaration']['revision']}", f"Operation: {document['operation']['operation_id']}", "", "OBLIGATION  DISPOSITION     BASIS                         STATE"]
     for row in document["obligations"]:
         lines.append(f"{row['id']:<11} {row['disposition']:<15} {row['basis']:<29} {row['state'].upper()}")
+    return "\n".join(lines)
+
+
+_SUPPORT_REASONS = {
+    "declared_group_scope_has_no_frozen_subjects": (
+        "The declared group scope has no subjects in the exact frozen operation."
+    ),
+    "missing_exact_result_slot": (
+        "The frozen subject has no exact required result slot."
+    ),
+    "exact_retained_result_support_unavailable": (
+        "Exact retained result support is unavailable."
+    ),
+    "exact_retained_plan_or_result_unavailable": (
+        "The exact retained plan or result is unavailable."
+    ),
+    "pin_absent_from_exact_retained_plan_provenance": (
+        "The declared policy pin is absent from exact retained plan provenance."
+    ),
+    "pin_has_no_exact_retained_assessment_outcome": (
+        "The declared policy pin has no exact retained assessment outcome."
+    ),
+}
+
+
+def _words(value: str) -> str:
+    return value.replace("_", " ")
+
+
+def _render_qualifications(lines: list[str], qualifications: dict) -> None:
+    if not qualifications:
+        return
+    lines.append("      Current qualification:")
+    for key, value in qualifications.items():
+        rendered = value if isinstance(value, str) else json.dumps(value, sort_keys=True)
+        lines.append(f"        {_words(key).capitalize()}: {rendered}")
+
+
+def _render_outcomes(lines: list[str], label: str, outcomes: list[dict]) -> None:
+    for outcome in outcomes:
+        identity = outcome.get("requirement", outcome.get("instance_id", "outcome"))
+        reason = f" — {outcome['reason']}" if outcome.get("reason") else ""
+        lines.append(f"      {label} {identity}: {outcome['status'].upper()}{reason}")
+
+
+def render_explanation(document: dict) -> str:
+    """Render readable causal support without re-resolving current policy."""
+    lines = [
+        document["statement"],
+        f"Declaration: {document['declaration']['name']}@{document['declaration']['revision']}",
+        f"Operation: {document['operation']['operation_id']}",
+        f"Declared scope: {document['scope']['id']}",
+        "Scope groups: " + ", ".join(_refs(document["scope"]["groupRefs"])),
+    ]
+    for row in document["obligations"]:
+        lines.extend([
+            "",
+            f"OBLIGATION {row['id']}",
+            f"  Disposition: {_words(row['disposition'])}",
+            f"  Interpretation: {row['interpretation']}",
+            f"  Basis: {row['basis']}",
+            f"  State: {row['state'].upper()}",
+        ])
+        if row.get("rationale"):
+            lines.append(f"  Rationale: {row['rationale']}")
+        for support in row["support"]:
+            if support["kind"] == "governance":
+                lines.extend([
+                    f"  Governance subject: {support['subject']}",
+                    f"    Governance owner: {support['owner']}",
+                    f"    Determination: {_words(support['determination'])}",
+                ])
+                review = support.get("review")
+                if review:
+                    lines.extend([
+                        f"    Review reference: {review['reference']}",
+                        f"    Approved by: {review['approvedBy']}",
+                        f"    Approved at: {review['approvedAt']}",
+                    ])
+                else:
+                    lines.append("    Review: not recorded; governance support is not established.")
+                continue
+            label = "Objective" if support["kind"] == "objective" else "Direct policy"
+            lines.extend([
+                f"  {label}: {support['reference']}",
+                f"    Pinned digest: {support['digest']}",
+                f"    Declared groups: {', '.join(support['groups'])}",
+                f"    Frozen subjects: {', '.join(support['subjects']) or 'none'}",
+                f"    Support state: {support['state'].upper()}",
+            ])
+            if support.get("reason"):
+                lines.append(f"    Reason: {_SUPPORT_REASONS[support['reason']]}")
+            for subject in support["subject_support"]:
+                lines.append(f"    Frozen subject: {subject['subject_id']}")
+                if subject.get("reason"):
+                    lines.append(f"      Reason: {_SUPPORT_REASONS[subject['reason']]}")
+                if support["kind"] == "objective":
+                    _render_outcomes(lines, "Objective outcome", subject.get("outcomes", []))
+                    _render_outcomes(lines, "Technical outcome", subject.get("technical_outcomes", []))
+                else:
+                    _render_outcomes(lines, "Technical outcome", subject.get("outcomes", []))
+                _render_qualifications(lines, subject.get("qualifications", {}))
     return "\n".join(lines)
