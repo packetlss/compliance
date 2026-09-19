@@ -187,6 +187,36 @@ class FrameworkDeclarationTests(unittest.TestCase):
             explanation["obligations"][0]["rationale"],
             "Governance excluded this ledger entry.",
         )
+        support = explanation["obligations"][0]["support"][0]
+        self.assertEqual(support, {
+            "kind": "objective",
+            "reference": "example.objective@1",
+            "digest": "sha256:" + "a" * 64,
+            "groups": ["scope-group"],
+        })
+        rendered = render_explanation(explanation)
+        self.assertIn("Objective: example.objective@1", rendered)
+        self.assertIn("Declared groups: scope-group", rendered)
+        self.assertIn("Exact assessment support: not required", rendered)
+
+    def test_excluded_governance_row_retains_attribution_without_assessment(self):
+        item = declaration()
+        row = item["spec"]["obligations"][0]
+        row["disposition"] = "not-applicable"
+        row["rationale"] = "Governance marked this ledger entry not applicable."
+        item["digestAlgorithm"] = "compliance.example/framework-obligation-declaration-digest/v1alpha1"
+        item["digest"] = declaration_digest(item)
+
+        explanation = build_explanation(item, account(), [], [])
+        support = explanation["obligations"][0]["support"][0]
+        self.assertEqual(support["subject"], "subject")
+        self.assertEqual(support["owner"], "owner")
+        self.assertEqual(support["determination"], "affirmative")
+        self.assertEqual(support["review"]["reference"], "review")
+        self.assertNotIn("state", support)
+        rendered = render_explanation(explanation)
+        self.assertIn("Governance subject: subject", rendered)
+        self.assertIn("Rationale: Governance marked this ledger entry not applicable.", rendered)
 
     def test_not_established_governance_may_be_reviewed_or_unreviewed(self):
         for reviewed in (False, True):

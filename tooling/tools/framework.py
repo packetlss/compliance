@@ -353,6 +353,23 @@ def _basis_state(obligation: dict, account: dict, plans: dict, reports: dict) ->
     return ("fail" if "fail" in states else "pass" if states and all(s == "pass" for s in states) else "unknown"), facts
 
 
+def _declared_basis_support(obligation: dict) -> list[dict]:
+    """Expose excluded/N/A basis declarations without evaluating historical support."""
+    basis = obligation["basis"]
+    facts = []
+    if "governance" in basis:
+        facts.append({"kind": "governance", **copy.deepcopy(basis["governance"])})
+    for field, kind in (("objectivePins", "objective"), ("directPolicyPins", "direct-policy")):
+        for pin in basis.get(field, []):
+            facts.append({
+                "kind": kind,
+                "reference": pin["reference"],
+                "digest": pin["digest"],
+                "groups": _refs(pin["groupRefs"]),
+            })
+    return facts
+
+
 def _build_projection(declaration: dict, account: dict, plans: list[dict], reports: list[dict]) -> dict:
     plan_by_id = {plan["id"]: plan for plan in plans}
     report_by_id = {report["id"]: report for report in reports}
@@ -370,7 +387,7 @@ def _build_projection(declaration: dict, account: dict, plans: list[dict], repor
             state, support = _basis_state(obligation, account, plan_by_id, report_by_id)
             effective = state
         else:
-            support = []
+            support = _declared_basis_support(obligation)
             effective = "excluded"
         rows.append({"id": obligation["id"], "disposition": obligation["disposition"], "interpretation": obligation["interpretation"], "basis": obligation["basis"]["category"], "state": effective, "support": support, **({"rationale": obligation["rationale"]} if "rationale" in obligation else {})})
     required_states = [row["state"] for row in rows if row["disposition"] == "applicable"]
@@ -492,6 +509,13 @@ def render_explanation(document: dict) -> str:
                 f"  {label}: {support['reference']}",
                 f"    Pinned digest: {support['digest']}",
                 f"    Declared groups: {', '.join(support['groups'])}",
+            ])
+            if row["disposition"] != "applicable":
+                lines.append(
+                    "    Exact assessment support: not required for this declared disposition."
+                )
+                continue
+            lines.extend([
                 f"    Frozen subjects: {', '.join(support['subjects']) or 'none'}",
                 f"    Support state: {support['state'].upper()}",
             ])
