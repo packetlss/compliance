@@ -331,8 +331,8 @@ contracts; ADR 0022 rejects their conclusion-producing generic use pending migra
 Any new common
 abstraction, semantics or trust boundary requires renewed architecture review.
 ADR 0021 resolves only the bounded project-governance declaration and ephemeral
-satisfaction interpretation; external authority/recognition, generic framework/GRC
-behavior, and declaration implementation remain outside current runtime authority.
+satisfaction interpretation; external authority/recognition and generic
+framework/GRC behavior remain outside current runtime authority.
 
 ### Experimental generated/public views
 
