@@ -23,4 +23,17 @@ Current scenarios:
   company Linux operations and hardening, complete access realization,
   deterministic evidence, a temporary waiver, a provenance-bearing assessment
   plan for external-adapter handoff, and safe refusal of contradictory persona
-  classification.
+  classification;
+- [`hybrid-administrative-access`](projects/hybrid-administrative-access/README.md) —
+  one administrative-access Objective realized separately for a Linux bastion
+  and SaaS tenant in one exact operation; and
+- [`authorized-software-composition`](projects/authorized-software-composition/README.md) —
+  inventory-driven additive software authorization, retained two-member history,
+  and stored-plan policy-diff interpretation.
+
+Select a scenario from the maintained registry with, for example:
+
+```sh
+scripts/dev cli --config verification/scenarios/compliance.yaml \
+  --project hybrid-administrative-access coverage list assets
+```

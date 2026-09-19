@@ -56,22 +56,70 @@ never treat mappings, current Coverage, or a latest result as framework satisfac
 Status is the compact seven-row ledger. Explain follows each row into its exact
 governance determination or assessed support.
 
-## Operator proof
+## Operator walkthrough
 
-Run from the repository root. Generated evidence, plans and results are untracked; the validation script writes all runtime output outside the project.
+Run this deterministic walkthrough from the repository root. It places every
+runtime artifact in a new temporary directory; it does not write generated state
+below the project. The first `scripts/dev cli` call prepares the repository-managed
+`.dev/venv`, whose Python runs the existing mock collector.
 
 ```sh
-scripts/dev cli --config projects/alder-forge-dcc-level3/compliance.yaml inventory validate
-scripts/dev cli --config projects/alder-forge-dcc-level3/compliance.yaml coverage list assets
-scripts/dev cli --config projects/alder-forge-dcc-level3/compliance.yaml coverage explain entity/alder-forge-defence-systems
-scripts/dev cli --config projects/alder-forge-dcc-level3/compliance.yaml policy validate
+alder_run="$(mktemp -d "${TMPDIR:-/tmp}/compliance-alder-forge.XXXXXX")"
+alder_config=projects/alder-forge-dcc-level3/compliance.yaml
+alder_at=2026-09-01T00:00:00Z
+
+scripts/dev cli --config "$alder_config" inventory validate
+scripts/dev cli --config "$alder_config" coverage list assets
+scripts/dev cli --config "$alder_config" \
+  coverage explain entity/alder-forge-defence-systems
+scripts/dev cli --config "$alder_config" \
+  coverage explain host/alder-build-01
+scripts/dev cli --config "$alder_config" \
+  coverage explain saas/alder-admin-tenant
+
+.dev/venv/bin/python tooling/collectors/mock-api/collect.py \
+  projects/alder-forge-dcc-level3/fixtures/technical \
+  "$alder_run/evidence" --collected-at "$alder_at"
+
+scripts/dev cli --config "$alder_config" assessment run \
+  --group alder-forge-legal-entity \
+  --group corporate-linux-build-systems \
+  --group critical-saas-administration \
+  --evidence "$alder_run/evidence" \
+  --plan-output "$alder_run/plans" \
+  --output "$alder_run/results" \
+  --at "$alder_at"
+
+alder_anchor="$alder_run/plans/entity__alder-forge-defence-systems.json"
+scripts/dev cli --no-config assessment status \
+  --plan "$alder_anchor" --assessed-plans "$alder_run/plans" \
+  --results "$alder_run/results" --at "$alder_at" --as-of "$alder_at"
+scripts/dev cli --no-config assessment mappings \
+  --plan "$alder_anchor" --assessed-plans "$alder_run/plans" \
+  --results "$alder_run/results" --at "$alder_at" --as-of "$alder_at"
+
+scripts/dev cli --no-config framework status \
+  alder-forge-defstan-dcc-level3 --revision 2026-09 \
+  --declarations projects/alder-forge-dcc-level3/framework-obligations \
+  --plan "$alder_anchor" --assessed-plans "$alder_run/plans" \
+  --results "$alder_run/results" --at "$alder_at" --as-of "$alder_at"
+scripts/dev cli --no-config framework explain \
+  alder-forge-defstan-dcc-level3 --revision 2026-09 \
+  --declarations projects/alder-forge-dcc-level3/framework-obligations \
+  --plan "$alder_anchor" --assessed-plans "$alder_run/plans" \
+  --results "$alder_run/results" --at "$alder_at" --as-of "$alder_at"
 ```
 
-Coverage shows no assessable entity policy for the governance-only entries, the MFA
-Objective, and the direct 2409 technical policy. It reads current inventory and
-policy only; it does not read evidence or results. The focused project gate also runs
-both `framework status` and `framework explain`, in human and JSON forms, over exact
-retained history. It demonstrates:
+Current Coverage shows no assessable entity policy for the governance-only
+entries, one direct Linux check, and one SaaS Objective/check. It reads current
+inventory and policy only; it does not read evidence or results. The single frozen
+operation then shows the entity as `NOT REQUIRED`, the Linux member as `FAIL`, and
+the SaaS member as `PASS`. Mappings connect DEFSTAN `2201` to the exact Objective
+PASS and `2409` to the exact direct technical FAIL.
+
+`framework status` is intentionally the concise seven-row ledger;
+`framework explain` is the drill-down into the exact declared governance or
+retained technical support. Together they demonstrate:
 
 - `1101` and `2410` as affirmative governance determinations;
 - `0002`, `1202` and `2602` as not established governance accounting;
@@ -83,6 +131,10 @@ retained history. It demonstrates:
 - explicit not-established governance support.
 
 There are no waivers in this slice. In particular, no waiver is used for uncertain evidence, unknown scope or assessor judgment.
+
+The focused Alder validator remains the primary executable owner of these
+semantics. This walkthrough is the operator path through that existing behavior,
+not a second assertion suite.
 
 ## Deferred work
 
