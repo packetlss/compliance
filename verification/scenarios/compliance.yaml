@@ -8,3 +8,7 @@ projects:
     config: projects/company-iam-policy-assessment/compliance.yaml
   technical-only-packages:
     config: projects/technical-only-packages/compliance.yaml
+  hybrid-administrative-access:
+    config: projects/hybrid-administrative-access/compliance.yaml
+  authorized-software-composition:
+    config: projects/authorized-software-composition/compliance.yaml

@@ -18,63 +18,98 @@ forwarding from `0` to `1`, records the approved deviation, and adds
 `containerd`. Assigning only the leaf policy avoids applying both a parent and
 its tailored child to the same subject.
 
-Run from the checkout root:
+Run this bounded waiver and refusal walkthrough from the checkout root. Both
+assessment instants recollect the same existing fixture so evidence remains timely;
+all runtime output stays in a temporary directory.
 
 ```sh
-scripts/dev cli --config projects/server-personas/compliance.yaml inventory validate
-scripts/dev cli --config projects/server-personas/compliance.yaml policy validate
-scripts/dev cli --config projects/server-personas/compliance.yaml waiver validate
-scripts/dev cli --config projects/server-personas/compliance.yaml waiver list
-uv run --project tooling python tooling/collectors/mock-api/collect.py \
-  projects/server-personas/fixtures \
-  projects/server-personas/generated/evidence \
-  --collected-at 2026-09-01T00:00:00Z
+persona_run="$(mktemp -d "${TMPDIR:-/tmp}/compliance-server-personas.XXXXXX")"
+persona_config=projects/server-personas/compliance.yaml
+persona_active_at=2026-09-01T00:00:00Z
+persona_expired_at=2026-12-02T00:00:00Z
 
-scripts/dev cli --config projects/server-personas/compliance.yaml assessment run \
-  host/standard-app-01 --at 2026-09-01T00:00:00Z
-scripts/dev cli --config projects/server-personas/compliance.yaml assessment run \
-  host/container-app-01 --at 2026-09-01T00:00:00Z
-scripts/dev cli --config projects/server-personas/compliance.yaml assessment explain \
-  host/container-app-01 \
-  --plan projects/server-personas/generated/plans/host__container-app-01.json \
-  --assessed-plans projects/server-personas/generated/plans \
-  --at 2026-09-01T00:00:00Z \
-  --as-of 2026-09-01T00:00:00Z
+scripts/dev cli --config "$persona_config" inventory validate
+scripts/dev cli --config "$persona_config" policy validate
+scripts/dev cli --config "$persona_config" waiver validate
+scripts/dev cli --config "$persona_config" waiver list
+
+uv run --project tooling --frozen python tooling/collectors/mock-api/collect.py \
+  projects/server-personas/fixtures \
+  "$persona_run/active-evidence" --collected-at "$persona_active_at"
+scripts/dev cli --config "$persona_config" assessment run \
+  host/standard-app-01 --evidence "$persona_run/active-evidence" \
+  --plan-output "$persona_run/active-plans" \
+  --output "$persona_run/active-results" \
+  --waivers projects/server-personas/waivers --at "$persona_active_at"
+scripts/dev cli --no-config assessment explain host/standard-app-01 \
+  --plan "$persona_run/active-plans/host__standard-app-01.json" \
+  --results "$persona_run/active-results" \
+  --at "$persona_active_at" --as-of "$persona_active_at"
+
+uv run --project tooling --frozen python tooling/collectors/mock-api/collect.py \
+  projects/server-personas/fixtures \
+  "$persona_run/expired-evidence" --collected-at "$persona_expired_at"
+scripts/dev cli --config "$persona_config" assessment run \
+  host/standard-app-01 --evidence "$persona_run/expired-evidence" \
+  --plan-output "$persona_run/expired-plans" \
+  --output "$persona_run/expired-results" \
+  --waivers projects/server-personas/waivers --at "$persona_expired_at"
+scripts/dev cli --no-config assessment explain host/standard-app-01 \
+  --plan "$persona_run/expired-plans/host__standard-app-01.json" \
+  --results "$persona_run/expired-results" \
+  --at "$persona_expired_at" --as-of "$persona_expired_at"
 ```
 
-The container subject should pass. The standard subject intentionally lacks
-`auditd`; its exact technical failure is covered by the active
-`standard-app-01-auditd-rollout` waiver and therefore reports `WAIVED`, not
-`PASS`. Its assessment plan still records the underlying desired technical
-policy and requires `auditd`; the waiver changes only the evaluation result.
+The first explanation reports `WAIVED`, names the missing `auditd` failure, and
+states that Governance accepted that failure under
+`standard-app-01-auditd-rollout`; the underlying technical outcome was never
+rewritten to `PASS`. The second explanation reports `FAIL` after the waiver's
+2026-12-01 expiry. The plan still requires `auditd` in both cases.
 
 The assessment plans expose the complete baseline lineage, external benchmark
 references, resolved parameters, and any deviations. The container plan retains
 `auditd`, `containerd`, ASLR, and forwarding as resolved technical controls.
+The complete immutable derivation records are consumed by `compliance policy diff
+BEFORE AFTER` without consulting the current policy checkout.
 
-`assessment explain` shows the exact effective forwarding Check, parameters,
-required evidence, immutable outcome, and current qualification. The complete
-immutable derivation records remain in the assessed plan and are consumed by
-`compliance policy diff BEFORE AFTER`, so a historical plan comparison can show
-the exact forwarding criteria and approved deviation without consulting the
-current policy checkout.
-
-The third subject deliberately has both persona labels:
+The third subject deliberately has both persona labels. Inspect current resolution
+before attempting assessment:
 
 ```sh
-scripts/dev cli --config projects/server-personas/compliance.yaml plan render \
-  host/persona-conflict-01
-scripts/dev cli --config projects/server-personas/compliance.yaml plan show \
-  host/persona-conflict-01
+scripts/dev cli --config "$persona_config" \
+  coverage explain host/persona-conflict-01
+scripts/dev cli --config "$persona_config" plan render \
+  host/persona-conflict-01 --output "$persona_run/conflict-plans"
+scripts/dev cli --no-config plan show \
+  "$persona_run/conflict-plans/host__persona-conflict-01.json"
+
+set +e
+scripts/dev cli --config "$persona_config" assessment run \
+  host/persona-conflict-01 --evidence "$persona_run/active-evidence" \
+  --plan-output "$persona_run/conflict-plans" \
+  --output "$persona_run/conflict-results" \
+  --waivers projects/server-personas/waivers --at "$persona_active_at"
+persona_refusal_status=$?
+set -e
+test "$persona_refusal_status" -eq 1
+test ! -e "$persona_run/conflict-results/host__persona-conflict-01.json"
 ```
 
-It selects both sibling assignments, which require incompatible values for the
-same stable forwarding control. Resolution must be invalid and must not choose
-a policy based on assignment or file order. This is an inventory classification
-error, not a waiver. A durable persona-wide difference belongs in a reviewed
-overlay. The standard subject demonstrates the separate temporary exception
-mechanism: the failure remains visible, the approval expires, and assessed
-technical policy is not rewritten.
+The subject selects both sibling assignments, which require incompatible values
+for the same stable forwarding control. `coverage explain` shows those paths and
+the invalid resolution. Assessment then uses the bounded refusal surface: it
+identifies the asset, `control-instance-conflict`, affected Check and policy,
+states that no AssessmentResult was published, and directs the operator back to
+`coverage explain`. Exit status 1 and the absent result file are expected.
+
+This is an inventory classification error, not a waiver. A durable persona-wide
+difference belongs in a reviewed overlay. The standard subject demonstrates the
+separate temporary exception mechanism: the failure remains visible, the approval
+expires, and assessed technical policy is not rewritten.
+
+The development-project validator remains the executable owner of persona,
+waiver, invalid-resolution, and publication-boundary semantics. This walkthrough
+only makes those existing surfaces runnable by an operator.
 
 The project assembles reusable controls and evidence/parameter schemas from `control-library` with
 this synthetic benchmark and company policy from `verification-policy`.

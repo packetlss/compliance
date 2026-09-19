@@ -41,6 +41,105 @@ collector at `2026-09-01T00:00:00Z`. Machine-readable assertions prove:
   unchanged with identity-context-only differences, and the database comparison as
   an effective policy change due to the removed database assignment/contribution.
 
+## Operator walkthrough
+
+Run from the repository root. This keeps the original evidence, plans and results
+in a temporary retained-history view, then copies only Inventory into a separate
+temporary current-input view and removes the database classification there.
+
+```sh
+authorized_run="$(mktemp -d "${TMPDIR:-/tmp}/compliance-authorized.XXXXXX")"
+authorized_registry=verification/scenarios/compliance.yaml
+authorized_project=verification/scenarios/projects/authorized-software-composition
+authorized_at=2026-09-01T00:00:00Z
+
+scripts/dev cli --config "$authorized_registry" \
+  --project authorized-software-composition \
+  coverage explain host/authorized-base
+scripts/dev cli --config "$authorized_registry" \
+  --project authorized-software-composition \
+  coverage explain host/authorized-database
+
+uv run --project tooling --frozen python \
+  tooling/collectors/mock-api/collect.py "$authorized_project/fixtures" \
+  "$authorized_run/evidence" --collected-at "$authorized_at"
+scripts/dev cli --config "$authorized_registry" \
+  --project authorized-software-composition assessment run \
+  host/authorized-base host/authorized-database \
+  --evidence "$authorized_run/evidence" \
+  --plan-output "$authorized_run/historical-plans" \
+  --output "$authorized_run/historical-results" --at "$authorized_at"
+
+mkdir -p "$authorized_run/current-inventory"
+cp "$authorized_project"/inventory/*.json "$authorized_run/current-inventory/"
+python3 - "$authorized_run/current-inventory/database.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+document = json.loads(path.read_text())
+del document["metadata"]["labels"]["feature.database"]
+path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
+PY
+
+scripts/dev cli --config "$authorized_registry" \
+  --project authorized-software-composition inventory explain \
+  host/authorized-database --inventory "$authorized_run/current-inventory"
+scripts/dev cli --config "$authorized_registry" \
+  --project authorized-software-composition coverage explain \
+  host/authorized-base --inventory "$authorized_run/current-inventory"
+scripts/dev cli --config "$authorized_registry" \
+  --project authorized-software-composition coverage explain \
+  host/authorized-database --inventory "$authorized_run/current-inventory"
+scripts/dev cli --config "$authorized_registry" \
+  --project authorized-software-composition plan render \
+  host/authorized-base host/authorized-database \
+  --inventory "$authorized_run/current-inventory" \
+  --output "$authorized_run/current-plans"
+
+authorized_anchor="$authorized_run/historical-plans/host__authorized-base.json"
+authorized_comparison="$authorized_run/current-plans/host__authorized-base.json"
+scripts/dev cli --no-config assessment status \
+  --plan "$authorized_anchor" \
+  --assessed-plans "$authorized_run/historical-plans" \
+  --results "$authorized_run/historical-results" \
+  --comparison-plan "$authorized_comparison" \
+  --at "$authorized_at" --as-of "$authorized_at"
+scripts/dev cli --no-config assessment explain host/authorized-database \
+  --plan "$authorized_anchor" \
+  --assessed-plans "$authorized_run/historical-plans" \
+  --results "$authorized_run/historical-results" \
+  --comparison-plan "$authorized_comparison" \
+  --at "$authorized_at" --as-of "$authorized_at"
+
+scripts/dev cli --no-config policy diff \
+  "$authorized_run/historical-plans/host__authorized-base.json" \
+  "$authorized_run/current-plans/host__authorized-base.json"
+scripts/dev cli --no-config policy diff \
+  "$authorized_run/historical-plans/host__authorized-database.json" \
+  "$authorized_run/current-plans/host__authorized-database.json" || \
+  test "$?" -eq 1
+```
+
+The original operation reports both members `PASS`. In the current input view,
+the application Coverage is unchanged, while database Coverage loses the
+`database-software` assignment/contribution and its effective allowed set changes
+from `auditd,curl,postgresql` to `auditd,curl`. No retained artifact is overwritten.
+
+The comparison operation therefore has a different operation ID and both
+operation-bound plan IDs differ. Exact historical status still reports the original
+complete two-member PASS operation and qualifies both members as `DIFFERENT PLAN`;
+database explanation still shows PostgreSQL in the retained effective parameters.
+The first policy diff reports `NO EFFECTIVE POLICY CHANGES` with only plan/operation
+identity context changes. The database diff reports `EFFECTIVE POLICY CHANGED`,
+returns status 1 by design, and attributes removal of the database assignment and
+contribution. The renderer's current verbosity is outside this walkthrough's scope.
+
+`assert-scenario.py` and the canonical scenario gate remain the primary executable
+owners of composition and history semantics. The commands above expose their
+existing behavior without duplicating assertions.
+
 Run focused assertions from the repository root against the working tree:
 
 ```sh

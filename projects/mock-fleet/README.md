@@ -86,13 +86,8 @@ the external archive rather than treating the rationale as proof.
 The files in [`fixtures/`](fixtures/) represent normalized responses from
 read-only APIs. The policy-agnostic mock collector refreshes collection times,
 uses payload-derived material only to construct its stable evidence ID, and
-writes the common evidence envelope without a separate payload-integrity field:
-
-```sh
-uv run --project tooling python tooling/collectors/mock-api/collect.py \
-  projects/mock-fleet/fixtures \
-  projects/mock-fleet/generated/evidence
-```
+writes the common evidence envelope without a separate payload-integrity field.
+The walkthrough below invokes it with a temporary destination.
 
 For real AWS collectors, the same payloads can be populated from calls such as
 IAM `GetAccountSummary`, CloudTrail `DescribeTrails`, CloudWatch Logs
@@ -115,36 +110,56 @@ then applies type and freshness requirements.
 
 ## Run the example
 
-From the destination repository root:
+From the destination repository root, run this deterministic mixed-operation
+walkthrough. Only the existing AWS fixtures are copied into the temporary
+collection input. The SaaS member is still selected by `--all`, but it has no
+eligible observation and must remain attributable `UNKNOWN`.
 
 ```sh
-scripts/dev cli --config projects/mock-fleet/compliance.yaml config validate
-scripts/dev cli --config projects/mock-fleet/compliance.yaml inventory graph
-scripts/dev cli --config projects/mock-fleet/compliance.yaml policy validate
-scripts/dev cli --config projects/mock-fleet/compliance.yaml plan show
+mock_run="$(mktemp -d "${TMPDIR:-/tmp}/compliance-mock-fleet.XXXXXX")"
+mock_config=projects/mock-fleet/compliance.yaml
+mock_at=2026-09-01T00:00:00Z
 
-uv run --project tooling python tooling/collectors/mock-api/collect.py \
-  projects/mock-fleet/fixtures \
-  projects/mock-fleet/generated/evidence \
-  --collected-at 2026-09-01T00:00:00Z
+scripts/dev cli --config "$mock_config" config validate
+scripts/dev cli --config "$mock_config" inventory graph
+scripts/dev cli --config "$mock_config" coverage list assets
+scripts/dev cli --config "$mock_config" policy validate
 
-scripts/dev cli --config projects/mock-fleet/compliance.yaml \
-  assessment run --all --at 2026-09-01T00:00:00Z
+mkdir -p "$mock_run/aws-fixtures"
+cp projects/mock-fleet/fixtures/aws-*-api.json "$mock_run/aws-fixtures/"
+uv run --project tooling --frozen python tooling/collectors/mock-api/collect.py \
+  "$mock_run/aws-fixtures" "$mock_run/evidence" \
+  --collected-at "$mock_at"
 
-scripts/dev cli --config projects/mock-fleet/compliance.yaml assessment status \
-  --plan projects/mock-fleet/generated/plans/cloud-account__aws-111122223333.json \
-  --assessed-plans projects/mock-fleet/generated/plans --at 2026-09-01T00:00:00Z \
-  --as-of 2026-09-01T00:00:00Z
-scripts/dev cli --config projects/mock-fleet/compliance.yaml assessment mappings \
-  --plan projects/mock-fleet/generated/plans/cloud-account__aws-111122223333.json \
-  --assessed-plans projects/mock-fleet/generated/plans --at 2026-09-01T00:00:00Z \
-  --as-of 2026-09-01T00:00:00Z
-scripts/dev cli --config projects/mock-fleet/compliance.yaml \
+scripts/dev cli --config "$mock_config" assessment run --all \
+  --evidence "$mock_run/evidence" \
+  --plan-output "$mock_run/plans" \
+  --output "$mock_run/results" --at "$mock_at"
+
+mock_anchor="$mock_run/plans/cloud-account__aws-111122223333.json"
+scripts/dev cli --no-config plan show "$mock_anchor"
+scripts/dev cli --no-config assessment status \
+  --plan "$mock_anchor" --assessed-plans "$mock_run/plans" \
+  --results "$mock_run/results" --at "$mock_at" --as-of "$mock_at"
+scripts/dev cli --no-config assessment mappings \
+  --plan "$mock_anchor" --assessed-plans "$mock_run/plans" \
+  --results "$mock_run/results" --at "$mock_at" --as-of "$mock_at"
+scripts/dev cli --no-config \
   assessment explain cloud-account/aws-111122223333 \
-  --plan projects/mock-fleet/generated/plans/cloud-account__aws-111122223333.json \
-  --assessed-plans projects/mock-fleet/generated/plans --at 2026-09-01T00:00:00Z \
-  --as-of 2026-09-01T00:00:00Z
+  --plan "$mock_anchor" --assessed-plans "$mock_run/plans" \
+  --results "$mock_run/results" --at "$mock_at" --as-of "$mock_at"
+scripts/dev cli --no-config \
+  assessment explain saas/acme-projects/company \
+  --plan "$mock_anchor" --assessed-plans "$mock_run/plans" \
+  --results "$mock_run/results" --at "$mock_at" --as-of "$mock_at"
 ```
+
+The assessment creates the plans before `plan show` reads one, so the sequence
+works from a clean checkout. The exact operation is complete: the drifting first
+AWS account is `FAIL`, the second AWS account is `PASS`, and the SaaS tenant is
+`UNKNOWN`. Its explanation attributes every check to an absent required
+`saas.tenant.configuration/v1` observation; mappings carry that same `UNKNOWN`
+without inventing a result or collecting the checked-in SaaS fixture.
 
 ## Assessment-plan handoff
 
@@ -178,7 +193,7 @@ complete plan; an explicit plan-file path remains supported.
 
 ## Intentional development drift
 
-The fixtures intentionally produce useful mixed results:
+Collecting every fixture intentionally produces these per-check results:
 
 | Subject | Pass | Fail | Intended failures |
 |---|---:|---:|---|
@@ -189,6 +204,11 @@ The fixtures intentionally produce useful mixed results:
 Changing a fixture and recollecting simulates drift from an external system.
 Changing an upstream profile invalidates stale overlay pins or fingerprints,
 forcing company policy authors to review the rebase.
+
+The focused mock-fleet validator remains the primary executable owner of the
+full-fixture behavior and mapping filters. The temporary partial collection above
+is an operator walkthrough of existing missing-evidence semantics, not a duplicate
+canonical assertion.
 
 The mapping view shows each CSA CCM reference, asset, technical result,
 and alignment. The two local-retention checks appear as `TAILORED`: their pass
