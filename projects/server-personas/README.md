@@ -32,7 +32,7 @@ persona_expired_at=2026-12-02T00:00:00Z
 scripts/dev cli --config "$persona_config" inventory validate
 scripts/dev cli --config "$persona_config" policy validate
 scripts/dev cli --config "$persona_config" waiver validate
-scripts/dev cli --config "$persona_config" waiver list
+scripts/dev cli --config "$persona_config" waiver list --at "$persona_active_at"
 
 .dev/venv/bin/python tooling/collectors/mock-api/collect.py \
   projects/server-personas/fixtures \
