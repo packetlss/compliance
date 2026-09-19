@@ -19,6 +19,67 @@ class InvalidOperationResolution(ValueError):
     """Supplied policy resolved to an invalid selected member, refusing assessment."""
 
 
+def _invalid_resolution_message(plans):
+    """Render bounded ephemeral refusal facts without dumping planner internals."""
+    invalid = [
+        plan for plan in plans if plan['resolution']['status'] != 'valid'
+    ]
+    lines = [
+        'Assessment refused: selected policy resolution is invalid; no assessment '
+        'result was published.'
+    ]
+    for plan in invalid:
+        subject_id = plan['subject']['id']
+        lines.append(f'Asset: {subject_id}')
+        for error in plan['resolution']['errors']:
+            code = str(error.get('type', 'resolution-failed'))
+            lines.append(f'  Failure: {code.replace("-", " ").capitalize()}')
+            lines.append(f'    Code: {code}')
+            check_id = error.get('instance_id') or error.get('target')
+            if isinstance(check_id, str) and check_id:
+                lines.append(f'    Check: {check_id}')
+            for label, field in (
+                ('Control', 'control'),
+                ('Reference', 'reference'),
+                ('Requirement', 'requirement'),
+                ('Realization', 'realization'),
+            ):
+                value = error.get(field)
+                if isinstance(value, str) and value:
+                    lines.append(f'    {label}: {value}')
+            policies = {
+                provenance['baseline']
+                for provenance in (error.get('incoming_provenance') or [])
+                if isinstance(provenance, dict)
+                and isinstance(provenance.get('baseline'), str)
+            }
+            if isinstance(error.get('baseline'), str):
+                policies.add(error['baseline'])
+            identity = error.get('identity')
+            resource_kind = error.get('kind')
+            if (
+                resource_kind in {'Baseline', 'RequirementBaseline'}
+                and isinstance(identity, str)
+                and identity
+            ):
+                policies.add(identity)
+            if policies:
+                lines.append('    Policy: ' + ', '.join(sorted(policies)))
+            if (
+                resource_kind not in {'Baseline', 'RequirementBaseline'}
+                and isinstance(identity, str)
+                and identity
+            ):
+                resource = f'    Resource: {identity}'
+                if isinstance(resource_kind, str) and resource_kind:
+                    resource += f' ({resource_kind})'
+                lines.append(resource)
+        lines.append(
+            f'  Next: inspect current resolution with `coverage explain {subject_id}`.'
+        )
+    return '\n'.join(lines)
+
+
 def policy_membership(plan):
     """Retain only exact historical result slots and reporting mappings."""
     controls = [{
@@ -321,7 +382,7 @@ def render_operation(subjects, groups, assignments, policy_sources, selection, *
     plans = [render_plan(subjects[s], groups, assignments, policy_sources, config=config)
              for s in ids]
     if any(p['resolution']['status'] != 'valid' for p in plans):
-        raise InvalidOperationResolution('operation planning failed: ' + str([{'subject': p['subject']['id'], 'errors': p['resolution']['errors']} for p in plans if p['resolution']['status'] != 'valid']))
+        raise InvalidOperationResolution(_invalid_resolution_message(plans))
     freeze_operation(plans, subjects, groups, assignments, selection)
     for plan in plans:
         validate_assessment_plan(plan)

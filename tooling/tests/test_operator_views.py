@@ -1,6 +1,7 @@
 import copy
 import io
 import json
+import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -370,6 +371,45 @@ class CoverageOperatorViewTests(unittest.TestCase):
         self.assertIn("Applicable policy: unresolved policy", rendered)
         self.assertNotIn("Check:", rendered)
         self.assertNotIn("Coverage: unassigned", rendered)
+
+    def test_assessment_refusal_is_bounded_and_publishes_no_result(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            with self.assertRaises(SystemExit) as raised:
+                main(
+                    [
+                        "--config",
+                        str(ROLLOUT_CONFIG),
+                        "assessment",
+                        "run",
+                        "host/persona-conflict-01",
+                        "--evidence",
+                        str(root / "evidence"),
+                        "--plan-output",
+                        str(root / "plans"),
+                        "--output",
+                        str(root / "results"),
+                        "--at",
+                        "2026-09-01T00:00:00Z",
+                    ]
+                )
+
+            rendered = str(raised.exception)
+            self.assertIn("Assessment refused", rendered)
+            self.assertIn("Asset: host/persona-conflict-01", rendered)
+            self.assertIn("Code: control-instance-conflict", rendered)
+            self.assertIn(
+                "Check: benchmark.example.linux-server.ip-forwarding-disabled",
+                rendered,
+            )
+            self.assertIn("Policy: company.linux-server-hardening@1", rendered)
+            self.assertIn(
+                "coverage explain host/persona-conflict-01", rendered
+            )
+            self.assertNotIn("incoming_provenance", rendered)
+            self.assertNotIn("definition_fingerprint", rendered)
+            self.assertNotIn("net.ipv4.ip_forward", rendered)
+            self.assertFalse((root / "results").exists())
 
     def test_ordinary_explanations_exclude_plan_internal_provenance(self):
         valid_output = io.StringIO()
