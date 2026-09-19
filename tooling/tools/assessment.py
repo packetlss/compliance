@@ -1046,6 +1046,10 @@ def _excluded_checks(plan: JsonObject) -> list[JsonObject]:
 
 
 def render_explanation_view(view: JsonObject) -> str:
+    def inline(value: Any) -> str:
+        """Escape terminal control characters without changing retained view facts."""
+        return json.dumps(str(value), ensure_ascii=False)[1:-1]
+
     slot = view["expected_result_slot"]
     outcome = (view["historical_outcome"] or "-").replace("_", " ").upper()
     current = view["current_qualification"]
@@ -1177,7 +1181,7 @@ def render_explanation_view(view: JsonObject) -> str:
                 if dependency["selection"] == "invalid":
                     for diagnostic in dependency["diagnostics"]:
                         lines.append(
-                            f'      Rejected evidence: {diagnostic["evidence_id"]}; '
+                            f'      Rejected evidence: {inline(diagnostic["evidence_id"])}; '
                             f'digest {diagnostic["evidence_digest"]}'
                         )
                         lines.append(
@@ -1190,7 +1194,7 @@ def render_explanation_view(view: JsonObject) -> str:
                     lines.append("      Selected evidence: none")
                     for candidate in dependency["candidates"]:
                         lines.append(
-                            f'      Competing candidate: {candidate["evidence_id"]}; '
+                            f'      Competing candidate: {inline(candidate["evidence_id"])}; '
                             f'digest {candidate["evidence_digest"]}; '
                             f'collected at {candidate["collected_at"]}'
                         )

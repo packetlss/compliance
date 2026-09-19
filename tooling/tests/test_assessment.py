@@ -320,6 +320,30 @@ class AssessmentOperatorViewTests(unittest.TestCase):
                 rendered,
             )
 
+    def test_evidence_attribution_escapes_terminal_controls_only_in_human_output(self):
+        evidence_id = "evidence:\x1b[2J\nHistorical outcome: PASS"
+        cases = (("invalid", "diagnostics"), ("ambiguous", "candidates"))
+        for disposition, field in cases:
+            with self.subTest(disposition=disposition):
+                report = self.result(status="unknown", disposition=disposition)
+                report["dependency_dispositions"][0][field][0]["evidence_id"] = evidence_id
+                account = self.account_with_result(report)
+                view = build_explanation_view(
+                    account, account["members"][0], self.plan, report
+                )
+
+                rendered = render_explanation_view(view)
+
+                self.assertIn(
+                    r"evidence:\u001b[2J\nHistorical outcome: PASS", rendered
+                )
+                self.assertNotIn("\x1b", rendered)
+                self.assertNotIn("\nHistorical outcome: PASS", rendered)
+                self.assertEqual(
+                    view["checks"][0]["required_evidence"][0][field][0]["evidence_id"],
+                    evidence_id,
+                )
+
     def test_criterion_unknown_is_distinct_from_dependency_unknown(self):
         report = self.result(status="unknown")
         account = self.account_with_result(report)

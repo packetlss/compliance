@@ -38,6 +38,15 @@ def _invalid_resolution_message(plans):
             check_id = error.get('instance_id') or error.get('target')
             if isinstance(check_id, str) and check_id:
                 lines.append(f'    Check: {check_id}')
+            for label, field in (
+                ('Control', 'control'),
+                ('Reference', 'reference'),
+                ('Requirement', 'requirement'),
+                ('Realization', 'realization'),
+            ):
+                value = error.get(field)
+                if isinstance(value, str) and value:
+                    lines.append(f'    {label}: {value}')
             policies = {
                 provenance['baseline']
                 for provenance in (error.get('incoming_provenance') or [])
@@ -56,7 +65,11 @@ def _invalid_resolution_message(plans):
                 policies.add(identity)
             if policies:
                 lines.append('    Policy: ' + ', '.join(sorted(policies)))
-            elif isinstance(identity, str) and identity:
+            if (
+                resource_kind not in {'Baseline', 'RequirementBaseline'}
+                and isinstance(identity, str)
+                and identity
+            ):
                 resource = f'    Resource: {identity}'
                 if isinstance(resource_kind, str) and resource_kind:
                     resource += f' ({resource_kind})'

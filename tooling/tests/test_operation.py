@@ -149,6 +149,30 @@ class OperationTests(unittest.TestCase):
         self.assertNotIn('existing_sources', baseline)
         self.assertNotIn('policy_source', control)
 
+    def test_refusal_projects_other_retained_typed_identities(self):
+        rendered = _invalid_resolution_message([{
+            'subject': {'id': 'host/A'},
+            'resolution': {
+                'status': 'invalid',
+                'errors': [{
+                    'type': 'control-evidence-schema-missing',
+                    'control': 'test.control',
+                }, {
+                    'type': 'assignment-reference-kind-collision',
+                    'reference': 'test.policy@1',
+                }, {
+                    'type': 'requirement-digest-mismatch',
+                    'requirement': 'test.requirement@1',
+                    'realization': 'test.realization@1',
+                }],
+            },
+        }])
+
+        self.assertIn('Control: test.control', rendered)
+        self.assertIn('Reference: test.policy@1', rendered)
+        self.assertIn('Requirement: test.requirement@1', rendered)
+        self.assertIn('Realization: test.realization@1', rendered)
+
     def test_explicit_selection_ignores_supplied_nonselected_candidate(self):
         plans = self.plans()
         groups = [{'id':'test-hosts','parents':[],'members':['host/A','host/B']}]
