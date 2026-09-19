@@ -212,6 +212,17 @@ They never select a latest declaration/result or resolve current policy. Their o
 top-level words are “Satisfied under declared coverage”, “Not satisfied under declared
 coverage”, and “Satisfaction not established under declared coverage”.
 
+`framework status` is the concise ledger projection: its human table and JSON
+obligation rows contain only obligation identity, disposition, basis category, and
+effective state beneath the bounded statement, declaration identity, and exact
+operation anchor. `framework explain` is the drill-down projection over those same
+inputs. It adds each reviewed interpretation and exact governance or assessed support:
+governance attribution and review facts, pinned Objective/direct-policy identity and
+declared groups, frozen subjects, exact retained Objective and technical outcomes,
+current historical qualifications, or an explicit reason support is not established.
+Governance support is declaration-side and never appears as a synthetic assessment
+result.
+
 The assessment plan is the machine-readable external-adapter handoff. Its
 active and excluded control records retain stable implementation and instance
 IDs, resolved parameters, definition fingerprints, derivations, deviations,

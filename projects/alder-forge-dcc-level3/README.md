@@ -50,9 +50,11 @@ slice does not record Governance's review and adoption of an external training b
 The declaration at `framework-obligations/defstan-dcc-level3.yaml` is closed,
 versioned project-governance state, outside `policy/` and generated output. It has its
 own digest and does not change policy-source, composition, member-plan, operation,
-plan, or result identity. `framework status` joins it only to explicitly supplied
-exact retained plans/results and an operation scope witness; it never treats mappings,
-current Coverage, or a latest result as framework satisfaction.
+plan, or result identity. `framework status` and `framework explain` join it only to
+explicitly supplied exact retained plans/results and an operation scope witness; they
+never treat mappings, current Coverage, or a latest result as framework satisfaction.
+Status is the compact seven-row ledger. Explain follows each row into its exact
+governance determination or assessed support.
 
 ## Operator proof
 
@@ -68,12 +70,17 @@ scripts/dev cli --config projects/alder-forge-dcc-level3/compliance.yaml policy 
 Coverage shows no assessable entity policy for the governance-only entries, the MFA
 Objective, and the direct 2409 technical policy. It reads current inventory and
 policy only; it does not read evidence or results. The focused project gate also runs
-`framework status` over exact retained history. It demonstrates:
+both `framework status` and `framework explain`, in human and JSON forms, over exact
+retained history. It demonstrates:
 
 - `1101` and `2410` as affirmative governance determinations;
 - `0002`, `1202` and `2602` as not established governance accounting;
-- retained MFA passing and the unexpected Linux package failing; and
-- no entity AssessmentResult for the governance-only obligations.
+- `2201` following the pinned MFA Objective through the critical-SaaS group and
+  frozen tenant to its exact Objective and passing technical outcome;
+- `2409` following the pinned direct Linux policy to its exact failing technical
+  outcome;
+- governance attribution without an entity AssessmentResult; and
+- explicit not-established governance support.
 
 There are no waivers in this slice. In particular, no waiver is used for uncertain evidence, unknown scope or assessor judgment.
 

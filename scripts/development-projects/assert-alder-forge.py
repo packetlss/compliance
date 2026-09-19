@@ -126,10 +126,18 @@ def assert_technical_cases(run_root: Path) -> None:
 
 
 def assert_framework_accounting(run_root: Path) -> None:
-    framework = load(run_root / "framework-status.json")
-    if framework.get("state") != "not_satisfied":
+    status = load(run_root / "framework-status.json")
+    explanation = load(run_root / "framework-explanation.json")
+    if status.get("state") != "not_satisfied" or explanation.get("state") != "not_satisfied":
         fail("declared framework projection did not preserve the direct package failure")
-    rows = {row["id"]: row for row in framework.get("obligations", [])}
+    if status.get("schema") != "compliance.example/framework-satisfaction-status/v1alpha1":
+        fail("framework status lost its summary schema")
+    if explanation.get("schema") != "compliance.example/framework-satisfaction-explanation/v1alpha1":
+        fail("framework explanation lost its drill-down schema")
+    if any(set(row) != {"id", "disposition", "basis", "state"} for row in status.get("obligations", [])):
+        fail("framework status JSON exposed drill-down support")
+    rows = {row["id"]: row for row in status.get("obligations", [])}
+    explained = {row["id"]: row for row in explanation.get("obligations", [])}
     expected_states = {
         "0002": "unknown", "1101": "pass", "1202": "unknown", "2201": "pass",
         "2409": "fail", "2410": "pass", "2602": "unknown",
@@ -144,6 +152,78 @@ def assert_framework_accounting(run_root: Path) -> None:
         fail("framework declaration did not retain exact ADR 0022 obligation states")
     if {item: rows.get(item, {}).get("basis") for item in expected_bases} != expected_bases:
         fail("framework declaration did not retain exact ADR 0022 obligation bases")
+
+    objective = explained["2201"]["support"][0]
+    if (
+        objective.get("kind") != "objective"
+        or objective.get("reference") != "alder-forge.critical-access.mfa@1"
+        or objective.get("groups") != ["critical-saas-administration"]
+        or objective.get("subjects") != [SAAS]
+        or objective.get("state") != "pass"
+    ):
+        fail("2201 explanation lost its exact Objective-backed path")
+    objective_subject = objective["subject_support"][0]
+    if (
+        objective_subject.get("outcomes", [{}])[0].get("status") != "pass"
+        or objective_subject.get("technical_outcomes", [{}])[0].get("instance_id")
+        != "alder-forge.saas.critical-access.mfa-enforced"
+        or objective_subject.get("technical_outcomes", [{}])[0].get("status") != "pass"
+    ):
+        fail("2201 explanation lost its retained Objective or technical outcome")
+
+    direct = explained["2409"]["support"][0]
+    if (
+        direct.get("kind") != "direct-policy"
+        or direct.get("reference") != "alder-forge.corporate-linux.authorized-software@1"
+        or direct.get("groups") != ["corporate-linux-build-systems"]
+        or direct.get("subjects") != [LINUX]
+        or direct.get("state") != "fail"
+        or direct.get("subject_support", [{}])[0].get("outcomes", [{}])[0].get("status") != "fail"
+    ):
+        fail("2409 explanation lost its exact failing direct-policy path")
+
+    governance = explained["1101"]["support"][0]
+    if (
+        governance.get("kind") != "governance"
+        or governance.get("subject") != "alder-forge-governance/board-security-direction"
+        or governance.get("owner") != "alder-forge-board"
+        or governance.get("determination") != "affirmative"
+        or governance.get("review", {}).get("reference")
+        != "alder-forge-governance/BOARD-SEC-2026-03"
+        or "outcomes" in governance
+    ):
+        fail("governance-only explanation invented or lost support")
+    if explained["0002"]["support"][0].get("determination") != "not_established":
+        fail("governance not-established support was not explained")
+
+    status_text = (run_root / "framework-status.txt").read_text(encoding="utf-8")
+    explanation_text = (run_root / "framework-explanation.txt").read_text(encoding="utf-8")
+    if status_text == explanation_text or "Interpretation:" in status_text:
+        fail("framework status and explain retained the same human output")
+    for expected in (
+        "Objective: alder-forge.critical-access.mfa@1",
+        "Frozen subject: saas/alder-admin-tenant",
+        "Technical outcome alder-forge.saas.critical-access.mfa-enforced: PASS",
+        "Dependency observation for alder-forge.saas.critical-access.mfa-enforced: Timely",
+        "Direct policy: alder-forge.corporate-linux.authorized-software@1",
+        "Technical outcome alder-forge.corporate-linux.authorized-software-2409: FAIL",
+        "Dependency observation for alder-forge.corporate-linux.authorized-software-2409: Timely",
+        "Plan alignment: Unavailable; no comparable plan was supplied.",
+        "Selected evidence within recorded age limits: 1 dependency.",
+        "recorded maximum age 86400s",
+        "Recorded waivers: None.",
+        "Governance subject: alder-forge-governance/board-security-direction",
+        "Determination: not established",
+    ):
+        if expected not in explanation_text:
+            fail(f"framework human explanation lost {expected!r}")
+    for internal in (
+        "plan_alignment_unavailable", "recorded_max_age", "collected_at",
+        '"qualification":', '"dependencies":', "Evidence timeliness: {",
+        "Recorded waiver qualification: {",
+    ):
+        if internal in explanation_text:
+            fail(f"framework human explanation exposed internal qualification data {internal!r}")
     if (run_root / "framework/results/entity__alder-forge-defence-systems.json").exists():
         fail("governance-only Alder obligations produced AssessmentResults")
 

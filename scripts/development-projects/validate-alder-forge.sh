@@ -45,6 +45,18 @@ framework_anchor="$RUN_ROOT/framework/plans/entity__alder-forge-defence-systems.
   --plan "$framework_anchor" --assessed-plans "$RUN_ROOT/framework/plans" \
   --results "$RUN_ROOT/framework/results" --at "$FIXED_INSTANT" --as-of "$FIXED_INSTANT" \
   --format json > "$RUN_ROOT/framework-status.json"
+"${cli[@]}" framework explain alder-forge-defstan-dcc-level3 --revision 2026-09 \
+  --plan "$framework_anchor" --assessed-plans "$RUN_ROOT/framework/plans" \
+  --results "$RUN_ROOT/framework/results" --at "$FIXED_INSTANT" --as-of "$FIXED_INSTANT" \
+  --format json > "$RUN_ROOT/framework-explanation.json"
+"${cli[@]}" framework status alder-forge-defstan-dcc-level3 --revision 2026-09 \
+  --plan "$framework_anchor" --assessed-plans "$RUN_ROOT/framework/plans" \
+  --results "$RUN_ROOT/framework/results" --at "$FIXED_INSTANT" --as-of "$FIXED_INSTANT" \
+  > "$RUN_ROOT/framework-status.txt"
+"${cli[@]}" framework explain alder-forge-defstan-dcc-level3 --revision 2026-09 \
+  --plan "$framework_anchor" --assessed-plans "$RUN_ROOT/framework/plans" \
+  --results "$RUN_ROOT/framework/results" --at "$FIXED_INSTANT" --as-of "$FIXED_INSTANT" \
+  > "$RUN_ROOT/framework-explanation.txt"
 
 printf '\n== Alder Forge direct technical and MFA Objective checks ==\n'
 mkdir -p "$RUN_ROOT/technical/evidence" "$RUN_ROOT/technical/plans" "$RUN_ROOT/technical/results"

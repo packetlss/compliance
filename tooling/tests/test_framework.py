@@ -13,7 +13,8 @@ from tools.assessment_provenance import member_plan_digest
 from tools.composition import composition_digest
 from tools.evaluate_plan import control_error_result, evaluate_plan_document
 from tools.framework import (
-    build_status, declaration_digest, declaration_projection, load_declarations,
+    build_explanation, build_status, declaration_digest, declaration_projection,
+    load_declarations, render_explanation, render_status,
     validate_project_declarations,
 )
 from tools.render_plan import source_tree_digest
@@ -104,6 +105,31 @@ class FrameworkDeclarationTests(unittest.TestCase):
                 item["digest"] = declaration_digest(item)
                 self.assertEqual(build_status(item, account(), [], [])["state"], expected)
 
+    def test_status_and_explanation_have_distinct_human_and_json_responsibilities(self):
+        item = declaration()
+        item["digestAlgorithm"] = "compliance.example/framework-obligation-declaration-digest/v1alpha1"
+        item["digest"] = declaration_digest(item)
+        status = build_status(item, account(), [], [])
+        explanation = build_explanation(item, account(), [], [])
+
+        self.assertEqual(
+            set(status["obligations"][0]),
+            {"id", "disposition", "basis", "state"},
+        )
+        self.assertNotIn("support", status["obligations"][0])
+        self.assertEqual(
+            explanation["obligations"][0]["interpretation"],
+            "Reviewed governance basis.",
+        )
+        governance = explanation["obligations"][0]["support"][0]
+        self.assertEqual(governance["subject"], "subject")
+        self.assertEqual(governance["owner"], "owner")
+        self.assertEqual(governance["review"]["reference"], "review")
+        self.assertNotEqual(render_status(status), render_explanation(explanation))
+        self.assertNotIn("Interpretation:", render_status(status))
+        self.assertIn("Interpretation: Reviewed governance basis.", render_explanation(explanation))
+        self.assertIn("Governance owner: owner", render_explanation(explanation))
+
     def test_retired_framework_basis_and_field_are_rejected(self):
         governance = declaration()["spec"]["obligations"][0]["basis"]["governance"]
         for basis in (
@@ -153,9 +179,44 @@ class FrameworkDeclarationTests(unittest.TestCase):
         item["digestAlgorithm"] = "compliance.example/framework-obligation-declaration-digest/v1alpha1"
         item["digest"] = declaration_digest(item)
         status = build_status(item, account(), [], [])
+        explanation = build_explanation(item, account(), [], [])
         self.assertEqual(status["state"], "not_established")
         self.assertEqual(status["obligations"][0]["state"], "excluded")
-        self.assertEqual(status["obligations"][0]["rationale"], "Governance excluded this ledger entry.")
+        self.assertNotIn("rationale", status["obligations"][0])
+        self.assertEqual(
+            explanation["obligations"][0]["rationale"],
+            "Governance excluded this ledger entry.",
+        )
+        support = explanation["obligations"][0]["support"][0]
+        self.assertEqual(support, {
+            "kind": "objective",
+            "reference": "example.objective@1",
+            "digest": "sha256:" + "a" * 64,
+            "groups": ["scope-group"],
+        })
+        rendered = render_explanation(explanation)
+        self.assertIn("Objective: example.objective@1", rendered)
+        self.assertIn("Declared groups: scope-group", rendered)
+        self.assertIn("Exact assessment support: not required", rendered)
+
+    def test_excluded_governance_row_retains_attribution_without_assessment(self):
+        item = declaration()
+        row = item["spec"]["obligations"][0]
+        row["disposition"] = "not-applicable"
+        row["rationale"] = "Governance marked this ledger entry not applicable."
+        item["digestAlgorithm"] = "compliance.example/framework-obligation-declaration-digest/v1alpha1"
+        item["digest"] = declaration_digest(item)
+
+        explanation = build_explanation(item, account(), [], [])
+        support = explanation["obligations"][0]["support"][0]
+        self.assertEqual(support["subject"], "subject")
+        self.assertEqual(support["owner"], "owner")
+        self.assertEqual(support["determination"], "affirmative")
+        self.assertEqual(support["review"]["reference"], "review")
+        self.assertNotIn("state", support)
+        rendered = render_explanation(explanation)
+        self.assertIn("Governance subject: subject", rendered)
+        self.assertIn("Rationale: Governance marked this ledger entry not applicable.", rendered)
 
     def test_not_established_governance_may_be_reviewed_or_unreviewed(self):
         for reviewed in (False, True):
@@ -169,10 +230,17 @@ class FrameworkDeclarationTests(unittest.TestCase):
                     path = Path(temporary) / "declaration.json"
                     path.write_text(json.dumps(item), encoding="utf-8")
                     loaded = load_declarations(path)[0]
-                status = build_status(loaded, account(), [], [])
-                self.assertEqual(status["state"], "not_established")
-                self.assertEqual(status["obligations"][0]["support"][0]["determination"], "not_established")
-                self.assertEqual(status["obligations"][0]["support"][0]["state"], "unknown")
+                explanation = build_explanation(loaded, account(), [], [])
+                self.assertEqual(explanation["state"], "not_established")
+                support = explanation["obligations"][0]["support"][0]
+                self.assertEqual(support["determination"], "not_established")
+                self.assertEqual(support["state"], "unknown")
+                rendered = render_explanation(explanation)
+                self.assertIn("Determination: not established", rendered)
+                if reviewed:
+                    self.assertIn("Review reference: review", rendered)
+                else:
+                    self.assertIn("governance support is not established", rendered)
 
     def test_assessed_support_retains_each_subject_outcome_and_qualification(self):
         item = declaration()
@@ -183,17 +251,134 @@ class FrameworkDeclarationTests(unittest.TestCase):
         historical["operation"]["members"].append({"subject_id": "host/b", "resolved_groups": [{"id": "scope-group"}]})
         historical["operation"]["selection_witness"]["groups"][0]["members"].append("host/b")
         historical["members"] = [
-            {"subject_id": "host/a", "accounting_disposition": "result_required", "historical_interpretation": "validated", "result_id": "result-a", "plan_id": "plan-a", "plan_alignment": "plan_aligned", "evidence_timeliness": {"qualification": "available"}, "recorded_waiver_qualification": {"waivers": [], "counts": {}}},
-            {"subject_id": "host/b", "accounting_disposition": "result_required", "historical_interpretation": "validated", "result_id": "result-b", "plan_id": "plan-b", "plan_alignment": "different_plan", "evidence_timeliness": {"qualification": "unavailable"}, "recorded_waiver_qualification": {"waivers": [{"qualification": "expired"}], "counts": {"expired": 1}}},
+            {
+                "subject_id": "host/a", "accounting_disposition": "result_required",
+                "historical_interpretation": "validated", "result_id": "result-a",
+                "plan_id": "plan-a", "plan_alignment": "plan_aligned",
+                "evidence_timeliness": {
+                    "dependencies": [{
+                        "instance_id": "example.check-a", "dependency_id": "observation",
+                        "evidence_id": "evidence/a", "collected_at": "2026-08-31T00:00:00Z",
+                        "recorded_max_age": "86400s", "qualification": "timely",
+                    }],
+                    "controls": [{
+                        "instance_id": "example.check-a", "within_recorded_age_limits": True,
+                        "reassessment_due": False, "timeliness_unavailable": False,
+                    }],
+                    "timely_selected_dependencies": 1, "stale_selected_dependencies": 0,
+                    "unavailable_required_dependencies": 0,
+                    "controls_within_recorded_age_limits": 1,
+                    "controls_needing_reassessment": 0,
+                    "controls_with_unavailable_timeliness": 0,
+                },
+                "recorded_waiver_qualification": {"waivers": [], "counts": {}},
+            },
+            {
+                "subject_id": "host/b", "accounting_disposition": "result_required",
+                "historical_interpretation": "validated", "result_id": "result-b",
+                "plan_id": "plan-b", "plan_alignment": "plan_alignment_unavailable",
+                "evidence_timeliness": {
+                    "dependencies": [
+                        {
+                            "instance_id": "example.check-b", "dependency_id": "observation",
+                            "evidence_id": "evidence/b", "collected_at": "2026-08-01T00:00:00Z",
+                            "recorded_max_age": "86400s", "qualification": "stale",
+                        },
+                        {
+                            "instance_id": "example.check-b", "dependency_id": "secondary",
+                            "recorded_max_age": "3600s", "qualification": "unavailable",
+                        },
+                    ],
+                    "controls": [{
+                        "instance_id": "example.check-b", "within_recorded_age_limits": False,
+                        "reassessment_due": True, "timeliness_unavailable": True,
+                    }],
+                    "timely_selected_dependencies": 0, "stale_selected_dependencies": 1,
+                    "unavailable_required_dependencies": 1,
+                    "controls_within_recorded_age_limits": 0,
+                    "controls_needing_reassessment": 1,
+                    "controls_with_unavailable_timeliness": 1,
+                },
+                "recorded_waiver_qualification": {
+                    "waivers": [{
+                        "instance_id": "example.check-b", "waiver_id": "waiver/b",
+                        "valid_from": "2026-08-01T00:00:00Z",
+                        "expires_at": "2026-08-31T00:00:00Z", "qualification": "expired",
+                    }],
+                    "counts": {"expired": 1},
+                },
+            },
         ]
-        plans = [{"id": f"plan-{suffix}", "requirements": [{"reference": "example.objective@1", "digest": "sha256:" + "a" * 64, "provenance": [{"group": "scope-group"}]}]} for suffix in ("a", "b")]
-        reports = [{"id": f"result-{suffix}", "requirement_assessments": [{"requirement": "example.objective@1", "status": "pass", "reason": f"Exact retained support {suffix}."}]} for suffix in ("a", "b")]
-        status = build_status(item, historical, plans, reports)
-        support = status["obligations"][0]["support"][0]["subject_support"]
-        self.assertEqual(status["state"], "satisfied")
+        plans = [{"id": f"plan-{suffix}", "requirements": [{"reference": "example.objective@1", "digest": "sha256:" + "a" * 64, "provenance": [{"group": "scope-group"}], "technical_instance_ids": [f"example.check-{suffix}"]}]} for suffix in ("a", "b")]
+        reports = [{"id": f"result-{suffix}", "requirement_assessments": [{"requirement": "example.objective@1", "status": "pass", "reason": f"Exact retained support {suffix}."}], "results": [{"instance_id": f"example.check-{suffix}", "status": "pass", "reason": f"Exact technical support {suffix}."}]} for suffix in ("a", "b")]
+        explanation = build_explanation(item, historical, plans, reports)
+        support = explanation["obligations"][0]["support"][0]["subject_support"]
+        self.assertEqual(explanation["state"], "satisfied")
         self.assertEqual([row["outcomes"][0]["reason"] for row in support], ["Exact retained support a.", "Exact retained support b."])
+        self.assertEqual(
+            [row["technical_outcomes"][0]["instance_id"] for row in support],
+            ["example.check-a", "example.check-b"],
+        )
         self.assertEqual(support[1]["qualifications"]["recorded_waiver_qualification"]["counts"], {"expired": 1})
         self.assertNotIn("reason", support[1])
+        rendered = render_explanation(explanation)
+        self.assertIn("Declared groups: scope-group", rendered)
+        self.assertIn("Frozen subject: host/a", rendered)
+        self.assertIn("Objective outcome example.objective@1: PASS", rendered)
+        self.assertIn("Technical outcome example.check-a: PASS", rendered)
+        self.assertIn("Plan alignment: Aligned with the supplied comparison operation.", rendered)
+        self.assertIn("Plan alignment: Unavailable; no comparable plan was supplied.", rendered)
+        self.assertIn("Selected evidence within recorded age limits: 1 dependency.", rendered)
+        self.assertIn(
+            "Dependency observation for example.check-a: Timely; evidence evidence/a, "
+            "collected 2026-08-31T00:00:00Z, recorded maximum age 86400s.",
+            rendered,
+        )
+        self.assertIn(
+            "Evidence stale — reassessment due; timeliness unavailable for 1 required dependency.",
+            rendered,
+        )
+        self.assertIn(
+            "Dependency secondary for example.check-b: Timeliness unavailable; "
+            "recorded maximum age 3600s.",
+            rendered,
+        )
+        self.assertIn("Recorded waivers: None.", rendered)
+        self.assertIn(
+            "Recorded waiver waiver/b for example.check-b: expired; valid from "
+            "2026-08-01T00:00:00Z until 2026-08-31T00:00:00Z (exclusive).",
+            rendered,
+        )
+        for internal in (
+            "plan_alignment_unavailable", "recorded_max_age", "collected_at",
+            '"qualification":', '"dependencies":', "{",
+        ):
+            self.assertNotIn(internal, rendered)
+
+        for qualification, operator_text in (
+            ("within_window", "within its recorded validity window"),
+            ("expired", "expired"),
+            ("not_yet_in_window", "not yet within its recorded validity window"),
+        ):
+            with self.subTest(waiver_qualification=qualification):
+                qualified = copy.deepcopy(explanation)
+                waiver = qualified["obligations"][0]["support"][0]["subject_support"][0]
+                waiver["qualifications"]["recorded_waiver_qualification"] = {
+                    "waivers": [{
+                        "instance_id": "example.check-a", "waiver_id": "waiver/a",
+                        "valid_from": "2026-08-01T00:00:00Z",
+                        "expires_at": "2026-09-01T00:00:00Z",
+                        "qualification": qualification,
+                    }],
+                    "counts": {qualification: 1},
+                }
+                waiver_text = render_explanation(qualified)
+                self.assertIn(
+                    f"Recorded waiver waiver/a for example.check-a: {operator_text}; "
+                    "valid from 2026-08-01T00:00:00Z until "
+                    "2026-09-01T00:00:00Z (exclusive).",
+                    waiver_text,
+                )
 
     def test_missing_assessed_history_is_attributable_and_not_established(self):
         item = declaration()
@@ -211,24 +396,28 @@ class FrameworkDeclarationTests(unittest.TestCase):
             "subject_id": "host/a", "accounting_disposition": "result_required",
             "historical_interpretation": "unavailable", "result_id": None, "plan_id": "plan-a",
         }]
-        status = build_status(item, incomplete, [], [])
-        support = status["obligations"][0]["support"][0]
-        self.assertEqual(status["state"], "not_established")
+        explanation = build_explanation(item, incomplete, [], [])
+        support = explanation["obligations"][0]["support"][0]
+        self.assertEqual(explanation["state"], "not_established")
         self.assertEqual(support["state"], "unknown")
         self.assertEqual(support["subject_support"][0]["reason"], "exact_retained_result_support_unavailable")
+        self.assertIn(
+            "Reason: Exact retained result support is unavailable.",
+            render_explanation(explanation),
+        )
 
         retained = account()
         retained["members"] = [{
             "subject_id": "host/a", "accounting_disposition": "result_required",
             "historical_interpretation": "validated", "result_id": "result-a", "plan_id": "plan-a",
         }]
-        absent_pin = build_status(item, retained, [{"id": "plan-a", "requirements": []}], [{
+        absent_pin = build_explanation(item, retained, [{"id": "plan-a", "requirements": []}], [{
             "id": "result-a", "requirement_assessments": [],
         }])
         self.assertEqual(absent_pin["state"], "not_established")
         self.assertEqual(absent_pin["obligations"][0]["support"][0]["subject_support"][0]["reason"], "pin_absent_from_exact_retained_plan_provenance")
 
-        absent_outcome = build_status(item, retained, [{
+        absent_outcome = build_explanation(item, retained, [{
             "id": "plan-a", "requirements": [{
                 "reference": "example.objective@1", "digest": "sha256:" + "a" * 64,
                 "provenance": [{"group": "scope-group"}],
