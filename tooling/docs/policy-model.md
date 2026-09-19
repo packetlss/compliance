@@ -732,9 +732,10 @@ inventory and policy without persisting a Coverage artifact. `assessment status
 exact retained results from one operation anchor; it does not join a current plan
 to a latest result or claim that DAG group totals are mutually exclusive.
 
-The future ADR 0021 framework projection is a third, explicitly supplied
-interpretation over an exact declaration and exact assessment history. It does not
-persist `Coverage`, create a new assessment result, or mutate the historical result.
+The implemented experimental ADR 0021 framework projection is a third, explicitly
+supplied interpretation over an exact declaration and exact assessment history. It
+does not persist `Coverage`, create a new assessment result, or mutate the historical
+result.
 Its only top-level states are `satisfied`, `not_satisfied`, and `not_established`;
 any conclusive required governance or assessed failure wins as `not_satisfied`, lack
 of establishment wins next as `not_established`, and only every required basis

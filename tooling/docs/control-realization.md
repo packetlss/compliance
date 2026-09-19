@@ -337,10 +337,10 @@ carries an information-classification enum. Confidentiality is enforced by sourc
 ownership, acquisition/materialization, repository access, and deployment controls;
 the assessment engine does not make access decisions from a semantic label.
 
-If central governance needs framework-level status, the future ADR 0021 projection
-must receive the exact retained declaration, an exact operation anchor as the scope
-witness, and the exact independently valid bound plans/results needed by its assessed
-or direct portions. A downstream signed
+The implemented experimental ADR 0021 `framework status` / `framework explain`
+projection receives the exact retained declaration, an exact operation anchor as the
+scope witness, and the exact independently valid bound plans/results needed by its
+assessed or direct portions. A downstream signed
 export would remain an attestation or presentation from that environment, not a new
 core result, central re-evaluation, external certification, or substitute for those
 exact inputs. Raw evidence, parameters, implementation names, group names, and
@@ -393,7 +393,6 @@ does not yet:
 - support nested, threshold, or alternative satisfaction expressions;
 - sign shared releases or exported assurance claims;
 - define inheritance or overlays on realizations themselves;
-- implement `FrameworkObligationDeclaration` or its satisfaction projection; or
 - provide a generic process/GRC/activity-history evidence abstraction.
 
 Complete embedded checks and non-inheriting `based_on` provenance are the

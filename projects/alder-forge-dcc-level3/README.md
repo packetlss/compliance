@@ -6,7 +6,7 @@ An outcome means only: the exact Alder Forge project check passed, failed or was
 
 ## Project ownership and sources
 
-The project has three independent named policy inputs:
+The project has two independent named policy inputs:
 
 ```text
 control-library/                              reusable existing Controls and evidence schemas
