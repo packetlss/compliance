@@ -204,13 +204,26 @@ def assert_framework_accounting(run_root: Path) -> None:
         "Objective: alder-forge.critical-access.mfa@1",
         "Frozen subject: saas/alder-admin-tenant",
         "Technical outcome alder-forge.saas.critical-access.mfa-enforced: PASS",
+        "Dependency observation for alder-forge.saas.critical-access.mfa-enforced: Timely",
         "Direct policy: alder-forge.corporate-linux.authorized-software@1",
         "Technical outcome alder-forge.corporate-linux.authorized-software-2409: FAIL",
+        "Dependency observation for alder-forge.corporate-linux.authorized-software-2409: Timely",
+        "Plan alignment: Unavailable; no comparable plan was supplied.",
+        "Selected evidence within recorded age limits: 1 dependency.",
+        "recorded maximum age 86400s",
+        "Recorded waivers: None.",
         "Governance subject: alder-forge-governance/board-security-direction",
         "Determination: not established",
     ):
         if expected not in explanation_text:
             fail(f"framework human explanation lost {expected!r}")
+    for internal in (
+        "plan_alignment_unavailable", "recorded_max_age", "collected_at",
+        '"qualification":', '"dependencies":', "Evidence timeliness: {",
+        "Recorded waiver qualification: {",
+    ):
+        if internal in explanation_text:
+            fail(f"framework human explanation exposed internal qualification data {internal!r}")
     if (run_root / "framework/results/entity__alder-forge-defence-systems.json").exists():
         fail("governance-only Alder obligations produced AssessmentResults")
 

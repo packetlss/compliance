@@ -451,13 +451,111 @@ def _words(value: str) -> str:
     return value.replace("_", " ")
 
 
-def _render_qualifications(lines: list[str], qualifications: dict) -> None:
+_PLAN_ALIGNMENT_TEXT = {
+    "plan_aligned": "Aligned with the supplied comparison operation.",
+    "different_plan": "Different from the supplied comparison operation.",
+    "plan_alignment_unavailable": "Unavailable; no comparable plan was supplied.",
+}
+
+_WAIVER_QUALIFICATION_TEXT = {
+    "within_window": "within its recorded validity window",
+    "expired": "expired",
+    "not_yet_in_window": "not yet within its recorded validity window",
+}
+
+
+def _count_text(count: int, noun: str) -> str:
+    return f"{count} {noun}{'' if count == 1 else 's'}"
+
+
+def _render_evidence_timeliness(lines: list[str], evidence: dict) -> None:
+    if evidence.get("qualification") == "unavailable":
+        lines.append("        Evidence timeliness: Unavailable.")
+        return
+    dependencies = evidence.get("dependencies", [])
+    controls = evidence.get("controls", [])
+    timely = evidence.get("timely_selected_dependencies", 0)
+    stale = evidence.get("stale_selected_dependencies", 0)
+    unavailable = evidence.get("unavailable_required_dependencies", 0)
+    if not controls and not dependencies:
+        lines.append("        Evidence timeliness: Not applicable; no required evidence dependencies.")
+    elif stale and unavailable:
+        lines.append(
+            "        Evidence stale — reassessment due; timeliness unavailable for "
+            f"{_count_text(unavailable, 'required dependency')}."
+        )
+    elif stale:
+        lines.append(
+            "        Evidence stale — reassessment due for "
+            f"{_count_text(stale, 'selected dependency')}."
+        )
+    elif unavailable:
+        lines.append(
+            "        Evidence timeliness unavailable for "
+            f"{_count_text(unavailable, 'required dependency')}; "
+            f"{_count_text(timely, 'selected dependency')} remains within recorded age limits."
+        )
+    else:
+        lines.append(
+            "        Selected evidence within recorded age limits: "
+            f"{_count_text(timely, 'dependency')}."
+        )
+    for dependency in dependencies:
+        qualification = dependency.get("qualification")
+        condition = {
+            "timely": "Timely",
+            "stale": "Stale — reassessment due",
+            "unavailable": "Timeliness unavailable",
+        }.get(qualification, "Timeliness unavailable")
+        details = []
+        if dependency.get("evidence_id"):
+            details.append(f"evidence {dependency['evidence_id']}")
+        if dependency.get("collected_at"):
+            details.append(f"collected {dependency['collected_at']}")
+        if dependency.get("recorded_max_age"):
+            details.append(f"recorded maximum age {dependency['recorded_max_age']}")
+        suffix = f"; {', '.join(details)}" if details else ""
+        lines.append(
+            f"        Dependency {dependency.get('dependency_id', 'unknown')} for "
+            f"{dependency.get('instance_id', 'unknown')}: {condition}{suffix}."
+        )
+
+
+def _render_recorded_waivers(lines: list[str], qualification: dict) -> None:
+    waivers = qualification.get("waivers", [])
+    if not waivers:
+        lines.append("        Recorded waivers: None.")
+        return
+    for waiver in waivers:
+        condition = _WAIVER_QUALIFICATION_TEXT.get(
+            waiver.get("qualification"), "qualification unavailable",
+        )
+        lines.append(
+            f"        Recorded waiver {waiver['waiver_id']} for {waiver['instance_id']}: "
+            f"{condition}; valid from {waiver['valid_from']} through {waiver['expires_at']}."
+        )
+
+
+def _render_qualifications(
+    lines: list[str], qualifications: dict, query_instant: str | None,
+) -> None:
     if not qualifications:
         return
-    lines.append("      Current qualification:")
-    for key, value in qualifications.items():
-        rendered = value if isinstance(value, str) else json.dumps(value, sort_keys=True)
-        lines.append(f"        {_words(key).capitalize()}: {rendered}")
+    heading = "      Current qualification"
+    if query_instant:
+        heading += f" as of {query_instant}"
+    lines.append(heading + ":")
+    alignment = qualifications.get("plan_alignment", "plan_alignment_unavailable")
+    lines.append(
+        "        Plan alignment: "
+        + _PLAN_ALIGNMENT_TEXT.get(alignment, "Unavailable.")
+    )
+    _render_evidence_timeliness(lines, qualifications.get("evidence_timeliness", {
+        "qualification": "unavailable",
+    }))
+    _render_recorded_waivers(
+        lines, qualifications.get("recorded_waiver_qualification", {}),
+    )
 
 
 def _render_outcomes(lines: list[str], label: str, outcomes: list[dict]) -> None:
@@ -530,5 +628,9 @@ def render_explanation(document: dict) -> str:
                     _render_outcomes(lines, "Technical outcome", subject.get("technical_outcomes", []))
                 else:
                     _render_outcomes(lines, "Technical outcome", subject.get("outcomes", []))
-                _render_qualifications(lines, subject.get("qualifications", {}))
+                _render_qualifications(
+                    lines,
+                    subject.get("qualifications", {}),
+                    document["operation"].get("query_instant"),
+                )
     return "\n".join(lines)

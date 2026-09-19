@@ -251,8 +251,63 @@ class FrameworkDeclarationTests(unittest.TestCase):
         historical["operation"]["members"].append({"subject_id": "host/b", "resolved_groups": [{"id": "scope-group"}]})
         historical["operation"]["selection_witness"]["groups"][0]["members"].append("host/b")
         historical["members"] = [
-            {"subject_id": "host/a", "accounting_disposition": "result_required", "historical_interpretation": "validated", "result_id": "result-a", "plan_id": "plan-a", "plan_alignment": "plan_aligned", "evidence_timeliness": {"qualification": "available"}, "recorded_waiver_qualification": {"waivers": [], "counts": {}}},
-            {"subject_id": "host/b", "accounting_disposition": "result_required", "historical_interpretation": "validated", "result_id": "result-b", "plan_id": "plan-b", "plan_alignment": "different_plan", "evidence_timeliness": {"qualification": "unavailable"}, "recorded_waiver_qualification": {"waivers": [{"qualification": "expired"}], "counts": {"expired": 1}}},
+            {
+                "subject_id": "host/a", "accounting_disposition": "result_required",
+                "historical_interpretation": "validated", "result_id": "result-a",
+                "plan_id": "plan-a", "plan_alignment": "plan_aligned",
+                "evidence_timeliness": {
+                    "dependencies": [{
+                        "instance_id": "example.check-a", "dependency_id": "observation",
+                        "evidence_id": "evidence/a", "collected_at": "2026-08-31T00:00:00Z",
+                        "recorded_max_age": "86400s", "qualification": "timely",
+                    }],
+                    "controls": [{
+                        "instance_id": "example.check-a", "within_recorded_age_limits": True,
+                        "reassessment_due": False, "timeliness_unavailable": False,
+                    }],
+                    "timely_selected_dependencies": 1, "stale_selected_dependencies": 0,
+                    "unavailable_required_dependencies": 0,
+                    "controls_within_recorded_age_limits": 1,
+                    "controls_needing_reassessment": 0,
+                    "controls_with_unavailable_timeliness": 0,
+                },
+                "recorded_waiver_qualification": {"waivers": [], "counts": {}},
+            },
+            {
+                "subject_id": "host/b", "accounting_disposition": "result_required",
+                "historical_interpretation": "validated", "result_id": "result-b",
+                "plan_id": "plan-b", "plan_alignment": "plan_alignment_unavailable",
+                "evidence_timeliness": {
+                    "dependencies": [
+                        {
+                            "instance_id": "example.check-b", "dependency_id": "observation",
+                            "evidence_id": "evidence/b", "collected_at": "2026-08-01T00:00:00Z",
+                            "recorded_max_age": "86400s", "qualification": "stale",
+                        },
+                        {
+                            "instance_id": "example.check-b", "dependency_id": "secondary",
+                            "recorded_max_age": "3600s", "qualification": "unavailable",
+                        },
+                    ],
+                    "controls": [{
+                        "instance_id": "example.check-b", "within_recorded_age_limits": False,
+                        "reassessment_due": True, "timeliness_unavailable": True,
+                    }],
+                    "timely_selected_dependencies": 0, "stale_selected_dependencies": 1,
+                    "unavailable_required_dependencies": 1,
+                    "controls_within_recorded_age_limits": 0,
+                    "controls_needing_reassessment": 1,
+                    "controls_with_unavailable_timeliness": 1,
+                },
+                "recorded_waiver_qualification": {
+                    "waivers": [{
+                        "instance_id": "example.check-b", "waiver_id": "waiver/b",
+                        "valid_from": "2026-08-01T00:00:00Z",
+                        "expires_at": "2026-08-31T00:00:00Z", "qualification": "expired",
+                    }],
+                    "counts": {"expired": 1},
+                },
+            },
         ]
         plans = [{"id": f"plan-{suffix}", "requirements": [{"reference": "example.objective@1", "digest": "sha256:" + "a" * 64, "provenance": [{"group": "scope-group"}], "technical_instance_ids": [f"example.check-{suffix}"]}]} for suffix in ("a", "b")]
         reports = [{"id": f"result-{suffix}", "requirement_assessments": [{"requirement": "example.objective@1", "status": "pass", "reason": f"Exact retained support {suffix}."}], "results": [{"instance_id": f"example.check-{suffix}", "status": "pass", "reason": f"Exact technical support {suffix}."}]} for suffix in ("a", "b")]
@@ -271,7 +326,34 @@ class FrameworkDeclarationTests(unittest.TestCase):
         self.assertIn("Frozen subject: host/a", rendered)
         self.assertIn("Objective outcome example.objective@1: PASS", rendered)
         self.assertIn("Technical outcome example.check-a: PASS", rendered)
-        self.assertIn("Plan alignment: plan_aligned", rendered)
+        self.assertIn("Plan alignment: Aligned with the supplied comparison operation.", rendered)
+        self.assertIn("Plan alignment: Unavailable; no comparable plan was supplied.", rendered)
+        self.assertIn("Selected evidence within recorded age limits: 1 dependency.", rendered)
+        self.assertIn(
+            "Dependency observation for example.check-a: Timely; evidence evidence/a, "
+            "collected 2026-08-31T00:00:00Z, recorded maximum age 86400s.",
+            rendered,
+        )
+        self.assertIn(
+            "Evidence stale — reassessment due; timeliness unavailable for 1 required dependency.",
+            rendered,
+        )
+        self.assertIn(
+            "Dependency secondary for example.check-b: Timeliness unavailable; "
+            "recorded maximum age 3600s.",
+            rendered,
+        )
+        self.assertIn("Recorded waivers: None.", rendered)
+        self.assertIn(
+            "Recorded waiver waiver/b for example.check-b: expired; valid from "
+            "2026-08-01T00:00:00Z through 2026-08-31T00:00:00Z.",
+            rendered,
+        )
+        for internal in (
+            "plan_alignment_unavailable", "recorded_max_age", "collected_at",
+            '"qualification":', '"dependencies":', "{",
+        ):
+            self.assertNotIn(internal, rendered)
 
     def test_missing_assessed_history_is_attributable_and_not_established(self):
         item = declaration()
