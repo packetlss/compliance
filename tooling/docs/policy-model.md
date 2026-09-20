@@ -1,7 +1,6 @@
 # Policy and Baseline Model
 
-Status: **Working draft (v0.1)**  
-Last updated: **2026-09-13**
+Status: **Current experimental policy and assessment contract**
 
 This document describes how policy as code can represent host configuration,
 software baselines, SaaS settings, and other state expressible as JSON without
@@ -9,7 +8,7 @@ placing policy on the governed object.
 
 ## 1. Boundary
 
-The evaluation service has one job:
+Assessment has one job:
 
 > Given a subject, its typed evidence, its resolved baseline, active waivers,
 > and its operation-bound member plan, produce deterministic control results.
@@ -21,11 +20,10 @@ Governed objects do not receive policy bundles.
 flowchart LR
     O[Observed state] --> C[Collector]
     C -->|typed JSON| V[Schema validation]
-    V --> S[Evidence store]
-    S --> I[Assessment input builder]
+    V --> I[Assessment input builder]
     H[Hierarchy and assignments] --> I
     I --> OPA[OPA evaluator]
-    P[Signed policy bundle] --> OPA
+    P[Explicit materialized policy sources] --> OPA
     OPA --> U[Underlying control decisions]
     W[Active waivers] --> R[Waiver result resolver]
     U --> R
@@ -57,7 +55,7 @@ configuration-management output.
 
 ### Two policy paths, one assessment plan
 
-The platform intentionally supports both operational desired-state enforcement
+The platform intentionally supports both technical desired-state assessment
 and higher-level control assurance. They share inventory resolution, typed
 evidence, OPA implementations, immutable plans, and technical result contracts,
 but they make different claims:
@@ -303,7 +301,7 @@ provenance, even though it does not change the pass/fail logic.
 ## 3. Evidence is an open set of extensible typed JSON documents
 
 “Any JSON” should mean that new evidence types and additional collector fields
-can be added without changing the evaluator service. It should not mean that
+can be added without changing the evaluator. It should not mean that
 policies consume unversioned, unvalidated blobs.
 
 Every document uses a small common envelope and an evidence-type-specific
@@ -393,8 +391,8 @@ Evidence schemas define a **minimum compatibility contract**:
 - Objects permit additional properties, including nested objects where
   extension is expected.
 - Collectors may emit richer documents than current controls consume.
-- The evidence store preserves unknown fields and the assessment input builder
-  does not silently discard them.
+- Complete Evidence documents preserve unknown fields; the assessment input
+  builder does not silently discard them.
 - Undefined extension fields remain complete-document, identity-bearing content,
   but are not supported control inputs until their meaning and type are declared
   by that evidence type's payload schema.
@@ -795,17 +793,10 @@ network calls during evaluation.
 }
 ```
 
-The semantic unit of evaluation is one control instance for one subject, and
-OPA always returns an independently attributable result for each control. The
-transport/execution granularity remains deliberately open:
-
-- **Per-control execution** keeps inputs bounded, supports targeted evaluation
-  when one evidence type arrives, and isolates broken controls.
-- **Whole-plan execution** reduces call overhead and gives OPA the complete
-  generated baseline, but requires stronger isolation of policy errors.
-
-Both use the same assessment plan and result contract. We should prototype and
-measure both before selecting the evaluator API.
+The semantic unit of evaluation is one control instance for one subject. The
+current Python evaluator invokes the OPA CLI per eligible active control and retains
+an independently attributable decision. This implementation does not establish a
+frozen transport API or a service-hosting requirement.
 
 The waiver catalog is a separate project input resolved after plan rendering and
 does not change the desired-policy digest or result identity as a whole. Rego deliberately receives
@@ -1079,36 +1070,18 @@ composition against planning before invoking OPA. Production deployments should
 pin immutable source artifacts; unpinned co-located or externally materialized
 directories are local-development transport.
 
-## 10. Policy build gates
+## 10. Policy validation and release ownership
 
-A policy-source candidate is releasable only if it passes:
+Policy admission validates resource schemas, evidence contracts, references,
+parameters, baseline/realization resolution and declared Rego entrypoints.
+Component gates own focused schema/Rego tests; canonical scenarios own composed
+assessment behavior. See [tooling validation](validation.md) and
+[control-library validation](../../policy-sources/control-library/docs/validation.md).
 
-1. formatting and static analysis;
-2. Rego unit tests, including missing and stale evidence cases;
-3. JSON Schema validation for fixtures, control manifests, technical baselines,
-   requirements, requirement baselines, and realizations;
-4. evidence-schema existence, type, subject-compatibility, and meta-schema checks;
-5. effective control-parameter validation, Rego compilation, and proof that
-   every declared entrypoint exists;
-6. DAG and baseline resolution tests, including cycles and conflicts;
-7. deterministic assessment-plan rendering tests;
-8. contract tests asserting the common result shape;
-9. bundle build validation;
-10. signing and publication under an immutable revision.
-
-Production promotion should reference the bundle digest, not a mutable tag.
-
-## 11. Choices still open
-
-- How Git-backed group definitions and assignments integrate with runtime
-  inventory membership and label provenance.
-- Whether evidence is push-based, pull-based, or both.
-- Whether a collection run must create an atomic multi-document snapshot.
-- Whether source manifests remain dependency-free JSON or also support YAML.
-- Whether evaluation executes one control or one complete plan per OPA call.
-- Whether the first evaluator wraps the OPA CLI, embeds OPA as a library, or
-  talks to a long-running OPA server.
-- Which implementation language hosts the input builder and evaluation API.
+The [release contract](release-distribution.md) defines provider-neutral artifacts,
+exact content identity and acquisition validation. Signing, hosted publication and
+service activation are not core requirements. Collection transport, scheduling and
+retention belong to the surrounding operating environment.
 
 ## Historical evidence use and query-time timeliness
 

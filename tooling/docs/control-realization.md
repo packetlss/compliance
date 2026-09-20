@@ -324,7 +324,7 @@ Private project inventory and assignments
               +
 Local typed evidence
               ↓
-Local compiler, planner, OPA evaluator, and result store
+Local planner and OPA evaluator -> exact plans/results
 ```
 
 Shared policy distribution is one-way. The central repository does not clone,

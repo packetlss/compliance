@@ -16,12 +16,11 @@ This root owns reusable controls and helpers, control parameter schemas, policy/
 [ADR 0016](../../docs/adr/0016-closed-world-policy-assessment.md) supersedes ADRs
 0013–0015. Reusable evidence/requirement contracts support explicitly supplied
 company policy; governance owns external applicability and sufficiency. Mappings
-are attributable policy/reporting content. Selected evidence contracts and exact
-beneficiary dependencies constrain assurance; no generic certificate, recognition
-or external completeness machinery is required. #78 implements the bounded accounting
-and typed assertion cutover. #37 is completed promotion history; any residual
-architecture requires a new focused exploration, and no broader assurance subsystem
-is authorized.
+are attributable policy/reporting content. Descriptive evidence is admitted only
+for complete Governed Policy criteria under
+[ADR 0022](../../docs/adr/0022-criterion-ownership-and-external-judgment-retirement.md).
+Governance retains reviewed external/non-core determinations. No generic certificate,
+recognition or external completeness machinery belongs to this source.
 
 ## Validation
 

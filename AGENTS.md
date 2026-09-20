@@ -49,11 +49,12 @@ Implementation-local questions may be resolved only when they do not change sema
 - Missing, stale, invalid, or inconclusive required evidence produces `unknown`, never `pass`; authored realization/adoption state is not implementation evidence.
 - The provenance-bearing assessment plan is the external-adapter handoff. Backend compilation, credentials/state, apply authority, and executable adapter/plugin runtime remain outside the core.
 - Real private inventory, evidence, realizations, credentials, secrets, provider state, and results stay outside this repository.
-- Generated evidence, plans, results, caches, and adapter/backend output are non-authoritative and untracked.
+- Generated evidence, plans, results, caches, and adapter/backend output are untracked execution material, not authored policy. Retained validated plans/results preserve their exact historical assertion.
 - Verification policy remains source-only with no independent hosted release lane.
 - Firewall and network-policy work is out of scope unless explicitly reopened.
 
-ADR 0007 successor implementation remains bounded by its destination issues. Until consumers cut over, preserve the experimental runtime contracts required by active source. Detailed requirement/realization assurance semantics remain separately routed; do not redesign them incidentally.
+Detailed requirement/realization assurance contracts remain separately routed; do
+not redesign them incidentally.
 
 ## Validation and pull requests
 
