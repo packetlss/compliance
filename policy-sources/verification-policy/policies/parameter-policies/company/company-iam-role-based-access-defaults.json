@@ -1,0 +1,29 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "ParameterPolicy",
+  "metadata": {
+    "id": "company.iam.role-based-access-defaults",
+    "revision": 1
+  },
+  "spec": {
+    "extends": {
+      "policy": "company.iam.role-based-access@1",
+      "digest": "sha256:9e8778f762655d5795c1acedd10b615dfb07b12146ca34c65ebf6c9575808778"
+    },
+    "parameter_operations": [
+      {
+        "id": "bind-privileged-evidence-age",
+        "op": "bind",
+        "target": {
+          "policy": "company.iam.role-based-access@1",
+          "digest": "sha256:9e8778f762655d5795c1acedd10b615dfb07b12146ca34c65ebf6c9575808778",
+          "slot": "privileged_evidence_max_age",
+          "declaration_digest": "sha256:60e6fa8b374cb80376184db306b3938ca18e061b048e8af644359bd531347765",
+          "schema_digest": "sha256:df1833621754da9c010c07003bf8263267b0be0cec26073a552880a9cea1fcc5"
+        },
+        "expected_parent_fingerprint": "sha256:0a5348731e170effe2a1f2c25640418c62feb5d2667cabfda35722c06975cde2",
+        "to": "24h"
+      }
+    ]
+  }
+}

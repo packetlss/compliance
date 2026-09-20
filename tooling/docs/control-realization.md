@@ -1,6 +1,6 @@
 # Control Requirements and Environment Realizations
 
-Status: **Implemented experimental contract — ADR 0024 Tranche A (#199)**
+Status: **Implemented experimental contract — ADR 0024 Tranches A/B (#199/#201)**
 
 This optional layer connects a reviewed Objective to one complete policy-authored
 demonstration for an applicable subject. Direct technical policy remains valid
@@ -8,11 +8,11 @@ without an Objective wrapper. [ADR 0024](../../docs/adr/0024-objective-assurance
 owns the accepted semantics; [ADR 0023](../../docs/adr/0023-foundational-semantic-responsibility-boundaries.md)
 freezes Evidence and Assessment responsibilities and meanings.
 
-Parameter ownership and frozen parameter summaries remain the current
-[ADR 0012 parameter contract](policy-parameters.md) pending Tranche B. This checkpoint
-does not introduce ParameterPolicy, change assignment, or migrate authorized software
-to direct technical consumption. Active parameter-bearing RequirementBaseline
-contracts remain; only genuine Objective membership creates assessment rows.
+Parameter ownership is the separate implemented
+[ParameterPolicy contract](policy-parameters.md). ControlRealization owns only the
+symbolic links consumed by its authored Checks. RequirementBaseline remains
+Objective grouping only; direct technical policy can consume the same typed values
+without an Objective wrapper.
 
 ## 1. Problem
 
@@ -143,17 +143,16 @@ complete and valid assessment for its intended scope, not a missing objective.
 
 ## 3. Technology-neutral requirement
 
-System [ADR 0012](../../docs/adr/0012-explicit-policy-parameter-resolution.md)
-accepts technology-neutral parameter declarations and explicit RequirementBaseline
-bindings/parameter-only derivation, with realization links from exact semantic
-slots into required technical/evidence/freshness dependency inputs. Plans
-materialize those values with provenance; copied literals do not supply the
-semantic linkage. [#73](https://github.com/packetlss/compliance/issues/73) implements this migration;
-[the parameter contract](policy-parameters.md) defines its concrete fields and identity
-projection. Realizations still declare their complete checks, with explicit symbolic
-links for semantic parameters. ADR 0024 Tranche A separately represents missing
-realizations as implementation gaps and removes the redundant satisfaction
-expression; complete Check membership and provenance-only `based_on` remain.
+System [ADR 0024](../../docs/adr/0024-objective-assurance-and-parameter-policy.md)
+assigns technology-neutral parameter declarations and explicit derivation to
+ParameterPolicy. A realization owns links from exact ParameterPolicy slots into its
+required technical, Evidence-input and freshness destinations. Plans materialize
+those values with provenance; copied literals do not supply the semantic linkage.
+[The parameter contract](policy-parameters.md) defines the concrete fields and
+identity projection. Realizations still declare their complete checks. ADR 0024
+Tranche A separately represents missing realizations as implementation gaps and
+removes the redundant satisfaction expression; complete Check membership and
+provenance-only `based_on` remain.
 Broader assurance and external-claim authority require separate promoted work.
 
 A `ControlRequirement` is suitable for a signed company-policy release. It has a

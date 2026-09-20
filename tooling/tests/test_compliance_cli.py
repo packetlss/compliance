@@ -40,6 +40,7 @@ class ComplianceCliTests(unittest.TestCase):
             },
             "resolved_groups": [],
             "assignments": [],
+            "parameters": {"documents": [], "applicability": [], "consumers": []},
             "resolved_baselines": [],
             "resolved_requirement_baselines": [],
             "requirements": [],

@@ -79,6 +79,7 @@ def member_plan_projection(document: dict) -> dict:
         'subject': copy.deepcopy(subject),
         'resolved_groups': _member_resolved_groups(document),
         'assignments': copy.deepcopy(document['assignments']),
+        'parameters': copy.deepcopy(document['parameters']),
         'resolved_baselines': copy.deepcopy(document['resolved_baselines']),
         'resolved_requirement_baselines': copy.deepcopy(document['resolved_requirement_baselines']),
         'requirements': copy.deepcopy(document['requirements']),

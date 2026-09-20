@@ -1,6 +1,6 @@
 # ADR 0024: Separate Objective assurance from governed parameter policy
 
-- **Status:** Accepted; Tranche A implemented under #199, Tranche B pending; experimental representation
+- **Status:** Accepted; Tranche A implemented under #199, Tranche B implemented under #201; experimental representation
 - **Date:** 2026-09-20
 - **Contract:** [#192](https://github.com/packetlss/compliance/issues/192)
 - **Supersedes in part:** [ADR 0012](0012-explicit-policy-parameter-resolution.md), parameter ownership and redundant frozen representation; [ADR 0016](0016-closed-world-policy-assessment.md), fabricated missing-realization adoption and failing-Requirement representation
@@ -19,9 +19,8 @@ Repeated frozen parameter states duplicate deterministically reconstructable fac
 This documentation decision succeeds the affected representation, not the frozen
 responsibilities. The [realization](../../tooling/docs/control-realization.md) and
 [parameter](../../tooling/docs/policy-parameters.md) contracts describe the current
-experimental implementation until coordinated follow-on cutover. This tranche
-changes no schemas, runtime, maintained policy, artifacts or identity algorithms.
-Examples below specify semantics, not final field spellings.
+experimental implementation. Tranches A and B performed the coordinated cutover;
+examples below remain semantic rather than a schema or wire freeze.
 
 ## Decision
 

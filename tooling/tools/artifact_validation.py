@@ -141,9 +141,7 @@ def _frozen_meaning_errors(document: JsonObject) -> list[str]:
             definitions[control["implementation"]] = definition
 
     for index, baseline in enumerate(document["resolved_requirement_baselines"]):
-        ancestry = baseline.get("parameter_derivation", {}).get("ancestry", [])
-        selected = ancestry[-1] if ancestry else None
-        selected_document = selected.get("document") if isinstance(selected, dict) else None
+        selected_document = baseline.get("document")
         if isinstance(selected_document, dict):
             frozen_title = selected_document.get("spec", {}).get("title")
             if frozen_title != baseline["title"]:

@@ -1,13 +1,11 @@
 {
   "apiVersion": "compliance.example/v1alpha1",
-  "kind": "ControlRequirement",
+  "kind": "ParameterPolicy",
   "metadata": {
     "id": "company.authorized-software",
     "revision": 1
   },
   "spec": {
-    "title": "Only authorized software is installed",
-    "statement": "Installed package IDs must belong to the effective authorized-software set.",
     "parameters": {
       "allowed_software": {
         "required": true,
@@ -16,7 +14,7 @@
           "company.authorized-software-base"
         ],
         "schema": {
-          "$id": "https://compliance.example/schemas/requirements/company.authorized-software/parameters/allowed_software/v1.schema.json",
+          "$id": "https://compliance.example/schemas/parameter-policies/company.authorized-software/parameters/allowed_software/v1.schema.json",
           "type": "array",
           "uniqueItems": true,
           "items": {
@@ -24,7 +22,7 @@
             "minLength": 1
           }
         },
-        "schema_digest": "sha256:97dc85e04e624b64e9962bc7e9387080bef130447a415c491d05b9370a961f94",
+        "schema_digest": "sha256:ad415ae55b4c9207a24b924f43fac0ebee7e7f05dd427fb34b819326ae032394",
         "composition": {
           "kind": "additive-set"
         }

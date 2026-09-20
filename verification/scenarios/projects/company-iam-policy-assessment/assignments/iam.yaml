@@ -5,3 +5,5 @@ spec:
   targetRef: {kind: InventoryGroup, name: company-iam-hosts}
   baselineRefs:
     - {name: company.identity-access-objectives, revision: "1"}
+  parameterPolicyRefs:
+    - {name: company.iam.role-based-access-defaults, revision: "1"}

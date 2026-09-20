@@ -1,0 +1,26 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "ParameterPolicy",
+  "metadata": {
+    "id": "company.iam.role-based-access",
+    "revision": 1
+  },
+  "spec": {
+    "parameters": {
+      "privileged_evidence_max_age": {
+        "required": true,
+        "binding_mode": "open",
+        "binding_scope": [
+          "company.iam.role-based-access-defaults"
+        ],
+        "schema": {
+          "$id": "https://compliance.example/schemas/parameter-policies/company.iam.role-based-access/parameters/privileged_evidence_max_age/v1.schema.json",
+          "type": "string",
+          "pattern": "^[1-9][0-9]*[smhd]$"
+        },
+        "schema_digest": "sha256:df1833621754da9c010c07003bf8263267b0be0cec26073a552880a9cea1fcc5",
+        "representation": "duration"
+      }
+    }
+  }
+}

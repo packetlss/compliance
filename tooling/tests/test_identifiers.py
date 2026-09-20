@@ -6,7 +6,7 @@ from tools.identifiers import (
     is_canonical_control_evidence_inputs_schema_id,
     is_canonical_control_parameter_schema_id,
     is_canonical_evidence_schema_id,
-    is_canonical_requirement_parameter_schema_id,
+    is_canonical_parameter_policy_schema_id,
 )
 
 
@@ -22,9 +22,9 @@ class SchemaIdentityTests(unittest.TestCase):
             "adopter.control",
             "observation",
         ))
-        self.assertTrue(is_canonical_requirement_parameter_schema_id(
-            host + "/schemas/requirements/adopter.requirement/parameters/review_age/v4.schema.json",
-            "adopter.requirement",
+        self.assertTrue(is_canonical_parameter_policy_schema_id(
+            host + "/schemas/parameter-policies/adopter.policy/parameters/review_age/v4.schema.json",
+            "adopter.policy",
             "review_age",
         ))
         self.assertTrue(is_canonical_evidence_schema_id(
@@ -64,14 +64,14 @@ class SchemaIdentityTests(unittest.TestCase):
             "adopter.control",
             "observation",
         ))
-        self.assertFalse(is_canonical_requirement_parameter_schema_id(
-            host + "/schemas/requirements/other.requirement/parameters/review_age/v1.schema.json",
-            "adopter.requirement",
+        self.assertFalse(is_canonical_parameter_policy_schema_id(
+            host + "/schemas/parameter-policies/other.policy/parameters/review_age/v1.schema.json",
+            "adopter.policy",
             "review_age",
         ))
-        self.assertFalse(is_canonical_requirement_parameter_schema_id(
-            host + "/schemas/requirements/adopter.requirement/parameters/other_slot/v1.schema.json",
-            "adopter.requirement",
+        self.assertFalse(is_canonical_parameter_policy_schema_id(
+            host + "/schemas/parameter-policies/adopter.policy/parameters/other_slot/v1.schema.json",
+            "adopter.policy",
             "review_age",
         ))
         self.assertFalse(is_canonical_evidence_schema_id(

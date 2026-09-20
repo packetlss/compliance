@@ -1,0 +1,32 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "ParameterPolicy",
+  "metadata": {
+    "id": "company.authorized-software-base",
+    "revision": 1
+  },
+  "spec": {
+    "extends": {
+      "policy": "company.authorized-software@1",
+      "digest": "sha256:10b21485433955f07d91ead54705b4b55b555c214708a2df1ca93db709367fd3"
+    },
+    "parameter_operations": [
+      {
+        "id": "bind-allowed-software",
+        "op": "bind",
+        "target": {
+          "policy": "company.authorized-software@1",
+          "digest": "sha256:10b21485433955f07d91ead54705b4b55b555c214708a2df1ca93db709367fd3",
+          "slot": "allowed_software",
+          "declaration_digest": "sha256:07c4fe1ddefd89acb9eb6b0028020ae1e381239501119e607384a5acd97ac035",
+          "schema_digest": "sha256:ad415ae55b4c9207a24b924f43fac0ebee7e7f05dd427fb34b819326ae032394"
+        },
+        "expected_parent_fingerprint": "sha256:62647fa711b926699a2fdfa3f1a95d506a1fa4cda2abc26de0d7b2c3d9db82dd",
+        "to": [
+          "auditd",
+          "curl"
+        ]
+      }
+    ]
+  }
+}

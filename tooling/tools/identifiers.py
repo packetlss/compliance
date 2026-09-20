@@ -101,15 +101,15 @@ def is_canonical_control_evidence_inputs_schema_id(
     )
 
 
-def is_canonical_requirement_parameter_schema_id(
+def is_canonical_parameter_policy_schema_id(
     value: str,
-    requirement_id: str,
+    policy_id: str,
     slot: str,
 ) -> bool:
-    if not re.fullmatch(ID, requirement_id) or not re.fullmatch(SLOT, slot):
+    if not re.fullmatch(ID, policy_id) or not re.fullmatch(SLOT, slot):
         return False
     path = re.escape(
-        f"/schemas/requirements/{requirement_id}/parameters/{slot}/"
+        f"/schemas/parameter-policies/{policy_id}/parameters/{slot}/"
     )
     return _is_canonical_https_schema_uri(
         value,

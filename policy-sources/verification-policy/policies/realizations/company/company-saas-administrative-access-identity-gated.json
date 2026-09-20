@@ -8,7 +8,7 @@
   "spec": {
     "requirement": {
       "requirement": "company.administrative-access.identity-gated@1",
-      "digest": "sha256:c7aab5b7f10e6df44c7bc48cfd5c2ae9cb3d3c29bb7bb209d36963afc4da8b04"
+      "digest": "sha256:330ee10c73d00f1e5069cb7dd1ff6c7fc0089ed20025a4e1d9d691777424b378"
     },
     "applies_to": {
       "subject_types": [

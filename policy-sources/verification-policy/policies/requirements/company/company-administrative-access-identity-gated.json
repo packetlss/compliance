@@ -12,7 +12,6 @@
   "spec": {
     "title": "Administrative access is gated by managed identity controls",
     "statement": "Interactive administrative access is gated by centrally managed identity controls, and unmanaged local or guest access paths are disabled.",
-    "rationale": "Restricting administrative access to managed identity paths makes access governance and revocation consistent across platform types.",
-    "parameters": {}
+    "rationale": "Restricting administrative access to managed identity paths makes access governance and revocation consistent across platform types."
   }
 }

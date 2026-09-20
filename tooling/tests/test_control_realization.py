@@ -21,53 +21,6 @@ from tools.operation import plan_disposition
 
 
 class ControlRealizationTests(unittest.TestCase):
-    def test_distinct_revisions_cannot_split_stable_parameter_identity(self):
-        from tools import policy_parameters as pp
-        from tools.artifact_validation import validate_assessment_plan, ArtifactValidationError
-        from tools.assessment_provenance import artifact_digest
-        subject, groups, assignments = load_inventory_inputs(
-            self.root / 'iam/inventory', self.root / 'iam/assignments',
-            'host/restricted-linux-01', self.root / 'schemas/inventory/resource.schema.json')
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            for revision, value in ((1, '30d'), (2, '15d')):
-                requirement = copy.deepcopy(self.requirement)
-                requirement['metadata'].update(id='review.same-objective', revision=revision)
-                schema = {
-                    '$id': 'https://compliance.example/schemas/requirements/review.same-objective/parameters/privileged_evidence_max_age/v1.schema.json',
-                    'type': 'string',
-                }
-                requirement['spec']['parameters'] = {'privileged_evidence_max_age': {
-                    'required': True, 'binding_mode': 'fixed', 'value': value,
-                    'representation': 'duration', 'schema': schema, 'schema_digest': pp.digest(schema)}}
-                baseline = copy.deepcopy(self.baseline)
-                baseline['metadata'].update(id=f'review.baseline-{revision}', revision=1)
-                baseline['spec'] = {
-                    'title': f'Review baseline {revision}',
-                    'requirements': [{
-                        'requirement': f'review.same-objective@{revision}',
-                        'digest': pp.digest(requirement),
-                    }],
-                }
-                for folder, document in (('requirements', requirement), ('requirement-baselines', baseline)):
-                    (root / folder).mkdir(exist_ok=True)
-                    (root / folder / f'{revision}.json').write_text(json.dumps(document))
-            sources = (PolicySource('control-library', self.root / 'shared'), PolicySource('review', root))
-            assignments[0]['baselines'] = ['review.baseline-1@1', 'review.baseline-2@1']
-            for reverse in (False, True):
-                if reverse:
-                    assignments[0]['baselines'].reverse()
-                plan = render_plan(subject, groups, assignments, sources)
-                self.assertEqual(plan_disposition(plan), 'invalid')
-                self.assertTrue(any('stable parameter identity conflict' in e.get('message', '')
-                                    for e in plan['resolution']['errors']))
-            # Model an artifact emitted before stable-identity reconciliation existed.
-            with patch.object(pp, 'reconcile_selected_slots'):
-                unreconciled = render_plan(subject, groups, assignments, sources)
-            self.assertEqual(plan_disposition(unreconciled), 'result_required')
-            unreconciled['id'] = artifact_digest(unreconciled)
-            with self.assertRaisesRegex(ArtifactValidationError, 'stable parameter identity conflict'):
-                validate_assessment_plan(unreconciled)
 
     @classmethod
     def setUpClass(cls):

@@ -632,11 +632,10 @@ class AssessmentV4Tests(unittest.TestCase):
         requirement_baseline = shell['resolved_requirement_baselines'][0]
         requirement_baseline['baseline'] = 'test.requirements@1'
         requirement_baseline['reference'] = 'test.requirements@1'
-        selected = requirement_baseline['parameter_derivation']['ancestry'][-1]
-        selected['reference'] = 'test.requirements@1'
-        selected['document']['metadata']['id'] = 'test.requirements'
-        selected['digest'] = parameters.digest(selected['document'])
-        requirement_baseline['digest'] = selected['digest']
+        requirement_baseline['document']['metadata']['id'] = 'test.requirements'
+        requirement_baseline['digest'] = parameters.digest(
+            requirement_baseline['document']
+        )
         shell['requirements'][0]['provenance'][0]['baseline'] = 'test.requirements@1'
         for key in ('requirements', 'resolved_requirement_baselines'):
             self.plan[key] = shell[key]

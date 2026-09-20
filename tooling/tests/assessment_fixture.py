@@ -31,7 +31,9 @@ def assessment_plan(policy_sources, *, with_requirement=False):
             "id": "test-policy",
             "group": "test-hosts",
             "baselines": ["test.baseline@1"],
+            "parameter_policies": [],
         }],
+        "parameters": {"documents": [], "applicability": [], "consumers": []},
         "resolved_baselines": [],
         "resolved_requirement_baselines": [],
         "requirements": [],
@@ -289,13 +291,21 @@ def freeze_policy_inputs(plan):
     requirements = {}
     for record in plan['requirements']:
         identifier, revision = record['reference'].rsplit('@', 1)
-        doc = {'metadata': {'id': identifier, 'revision': revision}, 'spec': {'title': record['title'], 'statement': record['statement'], 'external_refs': copy.deepcopy(record['external_refs'])}}
+        doc = {
+            'apiVersion': 'compliance.example/v1alpha1',
+            'kind': 'ControlRequirement',
+            'metadata': {'id': identifier, 'revision': revision},
+            'spec': {'title': record['title'], 'statement': record['statement'],
+                     'external_refs': copy.deepcopy(record['external_refs'])},
+        }
         record['digest'] = pp.digest(doc)
+        record['document'] = copy.deepcopy(doc)
         requirements[record['reference']] = doc
-        facts = {'document': doc, 'states': {}}
         if 'realization' in record:
             rid, rev = record['realization']['reference'].rsplit('@', 1)
-            realization = {'metadata': {'id': rid, 'revision': rev}, 'spec': {
+            realization = {'apiVersion': 'compliance.example/v1alpha1',
+                           'kind': 'ControlRealization',
+                           'metadata': {'id': rid, 'revision': rev}, 'spec': {
                 'requirement': {'requirement': record['reference'], 'digest': record['digest']},
                 'adoption': copy.deepcopy(record['adoption']),
                 'checks': [copy.deepcopy(c['policy_inputs']['instance']) for c in plan['controls'] if c['instance_id'] in record['technical_instance_ids']]}}
@@ -304,8 +314,7 @@ def freeze_policy_inputs(plan):
                     record['realization']['based_on']
                 )
             record['realization']['digest'] = pp.digest(realization)
-            facts.update(realization=realization, consumption=[])
-        record['parameter_facts'] = facts
+            record['realization']['document'] = realization
     for baseline in plan['resolved_requirement_baselines']:
         identifier, revision = baseline['reference'].rsplit('@', 1)
         for pin in baseline['requirements']:
@@ -313,9 +322,9 @@ def freeze_policy_inputs(plan):
         doc = {'metadata': {'id': identifier, 'revision': revision},
                'spec': {'title': baseline['title'],
                         'requirements': copy.deepcopy(baseline['requirements'])}}
-        states, ancestry = pp.resolve(baseline['reference'], {baseline['reference']: {**doc, '_sources': baseline['policy_sources']}}, requirements)
+        doc.update(apiVersion='compliance.example/v1alpha1', kind='RequirementBaseline')
         baseline['digest'] = pp.digest(doc)
-        baseline['parameter_derivation'] = {'states': states, 'ancestry': ancestry}
+        baseline['document'] = copy.deepcopy(doc)
     refresh_operation(plan)
 
 
@@ -333,7 +342,9 @@ def refresh_operation(plan):
             else:
                 for child in source['via']:
                     groups[child]['parents'].append(resolved['id'])
-    assignments = [{'id': a['id'], 'target': {'group': a['group']}, 'baselines': a['baselines']}
+    assignments = [{'id': a['id'], 'target': {'group': a['group']},
+                    'baselines': a['baselines'],
+                    'parameter_policies': a.get('parameter_policies', [])}
                    for a in plan['assignments']]
     freeze_operation([plan], {plan['subject']['id']: plan['subject']}, list(groups.values()), assignments,
                      {'subjects': [plan['subject']['id']], 'groups': [], 'all': False})

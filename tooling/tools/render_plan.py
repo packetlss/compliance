@@ -48,6 +48,11 @@ REQUIREMENT_POLICY_KINDS = {
     "RequirementBaseline": ("requirement-baselines", "requirement-baseline.schema.json"),
     "ControlRealization": ("realizations", "control-realization.schema.json"),
 }
+PARAMETER_POLICY_KIND = (
+    "ParameterPolicy",
+    "parameter-policies",
+    "parameter-policy.schema.json",
+)
 EVIDENCE_ENVELOPE_FIELDS = (
     "schema",
     "id",
@@ -178,7 +183,11 @@ def normalize_assignment(document: JsonObject) -> JsonObject:
         "target": {"group": spec["targetRef"]["name"]},
         "baselines": [
             f'{reference["name"]}@{reference["revision"]}'
-            for reference in spec["baselineRefs"]
+            for reference in spec.get("baselineRefs", [])
+        ],
+        "parameter_policies": [
+            f'{reference["name"]}@{reference["revision"]}'
+            for reference in spec.get("parameterPolicyRefs", [])
         ],
     }
 
@@ -1228,6 +1237,7 @@ def load_policy_catalogs(
         policy_sources,
         controls,
     )
+    _, parameter_policy_errors = load_parameter_policy_catalogs(policy_sources)
     assignment_reference_collisions = sorted(set(catalog) & set(requirement_baselines))
     collision_errors = [
         {
@@ -1244,6 +1254,7 @@ def load_policy_catalogs(
         *baseline_errors,
         *evidence_errors,
         *requirement_errors,
+        *parameter_policy_errors,
         *collision_errors,
     ]
     if errors:
@@ -1273,13 +1284,29 @@ def load_policy_catalogs(
                 })
                 continue
 
+            links = [
+                link for link in baseline.get("parameter_links", [])
+                if link["destination"]["instance_id"] == instance_id
+            ]
+            if not links:
+                try:
+                    pp.evidence_for(instance, definition)
+                except (ValueError, KeyError) as error:
+                    errors.append({"type": "policy-freshness-invalid", "baseline": reference, "instance_id": instance_id, "message": str(error)})
+            linked_paths = {
+                link["destination"]["path"] for link in links
+                if link["destination"]["kind"] == "parameters"
+            }
             try:
-                pp.evidence_for(instance, definition)
-            except (ValueError, KeyError) as error:
-                errors.append({"type": "policy-freshness-invalid", "baseline": reference, "instance_id": instance_id, "message": str(error)})
+                parameter_schema = pp.partial_parameter_schema(
+                    definition["_parameters_schema"], linked_paths
+                )
+            except ValueError as error:
+                errors.append({"type": "parameter-destination-invalid", "baseline": reference, "message": str(error)})
+                continue
             validation_errors = sorted(
                 Draft202012Validator(
-                    definition["_parameters_schema"],
+                    parameter_schema,
                     format_checker=FormatChecker(),
                 ).iter_errors(instance.get("parameters", {})),
                 key=lambda error: (
@@ -1424,11 +1451,6 @@ def load_requirement_catalogs(
     if errors:
         return requirements, requirement_baselines, realizations, errors
 
-    for reference, requirement in sorted(requirements.items()):
-        try:
-            pp.declarations(requirement)
-        except (ValueError, KeyError) as error:
-            errors.append({"type": "parameter-declaration-invalid", "requirement": reference, "message": str(error)})
     for baseline_reference, baseline in sorted(requirement_baselines.items()):
         seen = set()
         for pin in baseline["spec"].get("requirements", []):
@@ -1562,6 +1584,75 @@ def load_requirement_catalogs(
                     "message": error.message,
                 })
     return requirements, requirement_baselines, realizations, errors
+
+
+def load_parameter_policy_catalogs(
+    policy_sources: PolicySources,
+) -> tuple[dict[str, JsonObject], list[JsonObject]]:
+    """Load the separate typed ParameterPolicy catalog."""
+    sources = normalize_policy_sources(policy_sources)
+    kind, directory, schema_filename = PARAMETER_POLICY_KIND
+    if not any((source.path / directory).is_dir() for source in sources):
+        return {}, []
+    schema_path, errors = _effective_schema_path(
+        sources,
+        Path("schemas/policy") / schema_filename,
+    )
+    catalog: dict[str, JsonObject] = {}
+    if schema_path is None:
+        return catalog, errors
+    for source in sources:
+        if not (source.path / directory).is_dir():
+            continue
+        incoming, incoming_errors = _load_requirement_policy_kind(
+            source.path,
+            kind,
+            directory,
+            schema_filename,
+            schema_path,
+        )
+        _qualify_catalog(incoming, source)
+        errors.extend(incoming_errors)
+        _merge_policy_catalog(
+            catalog,
+            incoming,
+            resource_kind=kind,
+            errors=errors,
+        )
+    if errors:
+        return catalog, errors
+    normalized: dict[str, JsonObject] = {}
+    for reference, policy in sorted(catalog.items()):
+        clean = pp.normalized_resource_document(policy, catalog)
+        qualified = {
+            **clean,
+            "_source": policy["_source"],
+            "_sources": copy.deepcopy(policy.get("_sources", [])),
+        }
+        qualified["_digest"] = content_digest(clean)
+        normalized[reference] = qualified
+        try:
+            pp.validate_parameter_policy_structure(qualified)
+            pp.declarations(qualified)
+        except (ValueError, KeyError, SchemaError) as error:
+            errors.append({
+                "type": "parameter-policy-invalid",
+                "policy": reference,
+                "source": qualified["_source"],
+                "message": str(error),
+            })
+    if not errors:
+        for reference in sorted(normalized):
+            try:
+                pp.resolve(reference, normalized)
+            except (ValueError, KeyError, SchemaError) as error:
+                errors.append({
+                    "type": "parameter-policy-invalid",
+                    "policy": reference,
+                    "source": normalized[reference]["_source"],
+                    "message": str(error),
+                })
+    return normalized, errors
 
 
 def validate_policy_catalog(policy_sources: PolicySources) -> tuple[dict[str, JsonObject], list[JsonObject]]:
@@ -1724,6 +1815,9 @@ def resolve_baseline(
             "digest": document["_digest"],
             "lineage": [{"reference": reference, "digest": document["_digest"]}],
             "controls": controls,
+            "parameter_links": copy.deepcopy(
+                document["spec"].get("parameter_links", [])
+            ),
             "deviations": [],
         }
         cache[reference] = copy.deepcopy(resolved)
@@ -1739,6 +1833,7 @@ def resolve_baseline(
     controls: dict[str, JsonObject] = {}
     baseline_lineage: list[JsonObject] = []
     deviations: list[JsonObject] = []
+    parameter_links: dict[str, JsonObject] = {}
     next_stack = (*stack, reference)
     parents = document["spec"].get("extends", [])
     if not parents:
@@ -1770,6 +1865,15 @@ def resolve_baseline(
 
         for instance_id, inherited in parent["controls"].items():
             inherited_controls.setdefault(instance_id, []).append((parent_pin, inherited))
+        for link in parent.get("parameter_links", []):
+            existing_link = parameter_links.get(link["id"])
+            if existing_link is not None and existing_link != link:
+                raise BaselineResolutionError(
+                    "inherited-parameter-link-conflict",
+                    baseline=reference,
+                    link=link["id"],
+                )
+            parameter_links[link["id"]] = copy.deepcopy(link)
 
     conflicts = [
         instance_id
@@ -1803,6 +1907,15 @@ def resolve_baseline(
             _append_unique(control["derivations"], inherited["derivations"])
             _append_unique(control["deviations"], inherited["deviations"])
         controls[instance_id] = control
+
+    for link in document["spec"].get("parameter_links", []):
+        if link["id"] in parameter_links:
+            raise BaselineResolutionError(
+                "duplicate-parameter-link",
+                baseline=reference,
+                link=link["id"],
+            )
+        parameter_links[link["id"]] = copy.deepcopy(link)
 
     seen_operations: set[tuple[str, str]] = set()
     for operation in document["spec"].get("operations", []):
@@ -1944,6 +2057,7 @@ def resolve_baseline(
         "digest": document["_digest"],
         "lineage": baseline_lineage,
         "controls": controls,
+        "parameter_links": [parameter_links[key] for key in sorted(parameter_links)],
         "deviations": deviations,
     }
     cache[reference] = copy.deepcopy(resolved)
@@ -1975,6 +2089,9 @@ def render_plan(
     for source_assignment in sorted(assignments, key=lambda assignment: assignment["id"]):
         assignment = copy.deepcopy(source_assignment)
         assignment["baselines"] = sorted(assignment.get("baselines", []))
+        assignment["parameter_policies"] = sorted(
+            assignment.get("parameter_policies", [])
+        )
         canonical_assignments.append(assignment)
 
     assignments = canonical_assignments
@@ -1996,14 +2113,23 @@ def render_plan(
         normalized_policy_sources,
         controls,
     )
+    parameter_policies, parameter_policy_errors = load_parameter_policy_catalogs(
+        normalized_policy_sources
+    )
     rendered_controls: dict[str, JsonObject] = {}
     excluded_controls: dict[str, JsonObject] = {}
     rendered_requirements: dict[str, JsonObject] = {}
     resolved_baselines: list[JsonObject] = []
     resolved_requirement_baselines: list[JsonObject] = []
-    resolution_errors: list[JsonObject] = copy.deepcopy(policy_errors)
+    resolution_errors: list[JsonObject] = copy.deepcopy(
+        [*policy_errors, *parameter_policy_errors]
+    )
     baseline_cache: dict[str, JsonObject] = {}
-    parameter_resolutions: dict[tuple[str, str, str], JsonObject] = {}
+    parameter_resolutions: list[JsonObject] = []
+    parameter_documents: dict[str, JsonObject] = {}
+    parameter_applicability: list[JsonObject] = []
+    parameter_consumers: dict[tuple[str, str], JsonObject] = {}
+    effective_parameter_states: dict[str, JsonObject] = {}
 
     if subject["status"] == "unknown":
         resolution_errors.append({
@@ -2012,22 +2138,20 @@ def render_plan(
         })
 
     parameter_resolution_failed = False
-    if not policy_errors:
+    if not resolution_errors:
         for assignment in applicable_assignments:
             group_id = assignment["target"]["group"]
-            for baseline_reference in assignment["baselines"]:
-                if baseline_reference not in requirement_baselines:
-                    continue
-                baseline_provenance = {
+            for policy_reference in assignment["parameter_policies"]:
+                applicability = {
                     "group": group_id,
                     "assignment": assignment["id"],
-                    "baseline": baseline_reference,
+                    "parameter_policy": policy_reference,
                 }
+                parameter_applicability.append(copy.deepcopy(applicability))
                 try:
                     parameter_states, parameter_ancestry = pp.resolve(
-                        baseline_reference,
-                        requirement_baselines,
-                        requirements,
+                        policy_reference,
+                        parameter_policies,
                     )
                     pp.complete(parameter_states)
                 except (ValueError, KeyError) as error:
@@ -2035,28 +2159,38 @@ def render_plan(
                     resolution_errors.append({
                         "type": "parameter-resolution-failed",
                         "message": str(error),
-                        **baseline_provenance,
+                        **applicability,
                     })
                     continue
-                parameter_resolutions[(assignment["id"], group_id, baseline_reference)] = {
-                    "reference": baseline_reference,
-                    "applicability": baseline_provenance,
+                parameter_resolutions.append({
+                    "reference": policy_reference,
+                    "applicability": applicability,
                     "states": parameter_states,
                     "ancestry": parameter_ancestry,
-                }
+                })
+                for ancestor in parameter_ancestry:
+                    existing = parameter_documents.get(ancestor["reference"])
+                    if existing is not None and existing != ancestor:
+                        parameter_resolution_failed = True
+                        resolution_errors.append({
+                            "type": "parameter-document-conflict",
+                            "parameter_policy": ancestor["reference"],
+                        })
+                    parameter_documents[ancestor["reference"]] = copy.deepcopy(ancestor)
         if not parameter_resolution_failed:
             try:
                 pp.compose_selected(
-                    list(parameter_resolutions.values()),
-                    requirement_baselines,
-                    requirements,
+                    parameter_resolutions,
+                    parameter_policies,
                 )
+                effective_parameter_states = pp.effective_states(parameter_resolutions)
             except (ValueError, KeyError) as error:
                 resolution_errors.append({
                     "type": "parameter-resolution-failed",
                     "message": str(error),
                 })
                 parameter_resolutions.clear()
+                effective_parameter_states.clear()
 
     for assignment in (applicable_assignments if not policy_errors else []):
         group_id = assignment["target"]["group"]
@@ -2068,20 +2202,13 @@ def render_plan(
                     "assignment": assignment["id"],
                     "baseline": baseline_reference,
                 }
-                parameter_resolution = parameter_resolutions.get(
-                    (assignment["id"], group_id, baseline_reference)
-                )
-                if parameter_resolution is None:
-                    continue
-                parameter_states = parameter_resolution["states"]
-                parameter_ancestry = parameter_resolution["ancestry"]
                 resolved_requirement_baselines.append({
                     **baseline_provenance,
                     "reference": baseline_reference,
                     "title": requirement_baseline["spec"]["title"],
                     "digest": requirement_baseline["_digest"],
                     "policy_sources": requirement_baseline.get("_sources", []),
-                    "parameter_derivation": {"ancestry": parameter_ancestry, "states": parameter_states},
+                    "document": pp.document(requirement_baseline),
                     "requirements": [
                         copy.deepcopy(pin)
                         for pin in requirement_baseline["spec"].get("requirements", [])
@@ -2135,17 +2262,18 @@ def render_plan(
                         "statement": requirement["spec"]["statement"],
                         "external_refs": requirement["spec"].get("external_refs", []),
                         "policy_sources": requirement.get("_sources", []),
+                        "document": pp.document(requirement),
                         "implementation_state": implementation_state,
                         **({"adoption": adoption} if adoption is not None else {}),
                         "technical_instance_ids": technical_ids,
                         "provenance": [baseline_provenance],
-                        "parameter_facts": {"document": pp.document(requirement), "states": parameter_states[requirement_reference]},
                     }
                     if realization is not None and realization_reference is not None:
                         requirement_candidate["realization"] = {
                             "reference": realization_reference,
                             "digest": realization["_digest"],
                             "policy_sources": realization.get("_sources", []),
+                            "document": pp.document(realization),
                             **(
                                 {"based_on": copy.deepcopy(realization["spec"]["based_on"])}
                                 if "based_on" in realization["spec"]
@@ -2156,12 +2284,21 @@ def render_plan(
                     resolved_checks = []
                     if realization is not None:
                         try:
-                            resolved_checks, consumed = pp.consume(realization, parameter_states[requirement_reference], controls)
+                            resolved_checks, consumed = pp.consume(
+                                realization,
+                                effective_parameter_states,
+                                controls,
+                            )
                         except (ValueError, KeyError) as error:
                             resolution_errors.append({"type": "parameter-consumption-failed", "message": str(error), **baseline_provenance})
                             continue
-                        requirement_candidate["parameter_facts"]["realization"] = pp.document(realization)
-                        requirement_candidate["parameter_facts"]["consumption"] = consumed
+                        if consumed:
+                            parameter_consumers[("ControlRealization", realization_reference)] = {
+                                "kind": "ControlRealization",
+                                "reference": realization_reference,
+                                "digest": realization["_digest"],
+                                "policy_sources": copy.deepcopy(realization.get("_sources", [])),
+                            }
                     existing_requirement = rendered_requirements.get(requirement_reference)
                     if existing_requirement is None:
                         rendered_requirements[requirement_reference] = requirement_candidate
@@ -2172,7 +2309,7 @@ def render_plan(
                             "adoption",
                             "technical_instance_ids",
                             "realization",
-                            "parameter_facts",
+                            "document",
                         )
                         if all(
                             existing_requirement.get(key) == requirement_candidate.get(key)
@@ -2268,6 +2405,55 @@ def render_plan(
                     "group": group_id,
                 })
                 continue
+
+            if baseline.get("parameter_links"):
+                try:
+                    materialized, _ = pp.consume_links(
+                        baseline["parameter_links"],
+                        list(baseline["controls"].values()),
+                        effective_parameter_states,
+                        controls,
+                    )
+                except (ValueError, KeyError) as error:
+                    resolution_errors.append({
+                        "type": "parameter-consumption-failed",
+                        "message": str(error),
+                        "group": group_id,
+                        "assignment": assignment["id"],
+                        "baseline": baseline_reference,
+                    })
+                    continue
+                baseline["controls"] = {
+                    item["instance_id"]: item for item in materialized
+                }
+                effective_link_ids = {
+                    link["id"] for link in baseline["parameter_links"]
+                }
+                for lineage_entry in baseline["lineage"]:
+                    owner_reference = lineage_entry["reference"]
+                    owner_document = baselines[owner_reference]
+                    links = [
+                        copy.deepcopy(link)
+                        for link in owner_document["spec"].get("parameter_links", [])
+                        if link["id"] in effective_link_ids
+                    ]
+                    if not links:
+                        continue
+                    consumer = {
+                        "kind": owner_document["kind"],
+                        "reference": owner_reference,
+                        "digest": owner_document["_digest"],
+                        "policy_sources": copy.deepcopy(owner_document.get("_sources", [])),
+                        "links": sorted(links, key=lambda item: item["id"]),
+                    }
+                    key = (owner_document["kind"], owner_reference)
+                    existing_consumer = parameter_consumers.get(key)
+                    if existing_consumer is not None and existing_consumer != consumer:
+                        resolution_errors.append({
+                            "type": "parameter-consumer-conflict",
+                            "reference": owner_reference,
+                        })
+                    parameter_consumers[key] = consumer
 
             resolved_baselines.append({
                 "assignment": assignment["id"],
@@ -2426,7 +2612,22 @@ def render_plan(
             "id": assignment["id"],
             "group": assignment["target"]["group"],
             "baselines": assignment["baselines"],
+            "parameter_policies": assignment["parameter_policies"],
         } for assignment in applicable_assignments],
+        "parameters": {
+            "documents": sorted(
+                parameter_documents.values(),
+                key=lambda item: item["reference"],
+            ),
+            "applicability": sorted(
+                parameter_applicability,
+                key=canonical_json_bytes,
+            ),
+            "consumers": sorted(
+                parameter_consumers.values(),
+                key=lambda item: (item["kind"], item["reference"]),
+            ),
+        },
         "resolved_baselines": sorted(
             resolved_baselines,
             key=lambda baseline: (baseline["assignment"], baseline["reference"]),

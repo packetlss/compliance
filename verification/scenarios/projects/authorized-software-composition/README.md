@@ -168,7 +168,11 @@ Identifiers introduced under #131 remain experimental. Implemented ADR 0019 owns
 namespace and schema-URI conventions; the #136 migration establishes no compatibility
 alias or contract freeze.
 
-Tranche A retains the current Objective-owned parameter and realization consumption.
-The contribution-only database policy creates no Objective or baseline assessment
-row; its assignment, effective value and historical attribution remain intact.
-ParameterPolicy and direct technical consumption are deferred to Tranche B.
+Tranche B uses an explicitly assigned base ParameterPolicy and independently
+applicable database contribution. A direct technical Baseline owns the consumer
+link, so no synthetic Objective, RequirementBaseline or ControlRealization is
+needed. The contribution-only policy creates no assessment row. Removing it leaves
+the valid base and turns observed PostgreSQL into an Evidence-derived technical
+FAIL; removing the required base prevents an assessable plan. Historical
+explanation and Policy Diff reconstruct complete contribution attribution from the
+exact retained ParameterPolicy documents and applicability.

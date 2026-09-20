@@ -14,14 +14,14 @@ specifies its embedded projection and concrete typed assertion examples. The
 promotion-stage statements below retain the original design history; #37 is closed
 promotion history. New residual architecture requires a focused exploration.
 
-> **Successor: Tranche A implemented under #199; parameter Tranche B pending:** [ADR 0024](0024-objective-assurance-and-parameter-policy.md)
+> **Successor: Tranche A implemented under #199; Tranche B under #201:** [ADR 0024](0024-objective-assurance-and-parameter-policy.md)
 > supersedes Requirement-owned parameters, RequirementBaseline parameter derivation/
 > contributions, realization-only consumption and duplicated frozen summaries. It
 > also replaces fabricated adoption and failing-Requirement representation for
 > implementation absence with a separately accountable implementation gap, and
 > removes redundant `satisfaction.allOf` and membership `required: true`.
-> All ADR 0023 frozen meanings remain intact. Historical/current-runtime descriptions
-> below remain migration context, not authority for successor implementation.
+> All ADR 0023 frozen meanings remain intact. Historical descriptions below remain
+> migration context, not authority for the implemented successor.
 
 ## Context and authority
 

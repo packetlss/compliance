@@ -297,7 +297,7 @@ def _member_subject(plan):
             if isinstance(selector, dict):
                 label_keys.update(selector.get('match_labels', {}))
     for requirement in plan['requirements']:
-        realization = requirement.get('parameter_facts', {}).get('realization', {})
+        realization = requirement.get('realization', {}).get('document', {})
         label_keys.update(realization.get('spec', {}).get('applies_to', {}).get('match_labels', {}))
     return {
         'id': subject['id'], 'type': subject['type'], 'status': subject['status'],
@@ -356,6 +356,7 @@ def freeze_operation(plans, subjects, groups, assignments, selection):
         'id': assignment['id'],
         'target_group': assignment['target']['group'],
         'baselines': sorted(assignment['baselines']),
+        'parameter_policies': sorted(assignment.get('parameter_policies', [])),
     } for assignment in sorted(assignments, key=lambda item: item['id'])
         if assignment['target']['group'] in selected_groups]
     projection = {
@@ -416,6 +417,8 @@ def validate_operation(document):
     for assignment in assignments:
         if assignment['baselines'] != sorted(set(assignment['baselines'])):
             raise ValueError('frozen assignment baselines must use canonical identity order')
+        if assignment['parameter_policies'] != sorted(set(assignment['parameter_policies'])):
+            raise ValueError('frozen assignment ParameterPolicies must use canonical identity order')
         if not any(assignment['target_group'] in {g['id'] for g in row['resolved_groups']}
                    for row in members):
             raise ValueError('frozen operation contains an unrelated assignment')
@@ -443,6 +446,7 @@ def validate_operation(document):
         'id': assignment['id'],
         'target_group': assignment['group'],
         'baselines': sorted(assignment['baselines']),
+        'parameter_policies': sorted(assignment.get('parameter_policies', [])),
     } for assignment in document['assignments']), key=lambda item: item['id'])
     row_groups = {group['id'] for group in row['resolved_groups']}
     expected_assignments = [assignment for assignment in assignments

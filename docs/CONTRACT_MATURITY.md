@@ -163,8 +163,9 @@ names do not create aliases for retired vocabulary or compatibility commitments.
 
 [ADR 0024](adr/0024-objective-assurance-and-parameter-policy.md) under
 [#192](https://github.com/packetlss/compliance/issues/192) has **Tranche A implemented
-under #199; Tranche B pending**. The ADR 0012 parameter representation remains active
-until Tranche B; it is an experimental migration input, not successor authority.
+under #199 and Tranche B implemented under #201**. The ParameterPolicy ownership and
+frozen representation are current experimental contracts; predecessor artifacts
+require historical tooling.
 
 The successor retains optional Objective assurance, exact zero/one/multiple
 realization resolution and conservative implemented Check outcomes. It removes
@@ -188,10 +189,9 @@ identities. No schema/wire/algorithm freeze, alias, dual reader or historical
 conversion follows. Historical artifacts keep their original tooling and meaning.
 
 Follow-on A (assurance simplification) and B (parameter ownership/representation)
-require coordinated valid checkpoints. Tranche A now implements assurance
-simplification; Tranche B parameter ownership and representation remains pending. Exact assignment
-relationships and semantic rules are settled in ADR 0024; wire layout and field
-spellings remain experimental.
+were implemented as coordinated valid checkpoints. Exact assignment relationships
+and semantic rules are settled in ADR 0024; wire layout and field spellings remain
+experimental.
 
 ## Historical/removed representations
 

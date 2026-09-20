@@ -17,7 +17,7 @@ The project composes exactly three named policy sources. `control-library`
 supplies evidence/parameter schemas and reusable controls; `verification-policy` supplies the
 synthetic requirement, requirement baseline, and ordinary company
 realization; and `environment-private` supplies this fixture's retained
-restricted realization and fictitious parameters. The restricted resource has
+restricted realization and fictitious ParameterPolicy tailoring. The restricted resource has
 no runnable copy in either central policy source and inherits no content from
 the ordinary realization.
 
@@ -41,6 +41,9 @@ The inventory contains `host/restricted-linux-01`. Its trusted
 realization. The assigned `company.identity-access-objectives@1` baseline
 expands into four independently attributable checks using
 `linux.access.setting-equals` and `linux.access.configuration/v1` evidence.
+The assignment separately selects the IAM ParameterPolicy. Its reusable base binds
+freshness to 24h; the private descendant explicitly tailors that value to 1h and the
+restricted realization fans it out through the same four required freshness links.
 
 Trusted `iam-profile` labels must select exactly one realization:
 

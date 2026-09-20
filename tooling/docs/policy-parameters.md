@@ -1,250 +1,114 @@
-# Explicit policy parameters
+# Explicit governed parameters
 
-> **Successor routing:** [ADR 0024](../../docs/adr/0024-objective-assurance-and-parameter-policy.md)
-> has Tranche A implemented under #199; parameter Tranche B remains pending. It separates Objective
-> implementation gaps from Assessment outcomes, simplifies required Check membership,
-> moves parameter ownership to explicitly assigned ParameterPolicy, supports both
-> Check-authoring consumption paths and reconstructs frozen summaries. This document
-> describes the current experimental runtime until coordinated migration; its
-> superseded representations are not the successor implementation contract.
+The current experimental contract implements [ADR 0024](../../docs/adr/0024-objective-assurance-and-parameter-policy.md)
+Tranche B under [#201](https://github.com/packetlss/compliance/issues/201).
+`ParameterPolicy` is the sole active owner of governed parameter declarations,
+base binding, descendant tailoring, ancestry and additive contributions.
+Objectives, RequirementBaselines, technical Baselines and ControlRealizations do
+not own parameter values.
 
-Current implementation contract: [#73](https://github.com/packetlss/compliance/issues/73),
-as amended by [ADR 0020](../../docs/adr/0020-governed-policy-composition-without-sealing.md)
-and implemented under [#144](https://github.com/packetlss/compliance/issues/144).
-The complete contract remains experimental and pre-freeze.
+## Resource and applicability
 
-## Current implemented representation
+A `ParameterPolicy` is addressed by exact `metadata.id@revision`. A declaration is
+owner-local and contains its typed JSON Schema, exact `schema_digest`, binding mode
+and any explicitly permitted descendant binders. Stable slot identity is
+`(ParameterPolicy metadata.id, slot)`; the exact source link additionally pins the
+owner revision/content, declaration and schema.
 
-Requirement declarations use a `parameters` object keyed by slot name. Each
-declaration contains `required`, `binding_mode` (`open` or `fixed`), an inline
-`schema` with its own `$id`, and `schema_digest`. Fixed declarations contain an
-explicit `value`. Open declarations require permitted baseline identities in
-`binding_scope`; fixed declarations may also use `binding_scope` to permit explicit
-governed descendant tailoring. Those identities constrain structure, not issuer
-authority.
-An optional `representation: duration` validates fixed positive integral
-`s`, `m`, `h`, or `d` values. A day is exactly 86400 seconds.
+`PolicyAssignment.spec.parameterPolicyRefs` is the only applicability surface for
+ParameterPolicy. It is separate from `baselineRefs`; either collection or both may
+be present, but at least one governed reference is required. Loading a resource,
+authoring a consumer link or targeting a contribution does not make a policy
+applicable. There is no ambient lookup, automatic owner import, registry, default,
+source order, assignment order, ancestry precedence or specificity rule.
 
-A slot reference contains the requirement reference and document digest, slot
-name, declaration digest and schema digest. Semantic slot identity is requirement
-metadata ID plus slot name; revision and content pins remain separately checked.
-Under [ADR 0019](../../docs/adr/0019-typed-identifier-namespaces-and-schema-uri-ownership.md),
-the stable identity is structurally `(requirement ID, owner-local snake_case slot)`;
-the exact declaration additionally includes the exact requirement reference and
-resource/declaration/schema digests. Nested schema properties remain schema-local
-fields rather than a global parameter namespace.
-Constraints and defaults never populate absent values. JSON arrays and objects
-are atomic unless a requirement slot explicitly opts into the string-only
-additive-set contract below. Duration values normalize to an integral seconds string, retaining
-authored values in declarations and operations: `1d`, `24h`, `1440m`, and `86400s`
-all materialize `86400s`; `1.5h`, `P1D`, and `1M` fail.
+A contribution-only ParameterPolicy is valid. Its applicability adds a value
+contribution only: it creates no Objective, Check, assessment row or synthetic N/A.
 
-Requirement baselines retain an explicit, unchanged requirement membership list.
-An optional exact `extends` parent pin permits parameter-only derivation. Each
-operation has an `id`, exact `target` slot reference, `expected_parent_fingerprint`,
-and `op` of `bind` or `tailor`. Binding requires open unbound state; tailoring
-requires explicit `from`, `to`, and the existing complete deviation record. Fixed
-base ownership is not descendant authority: a valid governed descendant may tailor
-an inherited fixed value. Multiple operations targeting one slot in a single
-baseline fail. Operations have no list-order precedence.
+## Derivation
 
-Realization consumption links target one named control instance, exact
-implementation ID/version/content fingerprint, and a JSON object path in its
-technical parameters or named evidence dependency. Paths never address array
-positions. Links materialize direct typed values; they do not evaluate expressions
-or convert units. The final interface is checked after any implementation choice.
-Every required slot in an implemented realization must have a required dependency
-consumer. Missing realization retains the existing independent coverage behavior.
+An exact `extends` edge pins the parent policy reference and content digest.
+`parameter_operations` contain an owner-local operation ID, `bind` or `tailor`, an
+exact source declaration link and `expected_parent_fingerprint`. Bind supplies an
+open base. Tailor additionally retains authored `from`, `to` and deviation facts.
+The runtime validates each authored expectation and exact pin; stale, missing,
+ambiguous or incompatible state fails before an assessable plan exists.
 
-Technical instance `evidence` bindings explicitly name dependencies and their
-effective `max_age`. Control manifests declare dependency IDs, types and required
-flags, but no effective freshness. There is no fallback. Objective links may
-supply freshness instead of literal instance bindings.
+Values are typed JSON and atomic by default. Ordinary arrays remain atomic.
+Duration declarations may opt into the existing positive integral `s`, `m`, `h`
+or `d` representation; materialized values use canonical seconds while authored
+values remain retained facts.
 
-Frozen plan facts retain declaration documents, exact pins, source locators,
-selected baseline ancestry, authored operations, intermediate state fingerprints,
-effective values, authored links, implementation interfaces and destinations.
-Persisted validation checks the frozen derivation and materialization, independently
-of the outer artifact digest. Under
-[#90](https://github.com/packetlss/compliance/issues/90), results reference
-the exact plan rather than retaining corresponding resolved facts; historical
-evidence selection identifies the exact assessed dependency by stable
-`(instance_id, dependency_id)`.
+Only a string-array declaration with `composition.kind: additive-set` composes.
+Its effective value is the tailored base union every independently applicable
+compatible contribution. Members use exact JSON-string equality, deduplicate and
+sort by UTF-8 bytes. A contribution targets the stable owner ID and owner-local
+slot; it neither activates nor pins the target declaration, binds or tailors the
+base, suppresses another contribution, or establishes precedence. Every origin and
+applicability path remains attributable.
 
-An inline parameter schema `$id` identifies its schema contract and URI base, not
-the owning requirement slot or exact schema bytes. The separately retained
-`schema_digest` commits exact content. ADR 0019's canonical absolute HTTPS URI layout
-and schema-version evolution rules are implemented under #136; runtime schema
-resolution remains document-local and offline.
+## Consumption
 
-Identity uses the existing provisional digest contracts and JCS. Object keys are
-canonicalized; operations and consumption records are ordered by their explicit
-identities, never used as precedence. Duration effective values use canonical
-seconds while authored representations remain provenance-bearing. Atomic JSON
-arrays retain value order. Acquisition paths and Git metadata add no parameter
-authority. Independently assigned divergent slot states conflict; equality of
-copied literals cannot erase declaration or linkage differences.
+The object that authors a Check owns its symbolic `parameter_links`:
 
-The additive-set contract supplies its own narrow semantic normalization before
-those existing JCS digests are calculated: fixed additive values, additive
-`bind`/`tailor` `from` and `to` members, contribution members, and contribution
-entries are canonicalized by their defined set/identity order. Frozen requirement
-and baseline documents retain that normalized semantic document and its existing
-resource digest; named policy-source content identity still records the acquired
-source bytes. Atomic values and unrelated resource fields are not normalized by
-this rule, and no second digest algorithm or identity family is introduced.
+- `ControlRealization` owns links for Objective-backed Checks.
+- `Baseline` or `BaselineOverlay` owns links for direct technical Checks.
 
-`policy_inputs` contains the resolved authored instance, Control manifest, parameter
-schema and sorted content digests of implementation-local non-test Rego modules.
-The exact plan separately projects the Control-owned title and purpose for both
-active and excluded checks and validates those fields against this frozen manifest.
-The prose is identity-bearing context, never a parameter or other executable input.
-The implementation fingerprint hashes these manifest/interface/module facts with
-JCS; source composition independently binds shared helpers. Changes in local module
-content or version invalidate destination pins. `parameter_facts` contains the
-requirement document, resolved slot states, selected realization and consumption
-records. `parameter_derivation` freezes the selected baseline ancestry and states.
-The exact relationally validated plan owns these records; results do not copy them.
-ADR 0011 successful selections retain stable dependency attribution. Stored policy
-diff compares the plan-owned fields;
-subject explanation prints effective ages and complete slot/link provenance.
+Each link pins the exact ParameterPolicy declaration and the exact destination
+instance, implementation interface and destination. Supported destinations include
+JSON object paths in technical parameters, named Evidence input values and
+dependency freshness such as `max_age`. One slot may fan out through several
+explicit links. Links apply the typed resolved value directly; they provide no
+expressions, interpolation, reducers or transformations.
 
-The canonical private-source scenario exercises explicit 24h → 1h tailoring with
-unchanged realization bytes, four-way freshness fan-out, conflicting independent
-ancestor/descendant assignment, required-evidence unknown, missing realization and
-independent frozen-fact tampering. Focused resolver vectors exercise 30d → 15d
-fan-out into technical, evidence-input and freshness destinations.
+The planner materializes final technical and Evidence inputs. Assessment evaluates
+only those exact plan inputs and never re-resolves current ParameterPolicy.
+Technical Baselines remain independently resolved and do not merge additively.
 
-## Implemented additive-set extension
+## Frozen plan and history
 
-ADR 0012 keeps scalars, objects, ordinary arrays and all direct technical
-`Baseline` / `BaselineOverlay` values atomic. `uniqueItems: true` has no composition
-meaning. The only accepted exception is a string-array requirement slot that
-explicitly opts into additive-set composition:
+The v4 plan retains one `parameters` object with:
 
-```yaml
-composition:
-  kind: additive-set
-```
+- exact selected ParameterPolicy documents, content digests and policy-source
+  attribution;
+- every explicit group/assignment/ParameterPolicy applicability path; and
+- each exact consumer owner document and its symbolic links.
 
-Its current effective value is:
+Declarations, schema documents, ancestry, bind/tailor operations, authored
+expectations, contributions and origins are retained inside those exact source
+documents. Final materialized values remain in their technical or Evidence
+destinations as required execution facts, not as a second parameter authority.
+The plan does not persist duplicate effective-state, derivation-state,
+before/after, member-origin, contribution-owner or consumption-value summaries.
 
-```text
-canonical(tailored base ∪ every independently applicable contribution)
-```
+Artifact admission independently reconstructs ancestry, operations, effective
+values, canonical additive union, complete contribution membership and attribution,
+consumer interfaces and materialized destinations from these retained historical
+facts. It verifies exact source pins and provenance without consulting current
+policy, inventory or Evidence. An outer artifact digest is insufficient. Artifacts
+using the superseded RequirementBaseline-owned representation are rejected by the
+current reader and remain meaningful only with their historical tooling.
 
-Exactly one compatible current declaration and exactly one compatible applicable
-base are required. The base uses the exact bind/tailor contract. Every compatible,
-independently applicable contribution participates after valid base tailoring,
-including for a fixed base. With no contributions, the canonical effective value
-is the selected base.
+Coverage is a current, ephemeral projection of applicability, resolution,
+contributions and consumer effects. Historical explanation and Policy Diff use the
+validated frozen plan/result only. Policy Diff reconstructs effective parameter
+changes while keeping identity/context churn distinct from effective-policy change.
 
-Members are strings and are compared by exact JSON-string value, without case
-folding, Unicode normalization, coercion or transformation. Duplicates coalesce.
-The canonical effective array sorts the surviving strings lexicographically by
-their UTF-8 bytes before complete current-schema validation and ordinary JCS-based
-identity projection. Authored order in a base or contribution and source, file,
-group, assignment, feature or traversal order have no semantic effect. An invalid
-member or invalid final set fails resolution; the resolver must not remove members
-to obtain a valid result.
+## Maintained proofs
 
-### Contributions and stable targets
+The authorized-software scenario assigns an explicit base ParameterPolicy and an
+independently applicable database contribution, then materializes the canonical
+`auditd,curl,postgresql` set into a direct technical Check. Removing the contribution
+leaves the base valid and observed PostgreSQL produces an Evidence-derived FAIL;
+removing the required base prevents assessment planning.
 
-A contribution is ordinary applicable policy:
+The IAM/private-boundary scenario assigns a 24h base and explicitly tailors it to
+1h in the private source. The same realization-owned links fan out to four required
+freshness destinations. Private acquisition, Evidence selection and Assessment
+meaning are unchanged; independently applicable divergent ancestor and descendant
+policies conflict, and source relocation/order remains nonsemantic.
 
-```yaml
-parameter_contributions:
-  - id: database-software
-    target:
-      requirement: company.authorized-software
-      slot: allowed_software
-    members:
-      - postgresql
-      - pgbouncer
-```
-
-This is the current authoring wire syntax. An authored
-contribution targets only `(ControlRequirement metadata.id, slot name)`. It does
-not carry a requirement revision/document digest, declaration/schema digest, base
-baseline pin, base fingerprint, `from` value or deviation metadata. The resolver
-binds the target to the unique exact current declaration supplied for the operation.
-Compatible unrelated requirement or declaration changes therefore do not require
-contribution reauthoring; incompatible current meaning fails closed.
-
-Contributions are not current `parameter_operations`. They do not bind or tailor;
-do not mutate a parent or base; and do not create an inheritance, deviation,
-overlay, precedence or authority edge. Tailoring affects only the base and cannot
-suppress, remove or override independently applicable contributions.
-
-The semantic contribution identity is `(owning RequirementBaseline identity, local
-contribution ID, target requirement ID, target slot)`. Reaching the same contribution
-through several membership/assignment paths retains one contribution and every path.
-Equal members from the base or separate contributions produce one effective member
-while every origin remains attributable.
-
-### Applicability and RequirementBaseline structure
-
-A contribution never imports, selects or makes its target requirement applicable.
-Exactly one compatible declaration and base must already be applicable through
-governed current policy. The schema/runtime contract therefore allows:
-
-- a target not listed in the contribution owner's exact `spec.requirements`;
-- attachment to a unique declaration/base made applicable by other policy;
-- a contribution-only `RequirementBaseline` without fake requirement membership;
-  and
-- a baseline with at least one genuine requirement or at least one contribution.
-
-Inventory remains governed-fact and applicability input. Policy, not inventory,
-owns the implication that a fact contributes particular members. Inventory must not
-carry policy IDs, contribution operations or parameter members. Overlapping factual
-classifications and assignments accumulate without precedence.
-
-### Resolution and frozen facts
-
-The implementation collects all applicable declarations, bases and
-contributions; resolve each stable target; require the unique compatible opted-in
-declaration and base; validate members; apply valid base tailoring; compute and
-validate the canonical union; and
-materialize it through the current exact realization links. Missing, ambiguous,
-atomic, incompatible, invalid-member, invalid-final-set and consumer-resolution
-conditions prevent an assessable plan.
-
-The exact plan must retain:
-
-- stable slot identity and the exact requirement revision/document/digest;
-- exact declaration/composition/schema documents and digests;
-- exact base binding, derivation/operations and tailoring;
-- exact contribution owner revision/document/digest, authored members and semantic
-  contribution identity;
-- every group/assignment/policy applicability path;
-- canonical effective set and deterministic member-to-origin attribution; and
-- exact realization consumer and materialized value.
-
-These extend current `parameter_facts` / `parameter_derivation` ownership and their
-provisional plan identity projections. No new resource, artifact, cache, digest
-family or identity family is introduced. Persisted validation must reject tampering
-with any frozen declaration, contribution, applicability/attribution, effective
-value or consumer.
-
-Each additive slot state retains its canonical effective `value` plus a
-`composition` record containing `kind`, canonical `base_value`, every
-entry in `base_origins`, semantic `contributions`, and `member_origins`. A contribution
-record freezes its semantic identity, exact owner document/digest/source identity,
-canonical authored member set, and every applicability path. A contribution-only
-selected baseline remains present in `resolved_requirement_baselines` with an empty
-`requirements` array and empty resolved state; it does not create a target
-requirement record or any Objective/baseline assessment row.
-
-Coverage owns an ephemeral deterministic projection of **current** effective values
-and derivation through the existing planner/resolver. This does not freeze command
-spelling or query shape and creates no second resolver, persistence layer or cache.
-Historical assessment explanation uses only the exact retained, relationally
-validated plan/result pair and never re-resolves current policy.
-
-Structured/keyed/numeric/mixed members; removal, denial, suppression, override,
-priority or subtraction; generic expressions, reducers or merge strategies;
-contribution ACL/issuer authority; direct technical-baseline composition; changed
-realization selection; evidence redesign; compatibility scaffolding; and new
-resource/artifact/digest/identity families are outside #127/#129. Unsupported syntax is
-an authoring failure and any demonstrated need for these semantics returns to
-architecture.
+The representation and identity algorithms remain experimental and pre-freeze.
+This cutover deliberately changes member-plan, operation, bound-plan and result
+identities where the committed representation changes; it defines no aliases,
+dual readers or cross-version equivalence.

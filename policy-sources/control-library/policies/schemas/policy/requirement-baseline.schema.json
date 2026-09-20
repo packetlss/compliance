@@ -3,329 +3,57 @@
   "$id": "https://compliance.example/schemas/platform/policy/requirement-baseline/v1alpha1.schema.json",
   "title": "Compliance requirement baseline",
   "type": "object",
-  "required": [
-    "apiVersion",
-    "kind",
-    "metadata",
-    "spec"
-  ],
+  "required": ["apiVersion", "kind", "metadata", "spec"],
   "additionalProperties": false,
   "properties": {
-    "apiVersion": {
-      "const": "compliance.example/v1alpha1"
-    },
-    "kind": {
-      "const": "RequirementBaseline"
-    },
+    "apiVersion": {"const": "compliance.example/v1alpha1"},
+    "kind": {"const": "RequirementBaseline"},
     "metadata": {
       "type": "object",
-      "required": [
-        "id",
-        "revision"
-      ],
+      "required": ["id", "revision"],
       "additionalProperties": false,
       "properties": {
-        "id": {
-          "$ref": "#/$defs/identifier"
-        },
-        "revision": {
-          "$ref": "#/$defs/revision"
-        },
-        "origin": {
-          "type": "object",
-          "required": [
-            "type",
-            "name"
-          ],
-          "additionalProperties": true,
-          "properties": {
-            "type": {
-              "type": "string",
-              "minLength": 1
-            },
-            "name": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        }
+        "id": {"$ref": "#/$defs/identifier"},
+        "revision": {"$ref": "#/$defs/revision"},
+        "origin": {"type": "object", "additionalProperties": true}
       }
     },
     "spec": {
       "type": "object",
-      "required": [
-        "title"
-      ],
+      "required": ["title", "requirements"],
       "additionalProperties": false,
       "properties": {
-        "title": {
-          "type": "string",
-          "pattern": ".*\\S.*"
-        },
+        "title": {"type": "string", "pattern": ".*\\S.*"},
         "requirements": {
           "type": "array",
           "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/requirementPin"
-          }
-        },
-        "extends": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "baseline": {
-              "type": "string",
-              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
-            },
-            "digest": {
-              "type": "string",
-              "pattern": "^sha256:[0-9a-f]{64}$"
-            }
-          },
-          "required": [
-            "baseline",
-            "digest"
-          ]
-        },
-        "parameter_operations": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "id": {
-                "type": "string",
-                "minLength": 1
-              },
-              "op": {
-                "enum": [
-                  "bind",
-                  "tailor"
-                ]
-              },
-              "target": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "requirement": {
-                    "type": "string",
-                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
-                  },
-                  "digest": {
-                    "type": "string",
-                    "pattern": "^sha256:[0-9a-f]{64}$"
-                  },
-                  "slot": {
-                    "type": "string",
-                    "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
-                  },
-                  "declaration_digest": {
-                    "type": "string",
-                    "pattern": "^sha256:[0-9a-f]{64}$"
-                  },
-                  "schema_digest": {
-                    "type": "string",
-                    "pattern": "^sha256:[0-9a-f]{64}$"
-                  }
-                },
-                "required": [
-                  "requirement",
-                  "digest",
-                  "slot",
-                  "declaration_digest",
-                  "schema_digest"
-                ]
-              },
-              "expected_parent_fingerprint": {
-                "type": "string",
-                "pattern": "^sha256:[0-9a-f]{64}$"
-              },
-              "from": {},
-              "to": {},
-              "deviation": {
-                "type": "object",
-                "required": [
-                  "id",
-                  "classification",
-                  "rationale",
-                  "approval_ref",
-                  "review_after"
-                ],
-                "additionalProperties": false,
-                "properties": {
-                  "id": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "classification": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "rationale": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "approval_ref": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "review_after": {
-                    "type": "string",
-                    "format": "date"
-                  }
-                }
-              }
-            },
-            "required": [
-              "id",
-              "op",
-              "target",
-              "expected_parent_fingerprint"
-            ],
-            "allOf": [
-              {
-                "if": {
-                  "properties": {
-                    "op": {
-                      "const": "bind"
-                    }
-                  }
-                },
-                "then": {
-                  "required": [
-                    "to"
-                  ],
-                  "not": {
-                    "anyOf": [
-                      {
-                        "required": [
-                          "from"
-                        ]
-                      },
-                      {
-                        "required": [
-                          "deviation"
-                        ]
-                      }
-                    ]
-                  }
-                }
-              },
-              {
-                "if": {
-                  "properties": {
-                    "op": {
-                      "const": "tailor"
-                    }
-                  }
-                },
-                "then": {
-                  "required": [
-                    "from",
-                    "to",
-                    "deviation"
-                  ]
-                }
-              }
-            ]
-          }
-        },
-        "parameter_contributions": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "object",
-            "required": [
-              "id",
-              "target",
-              "members"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "id": {
-                "type": "string",
-                "minLength": 1
-              },
-              "target": {
-                "type": "object",
-                "required": [
-                  "requirement",
-                  "slot"
-                ],
-                "additionalProperties": false,
-                "properties": {
-                  "requirement": {
-                    "$ref": "#/$defs/identifier"
-                  },
-                  "slot": {
-                    "type": "string",
-                    "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
-                  }
-                }
-              },
-              "members": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            }
-          }
+          "items": {"$ref": "#/$defs/requirementPin"}
         }
-      },
-      "anyOf": [
-        {
-          "required": [
-            "requirements"
-          ]
-        },
-        {
-          "required": [
-            "parameter_contributions"
-          ]
-        }
-      ]
+      }
     }
   },
   "$defs": {
     "identifier": {
       "type": "string",
-      "minLength": 1,
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
     },
     "revision": {
       "oneOf": [
-        {
-          "type": "integer",
-          "minimum": 1
-        },
-        {
-          "type": "string",
-          "minLength": 1,
-          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
-        }
+        {"type": "integer", "minimum": 1},
+        {"type": "string", "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"}
       ]
     },
-    "digest": {
-      "type": "string",
-      "pattern": "^sha256:[0-9a-f]{64}$"
-    },
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "requirementPin": {
       "type": "object",
-      "required": [
-        "requirement",
-        "digest"
-      ],
+      "required": ["requirement", "digest"],
       "additionalProperties": false,
       "properties": {
         "requirement": {
           "type": "string",
-          "minLength": 3,
           "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
         },
-        "digest": {
-          "$ref": "#/$defs/digest"
-        }
+        "digest": {"$ref": "#/$defs/digest"}
       }
     }
   }

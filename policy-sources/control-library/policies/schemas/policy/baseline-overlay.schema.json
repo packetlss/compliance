@@ -46,6 +46,30 @@
           "items": {
             "$ref": "#/$defs/operation"
           }
+        },
+        "parameter_links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "source", "destination"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {"type": "string", "minLength": 1},
+              "source": {
+                "type": "object",
+                "required": ["policy", "digest", "slot", "declaration_digest", "schema_digest"],
+                "additionalProperties": false,
+                "properties": {
+                  "policy": {"type": "string"},
+                  "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                  "slot": {"type": "string"},
+                  "declaration_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                  "schema_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+                }
+              },
+              "destination": {"type": "object"}
+            }
+          }
         }
       }
     }

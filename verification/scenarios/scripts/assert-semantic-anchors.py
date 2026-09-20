@@ -455,6 +455,8 @@ spec:
   targetRef: {kind: InventoryGroup, name: company-iam-overlap}
   baselineRefs:
     - {name: company.identity-access-objectives, revision: "1"}
+  parameterPolicyRefs:
+    - {name: company.iam.role-based-access-defaults, revision: "1"}
 """)
         evidence = s.collect(); original = documents(evidence)
         happy, plans, results = s.assess("host/A", "host/B", evidence=evidence, tag="happy")
@@ -694,7 +696,7 @@ spec:
                 "missing realization lost independently accounted implementation gap")
         realization.write_bytes(realization_bytes)
 
-        baseline = s.work / "verification-policy/requirement-baselines/company/company-iam-baseline.json"
+        baseline = s.work / "verification-policy/parameter-policies/company/company-iam-role-based-access-defaults.json"
         baseline_doc=json.loads(baseline.read_text()); baseline_doc["spec"]["parameter_operations"]=[]; baseline.write_text(json.dumps(baseline_doc))
         unresolved_output=s.work/"unresolved-results"
         s.cli("assessment","run","host/A","--at",AT,"--evidence",str(evidence),"--output",str(unresolved_output),success=False)
