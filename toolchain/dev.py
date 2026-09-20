@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import unicodedata
 import shutil
 import subprocess
@@ -356,32 +357,145 @@ def cli(arguments: list[str]) -> int:
     raise AssertionError("execve returned unexpectedly")
 
 
+REQUIRED_HEAD_CONTEXTS = {
+    "component-validation",
+    "verification-scenarios",
+    "installed-release-provenance",
+    "macos-portability",
+}
+INTEGRATION_CONTEXT = "integration-current-main"
+SUCCESS_STATES = {"SUCCESS", "success"}
+BASE_DESCRIPTION = re.compile(r"base=([0-9a-f]{40})")
+
+
+def status_name(status: dict[str, object]) -> str | None:
+    """Return the shared name from a check-run or legacy commit-status shape."""
+    value = status.get("name") or status.get("context")
+    return value if isinstance(value, str) else None
+
+
+def status_result(status: dict[str, object]) -> str | None:
+    """Return the shared conclusion/state from a check-run or commit-status."""
+    value = status.get("conclusion") or status.get("state")
+    return value if isinstance(value, str) else None
+
+
+def status_description(status: dict[str, object]) -> str | None:
+    value = status.get("description")
+    return value if isinstance(value, str) else None
+
+
+def integration_base(status: dict[str, object]) -> str | None:
+    """Read the deliberately narrow, machine-readable integration base binding."""
+    description = status_description(status)
+    if description is None:
+        return None
+    match = BASE_DESCRIPTION.fullmatch(description.strip())
+    return match.group(1) if match else None
+
+
+def latest_named_status(statuses: list[dict[str, object]], name: str) -> dict[str, object] | None:
+    """Return the API's newest matching context (GitHub returns statuses newest first)."""
+    return next((status for status in statuses if status_name(status) == name), None)
+
+
+def current_base(pr: dict[str, object]) -> str:
+    base_ref = pr["baseRefName"]
+    if not isinstance(base_ref, str) or not base_ref:
+        raise SystemExit("ERROR: PR base ref is missing")
+    output = run(["git", "ls-remote", "origin", f"refs/heads/{base_ref}"], capture=True).stdout.split()
+    if not output or not re.fullmatch(r"[0-9a-f]{40}", output[0]):
+        raise SystemExit(f"ERROR: could not resolve current base ref {base_ref}")
+    return output[0]
+
+
+def commit_statuses(head: str) -> list[dict[str, object]]:
+    """Read legacy commit statuses, whose descriptions bind integration to a base."""
+    payload = json.loads(run(["gh", "api", f"repos/{{owner}}/{{repo}}/commits/{head}/status"], capture=True).stdout)
+    statuses = payload.get("statuses", [])
+    return [status for status in statuses if isinstance(status, dict)] if isinstance(statuses, list) else []
+
+
 def readiness(_: argparse.Namespace) -> int:
-    if not shutil.which("gh"): print("ERROR: gh is required", file=sys.stderr); return 1
+    if not shutil.which("gh"):
+        print("ERROR: gh is required", file=sys.stderr)
+        return 1
     pr = json.loads(run(["gh", "pr", "view", "--json", "headRefOid,baseRefName,body,reviews,statusCheckRollup"], capture=True).stdout)
-    base = run(["git", "ls-remote", "origin", f"refs/heads/{pr['baseRefName']}"], capture=True).stdout.split()[0]
-    head = pr["headRefOid"]; body = pr.get("body") or ""; required = {"component-validation", "verification-scenarios", "installed-release-provenance", "macos-portability"}
-    checks = {c.get("name"): c.get("conclusion") or c.get("state") for c in pr.get("statusCheckRollup", [])}
+    head = pr.get("headRefOid")
+    if not isinstance(head, str) or not re.fullmatch(r"[0-9a-f]{40}", head):
+        print("ERROR: PR head is missing or invalid", file=sys.stderr)
+        return 1
+    base = current_base(pr)
+    body = pr.get("body") or ""
+    rollup = [status for status in pr.get("statusCheckRollup", []) if isinstance(status, dict)]
+    checks = {status_name(status): status_result(status) for status in rollup if status_name(status)}
     reviewed = {line.split(":", 1)[0].strip(" -"): line.split(":", 1)[1].strip() for line in body.splitlines() if ":" in line}
     merge_base = run(["git", "merge-base", head, base], capture=True).stdout.strip()
     errors = []
-    if merge_base != base: errors.append(f"candidate does not contain current base head {base}")
-    if reviewed.get("Reviewed head") != head: errors.append("independent review is missing or stale")
-    if not reviewed.get("Reviewer/provider") or reviewed.get("Outcome and finding disposition", "").lower() not in {"pass", "approved", "no findings"}: errors.append("independent review outcome is not accepted")
-    for name in sorted(required):
-        if checks.get(name) not in {"SUCCESS", "success"}: errors.append(f"required check {name}: {checks.get(name, 'missing')}")
+    contains_base = merge_base == base
+    integration = None
+    if not contains_base:
+        # Check-runs and commit-statuses use different field names. The legacy
+        # status endpoint is authoritative for the status description we bind.
+        integration = latest_named_status(commit_statuses(head), INTEGRATION_CONTEXT)
+        if integration is None:
+            errors.append(f"current-base integration evidence is missing for {base}")
+        elif status_result(integration) not in SUCCESS_STATES:
+            errors.append(f"current-base integration: {status_result(integration) or 'missing'}")
+        elif integration_base(integration) != base:
+            errors.append(f"current-base integration is not bound to current base {base}")
+    if reviewed.get("Reviewed head") != head:
+        errors.append("independent review is missing or stale")
+    if not reviewed.get("Reviewer/provider") or reviewed.get("Outcome and finding disposition", "").lower() not in {"pass", "approved", "no findings"}:
+        errors.append("independent review outcome is not accepted")
+    for name in sorted(REQUIRED_HEAD_CONTEXTS):
+        if checks.get(name) not in SUCCESS_STATES:
+            errors.append(f"required check {name}: {checks.get(name, 'missing')}")
     print(f"PR head: {head}\nBase head: {base}\nReviewed head: {reviewed.get('Reviewed head', 'missing')}")
-    for name in sorted(required): print(f"{name}: {checks.get(name, 'missing')}")
-    for error in errors: print(f"NOT READY: {error}", file=sys.stderr)
-    if not errors: print("READY: point-in-time evidence is exact-head and green")
+    for name in sorted(REQUIRED_HEAD_CONTEXTS):
+        print(f"{name}: {checks.get(name, 'missing')}")
+    if not contains_base:
+        print(f"{INTEGRATION_CONTEXT}: {status_result(integration) if integration else 'missing'}")
+        print(f"Integration base: {integration_base(integration) if integration else 'missing'}")
+    for error in errors:
+        print(f"NOT READY: {error}", file=sys.stderr)
+    if not errors:
+        print("READY: exact PR-head evidence and current-base integration evidence are green")
     return 1 if errors else 0
+
+
+def integration(_: argparse.Namespace) -> int:
+    """Explicitly request trusted current-base integration; never alter the branch."""
+    if not shutil.which("gh"):
+        print("ERROR: gh is required", file=sys.stderr)
+        return 1
+    pr = json.loads(run(["gh", "pr", "view", "--json", "number,headRefOid,baseRefName"], capture=True).stdout)
+    number, head = pr.get("number"), pr.get("headRefOid")
+    if not isinstance(number, int) or not isinstance(head, str) or not re.fullmatch(r"[0-9a-f]{40}", head):
+        print("ERROR: current PR number or head is missing or invalid", file=sys.stderr)
+        return 1
+    base = current_base(pr)
+    default_branch = json.loads(run(["gh", "repo", "view", "--json", "defaultBranchRef"], capture=True).stdout).get("defaultBranchRef", {}).get("name")
+    if not isinstance(default_branch, str) or not default_branch:
+        print("ERROR: repository default branch is missing", file=sys.stderr)
+        return 1
+    print(f"Requesting {INTEGRATION_CONTEXT} for PR #{number}: head={head} base={base}")
+    result = run([
+        "gh", "workflow", "run", "current-main-integration.yml", "--ref", default_branch,
+        "-f", f"pr_number={number}",
+    ], check=False)
+    if result.returncode:
+        print("ERROR: could not dispatch current-base integration", file=sys.stderr)
+        return result.returncode or 1
+    print("Requested trusted integration workflow; run scripts/dev readiness after it completes.")
+    return 0
 
 
 def main() -> int:
     if len(sys.argv) > 1 and sys.argv[1] == "cli":
         return cli(sys.argv[2:])
     parser = argparse.ArgumentParser(); sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("setup").set_defaults(func=setup); sub.add_parser("doctor").set_defaults(func=doctor); sub.add_parser("readiness").set_defaults(func=readiness); sub.add_parser("cli", help="run the managed compliance CLI from the repository root")
+    sub.add_parser("setup").set_defaults(func=setup); sub.add_parser("doctor").set_defaults(func=doctor); sub.add_parser("readiness").set_defaults(func=readiness); sub.add_parser("integration", help="request trusted current-base integration for the current PR").set_defaults(func=integration); sub.add_parser("cli", help="run the managed compliance CLI from the repository root")
     p = sub.add_parser("check"); p.add_argument("--verbose", action="store_true", help="show every test while it runs"); p.add_argument("area", choices=COMMANDS); p.add_argument("selection", nargs=argparse.REMAINDER); p.set_defaults(func=check)
     p = sub.add_parser("gate"); p.add_argument("area", choices=GATES); p.set_defaults(func=gate)
     args = parser.parse_args()

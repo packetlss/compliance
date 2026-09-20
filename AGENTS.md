@@ -68,3 +68,11 @@ Every PR must record its contract, change and behavioral impact, validation actu
 - `macos-portability`
 
 Normal validation uses one destination checkout. Do not restore historical sibling acquisition, `COMPLIANCE_CI_*` credentials, PAT fallback, repository-coordinate manifests, or mutable branch resolution. A PR is complete only when its contract is satisfied, applicable local and exact-head CI evidence is green, findings are resolved, and generated state is clean.
+
+Review and the four destination CI contexts bind to the exact PR head. If only the
+base advances, preserve that PR-head evidence and refresh only the separate
+`integration-current-main` proof for the exact current base. A PR-head change
+invalidates review, head CI, and integration evidence. Synthetic integration is
+mechanical compatibility evidence only: return to implementation or architecture
+when the intervening base delta materially changes authority, trust/release
+boundaries, contracts, dependencies, scope, or invariants.

@@ -19,6 +19,8 @@ require_file compliance.yaml
 require_file t3.json
 require_file .github/ISSUE_TEMPLATE/implementation.md
 require_file .github/PULL_REQUEST_TEMPLATE.md
+require_file .github/workflows/destination-validation.yml
+require_file .github/workflows/current-main-integration.yml
 require_file docs/adr/README.md
 require_file docs/history/pre-consolidation.md
 require_file toolchain/versions.env
@@ -203,7 +205,10 @@ if [[ -d .github/workflows ]]; then
   fi
 fi
 
-active_validation_paths=(.github/workflows scripts verification/scenarios/scripts)
+# The trusted integration resolver/publisher uses the repository-scoped workflow
+# token solely to publish its one status context. PR-controlled candidate jobs
+# are read-only and are checked by the focused workflow contract tests instead.
+active_validation_paths=(.github/workflows/destination-validation.yml scripts verification/scenarios/scripts)
 if grep -R --exclude='validate-repository.sh' -nE \
   'COMPLIANCE_CI_|PERSONAL_ACCESS_TOKEN|GH_PAT|GH_TOKEN|actions/create-github-app-token|packetlss-labs/compliance-' \
   "${active_validation_paths[@]}"; then
@@ -214,5 +219,21 @@ if grep -R --exclude='validate-repository.sh' -nE \
   "${active_validation_paths[@]}"; then
   fail "active validation must not clone historical component repositories"
 fi
+
+integration_workflow=.github/workflows/current-main-integration.yml
+if grep -n 'pull_request_target' "$integration_workflow"; then
+  fail "current-base integration must not use pull_request_target"
+fi
+if grep -nE '(^|[[:space:]])git[[:space:]]+push([[:space:]]|$)' "$integration_workflow"; then
+  fail "current-base integration must not push a synthetic candidate"
+fi
+for context in component-validation verification-scenarios installed-release-provenance macos-portability; do
+  grep -q "name: $context" .github/workflows/destination-validation.yml \
+    || fail "required PR-head CI context is missing: $context"
+done
+for responsibility in 'scripts/dev gate repository' 'scripts/dev gate scenarios' 'scripts/dev gate package' '/bin/bash scripts/dev gate package'; do
+  grep -qF "$responsibility" "$integration_workflow" \
+    || fail "current-base integration is missing a required validation responsibility: $responsibility"
+done
 
 printf 'repository validation passed\n'

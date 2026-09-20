@@ -12,6 +12,7 @@ import sys
 import tempfile
 import time
 import unittest
+from io import StringIO
 from types import SimpleNamespace
 from pathlib import Path
 from unittest import mock
@@ -25,6 +26,7 @@ SPEC.loader.exec_module(dev)
 
 REPOSITORY_ROOT = SOURCE.parents[1]
 DEV_SCRIPT = REPOSITORY_ROOT / "scripts/dev"
+INTEGRATION_WORKFLOW = REPOSITORY_ROOT / ".github/workflows/current-main-integration.yml"
 
 
 def run_dev(*arguments: str, cwd: Path | None = None, env=None):
@@ -383,6 +385,164 @@ class CheckCommandTests(unittest.TestCase):
         self.assertEqual(result, 0)
         self.assertEqual(events, ["lock", "ready", "selected"])
         self.assertNotIn("-v", run.call_args.args[0])
+
+
+class ReadinessTests(unittest.TestCase):
+    head = "a" * 40
+    previous_head = "b" * 40
+    base = "c" * 40
+    previous_base = "d" * 40
+
+    def pr(self, *, head=None, reviewed_head=None, rollup=None):
+        return {
+            "headRefOid": head or self.head,
+            "baseRefName": "main",
+            "body": "\n".join((
+                f"- Reviewed head: {reviewed_head or head or self.head}",
+                "- Reviewer/provider: independent test reviewer",
+                "- Outcome and finding disposition: Pass",
+            )),
+            "statusCheckRollup": rollup or [
+                {"name": name, "conclusion": "SUCCESS"}
+                for name in dev.REQUIRED_HEAD_CONTEXTS
+            ],
+        }
+
+    def run_readiness(self, *, pr, merge_base, statuses=None):
+        calls = []
+
+        def fake_run(command, **kwargs):
+            calls.append(command)
+            if command[:3] == ["gh", "pr", "view"]:
+                return SimpleNamespace(stdout=json.dumps(pr), returncode=0)
+            if command[:3] == ["git", "ls-remote", "origin"]:
+                return SimpleNamespace(stdout=f"{self.base}\trefs/heads/main\n", returncode=0)
+            if command[:2] == ["git", "merge-base"]:
+                return SimpleNamespace(stdout=f"{merge_base}\n", returncode=0)
+            if command[:2] == ["gh", "api"]:
+                return SimpleNamespace(stdout=json.dumps({"statuses": statuses or []}), returncode=0)
+            raise AssertionError(f"unexpected command: {command}")
+
+        stdout, stderr = StringIO(), StringIO()
+        with (
+            mock.patch.object(dev.shutil, "which", return_value="/usr/bin/gh"),
+            mock.patch.object(dev, "run", side_effect=fake_run),
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(stderr),
+        ):
+            result = dev.readiness(SimpleNamespace())
+        return result, stdout.getvalue(), stderr.getvalue(), calls
+
+    def integration_status(self, *, state="success", base=None, description=None):
+        return {
+            "context": dev.INTEGRATION_CONTEXT,
+            "state": state,
+            "description": description if description is not None else f"base={base or self.base}",
+        }
+
+    def test_current_head_containing_base_needs_only_review_and_head_ci(self):
+        result, output, errors, calls = self.run_readiness(pr=self.pr(), merge_base=self.base)
+        self.assertEqual(result, 0, errors)
+        self.assertIn("READY:", output)
+        self.assertFalse(any(command[:2] == ["gh", "api"] for command in calls))
+
+    def test_stale_base_requires_current_base_integration_evidence(self):
+        result, _, errors, _ = self.run_readiness(pr=self.pr(), merge_base=self.previous_base)
+        self.assertEqual(result, 1)
+        self.assertIn("integration evidence is missing", errors)
+
+    def test_successful_commit_status_bound_to_current_base_makes_stale_branch_ready(self):
+        result, output, errors, _ = self.run_readiness(
+            pr=self.pr(), merge_base=self.previous_base, statuses=[self.integration_status()],
+        )
+        self.assertEqual(result, 0, errors)
+        self.assertIn(f"Integration base: {self.base}", output)
+
+    def test_old_or_malformed_integration_base_fails_closed(self):
+        for description in (f"base={self.previous_base}", "base=not-a-sha", "base=" + self.base + " extra"):
+            with self.subTest(description=description):
+                result, _, errors, _ = self.run_readiness(
+                    pr=self.pr(), merge_base=self.previous_base,
+                    statuses=[self.integration_status(description=description)],
+                )
+                self.assertEqual(result, 1)
+                self.assertIn("not bound to current base", errors)
+
+    def test_failed_pending_and_missing_integration_statuses_fail_closed(self):
+        for state in ("failure", "pending"):
+            with self.subTest(state=state):
+                result, _, errors, _ = self.run_readiness(
+                    pr=self.pr(), merge_base=self.previous_base,
+                    statuses=[self.integration_status(state=state)],
+                )
+                self.assertEqual(result, 1)
+                self.assertIn(f"integration: {state}", errors)
+
+    def test_head_change_cannot_reuse_old_review_or_status_lookup(self):
+        changed = "e" * 40
+        result, _, errors, calls = self.run_readiness(
+            pr=self.pr(head=changed, reviewed_head=self.previous_head),
+            merge_base=self.previous_base,
+            statuses=[self.integration_status()],
+        )
+        self.assertEqual(result, 1)
+        self.assertIn("review is missing or stale", errors)
+        api_call = next(command for command in calls if command[:2] == ["gh", "api"])
+        self.assertIn(changed, api_call[-1])
+        self.assertNotIn(self.previous_head, api_call[-1])
+
+    def test_check_runs_and_commit_status_contexts_share_the_head_ci_parser(self):
+        rollup = [
+            {"name": "component-validation", "conclusion": "SUCCESS"},
+            {"context": "verification-scenarios", "state": "success"},
+            {"name": "installed-release-provenance", "conclusion": "SUCCESS"},
+            {"context": "macos-portability", "state": "success"},
+        ]
+        result, _, errors, _ = self.run_readiness(pr=self.pr(rollup=rollup), merge_base=self.base)
+        self.assertEqual(result, 0, errors)
+
+    def test_integration_command_dispatches_without_branch_rewrite(self):
+        commands = []
+
+        def fake_run(command, **kwargs):
+            commands.append(command)
+            if command[:3] == ["gh", "pr", "view"]:
+                return SimpleNamespace(stdout=json.dumps({"number": 196, "headRefOid": self.head, "baseRefName": "main"}), returncode=0)
+            if command[:3] == ["git", "ls-remote", "origin"]:
+                return SimpleNamespace(stdout=f"{self.base}\trefs/heads/main\n", returncode=0)
+            if command[:4] == ["gh", "repo", "view", "--json"]:
+                return SimpleNamespace(stdout=json.dumps({"defaultBranchRef": {"name": "main"}}), returncode=0)
+            if command[:3] == ["gh", "workflow", "run"]:
+                return SimpleNamespace(stdout="", returncode=0)
+            raise AssertionError(f"unexpected command: {command}")
+
+        with (
+            mock.patch.object(dev.shutil, "which", return_value="/usr/bin/gh"),
+            mock.patch.object(dev, "run", side_effect=fake_run),
+        ):
+            result = dev.integration(SimpleNamespace())
+        self.assertEqual(result, 0)
+        self.assertIn(["gh", "workflow", "run", "current-main-integration.yml", "--ref", "main", "-f", "pr_number=196"], commands)
+        self.assertFalse(any(command[0] == "git" and command[1] in {"merge", "rebase", "push", "reset"} for command in commands))
+
+
+class WorkflowContractTests(unittest.TestCase):
+    def test_destination_jobs_remain_exact_pr_head_evidence(self):
+        workflow = (REPOSITORY_ROOT / ".github/workflows/destination-validation.yml").read_text()
+        for context in dev.REQUIRED_HEAD_CONTEXTS:
+            self.assertIn(f"name: {context}", workflow)
+        self.assertEqual(workflow.count("github.event.pull_request.head.sha || github.sha"), 12)
+
+    def test_integration_workflow_uses_disposable_combined_candidates_and_isolates_status_writes(self):
+        workflow = INTEGRATION_WORKFLOW.read_text()
+        self.assertNotIn("pull_request_target", workflow)
+        self.assertNotIn("git push", workflow)
+        self.assertEqual(workflow.count("git merge --no-ff --no-edit refs/remotes/integration/head"), 4)
+        self.assertEqual(workflow.count("persist-credentials: false"), 4)
+        self.assertIn("statuses: write", workflow)
+        self.assertIn("Publish final status without checking out PR code", workflow)
+        for gate in ("scripts/dev gate repository", "scripts/dev gate scenarios", "scripts/dev gate package", "/bin/bash scripts/dev gate package"):
+            self.assertIn(gate, workflow)
 
 
 if __name__ == "__main__":

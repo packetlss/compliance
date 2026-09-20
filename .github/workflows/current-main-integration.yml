@@ -1,0 +1,340 @@
+name: Current-main integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Open pull request number to validate against its current base
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: current-main-integration-${{ inputs.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  resolve:
+    name: Resolve trusted PR head and current base
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      statuses: write
+    outputs:
+      pr_number: ${{ steps.resolve.outputs.pr_number }}
+      head: ${{ steps.resolve.outputs.head }}
+      base: ${{ steps.resolve.outputs.base }}
+    steps:
+      - name: Resolve the open PR and current base
+        id: resolve
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]] || { echo "::error::invalid PR number"; exit 1; }
+          pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
+          state="$(printf '%s' "$pr" | jq -r '.state')"
+          head="$(printf '%s' "$pr" | jq -r '.head.sha')"
+          base_ref="$(printf '%s' "$pr" | jq -r '.base.ref')"
+          [[ "$state" == "open" ]] || { echo "::error::PR #$PR_NUMBER is not open"; exit 1; }
+          [[ "$head" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::invalid PR head"; exit 1; }
+          [[ "$base_ref" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo "::error::invalid base ref"; exit 1; }
+          base="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$base_ref" --jq '.object.sha')"
+          [[ "$base" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::invalid base SHA"; exit 1; }
+          {
+            echo "pr_number=$PR_NUMBER"
+            echo "head=$head"
+            echo "base=$base"
+          } >> "$GITHUB_OUTPUT"
+      - name: Publish pending integration status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD: ${{ steps.resolve.outputs.head }}
+          BASE: ${{ steps.resolve.outputs.base }}
+        run: |
+          set -euo pipefail
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$HEAD" \
+            -f state=pending \
+            -f context=integration-current-main \
+            -f description="base=$BASE" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >/dev/null
+
+  component-validation:
+    name: integration component-validation
+    needs: resolve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.base }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build disposable combined candidate
+        id: candidate
+        shell: bash
+        env:
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+          HEAD: ${{ needs.resolve.outputs.head }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "refs/pull/$PR_NUMBER/head:refs/remotes/integration/head"
+          [[ "$(git rev-parse refs/remotes/integration/head)" == "$HEAD" ]]
+          git config user.name integration-validation
+          git config user.email integration-validation@example.invalid
+          git merge --no-ff --no-edit refs/remotes/integration/head
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Load validation toolchain pins
+        id: versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          source toolchain/versions.env
+          {
+            echo "python=$PYTHON_VERSION"
+            echo "uv=$UV_VERSION"
+            echo "opa=$OPA_VERSION"
+            echo "opa_sha256=$OPA_LINUX_AMD64_STATIC_SHA256"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ steps.versions.outputs.python }}
+          architecture: x64
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: ${{ steps.versions.outputs.uv }}
+      - name: Install pinned OPA
+        shell: bash
+        env:
+          OPA_VERSION: ${{ steps.versions.outputs.opa }}
+          OPA_SHA256: ${{ steps.versions.outputs.opa_sha256 }}
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 3 --output /tmp/opa "https://github.com/open-policy-agent/opa/releases/download/v${OPA_VERSION}/opa_linux_amd64_static"
+          printf '%s  %s\n' "$OPA_SHA256" /tmp/opa | sha256sum --check --strict -
+          sudo install -m 0755 /tmp/opa /usr/local/bin/opa
+      - run: scripts/dev setup
+      - run: scripts/dev gate repository
+      - run: scripts/dev gate tooling
+        env:
+          COMPLIANCE_TOOLING_SHA: ${{ steps.candidate.outputs.sha }}
+      - run: scripts/dev gate policy
+        env:
+          COMPLIANCE_CONTROL_LIBRARY_SHA: ${{ steps.candidate.outputs.sha }}
+      - run: scripts/dev gate verification-policy
+        env:
+          COMPLIANCE_VERIFICATION_POLICY_SHA: ${{ steps.candidate.outputs.sha }}
+      - run: scripts/dev gate projects
+        env:
+          COMPLIANCE_DEVELOPMENT_PROJECTS_SHA: ${{ steps.candidate.outputs.sha }}
+      - run: scripts/dev gate iam
+        env:
+          COMPLIANCE_IAM_PRIVATE_BOUNDARY_SHA: ${{ steps.candidate.outputs.sha }}
+
+  verification-scenarios:
+    name: integration verification-scenarios
+    needs: resolve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.base }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build disposable combined candidate
+        id: candidate
+        shell: bash
+        env:
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+          HEAD: ${{ needs.resolve.outputs.head }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "refs/pull/$PR_NUMBER/head:refs/remotes/integration/head"
+          [[ "$(git rev-parse refs/remotes/integration/head)" == "$HEAD" ]]
+          git config user.name integration-validation
+          git config user.email integration-validation@example.invalid
+          git merge --no-ff --no-edit refs/remotes/integration/head
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Load validation toolchain pins
+        id: versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          source toolchain/versions.env
+          {
+            echo "python=$PYTHON_VERSION"
+            echo "uv=$UV_VERSION"
+            echo "opa=$OPA_VERSION"
+            echo "opa_sha256=$OPA_LINUX_AMD64_STATIC_SHA256"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ steps.versions.outputs.python }}
+          architecture: x64
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: ${{ steps.versions.outputs.uv }}
+      - name: Install pinned OPA
+        shell: bash
+        env:
+          OPA_VERSION: ${{ steps.versions.outputs.opa }}
+          OPA_SHA256: ${{ steps.versions.outputs.opa_sha256 }}
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 3 --output /tmp/opa "https://github.com/open-policy-agent/opa/releases/download/v${OPA_VERSION}/opa_linux_amd64_static"
+          printf '%s  %s\n' "$OPA_SHA256" /tmp/opa | sha256sum --check --strict -
+          sudo install -m 0755 /tmp/opa /usr/local/bin/opa
+      - run: scripts/dev setup
+      - run: scripts/dev gate scenarios
+        env:
+          COMPLIANCE_VERIFICATION_SCENARIOS_SHA: ${{ steps.candidate.outputs.sha }}
+
+  installed-release-provenance:
+    name: integration installed-release-provenance
+    needs: resolve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.base }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build disposable combined candidate
+        id: candidate
+        shell: bash
+        env:
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+          HEAD: ${{ needs.resolve.outputs.head }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "refs/pull/$PR_NUMBER/head:refs/remotes/integration/head"
+          [[ "$(git rev-parse refs/remotes/integration/head)" == "$HEAD" ]]
+          git config user.name integration-validation
+          git config user.email integration-validation@example.invalid
+          git merge --no-ff --no-edit refs/remotes/integration/head
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Load validation toolchain pins
+        id: versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          source toolchain/versions.env
+          {
+            echo "python=$PYTHON_VERSION"
+            echo "uv=$UV_VERSION"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ steps.versions.outputs.python }}
+          architecture: x64
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: ${{ steps.versions.outputs.uv }}
+      - run: scripts/dev setup
+      - run: scripts/dev gate package
+      - run: scripts/dev gate locked-artifacts
+      - name: Validate annotated release tag gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate="$(git rev-parse HEAD)"
+          git -c user.name=release-validation -c user.email=release-validation@example.invalid tag -a v0.2.0-ci.1 -m "release validation" "$candidate"
+          [[ "$(bash tooling/scripts/validate-release-tag.sh v0.2.0-ci.1)" == "$candidate" ]]
+          git tag v0.2.0-lightweight "$candidate"
+          if bash tooling/scripts/validate-release-tag.sh v0.2.0-lightweight; then exit 1; fi
+          git -c user.name=release-validation -c user.email=release-validation@example.invalid tag -a v0.2.0-other -m "wrong source" HEAD^
+          if bash tooling/scripts/validate-release-tag.sh v0.2.0-other; then exit 1; fi
+      - run: scripts/dev gate release-preparation
+        env:
+          COMPLIANCE_TOOLING_SHA: ${{ steps.candidate.outputs.sha }}
+      - run: scripts/dev gate policy-release
+
+  macos-portability:
+    name: integration macos-portability
+    needs: resolve
+    runs-on: macos-15
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.base }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build disposable combined candidate
+        id: candidate
+        shell: bash
+        env:
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+          HEAD: ${{ needs.resolve.outputs.head }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "refs/pull/$PR_NUMBER/head:refs/remotes/integration/head"
+          [[ "$(git rev-parse refs/remotes/integration/head)" == "$HEAD" ]]
+          git config user.name integration-validation
+          git config user.email integration-validation@example.invalid
+          git merge --no-ff --no-edit refs/remotes/integration/head
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Set up and inspect repository toolchain
+        run: |
+          /bin/bash scripts/dev setup
+          /bin/bash scripts/dev doctor
+      - name: Exercise working-tree and identity checks
+        run: |
+          /bin/bash scripts/dev check tooling test_canonical_json.py test_tooling_source.py test_package_schema_mirrors.py
+          /bin/bash scripts/dev gate repository
+      - name: Exercise portable package entrypoints
+        env:
+          COMPLIANCE_TOOLING_SHA: ${{ steps.candidate.outputs.sha }}
+        run: |
+          /bin/bash scripts/dev gate package
+          /bin/bash scripts/dev gate release-preparation
+
+  publish:
+    name: Publish integration status
+    needs:
+      - resolve
+      - component-validation
+      - verification-scenarios
+      - installed-release-provenance
+      - macos-portability
+    if: ${{ always() && needs.resolve.result == 'success' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      statuses: write
+    steps:
+      - name: Publish final status without checking out PR code
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD: ${{ needs.resolve.outputs.head }}
+          BASE: ${{ needs.resolve.outputs.base }}
+          COMPONENT: ${{ needs.component-validation.result }}
+          SCENARIOS: ${{ needs.verification-scenarios.result }}
+          RELEASE: ${{ needs.installed-release-provenance.result }}
+          MACOS: ${{ needs.macos-portability.result }}
+        run: |
+          set -euo pipefail
+          state=success
+          for result in "$COMPONENT" "$SCENARIOS" "$RELEASE" "$MACOS"; do
+            [[ "$result" == success ]] || state=failure
+          done
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$HEAD" \
+            -f state="$state" \
+            -f context=integration-current-main \
+            -f description="base=$BASE" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >/dev/null
