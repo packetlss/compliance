@@ -47,7 +47,8 @@ def validate_realization(
     adoption = spec.get("adoption", {})
     status = adoption.get("status")
     checks = spec.get("checks", [])
-    satisfaction = spec.get("satisfaction")
+    if "satisfaction" in spec:
+        errors.append("obsolete realization satisfaction")
     if status == "implemented":
         check_ids = [check.get("instance_id") for check in checks]
         duplicates = sorted(
@@ -57,18 +58,9 @@ def validate_realization(
         )
         if duplicates:
             errors.append("duplicate technical check ids: " + ", ".join(duplicates))
-        required_ids = satisfaction.get("allOf", []) if isinstance(satisfaction, dict) else []
-        missing_definitions = sorted(set(required_ids) - set(check_ids))
-        unreferenced_checks = sorted(set(check_ids) - set(required_ids))
-        if missing_definitions:
-            errors.append(
-                "satisfaction references undefined checks: " + ", ".join(missing_definitions)
-            )
-        if unreferenced_checks:
-            errors.append(
-                "technical checks omitted from satisfaction: " + ", ".join(unreferenced_checks)
-            )
-    elif checks or satisfaction is not None:
+        if not checks:
+            errors.append("implemented realization must contain checks")
+    elif checks:
         errors.append(f"{status!r} realization must not declare technical checks")
     return errors
 
@@ -137,12 +129,15 @@ def roll_up_plan_requirements(
     }
     requirement_assessments = []
     for requirement in plan.get("requirements", []):
-        adoption = requirement["adoption"]
+        adoption = requirement.get("adoption")
+        implementation_state = requirement["implementation_state"]
         assessment: JsonObject = {
             "requirement": requirement["reference"],
             "requirement_digest": requirement["digest"],
             "external_refs": list(requirement.get("external_refs", [])),
-            "adoption": copy_json(adoption),
+            "implementation_state": implementation_state,
+            "implementation_gap": implementation_state in {"no_realization", "not_implemented"},
+            **({"adoption": copy_json(adoption)} if adoption is not None else {}),
             "technical_instance_ids": list(requirement["technical_instance_ids"]),
             **(
                 {"realization": copy_json(requirement["realization"])}
@@ -150,7 +145,7 @@ def roll_up_plan_requirements(
                 else {}
             ),
         }
-        if adoption["status"] == "not_applicable":
+        if implementation_state == "not_applicable":
             assessment.update({
                 "status": "not_applicable",
                 "reason": "The selected realization marks the requirement not applicable.",
@@ -158,10 +153,11 @@ def roll_up_plan_requirements(
             })
             requirement_assessments.append(assessment)
             continue
-        if adoption["status"] == "not_implemented":
+        if assessment["implementation_gap"]:
             assessment.update({
-                "status": "fail",
-                "reason": "The applicable requirement has no implemented realization.",
+                "status": None,
+                "reason": ("No applicable realization exists." if implementation_state == "no_realization"
+                           else "The selected realization explicitly declares non-implementation."),
                 "check_summary": _empty_summary(),
             })
             requirement_assessments.append(assessment)
@@ -202,6 +198,8 @@ def roll_up_plan_requirements(
     baseline_assessments = []
     seen_baselines = set()
     for baseline in plan.get("resolved_requirement_baselines", []):
+        if not baseline["requirements"]:
+            continue
         reference = baseline["reference"]
         if reference in seen_baselines:
             continue
@@ -212,6 +210,7 @@ def roll_up_plan_requirements(
             states.append({
                 "requirement": pin["requirement"],
                 "status": assessment["status"] if assessment else "missing",
+                "implementation_gap": assessment["implementation_gap"] if assessment else False,
             })
         counts = Counter(item["status"] for item in states)
         if counts["fail"]:
@@ -222,16 +221,21 @@ def roll_up_plan_requirements(
             status, reason = "unknown", "One or more required control objectives are inconclusive."
         elif counts["waived"]:
             status, reason = "waived", "One or more required control objectives are waived."
-        elif counts["not_applicable"] == len(states):
+        elif not any(item["status"] is not None for item in states):
+            status, reason = None, "Required objectives have implementation gaps and no Assessment outcome."
+        elif counts["not_applicable"] == sum(item["status"] is not None for item in states):
             status, reason = "not_applicable", "Every required objective is not applicable."
         else:
             status, reason = "pass", "Every applicable required control objective passed."
+        if any(item["implementation_gap"] for item in states) and status is not None:
+            reason = f"Assessment roll-up is {status}; implementation gaps prevent successful demonstration."
         baseline_assessments.append({
             "baseline": reference,
             "digest": baseline["digest"],
             "status": status,
             "reason": reason,
             "requirements": states,
+            "implementation_gap": any(item["implementation_gap"] for item in states),
         })
     return requirement_assessments, baseline_assessments
 
@@ -247,6 +251,7 @@ def compact_plan_outcomes(
             "requirement": item["requirement"],
             "status": item["status"],
             "reason": item["reason"],
+            "implementation_gap": item["implementation_gap"],
         }
         for item in requirements
     ]
@@ -255,6 +260,7 @@ def compact_plan_outcomes(
             "baseline": item["baseline"],
             "status": item["status"],
             "reason": item["reason"],
+            "implementation_gap": item["implementation_gap"],
         }
         for item in baselines
     ]

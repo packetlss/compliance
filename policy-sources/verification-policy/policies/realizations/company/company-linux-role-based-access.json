@@ -72,14 +72,6 @@
         }
       }
     ],
-    "satisfaction": {
-      "allOf": [
-        "company.linux.rbac.sssd-installed",
-        "company.linux.rbac.sssd-domain-configured",
-        "company.linux.rbac.ssh-central-group-required",
-        "company.linux.rbac.unmanaged-local-login-absent"
-      ]
-    },
     "parameter_links": [
       {
         "id": "company.linux.rbac.sssd-installed.freshness",

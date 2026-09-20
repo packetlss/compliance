@@ -47,7 +47,10 @@ const documents = [
     schema: "compliance.example/assessment-explanation-view/v1alpha1",
     asset: { id: "host/A" },
     applicable_policies: [{ reference: "policy.example@1", title: "Example policy" }],
-    objectives: [],
+    implementation_gap: true,
+    objectives: [{ title: "Missing demonstration", statement: "Required policy",
+      implementation_state: "no_realization", historical_outcome: null,
+      historical_reason: "No applicable realization exists." }],
     checks: [{
       check: { title: "Example check", purpose: "Exercise presentation." },
       historical_result: { historical_outcome: "pass" },
@@ -111,6 +114,9 @@ assert.match(content.innerHTML, /Frozen group accounting/);
 
 const explanation = select(1);
 assert.match(explanation, /evidence:exact/);
+assert.match(explanation, /Implementation: no_realization/);
+assert.match(explanation, /No applicable realization exists/);
+assert.match(explanation, /implementation gap/);
 assert.match(explanation, /sha256:a{64}/);
 assert.match(explanation, /example-collector@1/);
 assert.match(explanation, /exact_evidence_id_and_digest/);

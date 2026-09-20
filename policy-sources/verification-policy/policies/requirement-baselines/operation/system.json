@@ -10,8 +10,7 @@
     "requirements": [
       {
         "requirement": "verification.operation.system.o1@1",
-        "digest": "sha256:93f3cacb17a69536a490c88294cfda90fb58bbb12013d24aa72717af68c03e24",
-        "required": true
+        "digest": "sha256:93f3cacb17a69536a490c88294cfda90fb58bbb12013d24aa72717af68c03e24"
       }
     ]
   }

@@ -431,8 +431,8 @@ def _policy_paths(plan: JsonObject) -> list[JsonObject]:
                         "reference": requirement["reference"],
                         "title": requirement["title"],
                         "statement": requirement["statement"],
-                        "required": requirement["required"],
-                        "adoption": copy.deepcopy(requirement["adoption"]),
+                        "implementation_state": requirement["implementation_state"],
+                        "adoption": copy.deepcopy(requirement.get("adoption")),
                         "parameters": _objective_parameters(requirement),
                         "checks": sorted(
                             checks, key=lambda item: item["instance_id"]
@@ -596,7 +596,7 @@ def format_coverage_explanation(document: JsonObject) -> str:
                         f'      Objective: {objective["title"]}',
                         f'        Reference: {objective["reference"]}',
                         f'        Meaning: {objective["statement"]}',
-                        f'        Adoption: {objective["adoption"]["status"]}',
+                        f'        Implementation: {objective["implementation_state"]}',
                     ]
                 )
                 for parameter in objective["parameters"]:

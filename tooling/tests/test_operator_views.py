@@ -529,8 +529,8 @@ class CoverageOperatorViewTests(unittest.TestCase):
             "reference": "objective/one",
             "title": "Readable objective",
             "statement": "The objective meaning.",
-            "required": True,
-            "adoption": {"status": "adopted"},
+            "implementation_state": "implemented",
+            "adoption": {"status": "implemented"},
             "provenance": [
                 {
                     "assignment": "assignment/a",
@@ -610,7 +610,7 @@ class CoverageOperatorViewTests(unittest.TestCase):
             "reference": "objective@1",
             "title": "Authorized software",
             "statement": "Only authorized software is installed.",
-            "required": True,
+            "implementation_state": "implemented",
             "adoption": {"status": "implemented"},
             "provenance": [base_path],
             "parameter_facts": {

@@ -85,6 +85,9 @@ def validate_baseline_structure(value):
     if 'requirements' in spec:
         require(isinstance(spec['requirements'], list) and bool(spec['requirements']),
                 'requirement baseline requirements must be nonempty when present')
+    for pin in spec.get('requirements', []):
+        require(isinstance(pin, dict) and set(pin) == {'requirement', 'digest'},
+                'invalid exact Objective membership')
     if 'extends' in spec:
         parent = spec['extends']
         require(
@@ -607,7 +610,7 @@ def validate_control_contract_identity(definition):
 def consume(realization, slots, controls):
     checks = copy.deepcopy(realization['spec'].get('checks', []))
     by_id = {check['instance_id']: check for check in checks}
-    required_ids = realization['spec'].get('satisfaction', {}).get('allOf', [])
+    required_ids = [check['instance_id'] for check in realization['spec'].get('checks', [])]
     consumed, destinations, link_ids, records = set(), set(), set(), []
     for link in sorted(realization['spec'].get('parameter_links', []), key=lambda item: item['id']):
         require(link['id'] not in link_ids, 'duplicate consumption link identity')
@@ -1030,23 +1033,11 @@ def validate_realization_contract_identities(
         requirement_pin.get('requirement') == requirement_reference,
         'frozen realization requirement reference mismatch',
     )
-    satisfaction = spec.get('satisfaction', {})
-    require(isinstance(satisfaction, dict), 'frozen realization satisfaction must be an object')
-    required_ids = satisfaction.get('allOf', [])
-    require(
-        isinstance(required_ids, list),
-        'frozen realization satisfaction allOf must be an array',
-    )
-    for instance_id in required_ids:
-        require_identity(
-            instance_id,
-            ID,
-            'invalid frozen realization satisfaction identity',
-        )
-    require(
-        len(required_ids) == len(set(required_ids)),
-        'duplicate frozen realization satisfaction identity',
-    )
+    require('satisfaction' not in spec, 'obsolete realization satisfaction')
+    adoption = spec.get('adoption')
+    require(isinstance(adoption, dict) and adoption.get('status') in
+            {'implemented', 'not_implemented', 'not_applicable'},
+            'invalid frozen realization adoption')
     checks = spec.get('checks', [])
     require(isinstance(checks, list), 'frozen realization checks must be an array')
     check_ids = []
@@ -1058,8 +1049,8 @@ def validate_realization_contract_identities(
         'duplicate frozen realization check identity',
     )
     require(
-        set(check_ids) == set(required_ids),
-        'frozen realization checks differ from satisfaction',
+        bool(check_ids) if spec['adoption']['status'] == 'implemented' else not check_ids,
+        'frozen realization checks differ from implementation state',
     )
     for link in spec.get('parameter_links', []):
         validate_parameter_link_identities(link, controls)
@@ -1137,8 +1128,7 @@ def validate_frozen_contract_identities(plan):
         realization_reference = (
             f"{metadata.get('id')}@{metadata.get('revision')}"
         )
-        satisfaction = realization.get('spec', {}).get('satisfaction', {})
-        instance_ids = satisfaction.get('allOf', [])
+        instance_ids = [check['instance_id'] for check in realization['spec'].get('checks', [])]
         if isinstance(instance_ids, list):
             realization_memberships.update(
                 (requirement.get('reference'), realization_reference, instance_id)
@@ -1285,8 +1275,6 @@ def validate_frozen_contract_identities(plan):
                             pin.get('requirement')
                             == provenance.get('requirement')
                             and pin.get('digest') == requirement_record.get('digest')
-                            and pin.get('required')
-                            == requirement_record.get('required')
                             for pin in requirement_selections[key].get(
                                 'requirements',
                                 [],
@@ -1458,16 +1446,16 @@ def validate_frozen_contract_identities(plan):
                     ),
                     'frozen realization parent mismatch',
                 )
-            satisfaction = realization['spec'].get('satisfaction', {'allOf': []})
+            check_ids = [check['instance_id'] for check in realization['spec'].get('checks', [])]
             require(
                 equal(
                     requirement.get('adoption'),
                     realization['spec'].get('adoption'),
                 )
-                and equal(requirement.get('satisfaction'), satisfaction)
+                and requirement['implementation_state'] == realization['spec']['adoption']['status']
                 and equal(
                     requirement.get('technical_instance_ids'),
-                    satisfaction['allOf'],
+                    check_ids,
                 ),
                 'frozen realization satisfaction or adoption mismatch',
             )
@@ -1494,12 +1482,8 @@ def validate_frozen_contract_identities(plan):
                 )
         else:
             require(
-                requirement.get('adoption') == {
-                    'status': 'not_implemented',
-                    'method': 'none',
-                    'owner': 'unassigned',
-                }
-                and requirement.get('satisfaction') == {'allOf': []}
+                'adoption' not in requirement
+                and requirement['implementation_state'] == 'no_realization'
                 and requirement.get('technical_instance_ids') == [],
                 'missing-realization record differs from frozen coverage',
             )
@@ -1602,7 +1586,6 @@ def validate_frozen_contract_identities(plan):
             bool(memberships)
             and all(
                 pin.get('digest') == requirement['digest']
-                and pin.get('required') == requirement.get('required')
                 for pin in memberships
             ),
             'frozen requirement membership differs from selected baseline',
@@ -1618,7 +1601,6 @@ def validate_frozen_contract_identities(plan):
             if any(
                 pin.get('requirement') == requirement['reference']
                 and pin.get('digest') == requirement['digest']
-                and pin.get('required')
                 for pin in baseline.get('requirements', [])
             )
         ]
@@ -1724,8 +1706,7 @@ def validate_frozen(plan):
                 require(equal(record[field], declaration_document['spec'].get(field, [])), 'frozen requirement explanation mismatch')
             require(equal(slots, frozen['states']), 'assigned parameter state conflict')
             if 'realization' not in frozen:
-                require(record['adoption'] == {'status': 'not_implemented', 'method': 'none', 'owner': 'unassigned'}
-                        and record['satisfaction'] == {'allOf': []} and record['technical_instance_ids'] == []
+                require('adoption' not in record and record['implementation_state'] == 'no_realization' and record['technical_instance_ids'] == []
                         and 'realization' not in record, 'missing-realization record differs from frozen coverage')
                 continue
             realization = frozen['realization']
@@ -1736,8 +1717,8 @@ def validate_frozen(plan):
             require(realization['spec']['requirement'] == {'requirement': reference, 'digest': record['digest']},
                     'frozen realization requirement pin mismatch')
             require(equal(record['adoption'], realization['spec']['adoption'])
-                    and equal(record['satisfaction'], realization['spec'].get('satisfaction', {'allOf': []}))
-                    and equal(record['technical_instance_ids'], realization['spec'].get('satisfaction', {'allOf': []})['allOf']),
+                    and record['implementation_state'] == realization['spec']['adoption']['status']
+                    and equal(record['technical_instance_ids'], [check['instance_id'] for check in realization['spec'].get('checks', [])]),
                     'evaluated requirement differs from frozen realization satisfaction')
             checks, records = consume(realization, slots, controls)
             require(equal(records, frozen['consumption']), 'frozen consumption records mismatch')
@@ -1748,7 +1729,7 @@ def validate_frozen(plan):
     for record in plan['requirements']:
         expected = [{'group': b['group'], 'assignment': b['assignment'], 'baseline': b['reference']}
                     for b in plan['resolved_requirement_baselines']
-                    if any(pin['requirement'] == record['reference'] and pin['digest'] == record['digest'] and pin['required']
+                    if any(pin['requirement'] == record['reference'] and pin['digest'] == record['digest']
                            for pin in b['requirements'])]
         require(equal(sorted(record['provenance'], key=canonical_json_bytes), sorted(expected, key=canonical_json_bytes)),
                 'frozen requirement assignment attribution mismatch')

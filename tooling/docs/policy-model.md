@@ -655,8 +655,8 @@ planning-composition, member-plan, operation, bound-plan, or result identity.
 Accounting disposition is derived from frozen lifecycle, relevant assignment,
 active-control, and requirement membership. Retired, unassigned, and
 no-assessable-policy members require no result and receive no synthetic pass or
-N/A. A missing applicable realization remains assessable as `not_implemented` so it yields an
-explicit failed objective instead of disappearing. A fully excluded baseline remains
+N/A. A missing applicable realization remains assessable as a separate implementation gap with no
+Assessment outcome; it stays in exact required-policy accounting. A fully excluded baseline remains
 assigned, but is explicitly non-assessable with reason `no-active-controls`;
 it must not produce a successful empty assessment.
 

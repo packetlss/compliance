@@ -190,7 +190,6 @@ class PolicyResourceTests(unittest.TestCase):
                     "requirements": [{
                         "requirement": "test.requirement@1",
                         "digest": digest,
-                        "required": True,
                     }],
                 },
                 ("title",),
@@ -853,6 +852,14 @@ class PolicySourceBoundaryTests(unittest.TestCase):
         }
 
         validator.validate(realization)
+        obsolete = copy.deepcopy(realization)
+        obsolete["spec"]["satisfaction"] = {"allOf": []}
+        self.assertFalse(validator.is_valid(obsolete))
+        empty_implemented = copy.deepcopy(realization)
+        empty_implemented["spec"]["adoption"].update(
+            status="implemented", method="automated", implementation_ref="test/implementation")
+        empty_implemented["spec"]["checks"] = []
+        self.assertFalse(validator.is_valid(empty_implemented))
         retired_shape = copy.deepcopy(realization)
         retired_shape["metadata"]["classification"] = "restricted"
         self.assertFalse(validator.is_valid(retired_shape))

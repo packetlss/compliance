@@ -1681,7 +1681,6 @@ class PlanRevisionTests(unittest.TestCase):
             requirement_pin = {
                 "requirement": "test.allowed-packages@1",
                 "digest": parameters.digest(requirement),
-                "required": True,
             }
             base = {
                 "apiVersion": "compliance.example/v1",
@@ -1746,7 +1745,6 @@ class PlanRevisionTests(unittest.TestCase):
                         "parameters": {},
                         "evidence": {"observation": {"max_age": "1d"}},
                     }],
-                    "satisfaction": {"allOf": ["test.allowed-packages"]},
                     "parameter_links": [{
                         "id": "allowed-packages",
                         "source": initial["pin"],

@@ -592,7 +592,10 @@ def _render_outcomes(lines: list[str], label: str, outcomes: list[dict]) -> None
     for outcome in outcomes:
         identity = outcome.get("requirement", outcome.get("instance_id", "outcome"))
         reason = f" — {outcome['reason']}" if outcome.get("reason") else ""
-        lines.append(f"      {label} {identity}: {outcome['status'].upper()}{reason}")
+        if outcome["status"] is None:
+            lines.append(f"      Objective implementation {identity}: GAP{reason}")
+        else:
+            lines.append(f"      {label} {identity}: {outcome['status'].upper()}{reason}")
 
 
 def render_explanation(document: dict) -> str:

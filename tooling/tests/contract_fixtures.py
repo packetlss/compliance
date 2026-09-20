@@ -465,7 +465,7 @@ def build_fixture(root):
             "test.iam",
             {
                 "title": "Synthetic requirement baseline",
-                "requirements": [{**pin, "required": True}],
+                "requirements": [pin],
             },
         ),
     )
@@ -488,7 +488,6 @@ def build_fixture(root):
                 "owner": "test",
             },
             "checks": checks,
-            "satisfaction": {"allOf": [check["instance_id"] for check in checks]},
         },
     )
     write(

@@ -167,3 +167,8 @@ effective-policy distinction. It does not broaden the independent
 Identifiers introduced under #131 remain experimental. Implemented ADR 0019 owns the
 namespace and schema-URI conventions; the #136 migration establishes no compatibility
 alias or contract freeze.
+
+Tranche A retains the current Objective-owned parameter and realization consumption.
+The contribution-only database policy creates no Objective or baseline assessment
+row; its assignment, effective value and historical attribution remain intact.
+ParameterPolicy and direct technical consumption are deferred to Tranche B.

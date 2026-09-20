@@ -687,8 +687,11 @@ spec:
         realization_bytes = realization.read_bytes(); realization.unlink()
         absent, absent_plans, _ = s.assess("host/A", evidence=evidence, tag="missing-realization")
         absent_plan = json.loads((absent_plans / "host__A.json").read_text())
-        require(not absent["summary"]["all_passed"] and absent_plan["requirements"][0]["adoption"]["status"]=="not_implemented",
-                "missing realization lost not_implemented semantics")
+        require(not absent["summary"]["all_passed"] and absent_plan["requirements"][0]["implementation_state"] == "no_realization"
+                and "adoption" not in absent_plan["requirements"][0]
+                and absent["assets"][0]["historical_outcome"] is None
+                and absent["assets"][0]["implementation_gap"],
+                "missing realization lost independently accounted implementation gap")
         realization.write_bytes(realization_bytes)
 
         baseline = s.work / "verification-policy/requirement-baselines/company/company-iam-baseline.json"

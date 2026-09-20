@@ -468,16 +468,22 @@ class AssessmentOperatorViewTests(unittest.TestCase):
         plan["requirements"][0]["adoption"] = {
             "status": "not_implemented",
             "method": "none",
-            "owner": "unassigned",
+            "owner": "platform-team",
         }
-        plan["requirements"][0].pop("realization")
-        report = self.result(status="fail")
+        plan["requirements"][0]["implementation_state"] = "not_implemented"
+        plan["requirements"][0]["technical_instance_ids"] = []
+        plan["controls"] = []
+        report = self.result(status=None)
+        report["results"] = []
+        report["provenance"]["selectedEvidence"] = []
         report["requirement_assessments"] = [{
             "requirement": "test.requirement@1",
-            "status": "fail",
-            "reason": "The applicable requirement has no implemented realization.",
+            "status": None,
+            "implementation_gap": True,
+            "reason": "The selected realization explicitly declares non-implementation.",
         }]
         account = self.account_with_result(report)
+        account["members"][0]["implementation_gap"] = True
 
         view = build_explanation_view(account, account["members"][0], plan, report)
         rendered = render_explanation_view(view)
@@ -485,11 +491,11 @@ class AssessmentOperatorViewTests(unittest.TestCase):
         self.assertEqual(view["objectives"][0]["adoption"], "not_implemented")
         self.assertEqual(
             view["objectives"][0]["historical_reason"],
-            "The applicable requirement has no implemented realization.",
+            "The selected realization explicitly declares non-implementation.",
         )
-        self.assertIn("Frozen adoption: not implemented", rendered)
+        self.assertIn("Implementation: not implemented", rendered)
         self.assertIn(
-            "Historical reason: The applicable requirement has no implemented realization.",
+            "Historical reason: The selected realization explicitly declares non-implementation.",
             rendered,
         )
         self.assertNotIn(view["operation"]["operation_id"], rendered)

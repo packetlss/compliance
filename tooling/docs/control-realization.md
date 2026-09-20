@@ -1,47 +1,18 @@
 # Control Requirements and Environment Realizations
 
-> **Successor routing:** [ADR 0024](../../docs/adr/0024-objective-assurance-and-parameter-policy.md)
-> is accepted design under #192, not yet implemented. It separates Objective
-> implementation gaps from Assessment outcomes, simplifies required Check membership,
-> moves parameter ownership to explicitly assigned ParameterPolicy, supports both
-> Check-authoring consumption paths and reconstructs frozen summaries. This document
-> describes the current experimental runtime until coordinated migration; its
-> superseded representations are not the successor implementation contract.
+Status: **Implemented experimental contract — ADR 0024 Tranche A (#199)**
 
-Status: **Implemented initial contract (v0.1)**  
-Last updated: **2026-09-13**
+This optional layer connects a reviewed Objective to one complete policy-authored
+demonstration for an applicable subject. Direct technical policy remains valid
+without an Objective wrapper. [ADR 0024](../../docs/adr/0024-objective-assurance-and-parameter-policy.md)
+owns the accepted semantics; [ADR 0023](../../docs/adr/0023-foundational-semantic-responsibility-boundaries.md)
+freezes Evidence and Assessment responsibilities and meanings.
 
-This document defines how a high-level regulatory or company control objective
-can receive a defensible top-level result from environment-private technical
-checks. The initial `allOf` contract is integrated with policy validation,
-rendered assessment plans, evaluation results, and operator views.
-
-This layer is optional. Standalone technical baselines remain the preferred
-model for package lists, hardening profiles, and configuration drift when no
-complete higher-level objective needs to be asserted. A subject may receive
-those controls alongside realized objectives in the same assessment plan. The
-realization model exists to support a genuine objective-level assurance claim,
-not to wrap every useful technical check in governance ceremony.
-
-## Closed-world assurance boundary
-
-[ADR 0016](../../docs/adr/0016-closed-world-policy-assessment.md) is implemented under
-[#78](https://github.com/packetlss/compliance/issues/78). See
-[operation accounting](operation-accounting.md) for the frozen denominator and
-concrete assertion contracts. Realization selection chooses demonstration; Subject,
-group and baseline assignment determine requirement targeting.
-
-Organization assertions are existing historical runtime contracts, not new admission
-authority. ADR 0022 rejects the generic organization-assertion family for its
-replacement migration. IAM integration is assessed from the descriptive exact
-consumer-to-service relationship against the service designated by governed policy;
-authored integration intent alone is insufficient. No certificate subsystem,
-authority engine or direct result graph exists. Mappings report supplied company
-policy only.
-
-ADR 0010/0012, exactly-one realization selection, missing-realization failure,
-explicit N/A and fail-only waivers retain their existing semantics. Any residual
-architecture or escalation requires a new focused promotion.
+Parameter ownership and frozen parameter summaries remain the current
+[ADR 0012 parameter contract](policy-parameters.md) pending Tranche B. This checkpoint
+does not introduce ParameterPolicy, change assignment, or migrate authorized software
+to direct technical consumption. Active parameter-bearing RequirementBaseline
+contracts remain; only genuine Objective membership creates assessment rows.
 
 ## 1. Problem
 
@@ -73,7 +44,7 @@ Environment-private ControlRealization
 Technical control instances
           ↓ evaluation
 Technical results
-          ↓ declared satisfaction rule
+          ↓ complete required Check roll-up
 Requirement assessment
           ↓ RequirementBaseline roll-up
 Top baseline assessment
@@ -158,7 +129,7 @@ policy owns the complete criterion and evaluates Control-unaware descriptive fac
 Otherwise it remains a Governance or other-domain determination. A mixed obligation
 requires both authorities only when its assessed portion independently passes that
 admission test; the governance determination is not evidence and does not alter
-complete `satisfaction.allOf` semantics.
+complete required Check membership.
 
 The existing `Baseline` and `BaselineOverlay` contracts continue to describe
 technical desired state and explicit changes to it. A realization is not a
@@ -206,8 +177,9 @@ declares:
 - applicable subject types;
 - adoption status, assurance method, owner, and approved implementation
   reference;
-- independently attributable technical control instances; and
-- a constrained satisfaction expression over those instances.
+- a non-empty collection of uniquely identified technical Checks when implemented.
+
+Every declared Check is required. There is no satisfaction expression or optional Check.
 
 The ordinary company Linux example is
 [`company-linux-role-based-access.json`](../../policy-sources/verification-policy/policies/realizations/company/company-linux-role-based-access.json).
@@ -221,8 +193,7 @@ It contains fictitious values but represents content that could remain visible
 only inside a need-to-know environment.
 
 Both documents embed complete technical instances. This keeps the completeness
-claim atomic and reviewable: every declared check must occur exactly once in
-`satisfaction.allOf`, and every referenced check must be defined. Reuse occurs
+claim atomic and reviewable: every declared Check is required and uniquely identified. Reuse occurs
 through the shared control implementations and through selecting the complete
 company realization where it applies; there is no separate template or binding
 resource.
@@ -245,9 +216,11 @@ Realization adoption and current assessment are separate dimensions:
 
 An implemented realization may pass, fail, become unknown, encounter an error,
 or contain a waived failure at runtime. `implemented` must never produce a pass
-without successful technical evidence. A `not_implemented` required objective
-produces a failing requirement assessment while retaining the separate
-adoption state.
+without successful technical evidence. An authored `not_implemented` declaration creates an implementation gap with no
+Assessment outcome. Its selected realization, owner and declaration remain visible.
+Zero matching realizations creates a separate `no_realization` implementation state;
+there is no authored adoption to retain or manufacture. Both prevent successful
+demonstration without producing FAIL, UNKNOWN, refusal, unassigned scope or N/A.
 
 Parent `not_applicable` comes only from the approved realization-level
 determination. A required child technical check returning `not_applicable` is
@@ -257,7 +230,7 @@ for that subject type.
 
 ## 6. Deterministic roll-up
 
-The first prototype permits only `satisfaction.allOf`. Its precedence is:
+Every Check of an implemented realization is required. The evidence-derived roll-up is:
 
 1. any required `fail` makes the requirement `fail`;
 2. otherwise any `error` makes it `error`;
@@ -265,7 +238,7 @@ The first prototype permits only `satisfaction.allOf`. Its precedence is:
 4. otherwise any `waived` result makes it `waived`; and
 5. only every required check passing produces `pass`.
 
-A failing result is conclusive for an `allOf` rule even if another check is
+An evidence-established failing Check is conclusive for the Objective roll-up even if another check is
 unknown. The output retains every child status and summary count so the parent
 tick never hides its basis.
 
@@ -286,6 +259,33 @@ so the repository-owned gate runs that operator flow in a temporary assembly:
 scripts/dev gate iam
 ```
 
+### Frozen representation and gap reporting
+
+Each planned Objective has `implementation_state`: `no_realization`,
+`not_implemented`, `not_applicable`, or `implemented`. Only a selected realization
+supplies `adoption`. `technical_instance_ids` is the resolved membership relation;
+validation independently reconstructs it from the exact retained realization Checks.
+Constant membership `required` and `satisfaction` are rejected in current artifacts.
+
+Compact Objective and RequirementBaseline result rows have `implementation_gap`
+independently of their evidence-derived `status`. A gap Objective has `status: null`;
+a baseline rolls up only existing outcomes and has `status: null` when all its
+Objectives are gaps. Mixed gaps and actual FAIL/ERROR/UNKNOWN/WAIVED/PASS preserve
+both dimensions. Explicit N/A remains attributable; all-N/A is N/A, never PASS.
+A contribution-only baseline has no Objective or baseline result row.
+
+Overall result `outcome` aggregates actual outcomes; it is null for gap-only
+assessment. Exact operation accounting retains that result slot. `all_passed`
+requires passing outcomes and no implementation gap, so a mixed PASS/gap operation
+is complete but unsuccessful. A gap has no Check failure and is never waiver-eligible.
+Current Coverage and exact historical explanation expose implementation state
+separately. Framework interpretation receives no passing support from a gap.
+
+This is a coordinated pre-freeze migration. Plan/member/operation/result projections
+and exact content pins change, while identity architecture and domains remain.
+No compatibility reader or conversion is provided; old artifacts retain their
+original meaning under historical tooling.
+
 ## 7. Selection and coverage rules
 
 The planner selects realizations after resolving subject identity,
@@ -296,15 +296,15 @@ groups, assignments, and requirement baselines:
    match;
 3. require exactly one complete effective realization with no ordering
    precedence;
-4. treat no matching realization as `not_implemented`, never as not applicable;
+4. retain no matching realization as `no_realization`, without fabricated adoption or Assessment outcome;
 5. treat multiple applicable realizations as a plan error; and
 6. expand the selected realization's technical instances into the subject plan.
 
 A subject with no applicable assignment has Coverage `unassigned` and creates no
 expected result.
 Once a requirement is assigned, zero applicable realizations retains
-`not_implemented` adoption and a failing requirement; exactly one expands and is
-assessed as the complete `satisfaction.allOf` recipe; multiple applicable
+`no_realization` implementation state and a gap; exactly one retains its authored
+state and, when implemented, expands and evaluates every Check; multiple applicable
 realizations make policy resolution ambiguous and planning fails. Evidence never
 selects policy or a realization.
 
@@ -316,8 +316,8 @@ partitions: stable governed persona, access-profile, deployment-model, environme
 lifecycle and factual-membership inputs may overlap. When that overlap makes more
 than one realization applicable to the same assigned requirement, the existing
 ambiguity failure applies without order or specificity precedence. Applicability
-selects the realization before its complete `allOf` rule is evaluated, so the
-roll-up expression cannot hide a failed or missing implementation branch.
+selects the realization before its complete Check set is evaluated, so the
+roll-up cannot hide a failed or missing implementation branch.
 
 ## 8. Need-to-know compilation boundary
 
@@ -363,7 +363,7 @@ Strict Draft 2020-12 schemas now exist for:
 - `ControlRealization`.
 
 The policy gate validates parent and optional `based_on` pins, unique check
-identities, complete `allOf` coverage, implementation applicability, and
+identities, complete required Check membership, implementation applicability, and
 effective parameters. Subject planning enforces trusted-label exactly-one
 selection. Evaluation supports the declared result states and conservative
 requirement and baseline roll-up.

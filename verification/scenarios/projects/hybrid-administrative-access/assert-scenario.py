@@ -191,6 +191,41 @@ def main(root):
                     "assignment": "linux-server-operations",
                 }], "historical explanation did not keep Linux Objective and direct policy separate")
 
+        # Removing only the applicable SaaS demonstration must retain an exact gap
+        # while Linux's independent Objective and direct package Check still pass.
+        (work / "verification-policy/realizations/company/company-saas-administrative-access-identity-gated.json").unlink()
+        gap_plans, gap_results = work / "gap-plans", work / "gap-results"
+        gap_operation = json.loads(cli("assessment", "run", LINUX, SAAS, "--at", AT,
+            "--evidence", str(evidence), "--plan-output", str(gap_plans),
+            "--output", str(gap_results), "--format", "json"))
+        gap_plan = read(document_path(gap_plans, SAAS))
+        gap_report = read(document_path(gap_results, SAAS))
+        gap, = gap_plan["requirements"]
+        require(gap["implementation_state"] == "no_realization" and "adoption" not in gap
+                and "realization" not in gap and not gap["technical_instance_ids"],
+                "zero match fabricated adoption or Check membership")
+        require(gap_report["outcome"] is None and not gap_report["results"]
+                and gap_report["requirement_assessments"][0]["status"] is None
+                and gap_report["requirement_assessments"][0]["implementation_gap"]
+                and gap_report["requirement_baseline_assessments"][0]["implementation_gap"],
+                "missing realization fabricated an Assessment outcome")
+        require(gap_operation["summary"]["accounting_complete"]
+                and not gap_operation["summary"]["all_passed"]
+                and gap_operation["summary"]["historical_outcomes"] == {"pass": 1},
+                "gap erased accounting or manufactured successful demonstration")
+        gap_explanation = json.loads(cli("assessment", "explain", SAAS,
+            "--plan", str(document_path(gap_plans, SAAS)), "--assessed-plans", str(gap_plans),
+            "--results", str(gap_results), "--at", AT, "--as-of", AT,
+            "--format", "json", historical=True))
+        require(gap_explanation["implementation_gap"]
+                and gap_explanation["objectives"][0]["implementation_state"] == "no_realization"
+                and gap_explanation["historical_outcome"] is None,
+                "historical explanation confused gap with Assessment outcome")
+        human = cli("assessment", "explain", SAAS,
+            "--plan", str(document_path(gap_plans, SAAS)), "--assessed-plans", str(gap_plans),
+            "--results", str(gap_results), "--at", AT, "--as-of", AT, historical=True)
+        require("Implementation gap: True" in human, "human explanation concealed gap")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

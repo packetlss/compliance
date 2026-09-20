@@ -89,7 +89,6 @@ def policy_membership(plan):
     } for field in ('controls', 'excluded_controls') for control in plan.get(field, [])]
     requirements = [{
         'reference': requirement['reference'],
-        'required': requirement['required'],
         'external_refs': copy.deepcopy(requirement.get('external_refs', [])),
     } for requirement in plan['requirements']]
     return {
@@ -499,6 +498,7 @@ def account_operation(anchor, reports, evaluated_at, assessed_plans=()):
                      'accounting_disposition': disposition,
                      'historical_interpretation': interpretation,
                      'result_present': result is not None,
+                     'implementation_gap': any(item['implementation_gap'] for item in result['requirement_assessments']) if result else False,
                      'result_id': result['id'] if result else None})
     interpretation_complete = all(
         row['accounting_disposition'] != 'result_required'
@@ -509,7 +509,7 @@ def account_operation(anchor, reports, evaluated_at, assessed_plans=()):
             'members': rows,
             'accounting_complete': all(r['state'] != 'missing' for r in rows),
             'historical_interpretation_complete': interpretation_complete,
-            'all_passed': interpretation_complete and all(r['state'] == 'pass' for r in rows),
+            'all_passed': interpretation_complete and all(r['state'] == 'pass' and not r['implementation_gap'] for r in rows),
             'claim': 'Exact supplied company policy only; no external conformity or inventory exhaustiveness.'}
 
 

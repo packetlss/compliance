@@ -86,23 +86,6 @@
             "$ref": "#/$defs/controlInstance"
           }
         },
-        "satisfaction": {
-          "type": "object",
-          "required": [
-            "allOf"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "allOf": {
-              "type": "array",
-              "minItems": 1,
-              "uniqueItems": true,
-              "items": {
-                "$ref": "#/$defs/identifier"
-              }
-            }
-          }
-        },
         "parameter_links": {
           "type": "array",
           "items": {
@@ -274,20 +257,19 @@
           },
           "then": {
             "required": [
-              "checks",
-              "satisfaction"
-            ]
+              "checks"
+            ],
+            "properties": {
+              "checks": {
+                "minItems": 1
+              }
+            }
           },
           "else": {
             "properties": {
               "checks": {
                 "maxItems": 0
               }
-            },
-            "not": {
-              "required": [
-                "satisfaction"
-              ]
             }
           }
         }

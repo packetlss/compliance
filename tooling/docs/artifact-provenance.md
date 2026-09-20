@@ -174,3 +174,16 @@ plan/results v1/v3 schemas, readers and compatibility fixtures after consumer cu
 Historical commits, releases, wheels and artifacts remain immutable provenance and
 are reproduced with their historical tooling. See the
 [retirement inventory](../../docs/history/predecessor-retirement.md).
+
+## ADR 0024 Tranche A gap reporting
+
+An exact assigned Objective remains accounted when it has no applicable realization
+or has an authored non-implementation declaration. The plan's `implementation_state`
+and optional authored adoption retain the basis. Compact Objective/baseline results
+carry `implementation_gap` independently from nullable `status`; gap-only results
+have null `outcome`. Actual evidence outcomes remain unchanged. Complete accounting
+is not successful demonstration: `all_passed` also requires no implementation gaps.
+Coverage and historical explanation expose the appropriate current or frozen basis.
+Contribution-only parameter baselines create no assessment rows. Current admission
+rejects predecessor membership/satisfaction representations; historical artifacts
+retain their meaning with historical tooling. See [realizations](control-realization.md).

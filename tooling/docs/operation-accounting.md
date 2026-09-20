@@ -200,3 +200,16 @@ certificate subsystem, beneficiary resource or common-assurance engine is added.
 The canonical [company IAM scenario](../../verification/scenarios/projects/company-iam-policy-assessment/README.md)
 keeps reusable contracts in control-library, company policy in verification-policy,
 and the host realization in separately materialized environment-private policy.
+
+## ADR 0024 Tranche A gap reporting
+
+An exact assigned Objective remains accounted when it has no applicable realization
+or has an authored non-implementation declaration. The plan's `implementation_state`
+and optional authored adoption retain the basis. Compact Objective/baseline results
+carry `implementation_gap` independently from nullable `status`; gap-only results
+have null `outcome`. Actual evidence outcomes remain unchanged. Complete accounting
+is not successful demonstration: `all_passed` also requires no implementation gaps.
+Coverage and historical explanation expose the appropriate current or frozen basis.
+Contribution-only parameter baselines create no assessment rows. Current admission
+rejects predecessor membership/satisfaction representations; historical artifacts
+retain their meaning with historical tooling. See [realizations](control-realization.md).

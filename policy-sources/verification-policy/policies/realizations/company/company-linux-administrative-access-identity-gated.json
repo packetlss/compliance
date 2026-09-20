@@ -72,13 +72,6 @@
           }
         }
       }
-    ],
-    "satisfaction": {
-      "allOf": [
-        "company.linux.administrative-access.iam-domain-configured",
-        "company.linux.administrative-access.operator-group-required",
-        "company.linux.administrative-access.unmanaged-local-accounts-absent"
-      ]
-    }
+    ]
   }
 }

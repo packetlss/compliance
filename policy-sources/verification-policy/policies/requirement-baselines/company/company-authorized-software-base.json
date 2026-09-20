@@ -10,8 +10,7 @@
     "requirements": [
       {
         "requirement": "company.authorized-software@1",
-        "digest": "sha256:b69d0692d6721011c5b60526c47f15e9fe19ad971ba0cd12150b70f5fff00cbb",
-        "required": true
+        "digest": "sha256:b69d0692d6721011c5b60526c47f15e9fe19ad971ba0cd12150b70f5fff00cbb"
       }
     ],
     "parameter_operations": [

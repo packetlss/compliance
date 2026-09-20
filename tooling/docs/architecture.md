@@ -522,3 +522,14 @@ and commands are unsupported, and adaptation is external.
 | 2026-09-11 | Represent `linux.sysctl.required` desired policy as one keyed value per sysctl name and classify divergent duplicate selected observations as attributable inconclusiveness | Accepted for the domain-local #115 cleanup; `linux.sysctl/v1`, general evidence selection, outcome taxonomy, and identity algorithms remain unchanged |
 | 2026-09-11 | Compare current pre-migration `macos.system.minimum_version` with macOS-owned numeric dotted-version semantics and classify malformed selected product versions as attributable inconclusiveness | Accepted for the domain-local #117 cleanup; ADR 0019's canonical target is `macos.system.minimum-version`; policy minimum remains explicit three-component syntax, observed versions may have two or three components, and no shared SemVer/version framework is introduced |
 | 2026-09-11 | Remove realization information classification from reusable policy and frozen plans | Implemented under #120 as a pre-freeze deletion; confidentiality remains enforced by source ownership, acquisition/materialization, repository access, and deployment controls, with no replacement runtime taxonomy or access decision |
+## ADR 0024 Tranche A implementation (#199)
+
+The current [realization contract](control-realization.md) removes redundant
+`satisfaction.allOf` and constant membership flags. Zero-match resolution has no
+fabricated adoption; authored non-implementation retains its declaration. Both
+are implementation gaps with no Assessment outcome. Plans retain exact complete
+Check membership; result rows retain the gap dimension separately from nullable
+outcomes. Gaps prevent successful demonstration without hiding real evidence-derived
+results. Contribution-only baselines create no assessment rows. Parameter ownership,
+assignment and frozen parameter mechanics remain pending Tranche B. Historical
+artifacts require historical tooling; identity architecture is unchanged.

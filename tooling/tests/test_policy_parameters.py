@@ -18,7 +18,7 @@ class PolicyParameterTests(unittest.TestCase):
         self.requirement = {'metadata': {'id': 'objective', 'revision': 1}, 'spec': {'parameters': {
             'age': {'required': True, 'binding_mode': 'open', 'schema': schema, 'schema_digest': p.digest(schema),
                     'binding_scope': ['company', 'enclave'], 'representation': 'duration'}}}}
-        self.pin = {'requirement': 'objective@1', 'digest': p.digest(self.requirement), 'required': True}
+        self.pin = {'requirement': 'objective@1', 'digest': p.digest(self.requirement)}
         self.initial = p.declarations(self.requirement)['age']
         self.baseline = {'metadata': {'id': 'company', 'revision': 1}, 'spec': {
             'requirements': [self.pin], 'parameter_operations': [self.operation('bind', self.initial, to='30d')]}}
@@ -34,7 +34,7 @@ class PolicyParameterTests(unittest.TestCase):
         self.controls = {'test.check': self.definition}
         self.realization = {'spec': {'adoption': {'status': 'implemented'},
                                     'checks': [{'instance_id': 'check', 'implementation': 'test.check', 'parameters': {}}],
-                                    'satisfaction': {'allOf': ['check']}, 'parameter_links': []}}
+                                    'parameter_links': []}}
         for kind, path in [('parameters', '/age'), ('evidence_inputs', '/period'), ('freshness', '/max_age')]:
             target = {'instance_id': 'check', 'implementation': p.implementation_pin(self.definition), 'kind': kind, 'path': path}
             if kind != 'parameters': target['dependency'] = 'observation'
@@ -99,7 +99,6 @@ class PolicyParameterTests(unittest.TestCase):
         pin = {
             'requirement': 'objective@1',
             'digest': p.digest(requirement),
-            'required': True,
         }
         initial = p.declarations(requirement)['allowed']
         baseline = {
@@ -339,7 +338,6 @@ class PolicyParameterTests(unittest.TestCase):
         changed_base['spec']['requirements'] = [{
             'requirement': 'objective@2',
             'digest': p.digest(changed_requirement),
-            'required': True,
         }]
         changed_base['spec']['parameter_operations'][0].update({
             'target': copy.deepcopy(initial['pin']),
@@ -452,7 +450,6 @@ class PolicyParameterTests(unittest.TestCase):
             'spec': {'requirements': [{
                 'requirement': 'objective@1',
                 'digest': p.digest(fixed),
-                'required': True,
             }]},
             '_sources': [{'policy_source': 'test', 'path': 'fixed.json'}],
         }
@@ -477,7 +474,6 @@ class PolicyParameterTests(unittest.TestCase):
         pin = {
             'requirement': 'objective@1',
             'digest': p.digest(requirements['objective@1']),
-            'required': True,
         }
         initial = p.declarations(requirements['objective@1'])['allowed']
         for baseline in (baselines['base@1'], duplicate):
@@ -511,7 +507,6 @@ class PolicyParameterTests(unittest.TestCase):
                 'requirements': [{
                     'requirement': 'objective@2',
                     'digest': p.digest(newer),
-                    'required': True,
                 }],
                 'parameter_operations': [{
                     'id': 'bind-other',
