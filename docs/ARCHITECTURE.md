@@ -75,7 +75,7 @@ compliance” state or proof of continuous effectiveness.
 [ADR 0019](adr/0019-typed-identifier-namespaces-and-schema-uri-ownership.md)
 accepts typed lookup namespaces rather than a global or source-qualified semantic ID
 space. Semantic policy IDs use dot-separated kebab-case segments; revisions remain
-separate `id@revision` pins; requirement slots and technical properties remain
+separate `id@revision` pins; ParameterPolicy slots and technical properties remain
 owner-local snake_case; and evidence types retain dispatch-significant `/vN` wire
 versions. Authority-looking ID prefixes are ordinary authored segments and grant no
 trust, precedence or source ownership.

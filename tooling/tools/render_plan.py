@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from jsonschema import Draft202012Validator, FormatChecker
+from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 from jsonschema.exceptions import SchemaError
 
 from ._canonical_json import canonical_json_bytes, unique_object
@@ -1233,11 +1233,13 @@ def load_policy_catalogs(
     controls, control_errors = _load_control_catalogs(policy_sources)
     catalog, baseline_errors = _load_baseline_catalogs(policy_sources)
     _, evidence_errors = validate_control_evidence_contracts(policy_sources, controls)
-    _, requirement_baselines, _, requirement_errors = load_requirement_catalogs(
+    _, requirement_baselines, realizations, requirement_errors = load_requirement_catalogs(
         policy_sources,
         controls,
     )
-    _, parameter_policy_errors = load_parameter_policy_catalogs(policy_sources)
+    parameter_policies, parameter_policy_errors = load_parameter_policy_catalogs(
+        policy_sources
+    )
     assignment_reference_collisions = sorted(set(catalog) & set(requirement_baselines))
     collision_errors = [
         {
@@ -1260,6 +1262,21 @@ def load_policy_catalogs(
     if errors:
         return controls, catalog, errors
 
+    for reference, realization in sorted(realizations.items()):
+        try:
+            pp.validate_consumer_links(
+                realization['spec'].get('parameter_links', []),
+                realization['spec'].get('checks', []),
+                controls,
+                parameter_policies,
+            )
+        except (ValueError, KeyError) as error:
+            errors.append({
+                "type": "parameter-consumer-invalid",
+                "realization": reference,
+                "message": str(error),
+            })
+
     cache: dict[str, JsonObject] = {}
     for reference in sorted(catalog):
         try:
@@ -1268,6 +1285,21 @@ def load_policy_catalogs(
             errors.append({
                 **error.details,
                 "source": catalog[reference]["_source"],
+            })
+            continue
+
+        try:
+            pp.validate_consumer_links(
+                baseline.get("parameter_links", []),
+                list(baseline["controls"].values()),
+                controls,
+                parameter_policies,
+            )
+        except (ValueError, KeyError) as error:
+            errors.append({
+                "type": "parameter-consumer-invalid",
+                "baseline": reference,
+                "message": str(error),
             })
             continue
 
@@ -1288,11 +1320,10 @@ def load_policy_catalogs(
                 link for link in baseline.get("parameter_links", [])
                 if link["destination"]["instance_id"] == instance_id
             ]
-            if not links:
-                try:
-                    pp.evidence_for(instance, definition)
-                except (ValueError, KeyError) as error:
-                    errors.append({"type": "policy-freshness-invalid", "baseline": reference, "instance_id": instance_id, "message": str(error)})
+            try:
+                pp.validate_evidence_interfaces(instance, definition, links)
+            except (ValueError, KeyError, ValidationError) as error:
+                errors.append({"type": "policy-freshness-invalid", "baseline": reference, "instance_id": instance_id, "message": str(error)})
             linked_paths = {
                 link["destination"]["path"] for link in links
                 if link["destination"]["kind"] == "parameters"
@@ -1558,6 +1589,19 @@ def load_requirement_catalogs(
                     "realization": realization_reference,
                     "instance_id": instance["instance_id"],
                     "subject_types": unsupported_types,
+                })
+            links = [
+                link for link in spec.get("parameter_links", [])
+                if link["destination"]["instance_id"] == instance["instance_id"]
+            ]
+            try:
+                pp.validate_evidence_interfaces(instance, definition, links)
+            except (ValueError, KeyError, ValidationError) as error:
+                errors.append({
+                    "type": "policy-freshness-invalid",
+                    "realization": realization_reference,
+                    "instance_id": instance["instance_id"],
+                    "message": str(error),
                 })
             linked_paths = {link["destination"]["path"] for link in spec.get("parameter_links", []) if link["destination"]["instance_id"] == instance["instance_id"] and link["destination"]["kind"] == "parameters"}
             try:

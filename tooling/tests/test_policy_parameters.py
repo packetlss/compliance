@@ -283,6 +283,65 @@ class PolicyParameterTests(unittest.TestCase):
             with self.subTest(mutate=mutate), self.assertRaises((p.ParameterResolutionError, KeyError)):
                 p.consume_links(links, checks, self.states(), self.controls)
 
+    def test_ancestor_and_descendant_destinations_fail_before_materialization(self):
+        definition = copy.deepcopy(self.definition)
+        definition["_parameters_schema"]["properties"]["settings"] = {
+            "type": "object",
+            "properties": {"value": {"type": "string"}},
+            "required": ["value"],
+            "additionalProperties": False,
+        }
+        links = []
+        for identifier, path in (("whole", "/settings"), ("leaf", "/settings/value")):
+            link = copy.deepcopy(self.links[0])
+            link["id"] = identifier
+            link["destination"]["path"] = path
+            links.append(link)
+        checks = [{"instance_id": "check", "implementation": "test.check", "parameters": {}}]
+
+        for ordered in (links, list(reversed(links))):
+            with self.subTest(order=[item["id"] for item in ordered]), self.assertRaisesRegex(
+                p.ParameterResolutionError,
+                "ambiguous consumption destination",
+            ):
+                p.consume_links(
+                    ordered,
+                    checks,
+                    self.states(),
+                    {"test.check": definition},
+                )
+        with self.assertRaisesRegex(
+            p.ParameterResolutionError,
+            "ambiguous consumption destination",
+        ):
+            p.partial_parameter_schema(
+                definition["_parameters_schema"],
+                {"/settings/value", "/settings"},
+            )
+
+    def test_catalog_link_validation_checks_every_symbolic_edge(self):
+        checks = [{"instance_id": "check", "implementation": "test.check", "parameters": {}}]
+        policies = {"objective@1": self.root}
+        mutations = (
+            (0, lambda link: link["destination"].update(instance_id="missing")),
+            (0, lambda link: link["source"].update(digest="sha256:" + "0" * 64)),
+            (0, lambda link: link["destination"]["implementation"].update(
+                fingerprint="sha256:" + "0" * 64
+            )),
+            (0, lambda link: link["destination"].update(path="/missing")),
+            (1, lambda link: link["destination"].update(dependency="missing")),
+            (1, lambda link: link["destination"].update(path="/missing")),
+        )
+        for index, mutate in mutations:
+            link = copy.deepcopy(self.links[index])
+            mutate(link)
+            with self.subTest(mutate=mutate), self.assertRaises(
+                p.ParameterResolutionError
+            ):
+                p.validate_consumer_links(
+                    [link], checks, self.controls, policies
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

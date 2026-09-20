@@ -524,6 +524,69 @@ class BaselineOverlayTests(unittest.TestCase):
         ):
             pp.frozen_technical_links(frozen)
 
+    def test_frozen_replay_preserves_owner_local_parameter_link_ids(self):
+        source = {
+            "policy": "test.parameters@1",
+            "digest": "sha256:" + "1" * 64,
+            "slot": "expected",
+            "declaration_digest": "sha256:" + "2" * 64,
+            "schema_digest": "sha256:" + "3" * 64,
+        }
+        documents = []
+        for identifier, instance_id in (
+            ("test.first", "test.first-check"),
+            ("test.second", "test.second-check"),
+        ):
+            document = copy.deepcopy(self.base)
+            document["metadata"]["id"] = identifier
+            document["spec"]["controls"] = [
+                copy.deepcopy(document["spec"]["controls"][0])
+            ]
+            document["spec"]["controls"][0]["instance_id"] = instance_id
+            document["spec"]["parameter_links"] = [{
+                "id": "owner-local-link",
+                "source": copy.deepcopy(source),
+                "destination": {
+                    "instance_id": instance_id,
+                    "implementation": {
+                        "id": "test.setting-equals",
+                        "version": 1,
+                        "fingerprint": "sha256:" + "4" * 64,
+                    },
+                    "kind": "parameters",
+                    "path": "/expected",
+                },
+            }]
+            documents.append(document)
+        locator = [{"policy_source": "test", "path": "baselines/test.json"}]
+        consumers = [{
+            "kind": document["kind"],
+            "reference": f"{document['metadata']['id']}@1",
+            "digest": baseline_semantic_digest(document),
+            "policy_sources": locator,
+            "document": document,
+        } for document in documents]
+        frozen = {
+            "parameters": {"consumers": consumers},
+            "resolved_baselines": [{
+                "reference": consumer["reference"],
+                "lineage": [{
+                    "reference": consumer["reference"],
+                    "digest": consumer["digest"],
+                    "policy_sources": locator,
+                }],
+            } for consumer in consumers],
+        }
+
+        links = pp.frozen_technical_links(frozen)
+
+        self.assertEqual(len(links), 2)
+        self.assertEqual({item["id"] for item in links}, {"owner-local-link"})
+        self.assertEqual(
+            {item["destination"]["instance_id"] for item in links},
+            {"test.first-check", "test.second-check"},
+        )
+
     def test_substitution_rejects_replacement_link_for_another_check(self):
         overlay = self.company_overlay()
         overlay["metadata"]["id"] = "company.substitute"
@@ -789,6 +852,50 @@ class PolicySchemaTests(unittest.TestCase):
 
         self.assertEqual(len(catalog), 10)
         self.assertEqual(errors, [])
+
+    def test_policy_validation_rejects_invalid_direct_parameter_consumers(self):
+        repository = Path(__file__).resolve().parents[2]
+        shared = repository / "policy-sources/control-library/policies"
+        verification = repository / "policy-sources/verification-policy/policies"
+        mutations = (
+            (
+                "dangling-check",
+                lambda baseline: baseline["spec"]["parameter_links"][0][
+                    "destination"
+                ].update(instance_id="company.missing-check"),
+                "parameter-consumer-invalid",
+            ),
+            (
+                "stale-source",
+                lambda baseline: baseline["spec"]["parameter_links"][0][
+                    "source"
+                ].update(digest="sha256:" + "0" * 64),
+                "parameter-consumer-invalid",
+            ),
+            (
+                "parameter-link-does-not-hide-evidence",
+                lambda baseline: baseline["spec"]["controls"][0].pop("evidence"),
+                "policy-freshness-invalid",
+            ),
+        )
+        for name, mutate, expected_type in mutations:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                copied = Path(directory) / "verification"
+                shutil.copytree(verification, copied)
+                baseline_path = (
+                    copied
+                    / "baselines/company/company-authorized-software.json"
+                )
+                baseline = load_json(baseline_path)
+                mutate(baseline)
+                baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+
+                _, _, errors = load_policy_catalogs((
+                    PolicySource("control-library", shared),
+                    PolicySource("verification-policy", copied),
+                ))
+
+                self.assertIn(expected_type, {error["type"] for error in errors})
 
     def test_equivalent_additive_parameter_documents_coalesce_after_normalization(self):
         repository = Path(__file__).resolve().parents[2]

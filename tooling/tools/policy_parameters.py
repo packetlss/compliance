@@ -283,12 +283,13 @@ def validate_technical_consumer_document(resource):
         validate_parameter_link_structure(link)
 
 
-def _merge_technical_links(target, incoming):
+def _merge_technical_links(target, owner, incoming):
     for link in incoming:
-        existing = target.get(link['id'])
+        key = (owner, link['id'])
+        existing = target.get(key)
         require(existing is None or equal(existing, link),
                 'inherited technical parameter link conflict')
-        target[link['id']] = copy.deepcopy(link)
+        target[key] = copy.deepcopy(link)
 
 
 def frozen_technical_links(plan):
@@ -343,19 +344,23 @@ def frozen_technical_links(plan):
         ]
         require(selected_lineage == reconstructed_lineage,
                 'frozen technical consumer ancestry differs from selected baseline')
-        _merge_technical_links(combined, links)
+        authored = {
+            reference: authored_parameter_links(technical_catalog[reference])
+            for reference in ancestry
+        }
+        for link in links:
+            owners = [
+                reference for reference in ancestry
+                if any(equal(link, candidate) for candidate in authored[reference])
+            ]
+            require(len(owners) == 1,
+                    'frozen technical parameter link has ambiguous structural owner')
+            _merge_technical_links(combined, owners[0], [link])
         visited.update(ancestry)
     require(visited == set(catalog),
             'frozen technical consumer document is outside selected consuming ancestry')
     links = [combined[key] for key in sorted(combined)]
-    destinations = [(
-        link['destination']['instance_id'],
-        link['destination']['kind'],
-        link['destination'].get('dependency'),
-        link['destination']['path'],
-    ) for link in links]
-    require(len(destinations) == len(set(destinations)),
-            'ambiguous consumption destination')
+    validate_consumer_destinations(links)
     return links
 
 
@@ -992,18 +997,155 @@ def declared_path(schema, path):
         current = current['properties'][part]
 
 
+def _pointer_parts(path):
+    return tuple(
+        part.replace('~1', '/').replace('~0', '~')
+        for part in path[1:].split('/')
+    )
+
+
+def _overlapping_paths(paths):
+    ordered = sorted((_pointer_parts(path), path) for path in paths)
+    for index, (parts, path) in enumerate(ordered):
+        for other_parts, other_path in ordered[index + 1:]:
+            if other_parts[:len(parts)] == parts:
+                return path, other_path
+    return None
+
+
+def validate_consumer_destinations(links, *, owner_local_ids=False):
+    """Reject duplicate owner IDs and overlapping typed destination interfaces."""
+    identifiers = [link['id'] for link in links]
+    if owner_local_ids:
+        require(len(identifiers) == len(set(identifiers)),
+                'duplicate consumption link identity')
+    containers = {}
+    for link in links:
+        target = link['destination']
+        key = (
+            target['instance_id'],
+            target['kind'],
+            target.get('dependency'),
+        )
+        containers.setdefault(key, []).append(target['path'])
+    for key in sorted(containers, key=lambda item: tuple(part or '' for part in item)):
+        require(_overlapping_paths(containers[key]) is None,
+                'ambiguous consumption destination: overlapping paths')
+
+
 def partial_parameter_schema(schema, paths):
     """Leave symbolic leaf values open until full post-materialization validation."""
+    paths = sorted(paths)
+    require(_overlapping_paths(paths) is None,
+            'ambiguous consumption destination: overlapping paths')
     result = copy.deepcopy(schema)
     for path in paths:
         declared_path(schema, path)
-        parts = [p.replace('~1', '/').replace('~0', '~') for p in path[1:].split('/')]
+        parts = _pointer_parts(path)
         parent = result
         for part in parts[:-1]:
             parent = parent['properties'][part]
         parent['required'] = [name for name in parent.get('required', []) if name != parts[-1]]
         parent['properties'][parts[-1]] = {}
     return result
+
+
+def _path_present(value, path):
+    current = value
+    for part in _pointer_parts(path):
+        if not isinstance(current, dict) or part not in current:
+            return False
+        current = current[part]
+    return True
+
+
+def validate_evidence_interfaces(check, definition, links):
+    """Validate authored Evidence bindings with symbolic leaves left unresolved."""
+    contracts = definition['spec']['evidence']
+    identifiers = [item['id'] for item in contracts]
+    require(len(identifiers) == len(set(identifiers)),
+            'ambiguous evidence dependency identity')
+    bindings = check.get('evidence', {})
+    require(set(bindings).issubset(set(identifiers)),
+            'unknown evidence dependency binding')
+    for contract in contracts:
+        dependency = contract['id']
+        binding = bindings.get(dependency, {})
+        require(isinstance(binding, dict)
+                and set(binding).issubset({'max_age', 'inputs'}),
+                'unsupported evidence dependency binding')
+        dependency_links = [
+            link for link in links
+            if link['destination'].get('dependency') == dependency
+        ]
+        freshness_links = [
+            link for link in dependency_links
+            if link['destination']['kind'] == 'freshness'
+        ]
+        if freshness_links:
+            require('max_age' not in binding,
+                    'literal value cannot replace or imitate symbolic consumption')
+        else:
+            require('max_age' in binding,
+                    'explicit policy freshness required for every evidence dependency')
+            duration(binding['max_age'])
+        input_links = [
+            link for link in dependency_links
+            if link['destination']['kind'] == 'evidence_inputs'
+        ]
+        inputs = binding.get('inputs', {})
+        input_schema = contract.get('inputs_schema')
+        if input_schema is None:
+            require(not inputs and not input_links,
+                    'evidence dependency has no declared input interface')
+            continue
+        linked_paths = {link['destination']['path'] for link in input_links}
+        for path in linked_paths:
+            require(not _path_present(inputs, path),
+                    'literal value cannot replace or imitate symbolic consumption')
+        schema = partial_parameter_schema(input_schema, linked_paths)
+        Draft202012Validator(schema, format_checker=FormatChecker()).validate(inputs)
+
+
+def validate_consumer_links(links, checks, controls, parameter_policies,
+                            *, owner_local_ids=True):
+    """Validate symbolic source and destination pins without resolving values."""
+    for link in links:
+        validate_parameter_link_structure(link)
+    validate_consumer_destinations(links, owner_local_ids=owner_local_ids)
+    by_id = {check['instance_id']: check for check in checks}
+    require(len(by_id) == len(checks), 'ambiguous required check identity')
+    for link in links:
+        source = link['source']
+        policy = parameter_policies.get(source['policy'])
+        require(policy is not None, 'consumption source ParameterPolicy is absent')
+        state = declarations(policy).get(source['slot'])
+        require(state is not None and equal(state['pin'], source),
+                'stale consumption declaration pin')
+        target = link['destination']
+        check = by_id.get(target['instance_id'])
+        require(check is not None, 'consumption requires a defined required check')
+        definition = controls.get(check['implementation'])
+        require(definition is not None, 'consumption Check implementation is absent')
+        require(equal(implementation_pin(definition), target['implementation']),
+                'stale post-substitution implementation destination')
+        if target['kind'] == 'parameters':
+            declared_path(definition['_parameters_schema'], target['path'])
+            continue
+        contracts = [
+            dependency for dependency in definition['spec']['evidence']
+            if dependency['id'] == target['dependency']
+        ]
+        require(len(contracts) == 1,
+                'consumption requires an unambiguous evidence dependency')
+        if target['kind'] == 'freshness':
+            require(target['path'] == '/max_age'
+                    and state['declaration'].get('representation') == 'duration',
+                    'freshness requires a direct duration slot')
+        elif target['kind'] == 'evidence_inputs':
+            declared_path(contracts[0].get('inputs_schema', {}), target['path'])
+        else:
+            raise ParameterResolutionError('unsupported consumption destination')
 
 
 def evidence_for(instance, definition):
@@ -1094,10 +1236,9 @@ def consume_links(links, checks, states, controls):
     checks = copy.deepcopy(checks)
     by_id = {check['instance_id']: check for check in checks}
     required_ids = [check['instance_id'] for check in checks]
-    destinations, link_ids, records = set(), set(), []
+    validate_consumer_destinations(links)
+    records = []
     for link in sorted(links, key=lambda item: item['id']):
-        require(link['id'] not in link_ids, 'duplicate consumption link identity')
-        link_ids.add(link['id'])
         source = link['source']
         state = states.get(source['policy'], {}).get(source['slot'])
         require(state is not None and equal(state['pin'], link['source']), 'stale consumption declaration pin')
@@ -1107,9 +1248,6 @@ def consume_links(links, checks, states, controls):
         require(check is not None and target['instance_id'] in required_ids, 'consumption requires a defined required check')
         definition = controls[check['implementation']]
         require(equal(implementation_pin(definition), target['implementation']), 'stale post-substitution implementation destination')
-        key = (target['instance_id'], target['kind'], target.get('dependency'), target['path'])
-        require(key not in destinations, 'ambiguous consumption destination')
-        destinations.add(key)
         if target['kind'] == 'parameters':
             declared_path(definition['_parameters_schema'], target['path'])
             assign_path(check.setdefault('parameters', {}), target['path'], state['value'])
@@ -1135,8 +1273,10 @@ def consume_links(links, checks, states, controls):
 
 
 def consume(owner, states, controls):
+    links = owner['spec'].get('parameter_links', [])
+    validate_consumer_destinations(links, owner_local_ids=True)
     return consume_links(
-        owner['spec'].get('parameter_links', []),
+        links,
         owner['spec'].get('checks', []),
         states,
         controls,
