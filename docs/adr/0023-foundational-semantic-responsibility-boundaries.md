@@ -82,7 +82,7 @@ A semantically compatible implementation must preserve all ten invariants below.
    | **FAIL** | Qualifying admissible evidence establishes that the resolved criterion is not satisfied. |
    | **UNKNOWN** | Criterion truth cannot be established from admissible evidence, but that lack of determination can be safely attributed and explained. |
    | **ERROR** | Criterion execution or decision interpretation failed, while trusted orchestration can still construct a trustworthy attributable result. |
-   | **WAIVED** | An underlying FAIL is covered by a valid explicit waiver. It remains distinguishable from PASS and does not establish criterion satisfaction. |
+   | **WAIVED** | An underlying FAIL is covered by an applicable explicit waiver at the assessment instant. It remains distinguishable from PASS and does not establish criterion satisfaction. |
    | **Refusal** | The shared prerequisites needed to construct and publish a trustworthy attributable result cannot be established; no assessment result is published. |
 
    Existing concrete refusal causes remain examples and executable owners of this
