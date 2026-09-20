@@ -151,9 +151,10 @@ materialize those values with provenance; copied literals do not supply the
 semantic linkage. [#73](https://github.com/packetlss/compliance/issues/73) implements this migration;
 [the parameter contract](policy-parameters.md) defines its concrete fields and identity
 projection. Realizations still declare their complete checks, with explicit symbolic
-links for semantic parameters. Missing realization/coverage behavior,
-`allOf` and provenance-only `based_on` are unchanged; broader assurance and
-external-claim authority require separate promoted work.
+links for semantic parameters. ADR 0024 Tranche A separately represents missing
+realizations as implementation gaps and removes the redundant satisfaction
+expression; complete Check membership and provenance-only `based_on` remain.
+Broader assurance and external-claim authority require separate promoted work.
 
 A `ControlRequirement` is suitable for a signed company-policy release. It has a
 stable ID and revision, a technology-neutral statement, and optional external

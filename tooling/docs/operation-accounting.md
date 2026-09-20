@@ -120,11 +120,13 @@ reopening project configuration.
 Member disposition is derived from frozen lifecycle, membership, assignments and
 expected policy: inactive, unassigned, no assessable policy, or result required.
 The first three require no result.
-`all_passed` additionally requires a passing state for every selected member. Thus
+`all_passed` additionally requires a passing state and no implementation gap for
+every selected member. Thus
 A pass plus B unassigned is complete accounting without unqualified A/B success.
 An operation consisting entirely of non-assessable members has no passing basis.
-No absent assignment is inferred N/A. Existing explicit N/A, missing realization,
-fail-only waivers and independent technical assessment retain their behavior.
+No absent assignment is inferred N/A. Explicit N/A, fail-only waivers and independent
+technical assessment remain distinct. Missing realization is an accounted
+implementation gap with no Assessment outcome under ADR 0024 Tranche A.
 
 Historical mapping filters are visibly filtered. Mapping references and whole-operation
 accounting remain separate, and mappings never produce external conformity. Current

@@ -14,7 +14,7 @@ specifies its embedded projection and concrete typed assertion examples. The
 promotion-stage statements below retain the original design history; #37 is closed
 promotion history. New residual architecture requires a focused exploration.
 
-> **Accepted successor, implementation pending:** [ADR 0024](0024-objective-assurance-and-parameter-policy.md)
+> **Successor: Tranche A implemented under #199; parameter Tranche B pending:** [ADR 0024](0024-objective-assurance-and-parameter-policy.md)
 > supersedes Requirement-owned parameters, RequirementBaseline parameter derivation/
 > contributions, realization-only consumption and duplicated frozen summaries. It
 > also replaces fabricated adoption and failing-Requirement representation for

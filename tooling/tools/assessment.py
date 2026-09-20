@@ -681,8 +681,15 @@ def build_mappings_view(
             for item in member["policy"][policy_key]:
                 identity = item["reference" if level == "objective" else "instance_id"]
                 outcome = _specific_outcome(member, report, result_key, identity_key, identity)
+                implementation_gap = False
                 if level == "objective":
                     exact_item = plan_requirements.get(identity)
+                    recorded = next((row for row in (report or {}).get("requirement_assessments", [])
+                                     if row["requirement"] == identity), None)
+                    implementation_gap = (
+                        exact_item["implementation_state"] in {"no_realization", "not_implemented"}
+                        if exact_item else recorded["implementation_gap"] if recorded else None
+                    )
                     policy_alignment = (
                         exact_item["implementation_state"]
                         if exact_item
@@ -711,6 +718,7 @@ def build_mappings_view(
                         "policy_alignment": policy_alignment,
                         "expected_result_slot": _slot(member),
                         "historical_outcome": outcome,
+                        "implementation_gap": implementation_gap,
                         "historical_interpretation": member["historical_interpretation"],
                         "current_qualification": {
                             "plan_alignment": member["plan_alignment"],
@@ -778,6 +786,7 @@ def render_mappings_view(view: JsonObject) -> str:
             f'{mapping["external_ref"]}  {mapping["mapping_level"].upper()}  '
             f'{mapping["asset_id"]}  {mapping["policy_object"]}  '
             f'{mapping["policy_object_title"] or "-"}  {outcome}  '
+            f'{"GAP" if mapping["implementation_gap"] else "-"}  '
             f'{mapping["current_qualification"]["plan_alignment"].replace("_", " ").upper()}  '
             f'{mapping["policy_alignment"].replace("_", " ").upper()}'
         )
