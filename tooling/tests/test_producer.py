@@ -75,6 +75,67 @@ class ProducerTests(unittest.TestCase):
                                       '--input', str(path)), result)
             self.assertEqual(path.read_bytes(), before)
 
+    def test_opaque_reference_annotations_survive_discovery_export_and_validation(self):
+        for keyword in ('$ref', '$dynamicRef'):
+            for value in ('https://example.invalid/annotation', 123):
+                with self.subTest(keyword=keyword, value=value):
+                    opaque = {keyword: value}
+                    self.schema['_annotation'] = opaque
+                    payload = self.schema['properties']['payload']
+                    payload['default'] = opaque
+                    payload['examples'] = [opaque]
+                    payload['properties']['$ref'] = {'const': opaque, 'enum': [opaque]}
+                    payload['_annotation'] = [opaque]
+                    self.write_schema()
+                    self.assertEqual(self.cli('list', *self.source_args())['contracts'][0]['type'],
+                                     'test.observation/v1')
+                    self.assertEqual(self.cli('schema', *self.source_args(),
+                                             '--type', 'test.observation/v1'), self.schema)
+                    self.assertTrue(self.validate()['document_valid'])
+
+    def test_real_references_are_checked_in_nested_subschema_locations(self):
+        original = copy.deepcopy(self.schema)
+        locations = (
+            lambda ref: {'allOf': [ref]},
+            lambda ref: {'properties': {'optional': ref}},
+            lambda ref: {'$defs': {'unused': ref}},
+            lambda ref: {'items': ref},
+            lambda ref: {'prefixItems': [ref]},
+            lambda ref: {'additionalProperties': ref},
+            lambda ref: {'dependentSchemas': {'count': ref}},
+            lambda ref: {'if': {'properties': {'count': ref}}},
+        )
+        for keyword in ('$ref', '$dynamicRef'):
+            for target in ('https://example.invalid/schema', '#/$defs/missing'):
+                for location in locations:
+                    with self.subTest(keyword=keyword, target=target, location=location):
+                        self.schema = copy.deepcopy(original)
+                        self.schema['properties']['payload'].update(location({keyword: target}))
+                        self.write_schema()
+                        self.cli('list', *self.source_args(), exit_code=2)
+        self.schema = original
+        self.schema['properties']['payload'].update({
+            '$id': 'https://example.invalid/local-payload',
+            '$defs': {'count': {'type': 'integer'}},
+            'properties': {'count': {'$ref': '#/$defs/count'}},
+        })
+        self.write_schema()
+        self.assertTrue(self.validate()['document_valid'])
+
+    def test_reference_targets_are_schemas_only_when_explicitly_referenced(self):
+        self.schema['_annotation'] = {'$ref': 'https://example.invalid/annotation'}
+        self.schema['properties']['payload']['allOf'] = [{'$ref': '#/_annotation'}]
+        self.write_schema()
+        self.assertIn('unresolvable external', self.cli('list', *self.source_args(), exit_code=2))
+        self.schema['_annotation'] = {'$ref': '#/missing'}
+        self.write_schema()
+        self.cli('list', *self.source_args(), exit_code=2)
+        # A recursive schema is legal; preflight must terminate without evaluating it.
+        self.schema['_annotation'] = {'$ref': '#/_annotation'}
+        self.write_schema()
+        self.assertEqual(self.cli('schema', *self.source_args(), '--type',
+                                 'test.observation/v1'), self.schema)
+
     def test_extensions_are_preserved_and_identity_bearing(self):
         doc = copy.deepcopy(self.document)
         for target in (doc, doc['subject'], doc['collector'], doc['payload']):
@@ -88,7 +149,7 @@ class ProducerTests(unittest.TestCase):
     def test_exact_coalescing_and_divergence_in_both_source_orders(self):
         path = self.root / 'other/schemas/evidence/different-filename.json'
         path.parent.mkdir(parents=True)
-        self.schema['_annotation'] = {'value': 1}
+        self.schema['_annotation'] = {'$ref': 'https://example.invalid/annotation'}
         self.write_schema()
         path.write_text(json.dumps(self.schema))
         permutations = ([f'a={self.source}', f'b={self.root / "other"}'],
@@ -97,7 +158,7 @@ class ProducerTests(unittest.TestCase):
             args = [item for source in sources for item in ('--policy-source', source)]
             self.assertEqual(self.cli('schema', *args, '--type', 'test.observation/v1'), self.schema)
         changed = copy.deepcopy(self.schema)
-        changed['_annotation']['value'] = 2
+        changed['_annotation']['$ref'] = 123
         path.write_text(json.dumps(changed))
         for sources in permutations:
             args = [item for source in sources for item in ('--policy-source', source)]

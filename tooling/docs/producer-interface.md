@@ -25,7 +25,10 @@ on stdout. It preserves all authored schema content and local references; JSON
 whitespace/key order may differ from the source file. `--schema-id URI` optionally
 asserts that the selected type has that exact schema URI. Unknown types, mismatched
 URIs, invalid schemas and unresolved references fail with exit 2 and a diagnostic
-on stderr. There is no network lookup, fallback or schema rewriting.
+on stderr. There is no network lookup, fallback or schema rewriting. Reference preflight
+uses the specification-defined subschema locations from `referencing`; opaque
+annotation values remain authored content even when they contain `$ref` or
+`$dynamicRef` keys. Genuine schema references are still resolved offline.
 
 Repeat `--policy-source NAME=PATH` for independent sources. Every supplied root
 must exist. Catalog admission remains fail-closed: exact-identical definitions

@@ -7,7 +7,8 @@ from datetime import datetime
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
-from referencing import Registry
+from referencing import Registry, Resource
+from referencing.jsonschema import DRAFT202012
 
 from ._canonical_json import canonical_json_bytes, unique_object as _unique_object
 from .evidence_provenance import evidence_document_digest, evidence_set_provenance
@@ -49,18 +50,30 @@ def prepare_schemas(schemas, required_types):
         # Catalog contracts use document-local refs. Resolve every reference before
         # attribution, even for empty snapshots; never retrieve mutable remote schemas.
         validator = Draft202012Validator(schema, format_checker=EVIDENCE_FORMAT_CHECKER, registry=Registry())
-        def check_refs(value):
+        checked = set()
+        def check_refs(resource, resolver):
+            value = resource.contents
+            location = (id(value), resolver._base_uri)
+            if location in checked:
+                return
+            checked.add(location)
             if isinstance(value, dict):
-                for key, child in value.items():
-                    if key in ('$ref', '$dynamicRef'):
+                for key in ('$ref', '$dynamicRef'):
+                    if key in value:
+                        child = value[key]
                         if not child.startswith('#'):
                             raise ValueError('unresolvable external required evidence schema reference')
-                        validator._resolver.lookup(child)
-                    else:
-                        check_refs(child)
-            elif isinstance(value, list):
-                for child in value: check_refs(child)
-        check_refs(schema)
+                        resolved = resolver.lookup(child)
+                        # A reference can explicitly make an otherwise opaque
+                        # location a schema. Follow it, without looping on cycles.
+                        Draft202012Validator.check_schema(resolved.contents)
+                        check_refs(Resource.from_contents(resolved.contents,
+                                   default_specification=DRAFT202012), resolved.resolver)
+            # The specification owns subschema locations. Annotation/default/const
+            # values are ordinary JSON, even when they contain reference-like keys.
+            for child in resource.subresources():
+                check_refs(child, resolver.in_subresource(child))
+        check_refs(DRAFT202012.create_resource(schema), validator._resolver)
         validators[evidence_type] = validator
         references[evidence_type] = {
             'type': evidence_type,
