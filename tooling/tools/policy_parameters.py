@@ -804,7 +804,7 @@ def compose_selected(resolutions, policies):
         for contribution in policy['spec'].get('parameter_contributions', []):
             target = contribution['target']
             identity = {
-                'policy': reference,
+                'policy': clean['metadata']['id'],
                 'id': contribution['id'],
                 'target_policy': target['policy'],
                 'slot': target['slot'],
@@ -1252,6 +1252,84 @@ def validate_realization_reference_identity(realization):
     require(isinstance(links, list), 'realization parameter links must be an array')
     for link in links:
         validate_parameter_link_structure(link)
+
+
+def _validate_frozen_origin(metadata, resource_kind):
+    origin = metadata.get('origin')
+    if origin is None:
+        return
+    require(isinstance(origin, dict)
+            and {'type', 'name'} <= set(origin)
+            and all(isinstance(origin[field], str) and bool(origin[field])
+                    for field in ('type', 'name')),
+            f'invalid frozen {resource_kind} origin')
+
+
+def validate_requirement_baseline_document(resource):
+    """Validate the bounded historical RequirementBaseline source wire."""
+    require(isinstance(resource, dict)
+            and set(resource) == {'apiVersion', 'kind', 'metadata', 'spec'}
+            and resource.get('apiVersion') == 'compliance.example/v1alpha1'
+            and resource.get('kind') == 'RequirementBaseline',
+            'unsupported frozen RequirementBaseline document syntax')
+    metadata = resource.get('metadata')
+    require(isinstance(metadata, dict)
+            and {'id', 'revision'} <= set(metadata)
+            and set(metadata).issubset({'id', 'revision', 'origin'})
+            and isinstance(metadata['id'], str)
+            and bool(re.fullmatch(ID, metadata['id']))
+            and valid_revision(metadata['revision']),
+            'unsupported frozen RequirementBaseline metadata syntax')
+    _validate_frozen_origin(metadata, 'RequirementBaseline')
+    spec = resource.get('spec')
+    require(isinstance(spec, dict)
+            and set(spec) == {'title', 'requirements'}
+            and isinstance(spec['title'], str) and bool(spec['title'].strip())
+            and isinstance(spec['requirements'], list) and bool(spec['requirements']),
+            'unsupported frozen RequirementBaseline spec syntax')
+    references = []
+    for pin in spec['requirements']:
+        require(isinstance(pin, dict) and set(pin) == {'requirement', 'digest'}
+                and isinstance(pin['requirement'], str)
+                and bool(re.fullmatch(REFERENCE, pin['requirement']))
+                and valid_digest(pin['digest']),
+                'invalid frozen RequirementBaseline Objective pin')
+        references.append(pin['requirement'])
+    require(len(references) == len(set(references)),
+            'duplicate frozen RequirementBaseline Objective pin')
+
+
+def validate_objective_document(resource):
+    """Validate the bounded historical ControlRequirement source wire."""
+    require(isinstance(resource, dict)
+            and set(resource) == {'apiVersion', 'kind', 'metadata', 'spec'}
+            and resource.get('apiVersion') == 'compliance.example/v1alpha1'
+            and resource.get('kind') == 'ControlRequirement',
+            'unsupported frozen Objective document syntax')
+    metadata = resource.get('metadata')
+    require(isinstance(metadata, dict)
+            and {'id', 'revision'} <= set(metadata)
+            and set(metadata).issubset({'id', 'revision', 'origin'})
+            and isinstance(metadata['id'], str)
+            and bool(re.fullmatch(ID, metadata['id']))
+            and valid_revision(metadata['revision']),
+            'unsupported frozen Objective metadata syntax')
+    _validate_frozen_origin(metadata, 'Objective')
+    spec = resource.get('spec')
+    require(isinstance(spec, dict)
+            and {'title', 'statement'} <= set(spec)
+            and set(spec).issubset({'title', 'statement', 'rationale', 'external_refs'})
+            and all(isinstance(spec[field], str) and bool(spec[field])
+                    for field in ('title', 'statement')),
+            'unsupported frozen Objective spec syntax')
+    if 'rationale' in spec:
+        require(isinstance(spec['rationale'], str) and bool(spec['rationale']),
+                'invalid frozen Objective rationale')
+    external_refs = spec.get('external_refs', [])
+    require(isinstance(external_refs, list)
+            and len(external_refs) == len(set(external_refs))
+            and all(isinstance(item, str) and bool(item) for item in external_refs),
+            'invalid frozen Objective external references')
 
 
 def require_identity(value, grammar, message):
@@ -1728,9 +1806,7 @@ def reconstruct_frozen_parameters(plan):
 def _validate_requirement_facts(plan, controls, states):
     for baseline in plan['resolved_requirement_baselines']:
         resource = baseline.get('document')
-        require(isinstance(resource, dict)
-                and resource.get('kind') == 'RequirementBaseline',
-                'frozen RequirementBaseline document is required')
+        validate_requirement_baseline_document(resource)
         reference = f"{resource['metadata']['id']}@{resource['metadata']['revision']}"
         require(reference == baseline['reference'] == baseline['baseline']
                 and digest(resource) == baseline['digest'],
@@ -1754,14 +1830,11 @@ def _validate_requirement_facts(plan, controls, states):
     }
     for requirement in plan['requirements']:
         resource = requirement.get('document')
-        require(isinstance(resource, dict), 'frozen Objective document is required')
+        validate_objective_document(resource)
         reference = f"{resource['metadata']['id']}@{resource['metadata']['revision']}"
         require(reference == requirement['reference']
                 and digest(resource) == requirement['digest'],
                 'frozen Objective content pin mismatch')
-        require(resource.get('kind') == 'ControlRequirement'
-                and 'parameters' not in resource.get('spec', {}),
-                'Objective cannot own parameter declarations')
         require(memberships.get(reference) == requirement['digest'],
                 'frozen Objective membership differs from selected baseline')
         for field in ('title', 'statement', 'external_refs'):

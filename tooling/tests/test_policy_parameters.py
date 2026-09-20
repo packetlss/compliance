@@ -202,7 +202,7 @@ class PolicyParameterTests(unittest.TestCase):
         self.assertEqual(state["value"], ["base", "postgresql", "shared"])
         contribution, = state["composition"]["contributions"]
         self.assertEqual(contribution["identity"], {
-            "policy": "database@1", "id": "packages",
+            "policy": "database", "id": "packages",
             "target_policy": "software", "slot": "allowed",
         })
         self.assertEqual(contribution["members"], ["postgresql", "shared"])
@@ -210,6 +210,27 @@ class PolicyParameterTests(unittest.TestCase):
                       if item["member"] == "shared")
         self.assertEqual({origin["kind"] for origin in shared["origins"]},
                          {"base", "contribution"})
+
+    def test_contribution_identity_is_stable_across_owner_revisions(self):
+        catalog, resolutions = self.additive()
+        revision = copy.deepcopy(catalog["database@1"])
+        revision["metadata"]["revision"] = 2
+        revision["spec"]["parameter_contributions"][0]["members"] = ["mysql"]
+        catalog["database@2"] = revision
+        states, ancestry = p.resolve("database@2", catalog)
+        resolutions.append({
+            "reference": "database@2",
+            "applicability": {"group": "database-v2", "assignment": "database-v2",
+                              "parameter_policy": "database@2"},
+            "states": states,
+            "ancestry": ancestry,
+        })
+
+        with self.assertRaisesRegex(
+            p.ParameterResolutionError,
+            "divergent additive contribution identity",
+        ):
+            p.compose_selected(resolutions, catalog)
 
     def test_contribution_does_not_activate_owner_and_order_is_nonsemantic(self):
         catalog, resolutions = self.additive()

@@ -15,7 +15,15 @@
       "properties": {
         "id": {"$ref": "#/$defs/identifier"},
         "revision": {"$ref": "#/$defs/revision"},
-        "origin": {"type": "object", "additionalProperties": true}
+        "origin": {
+          "type": "object",
+          "required": ["type", "name"],
+          "additionalProperties": true,
+          "properties": {
+            "type": {"type": "string", "minLength": 1},
+            "name": {"type": "string", "minLength": 1}
+          }
+        }
       }
     },
     "spec": {

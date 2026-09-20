@@ -342,6 +342,45 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
         ):
             validate_assessment_plan(changed)
 
+    def test_objective_owners_reject_open_or_empty_frozen_wire(self):
+        project = ROOT / "verification/fixtures/iam-private-boundary"
+        subject, groups, assignments = load_inventory_inputs(
+            project / "inventory",
+            project / "assignments",
+            "host/restricted-linux-01",
+            ROOT / "tooling/schemas/inventory/resource.schema.json",
+        )
+        plan = render_plan(
+            subject,
+            groups,
+            assignments,
+            (
+                self.sources[0],
+                self.sources[1],
+                PolicySource("environment-private", project / "policy"),
+            ),
+        )
+
+        changed = copy.deepcopy(plan)
+        changed["resolved_requirement_baselines"][0]["document"]["spec"][
+            "requirements"
+        ] = []
+        self.resign(changed)
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "unsupported frozen RequirementBaseline spec syntax",
+        ):
+            validate_assessment_plan(changed)
+
+        changed = copy.deepcopy(plan)
+        changed["requirements"][0]["document"]["unsupported"] = True
+        self.resign(changed)
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "unsupported frozen Objective document syntax",
+        ):
+            validate_assessment_plan(changed)
+
     def test_selected_nonconsuming_parent_can_be_retained_as_consumer_ancestry(self):
         source = self.plan["parameters"]["consumers"][0]
         parent = copy.deepcopy(source["document"])

@@ -238,6 +238,47 @@ class PolicyResourceTests(unittest.TestCase):
                     ):
                         self.assertFalse(validator.is_valid(changed))
 
+    def test_objective_policy_origin_requires_existing_provenance_shape(self):
+        digest = "sha256:" + "0" * 64
+        cases = (
+            (
+                "control-requirement.schema.json",
+                {
+                    "apiVersion": "compliance.example/v1alpha1",
+                    "kind": "ControlRequirement",
+                    "metadata": {"id": "test.objective", "revision": 1},
+                    "spec": {"title": "Objective", "statement": "Required state"},
+                },
+            ),
+            (
+                "requirement-baseline.schema.json",
+                {
+                    "apiVersion": "compliance.example/v1alpha1",
+                    "kind": "RequirementBaseline",
+                    "metadata": {"id": "test.objectives", "revision": 1},
+                    "spec": {
+                        "title": "Objectives",
+                        "requirements": [{
+                            "requirement": "test.objective@1",
+                            "digest": digest,
+                        }],
+                    },
+                },
+            ),
+        )
+        for filename, document in cases:
+            validator = Draft202012Validator(
+                read_json(POLICIES / "schemas/policy" / filename)
+            )
+            valid = copy.deepcopy(document)
+            valid["metadata"]["origin"] = {"type": "test", "name": "source"}
+            self.assertTrue(validator.is_valid(valid), filename)
+            for origin in ({}, {"type": "test"}, {"name": "source"}):
+                changed = copy.deepcopy(document)
+                changed["metadata"]["origin"] = origin
+                with self.subTest(schema=filename, origin=origin):
+                    self.assertFalse(validator.is_valid(changed))
+
     def test_additive_set_authoring_contract_is_bounded_and_strict(self):
         schema_root = POLICIES / "schemas/policy"
         parameter_validator = Draft202012Validator(

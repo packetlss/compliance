@@ -305,7 +305,7 @@ def _parameter_policy_paths(plan: JsonObject) -> dict[tuple[str, str], JsonObjec
         owned_contributions = []
         for row in _parameter_rows(states):
             for contribution in row.get("composition", {}).get("contributions", []):
-                if contribution["identity"]["policy"] == reference:
+                if contribution["identity"]["policy"] == reference.rsplit("@", 1)[0]:
                     owned_contributions.append(copy.deepcopy(contribution))
         result[key] = {
             "policy_type": "parameter",

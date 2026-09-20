@@ -14,7 +14,7 @@ AT = "2026-09-01T00:00:00Z"
 BASE = ["auditd", "curl"]
 UNION = ["auditd", "curl", "postgresql"]
 CONTRIBUTION = {
-    "policy": "company.database-software@1", "id": "database-packages",
+    "policy": "company.database-software", "id": "database-packages",
     "target_policy": "company.authorized-software", "slot": "allowed_software",
 }
 PATH = {
