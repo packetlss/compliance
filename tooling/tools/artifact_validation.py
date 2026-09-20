@@ -92,6 +92,26 @@ def _criteria_state(control: JsonObject) -> JsonObject:
     }
 
 
+def _authored_criteria_state(control: JsonObject, technical_links: list[JsonObject]) -> JsonObject:
+    """Project pre-consumption criteria when a direct Check has governed inputs."""
+    matching = [
+        link for link in technical_links
+        if link["destination"]["instance_id"] == control["instance_id"]
+    ]
+    if not matching:
+        return _criteria_state(control)
+    from .policy_parameters import dematerialize_links
+    instance = dematerialize_links(
+        [control["policy_inputs"]["instance"]], matching,
+    )[0]
+    return {
+        "evidence": instance.get("evidence", {}),
+        "implementation": instance["implementation"],
+        "parameters": instance.get("parameters", {}),
+        "disposition": instance["disposition"],
+    }
+
+
 def _frozen_meaning_errors(document: JsonObject) -> list[str]:
     """Validate plan-owned policy/check meaning against frozen source facts."""
     errors: list[str] = []
@@ -161,11 +181,15 @@ def validate_assessment_plan(
     from .assessment_provenance import validate_plan_provenance
     _validate_schema(document, assessment_plan_schema_path(), "assessment plan", source)
     errors: list[str] = []
-    from .policy_parameters import validate_frozen
+    from .policy_parameters import frozen_technical_links, validate_frozen
     try:
         validate_frozen(document)
     except (ValueError, KeyError) as error:
         errors.append("invalid frozen policy parameters: " + str(error))
+    try:
+        technical_links = frozen_technical_links(document)
+    except (ValueError, KeyError):
+        technical_links = []
     errors.extend(_frozen_meaning_errors(document))
 
     resolution = document["resolution"]
@@ -227,7 +251,7 @@ def validate_assessment_plan(
                         "overlay operation is missing from control lineage"
                     )
             if derivations and not any(
-                derivation["after"] == _criteria_state(control)
+                derivation["after"] == _authored_criteria_state(control, technical_links)
                 for derivation in derivations
             ):
                 errors.append(

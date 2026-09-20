@@ -5,6 +5,7 @@ import copy
 import re
 
 from jsonschema import Draft202012Validator, FormatChecker, ValidationError
+from jsonschema.exceptions import FormatError
 from referencing import Registry
 
 from .assessment_provenance import digest
@@ -87,6 +88,81 @@ def technical_document_reference(resource):
     return f"{metadata.get('id')}@{revision}"
 
 
+def _validate_authored_evidence(evidence):
+    require(isinstance(evidence, dict), 'technical Check evidence must be an object')
+    for dependency, requirement in evidence.items():
+        require(isinstance(dependency, str) and bool(re.fullmatch(SLOT, dependency))
+                and isinstance(requirement, dict)
+                and set(requirement).issubset({'max_age', 'inputs'}),
+                'unsupported technical Check evidence syntax')
+        if 'max_age' in requirement:
+            require(isinstance(requirement['max_age'], str)
+                    and bool(re.fullmatch(r'[1-9][0-9]*[smhd]', requirement['max_age'])),
+                    'invalid technical Check evidence freshness')
+        if 'inputs' in requirement:
+            require(isinstance(requirement['inputs'], dict),
+                    'technical Check Evidence inputs must be an object')
+
+
+def _validate_authored_control(control):
+    """Validate the exact bounded Check wire retained inside a technical owner."""
+    require(isinstance(control, dict)
+            and {'instance_id', 'implementation'} <= set(control)
+            and set(control).issubset({
+                'instance_id', 'implementation', 'parameters', 'severity',
+                'remediation', 'external_refs', 'evidence',
+            }), 'unsupported frozen technical Check syntax')
+    require(isinstance(control['instance_id'], str)
+            and bool(re.fullmatch(ID, control['instance_id']))
+            and isinstance(control['implementation'], str)
+            and bool(re.fullmatch(ID, control['implementation'])),
+            'invalid frozen technical Check identity')
+    require('parameters' not in control or isinstance(control['parameters'], dict),
+            'technical Check parameters must be an object')
+    require('severity' not in control
+            or control['severity'] in {'info', 'low', 'medium', 'high', 'critical'},
+            'invalid technical Check severity')
+    require('remediation' not in control or isinstance(control['remediation'], str),
+            'invalid technical Check remediation')
+    external_refs = control.get('external_refs', [])
+    require(isinstance(external_refs, list)
+            and len(external_refs) == len(set(external_refs))
+            and all(isinstance(item, str) and bool(item) for item in external_refs),
+            'invalid technical Check external references')
+    _validate_authored_evidence(control.get('evidence', {}))
+
+
+def _validate_deviation(deviation):
+    require(isinstance(deviation, dict)
+            and set(deviation) == {
+                'id', 'classification', 'rationale', 'approval_ref', 'review_after',
+            }
+            and all(isinstance(deviation[field], str) and bool(deviation[field])
+                    for field in deviation),
+            'invalid frozen technical deviation')
+    try:
+        FormatChecker().check(deviation['review_after'], 'date')
+    except FormatError as error:
+        raise ParameterResolutionError('invalid frozen technical deviation date') from error
+
+
+def _validate_annotations(annotations):
+    require(isinstance(annotations, dict)
+            and set(annotations).issubset({'severity', 'remediation', 'external_refs'}),
+            'unsupported frozen technical annotations')
+    if 'severity' in annotations:
+        require(annotations['severity'] in {'info', 'low', 'medium', 'high', 'critical'},
+                'invalid frozen technical annotation severity')
+    if 'remediation' in annotations:
+        require(isinstance(annotations['remediation'], str),
+                'invalid frozen technical annotation remediation')
+    if 'external_refs' in annotations:
+        refs = annotations['external_refs']
+        require(isinstance(refs, list) and len(refs) == len(set(refs))
+                and all(isinstance(item, str) and bool(item) for item in refs),
+                'invalid frozen technical annotation references')
+
+
 def validate_technical_consumer_document(resource):
     """Validate frozen Check-owning technical policy syntax needed for replay."""
     require(isinstance(resource, dict)
@@ -107,7 +183,13 @@ def validate_technical_consumer_document(resource):
                 'unsupported frozen Baseline metadata syntax')
         revision = metadata.get('version', metadata.get('revision'))
         require(valid_revision(revision), 'invalid frozen Baseline revision')
-        require('origin' not in metadata or isinstance(metadata['origin'], dict),
+        require('origin' not in metadata or (
+                    isinstance(metadata['origin'], dict)
+                    and {'type', 'name'} <= set(metadata['origin'])
+                    and all(isinstance(metadata['origin'][field], str)
+                            and bool(metadata['origin'][field])
+                            for field in ('type', 'name'))
+                ),
                 'invalid frozen Baseline origin')
     else:
         require(set(metadata) == {'id', 'revision'}
@@ -121,6 +203,8 @@ def validate_technical_consumer_document(resource):
                 and isinstance(spec['title'], str) and bool(spec['title'].strip())
                 and isinstance(spec['controls'], list),
                 'unsupported frozen Baseline spec syntax')
+        for control in spec['controls']:
+            _validate_authored_control(control)
     else:
         require(set(spec).issubset({'title', 'extends', 'operations', 'parameter_links'})
                 and {'title', 'extends', 'operations'} <= set(spec)
@@ -163,6 +247,27 @@ def validate_technical_consumer_document(resource):
                         and bool(re.fullmatch(ID, operation['target']))
                         and valid_digest(operation['expected_parent_fingerprint']),
                         'invalid frozen technical operation target')
+            if operation['op'] == 'add':
+                _validate_authored_control(operation['control'])
+            elif operation['op'] == 'tailor':
+                require(isinstance(operation['parameters'], dict),
+                        'technical tailor parameters must be an object')
+                _validate_authored_evidence(operation.get('evidence', {}))
+                _validate_deviation(operation['deviation'])
+            elif operation['op'] == 'exclude':
+                _validate_deviation(operation['deviation'])
+            elif operation['op'] == 'substitute':
+                require(isinstance(operation['implementation'], str)
+                        and bool(re.fullmatch(ID, operation['implementation']))
+                        and isinstance(operation['equivalence_ref'], str)
+                        and bool(operation['equivalence_ref']),
+                        'invalid frozen technical substitution')
+                require('parameters' not in operation
+                        or isinstance(operation['parameters'], dict),
+                        'technical substitution parameters must be an object')
+                _validate_authored_evidence(operation.get('evidence', {}))
+            elif operation['op'] == 'annotate':
+                _validate_annotations(operation['annotations'])
             operation_links = operation.get('parameter_links', [])
             require(isinstance(operation_links, list),
                     'technical operation parameter links must be an array')
@@ -180,51 +285,6 @@ def _merge_technical_links(target, incoming):
         require(existing is None or equal(existing, link),
                 'inherited technical parameter link conflict')
         target[link['id']] = copy.deepcopy(link)
-
-
-def resolve_frozen_technical_links(reference, catalog, stack=()):
-    """Replay technical link inheritance and substitution from retained documents."""
-    require(reference not in stack, 'frozen technical consumer ancestry cycle')
-    record = catalog.get(reference)
-    require(record is not None, 'missing frozen technical consumer ancestor document')
-    resource = record['document']
-    links = {}
-    visited = []
-    if resource['kind'] == 'BaselineOverlay':
-        parents = sorted(resource['spec']['extends'], key=canonical_json_bytes)
-        require(len({parent['baseline'] for parent in parents}) == len(parents),
-                'duplicate frozen technical parent')
-        for parent in parents:
-            parent_record = catalog.get(parent['baseline'])
-            require(parent_record is not None,
-                    'missing frozen technical consumer ancestor document')
-            require(parent_record['digest'] == parent['digest'],
-                    'stale frozen technical parent pin')
-            inherited, ancestry = resolve_frozen_technical_links(
-                parent['baseline'], catalog, (*stack, reference),
-            )
-            _merge_technical_links(links, inherited)
-            for ancestor in ancestry:
-                if ancestor not in visited:
-                    visited.append(ancestor)
-    for link in resource['spec'].get('parameter_links', []):
-        require(link['id'] not in links, 'duplicate technical parameter link')
-        links[link['id']] = copy.deepcopy(link)
-    for operation in resource['spec'].get('operations', []):
-        if operation.get('op') != 'substitute' or 'parameter_links' not in operation:
-            continue
-        target = operation['target']
-        links = {
-            link_id: link for link_id, link in links.items()
-            if link['destination']['instance_id'] != target
-        }
-        for link in operation['parameter_links']:
-            require(link['destination']['instance_id'] == target,
-                    'substitute parameter link targets another Check')
-            require(link['id'] not in links, 'duplicate technical parameter link')
-            links[link['id']] = copy.deepcopy(link)
-    visited.append(reference)
-    return [links[key] for key in sorted(links)], visited
 
 
 def frozen_technical_links(plan):
@@ -245,13 +305,32 @@ def frozen_technical_links(plan):
                 and item['reference'] == technical_document_reference(item['document'])
                 and item['digest'] == baseline_semantic_digest(item['document']),
                 'frozen technical parameter consumer owner mismatch')
+    technical_catalog = {
+        item['reference']: {
+            **copy.deepcopy(item['document']),
+            '_digest': item['digest'],
+            '_sources': copy.deepcopy(item['policy_sources']),
+        }
+        for item in records
+    }
     combined = {}
     visited = set()
+    from .render_plan import BaselineResolutionError, resolve_baseline
     for baseline in plan.get('resolved_baselines', []):
         if baseline['reference'] not in catalog:
             continue
-        links, ancestry = resolve_frozen_technical_links(baseline['reference'], catalog)
-        require(bool(links), 'frozen technical consumer lineage has no effective links')
+        try:
+            resolved = resolve_baseline(baseline['reference'], technical_catalog)
+        except BaselineResolutionError as error:
+            message = {
+                'duplicate-parameter-link': 'duplicate technical parameter link',
+                'unknown-baseline': 'missing frozen technical consumer ancestor document',
+            }.get(error.details.get('type'), 'invalid frozen technical consumer replay')
+            raise ParameterResolutionError(message) from error
+        links = resolved['parameter_links']
+        if not links:
+            continue
+        ancestry = [item['reference'] for item in resolved['lineage']]
         selected_lineage = [
             (item['reference'], item['digest']) for item in baseline['lineage']
         ]
@@ -667,13 +746,13 @@ def complete(states):
             require(state['bound'] or not state['declaration']['required'], 'required policy parameter unresolved')
 
 
-def reconcile_selected_slots(states, selected):
+def reconcile_selected_slots(states, selected, *, selection):
     """Independently selected exact pins cannot split one semantic slot identity."""
     candidate = dict(selected)
     for slots in states.values():
         for state in slots.values():
             identity = (state['identity']['policy'], state['identity']['slot'])
-            value = fingerprint(state)
+            value = digest({'selection': selection, 'state': state})
             require(identity not in candidate or candidate[identity] == value,
                     'independently selected stable parameter identity conflict')
             candidate[identity] = value
@@ -692,7 +771,9 @@ def compose_selected(resolutions, policies):
     selected = {}
     occurrences = {}
     for resolved in ordered:
-        reconcile_selected_slots(resolved['states'], selected)
+        reconcile_selected_slots(
+            resolved['states'], selected, selection=resolved['reference'],
+        )
         for slots in resolved['states'].values():
             for state in slots.values():
                 identity = (state['identity']['policy'], state['identity']['slot'])
@@ -1639,17 +1720,49 @@ def _validate_requirement_facts(plan, controls, states):
 
 
 def _validate_technical_consumers(plan, controls, states):
-    planned = {item['instance_id']: item for item in plan['controls']}
+    planned = {}
+    for item in [*plan['controls'], *plan['excluded_controls']]:
+        require(item['instance_id'] not in planned,
+                'duplicate active/excluded technical Check identity')
+        planned[item['instance_id']] = item
     links = frozen_technical_links(plan)
     source_checks = dematerialize_links(
         [copy.deepcopy(item['policy_inputs']['instance']) for item in planned.values()
          if any(link['destination']['instance_id'] == item['instance_id'] for link in links)],
         links,
     )
+    source_by_id = {item['instance_id']: item for item in source_checks}
     materialized, _ = consume_links(links, source_checks, states, controls)
     for check in materialized:
         require(equal(check, planned[check['instance_id']]['policy_inputs']['instance']),
                 'frozen technical materialized destination mismatch')
+    technical_records = {
+        consumer['reference']: consumer
+        for consumer in plan['parameters']['consumers']
+        if consumer['kind'] in {'Baseline', 'BaselineOverlay'}
+    }
+    technical_catalog = {
+        reference: {
+            **copy.deepcopy(record['document']),
+            '_digest': record['digest'],
+            '_sources': copy.deepcopy(record['policy_sources']),
+        }
+        for reference, record in technical_records.items()
+    }
+    from .render_plan import resolve_baseline
+    for baseline in plan['resolved_baselines']:
+        if baseline['reference'] not in technical_catalog:
+            continue
+        resolved = resolve_baseline(baseline['reference'], technical_catalog)
+        if not resolved['parameter_links']:
+            continue
+        for instance_id in {
+            link['destination']['instance_id']
+            for link in resolved['parameter_links']
+        }:
+            require(instance_id in resolved['controls'] and instance_id in source_by_id
+                    and equal(resolved['controls'][instance_id], source_by_id[instance_id]),
+                    'frozen technical consumer Check differs from retained owner')
     for consumer in plan['parameters']['consumers']:
         if consumer['kind'] == 'ControlRealization':
             continue
@@ -1764,6 +1877,7 @@ def validate_frozen(plan):
                 'parameter-document-conflict',
                 'parameter-consumption-failed',
                 'parameter-consumer-conflict',
+                'parameter-policy-invalid',
             }
             for error in plan['resolution']['errors']
         )

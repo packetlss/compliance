@@ -180,6 +180,21 @@ class PolicyParameterTests(unittest.TestCase):
         with self.assertRaisesRegex(p.ParameterResolutionError, "conflict"):
             p.compose_selected(selected, self.catalog)
 
+    def test_equal_value_cannot_erase_independently_selected_ancestry(self):
+        self.tailor("30d")
+        selected = [self.resolution("company@1", "company"),
+                    self.resolution("enclave@1", "enclave")]
+        with self.assertRaisesRegex(p.ParameterResolutionError, "conflict"):
+            p.compose_selected(selected, self.catalog)
+
+        descendant = copy.deepcopy(self.catalog["enclave@1"])
+        descendant["spec"].pop("parameter_operations")
+        self.catalog["enclave@1"] = descendant
+        selected = [self.resolution("company@1", "company"),
+                    self.resolution("enclave@1", "enclave")]
+        with self.assertRaisesRegex(p.ParameterResolutionError, "conflict"):
+            p.compose_selected(selected, self.catalog)
+
     def test_additive_union_is_canonical_and_completely_attributed(self):
         catalog, resolutions = self.additive()
         p.compose_selected(resolutions, catalog)

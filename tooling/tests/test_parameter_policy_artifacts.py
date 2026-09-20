@@ -1,5 +1,8 @@
 """Frozen ParameterPolicy reconstruction and tamper refusal vectors."""
 import copy
+import json
+import shutil
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -8,7 +11,12 @@ from tools.artifact_validation import ArtifactValidationError, validate_assessme
 from tools.assessment_provenance import artifact_digest
 from tools.policy_diff import build_policy_diff
 from tools.policy_sources import PolicySource
-from tools.render_plan import load_inventory_inputs, render_plan
+from tools.render_plan import (
+    baseline_semantic_digest,
+    load_inventory_inputs,
+    render_plan,
+    resolve_baseline,
+)
 from assessment_fixture import refresh_operation
 
 
@@ -39,6 +47,18 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
         refresh_operation(plan)
         plan.pop("id", None)
         plan["id"] = artifact_digest(plan)
+
+    @staticmethod
+    def repin_consumer(plan, consumer):
+        old_digest = consumer["digest"]
+        consumer["digest"] = baseline_semantic_digest(consumer["document"])
+        for baseline in plan["resolved_baselines"]:
+            if baseline["reference"] == consumer["reference"]:
+                baseline["digest"] = consumer["digest"]
+            for ancestor in baseline["lineage"]:
+                if (ancestor["reference"] == consumer["reference"]
+                        and ancestor["digest"] == old_digest):
+                    ancestor["digest"] = consumer["digest"]
 
     def test_direct_technical_plan_has_no_objective_or_derived_parameter_copies(self):
         validate_assessment_plan(self.plan)
@@ -220,6 +240,180 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
             "unsupported frozen technical consumer document syntax",
         ):
             validate_assessment_plan(changed)
+
+    def test_technical_consumer_reconstructs_authored_check_body(self):
+        changed = copy.deepcopy(self.plan)
+        consumer = changed["parameters"]["consumers"][0]
+        consumer["document"]["spec"]["controls"][0]["parameters"]["allowed"] = [
+            "telnet"
+        ]
+        self.repin_consumer(changed, consumer)
+        self.resign(changed)
+
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "consumer Check differs from retained owner",
+        ):
+            validate_assessment_plan(changed)
+
+        changed = copy.deepcopy(self.plan)
+        consumer = changed["parameters"]["consumers"][0]
+        consumer["document"]["spec"]["controls"][0]["unsupported"] = True
+        self.repin_consumer(changed, consumer)
+        self.resign(changed)
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "unsupported frozen technical Check syntax",
+        ):
+            validate_assessment_plan(changed)
+
+    def test_selected_nonconsuming_parent_can_be_retained_as_consumer_ancestry(self):
+        source = self.plan["parameters"]["consumers"][0]
+        parent = copy.deepcopy(source["document"])
+        parent["metadata"]["id"] = "company.parameter-parent"
+        parent["spec"].pop("parameter_links")
+        parent_reference = "company.parameter-parent@1"
+        parent_digest = baseline_semantic_digest(parent)
+        overlay = {
+            "apiVersion": "compliance.example/v1",
+            "kind": "BaselineOverlay",
+            "metadata": {"id": "company.parameter-child", "revision": 1},
+            "spec": {
+                "title": "Parameter consuming child",
+                "extends": [{"baseline": parent_reference, "digest": parent_digest}],
+                "operations": [],
+                "parameter_links": copy.deepcopy(
+                    source["document"]["spec"]["parameter_links"]
+                ),
+            },
+        }
+        overlay_reference = "company.parameter-child@1"
+        overlay_digest = baseline_semantic_digest(overlay)
+        locator = [{"policy_source": "test", "path": "policy.json"}]
+        plan = {
+            "parameters": {"consumers": [
+                {"kind": "Baseline", "reference": parent_reference,
+                 "digest": parent_digest, "policy_sources": locator,
+                 "document": parent},
+                {"kind": "BaselineOverlay", "reference": overlay_reference,
+                 "digest": overlay_digest, "policy_sources": locator,
+                 "document": overlay},
+            ]},
+            "resolved_baselines": [
+                {"reference": parent_reference, "digest": parent_digest,
+                 "lineage": [{"reference": parent_reference,
+                              "digest": parent_digest, "policy_sources": locator}]},
+                {"reference": overlay_reference, "digest": overlay_digest,
+                 "lineage": [
+                     {"reference": parent_reference, "digest": parent_digest,
+                      "policy_sources": locator},
+                     {"reference": overlay_reference, "digest": overlay_digest,
+                      "policy_sources": locator},
+                 ]},
+            ],
+        }
+
+        self.assertEqual(len(pp.frozen_technical_links(plan)), 1)
+
+    def test_excluded_direct_check_with_parameter_link_is_admissible(self):
+        with tempfile.TemporaryDirectory() as directory:
+            policy_root = Path(directory) / "policies"
+            shutil.copytree(self.sources[1].path, policy_root)
+            parent_path = (
+                policy_root
+                / "baselines/company/company-authorized-software.json"
+            )
+            parent = json.loads(parent_path.read_text(encoding="utf-8"))
+            parent_reference = "company.authorized-software-check@1"
+            parent_digest = baseline_semantic_digest(parent)
+            catalog_parent = {
+                **copy.deepcopy(parent),
+                "_digest": parent_digest,
+                "_sources": [{"policy_source": "verification-policy",
+                              "path": "baselines/company/company-authorized-software.json"}],
+            }
+            resolved = resolve_baseline(parent_reference, {
+                parent_reference: catalog_parent,
+            })
+            instance_id = "company.linux.authorized-software.only-allowed"
+            overlay = {
+                "apiVersion": "compliance.example/v1",
+                "kind": "BaselineOverlay",
+                "metadata": {"id": "company.authorized-software-excluded", "revision": 1},
+                "spec": {
+                    "title": "Excluded authorized software check",
+                    "extends": [{"baseline": parent_reference, "digest": parent_digest}],
+                    "operations": [{
+                        "op": "exclude",
+                        "target": instance_id,
+                        "expected_parent_fingerprint": resolved["controls"][instance_id][
+                            "definition_fingerprint"
+                        ],
+                        "deviation": {
+                            "id": "DEV-EXCLUDED-PARAMETER",
+                            "classification": "temporary-exclusion",
+                            "rationale": "Exercise frozen excluded consumer admission",
+                            "approval_ref": "test/review",
+                            "review_after": "2027-01-01",
+                        },
+                    }],
+                },
+            }
+            overlay_path = policy_root / "baselines/company/excluded-parameter.json"
+            overlay_path.write_text(json.dumps(overlay), encoding="utf-8")
+            assignments = copy.deepcopy(self.assignments)
+            next(item for item in assignments
+                 if item["id"] == "managed-linux-software")["baselines"] = [
+                     "company.authorized-software-excluded@1"
+                 ]
+            plan = render_plan(
+                self.subject,
+                self.groups,
+                assignments,
+                (self.sources[0], PolicySource("verification-policy", policy_root)),
+            )
+
+        self.assertEqual(plan["resolution"]["status"], "valid")
+        self.assertEqual(plan["controls"], [])
+        self.assertEqual(len(plan["excluded_controls"]), 1)
+        validate_assessment_plan(plan)
+
+    def test_invalid_parameter_policy_catalog_returns_admissible_refusal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            policy_root = Path(directory) / "policies"
+            shutil.copytree(self.sources[1].path, policy_root)
+            path = (
+                policy_root
+                / "parameter-policies/company/company-authorized-software-base.json"
+            )
+            resource = json.loads(path.read_text(encoding="utf-8"))
+            resource["spec"]["parameter_operations"][0][
+                "expected_parent_fingerprint"
+            ] = "sha256:" + "0" * 64
+            path.write_text(json.dumps(resource), encoding="utf-8")
+            plan = render_plan(
+                self.subject,
+                self.groups,
+                self.assignments,
+                (self.sources[0], PolicySource("verification-policy", policy_root)),
+            )
+
+        self.assertEqual(plan["resolution"]["status"], "invalid")
+        self.assertIn("parameter-policy-invalid", {
+            error["type"] for error in plan["resolution"]["errors"]
+        })
+        self.assertEqual(
+            plan["parameters"]["applicability"],
+            [{"group": "database", "assignment": "database-software",
+              "parameter_policy": "company.database-software@1"},
+             {"group": "managed-linux", "assignment": "managed-linux-software",
+              "parameter_policy": "company.authorized-software-base@1"}],
+        )
+        validate_assessment_plan(plan)
+        self.assertEqual(
+            build_policy_diff(self.plan, plan)["comparison"]["status"],
+            "incomplete",
+        )
 
     def test_policy_diff_treats_parameter_resolution_refusal_as_incomplete(self):
         assignments = copy.deepcopy(self.assignments)

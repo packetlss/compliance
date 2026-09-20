@@ -21,6 +21,9 @@ be present, but at least one governed reference is required. Loading a resource,
 authoring a consumer link or targeting a contribution does not make a policy
 applicable. There is no ambient lookup, automatic owner import, registry, default,
 source order, assignment order, ancestry precedence or specificity rule.
+Repeated applicability paths may coalesce only when they select the same exact
+derivation root. Independently selected ancestor and descendant roots conflict
+even when their materialized literals happen to be equal.
 
 A contribution-only ParameterPolicy is valid. Its applicability adds a value
 contribution only: it creates no Objective, Check, assessment row or synthetic N/A.
@@ -83,9 +86,10 @@ before/after, member-origin, contribution-owner or consumption-value summaries.
 
 Artifact admission independently reconstructs ancestry, operations, effective
 values, canonical additive union, complete contribution membership and attribution,
-consumer interfaces and materialized destinations from these retained historical
-facts. It verifies exact source pins and provenance without consulting current
-policy, inventory or Evidence. An outer artifact digest is insufficient. Artifacts
+consumer interfaces, authored direct-Check bodies, technical inheritance/operations
+and materialized destinations from these retained historical facts. It verifies
+exact source pins and provenance without consulting current policy, inventory or
+Evidence. An outer artifact digest is insufficient. Artifacts
 using the superseded RequirementBaseline-owned representation are rejected by the
 current reader and remain meaningful only with their historical tooling.
 

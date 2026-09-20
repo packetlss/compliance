@@ -2180,6 +2180,15 @@ def render_plan(
     parameter_consumers: dict[tuple[str, str], JsonObject] = {}
     effective_parameter_states: dict[str, JsonObject] = {}
 
+    for assignment in applicable_assignments:
+        group_id = assignment["target"]["group"]
+        for policy_reference in assignment["parameter_policies"]:
+            parameter_applicability.append({
+                "group": group_id,
+                "assignment": assignment["id"],
+                "parameter_policy": policy_reference,
+            })
+
     if subject["status"] == "unknown":
         resolution_errors.append({
             "type": "subject-lifecycle-unknown",
@@ -2187,7 +2196,7 @@ def render_plan(
         })
 
     parameter_resolution_failed = False
-    if not resolution_errors:
+    if not parameter_policy_errors:
         for assignment in applicable_assignments:
             group_id = assignment["target"]["group"]
             for policy_reference in assignment["parameter_policies"]:
@@ -2196,7 +2205,6 @@ def render_plan(
                     "assignment": assignment["id"],
                     "parameter_policy": policy_reference,
                 }
-                parameter_applicability.append(copy.deepcopy(applicability))
                 try:
                     parameter_states, parameter_ancestry = pp.resolve(
                         policy_reference,
