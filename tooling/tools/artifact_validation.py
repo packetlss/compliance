@@ -181,15 +181,12 @@ def validate_assessment_plan(
     from .assessment_provenance import validate_plan_provenance
     _validate_schema(document, assessment_plan_schema_path(), "assessment plan", source)
     errors: list[str] = []
-    from .policy_parameters import frozen_technical_links, validate_frozen
+    from .policy_parameters import validate_frozen
+    technical_links = []
     try:
-        validate_frozen(document)
+        technical_links = validate_frozen(document)
     except (ValueError, KeyError) as error:
         errors.append("invalid frozen policy parameters: " + str(error))
-    try:
-        technical_links = frozen_technical_links(document)
-    except (ValueError, KeyError):
-        technical_links = []
     errors.extend(_frozen_meaning_errors(document))
 
     resolution = document["resolution"]

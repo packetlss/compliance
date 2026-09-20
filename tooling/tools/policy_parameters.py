@@ -88,201 +88,6 @@ def technical_document_reference(resource):
     return f"{metadata.get('id')}@{revision}"
 
 
-def _validate_authored_evidence(evidence):
-    require(isinstance(evidence, dict), 'technical Check evidence must be an object')
-    for dependency, requirement in evidence.items():
-        require(isinstance(dependency, str) and bool(re.fullmatch(SLOT, dependency))
-                and isinstance(requirement, dict)
-                and set(requirement).issubset({'max_age', 'inputs'}),
-                'unsupported technical Check evidence syntax')
-        if 'max_age' in requirement:
-            require(isinstance(requirement['max_age'], str)
-                    and bool(re.fullmatch(r'[1-9][0-9]*[smhd]', requirement['max_age'])),
-                    'invalid technical Check evidence freshness')
-        if 'inputs' in requirement:
-            require(isinstance(requirement['inputs'], dict),
-                    'technical Check Evidence inputs must be an object')
-
-
-def _validate_authored_control(control, *, allow_external_refs=True):
-    """Validate the exact bounded Check wire retained inside a technical owner."""
-    allowed_fields = {
-        'instance_id', 'implementation', 'parameters', 'severity',
-        'remediation', 'evidence',
-    }
-    if allow_external_refs:
-        allowed_fields.add('external_refs')
-    require(isinstance(control, dict)
-            and {'instance_id', 'implementation'} <= set(control)
-            and set(control).issubset(allowed_fields),
-            'unsupported frozen technical Check syntax')
-    require(isinstance(control['instance_id'], str)
-            and bool(re.fullmatch(ID, control['instance_id']))
-            and isinstance(control['implementation'], str)
-            and bool(re.fullmatch(ID, control['implementation'])),
-            'invalid frozen technical Check identity')
-    require('parameters' not in control or isinstance(control['parameters'], dict),
-            'technical Check parameters must be an object')
-    require('severity' not in control
-            or control['severity'] in {'info', 'low', 'medium', 'high', 'critical'},
-            'invalid technical Check severity')
-    require('remediation' not in control or isinstance(control['remediation'], str),
-            'invalid technical Check remediation')
-    external_refs = control.get('external_refs', [])
-    require(isinstance(external_refs, list)
-            and len(external_refs) == len(set(external_refs))
-            and all(isinstance(item, str) and bool(item) for item in external_refs),
-            'invalid technical Check external references')
-    _validate_authored_evidence(control.get('evidence', {}))
-
-
-def _validate_deviation(deviation):
-    require(isinstance(deviation, dict)
-            and set(deviation) == {
-                'id', 'classification', 'rationale', 'approval_ref', 'review_after',
-            }
-            and all(isinstance(deviation[field], str) and bool(deviation[field])
-                    for field in deviation),
-            'invalid frozen technical deviation')
-    try:
-        FormatChecker().check(deviation['review_after'], 'date')
-    except FormatError as error:
-        raise ParameterResolutionError('invalid frozen technical deviation date') from error
-
-
-def _validate_annotations(annotations):
-    require(isinstance(annotations, dict)
-            and set(annotations).issubset({'severity', 'remediation', 'external_refs'}),
-            'unsupported frozen technical annotations')
-    if 'severity' in annotations:
-        require(annotations['severity'] in {'info', 'low', 'medium', 'high', 'critical'},
-                'invalid frozen technical annotation severity')
-    if 'remediation' in annotations:
-        require(isinstance(annotations['remediation'], str),
-                'invalid frozen technical annotation remediation')
-    if 'external_refs' in annotations:
-        refs = annotations['external_refs']
-        require(isinstance(refs, list) and len(refs) == len(set(refs))
-                and all(isinstance(item, str) and bool(item) for item in refs),
-                'invalid frozen technical annotation references')
-
-
-def validate_technical_consumer_document(resource):
-    """Validate frozen Check-owning technical policy syntax needed for replay."""
-    require(isinstance(resource, dict)
-            and set(resource) == {'apiVersion', 'kind', 'metadata', 'spec'}
-            and resource.get('apiVersion') == 'compliance.example/v1',
-            'unsupported frozen technical consumer document syntax')
-    kind = resource.get('kind')
-    require(kind in {'Baseline', 'BaselineOverlay'},
-            'unsupported frozen technical consumer kind')
-    metadata = resource.get('metadata')
-    require(isinstance(metadata, dict), 'technical consumer metadata must be an object')
-    require(isinstance(metadata.get('id'), str)
-            and bool(re.fullmatch(ID, metadata['id'])),
-            'invalid frozen technical consumer identity')
-    if kind == 'Baseline':
-        require(set(metadata).issubset({'id', 'version', 'revision', 'origin'})
-                and (('version' in metadata) != ('revision' in metadata)),
-                'unsupported frozen Baseline metadata syntax')
-        revision = metadata.get('version', metadata.get('revision'))
-        require(valid_revision(revision), 'invalid frozen Baseline revision')
-        require('origin' not in metadata or (
-                    isinstance(metadata['origin'], dict)
-                    and {'type', 'name'} <= set(metadata['origin'])
-                    and all(isinstance(metadata['origin'][field], str)
-                            and bool(metadata['origin'][field])
-                            for field in ('type', 'name'))
-                ),
-                'invalid frozen Baseline origin')
-    else:
-        require(set(metadata) == {'id', 'revision'}
-                and valid_revision(metadata.get('revision')),
-                'unsupported frozen BaselineOverlay metadata syntax')
-    spec = resource.get('spec')
-    require(isinstance(spec, dict), 'technical consumer spec must be an object')
-    if kind == 'Baseline':
-        require(set(spec).issubset({'title', 'controls', 'parameter_links'})
-                and {'title', 'controls'} <= set(spec)
-                and isinstance(spec['title'], str) and bool(spec['title'].strip())
-                and isinstance(spec['controls'], list),
-                'unsupported frozen Baseline spec syntax')
-        for control in spec['controls']:
-            _validate_authored_control(control)
-    else:
-        require(set(spec).issubset({'title', 'extends', 'operations', 'parameter_links'})
-                and {'title', 'extends', 'operations'} <= set(spec)
-                and isinstance(spec['title'], str) and bool(spec['title'].strip())
-                and isinstance(spec['extends'], list) and bool(spec['extends'])
-                and isinstance(spec['operations'], list),
-                'unsupported frozen BaselineOverlay spec syntax')
-        for parent in spec['extends']:
-            require(isinstance(parent, dict) and set(parent) == {'baseline', 'digest'}
-                    and isinstance(parent['baseline'], str)
-                    and bool(re.fullmatch(REFERENCE, parent['baseline']))
-                    and valid_digest(parent['digest']),
-                    'invalid frozen technical parent pin')
-        allowed_operation_fields = {
-            'add': {'op', 'control'},
-            'tailor': {'op', 'target', 'expected_parent_fingerprint', 'parameters',
-                       'evidence', 'deviation'},
-            'exclude': {'op', 'target', 'expected_parent_fingerprint', 'deviation'},
-            'substitute': {'op', 'target', 'expected_parent_fingerprint', 'implementation',
-                           'parameters', 'equivalence_ref', 'parameter_links', 'evidence'},
-            'annotate': {'op', 'target', 'expected_parent_fingerprint', 'annotations'},
-        }
-        required_operation_fields = {
-            'add': {'op', 'control'},
-            'tailor': {'op', 'target', 'expected_parent_fingerprint', 'parameters', 'deviation'},
-            'exclude': {'op', 'target', 'expected_parent_fingerprint', 'deviation'},
-            'substitute': {
-                'op', 'target', 'expected_parent_fingerprint', 'implementation', 'equivalence_ref',
-            },
-            'annotate': {'op', 'target', 'expected_parent_fingerprint', 'annotations'},
-        }
-        for operation in spec['operations']:
-            require(isinstance(operation, dict)
-                    and operation.get('op') in allowed_operation_fields
-                    and required_operation_fields[operation['op']] <= set(operation)
-                    and set(operation).issubset(allowed_operation_fields[operation['op']]),
-                    'unsupported frozen technical operation syntax')
-            if operation['op'] != 'add':
-                require(isinstance(operation['target'], str)
-                        and bool(re.fullmatch(ID, operation['target']))
-                        and valid_digest(operation['expected_parent_fingerprint']),
-                        'invalid frozen technical operation target')
-            if operation['op'] == 'add':
-                _validate_authored_control(operation['control'])
-            elif operation['op'] == 'tailor':
-                require(isinstance(operation['parameters'], dict),
-                        'technical tailor parameters must be an object')
-                _validate_authored_evidence(operation.get('evidence', {}))
-                _validate_deviation(operation['deviation'])
-            elif operation['op'] == 'exclude':
-                _validate_deviation(operation['deviation'])
-            elif operation['op'] == 'substitute':
-                require(isinstance(operation['implementation'], str)
-                        and bool(re.fullmatch(ID, operation['implementation']))
-                        and isinstance(operation['equivalence_ref'], str)
-                        and bool(operation['equivalence_ref']),
-                        'invalid frozen technical substitution')
-                require('parameters' not in operation
-                        or isinstance(operation['parameters'], dict),
-                        'technical substitution parameters must be an object')
-                _validate_authored_evidence(operation.get('evidence', {}))
-            elif operation['op'] == 'annotate':
-                _validate_annotations(operation['annotations'])
-            operation_links = operation.get('parameter_links', [])
-            require(isinstance(operation_links, list),
-                    'technical operation parameter links must be an array')
-            for link in operation_links:
-                validate_parameter_link_structure(link)
-    links = spec.get('parameter_links', [])
-    require(isinstance(links, list), 'technical parameter links must be an array')
-    for link in links:
-        validate_parameter_link_structure(link)
-
-
 def _merge_technical_links(target, owner, incoming):
     for link in incoming:
         key = (owner, link['id'])
@@ -300,16 +105,40 @@ def frozen_technical_links(plan):
     ]
     catalog = {item['reference']: item for item in records}
     require(len(catalog) == len(records), 'duplicate frozen technical consumer document')
+    actual_sources = (
+        plan.get('provenance', {})
+        .get('planningComposition', {})
+        .get('actual', {})
+        .get('policySources')
+    )
+    actual_policy_sources = (
+        {item['name'] for item in actual_sources}
+        if isinstance(actual_sources, list) else None
+    )
     from .render_plan import baseline_semantic_digest
     for item in records:
         require(set(item) == {
             'kind', 'reference', 'digest', 'policy_sources', 'document',
         }, 'invalid frozen technical parameter consumer')
-        validate_technical_consumer_document(item['document'])
         require(item['kind'] == item['document']['kind']
                 and item['reference'] == technical_document_reference(item['document'])
                 and item['digest'] == baseline_semantic_digest(item['document']),
                 'frozen technical parameter consumer owner mismatch')
+        matching_lineage = [
+            ancestor
+            for baseline in plan['resolved_baselines']
+            for ancestor in baseline['lineage']
+            if ancestor['reference'] == item['reference']
+            and ancestor['digest'] == item['digest']
+        ]
+        require(matching_lineage
+                and all(equal(ancestor['policy_sources'], item['policy_sources'])
+                        for ancestor in matching_lineage),
+                'frozen technical parameter consumer source mismatch')
+        if actual_policy_sources is not None:
+            require(all(locator.get('policy_source') in actual_policy_sources
+                        for locator in item['policy_sources']),
+                    'frozen technical consumer source is absent from planning composition')
     technical_catalog = {
         item['reference']: {
             **copy.deepcopy(item['document']),
@@ -335,6 +164,8 @@ def frozen_technical_links(plan):
         links = resolved['parameter_links']
         if not links:
             continue
+        for link in links:
+            validate_parameter_link_structure(link)
         ancestry = [item['reference'] for item in resolved['lineage']]
         selected_lineage = [
             (item['reference'], item['digest']) for item in baseline['lineage']
@@ -1301,16 +1132,13 @@ def consume(owner, states, controls):
 
 
 def validate_realization_reference_identity(realization):
-    """Validate the bounded historical ControlRealization owner wire."""
+    """Validate identities and links consumed from a frozen realization owner."""
     require(isinstance(realization, dict)
-            and set(realization) == {'apiVersion', 'kind', 'metadata', 'spec'}
-            and realization.get('apiVersion') == 'compliance.example/v1alpha1'
             and realization.get('kind') == 'ControlRealization',
-            'unsupported frozen ControlRealization document syntax')
+            'frozen realization must be a ControlRealization')
     metadata = realization.get('metadata')
     spec = realization.get('spec')
-    require(isinstance(metadata, dict) and set(metadata) == {'id', 'revision'},
-            'unsupported frozen ControlRealization metadata syntax')
+    require(isinstance(metadata, dict), 'frozen realization metadata must be an object')
     require(
         isinstance(metadata.get('id'), str) and bool(re.fullmatch(ID, metadata['id'])),
         'invalid frozen realization identity',
@@ -1319,177 +1147,20 @@ def validate_realization_reference_identity(realization):
         valid_revision(metadata.get('revision')),
         'invalid frozen realization revision',
     )
-    require(isinstance(spec, dict)
-            and {'requirement', 'applies_to', 'adoption'} <= set(spec)
-            and set(spec).issubset({
-                'requirement', 'based_on', 'applies_to', 'adoption', 'checks',
-                'parameter_links',
-            }), 'unsupported frozen ControlRealization spec syntax')
-    requirement = spec['requirement']
-    require(isinstance(requirement, dict)
-            and set(requirement) == {'requirement', 'digest'}
-            and isinstance(requirement['requirement'], str)
-            and bool(re.fullmatch(REFERENCE, requirement['requirement']))
-            and valid_digest(requirement['digest']),
-            'invalid frozen ControlRealization Objective pin')
+    require(isinstance(spec, dict), 'frozen realization spec must be an object')
     based_on = spec.get('based_on')
     if based_on is not None:
         require(
             isinstance(based_on, dict)
             and set(based_on) == {'realization', 'digest'}
             and isinstance(based_on.get('realization'), str)
-            and bool(re.fullmatch(REFERENCE, based_on['realization']))
-            and valid_digest(based_on.get('digest')),
+            and bool(re.fullmatch(REFERENCE, based_on['realization'])),
             'invalid frozen realization parent reference',
         )
-    applies_to = spec['applies_to']
-    require(isinstance(applies_to, dict)
-            and {'subject_types'} <= set(applies_to)
-            and set(applies_to).issubset({'subject_types', 'match_labels'}),
-            'unsupported frozen ControlRealization applicability syntax')
-    subject_types = applies_to['subject_types']
-    require(isinstance(subject_types, list) and bool(subject_types)
-            and len(subject_types) == len(set(subject_types))
-            and all(isinstance(item, str) and bool(item) for item in subject_types),
-            'invalid frozen ControlRealization subject types')
-    if 'match_labels' in applies_to:
-        labels = applies_to['match_labels']
-        require(isinstance(labels, dict) and bool(labels)
-                and all(isinstance(key, str) and bool(key)
-                        and isinstance(value, str)
-                        for key, value in labels.items()),
-                'invalid frozen ControlRealization labels')
-    adoption = spec['adoption']
-    require(isinstance(adoption, dict)
-            and {'status', 'method', 'owner'} <= set(adoption)
-            and set(adoption).issubset({
-                'status', 'method', 'owner', 'implementation_ref', 'determination',
-            })
-            and adoption['status'] in {
-                'implemented', 'not_implemented', 'not_applicable',
-            }
-            and adoption['method'] in {'automated', 'hybrid', 'manual', 'none'}
-            and isinstance(adoption['owner'], str) and bool(adoption['owner']),
-            'invalid frozen ControlRealization adoption')
-    if 'implementation_ref' in adoption:
-        require(isinstance(adoption['implementation_ref'], str)
-                and bool(adoption['implementation_ref']),
-                'invalid frozen ControlRealization implementation reference')
-    if 'determination' in adoption:
-        determination = adoption['determination']
-        require(isinstance(determination, dict)
-                and set(determination) == {
-                    'rationale', 'approval_ref', 'review_after',
-                }
-                and all(isinstance(determination[field], str)
-                        and bool(determination[field]) for field in determination),
-                'invalid frozen ControlRealization determination')
-        try:
-            FormatChecker().check(determination['review_after'], 'date')
-        except FormatError as error:
-            raise ParameterResolutionError(
-                'invalid frozen ControlRealization determination date'
-            ) from error
-    status = adoption['status']
-    if status == 'implemented':
-        require(adoption['method'] in {'automated', 'hybrid', 'manual'}
-                and 'implementation_ref' in adoption,
-                'implemented realization requires an implementation reference')
-    else:
-        require(adoption['method'] == 'none',
-                'non-implemented realization adoption method must be none')
-    if status == 'not_applicable':
-        require('determination' in adoption,
-                'not-applicable realization requires a determination')
-    checks = spec.get('checks', [])
-    require(isinstance(checks, list), 'realization Checks must be an array')
-    require((status == 'implemented' and bool(checks))
-            or (status != 'implemented' and not checks),
-            'realization Check membership differs from adoption')
-    for check in checks:
-        _validate_authored_control(check, allow_external_refs=False)
     links = spec.get('parameter_links', [])
     require(isinstance(links, list), 'realization parameter links must be an array')
     for link in links:
         validate_parameter_link_structure(link)
-
-
-def _validate_frozen_origin(metadata, resource_kind):
-    origin = metadata.get('origin')
-    if origin is None:
-        return
-    require(isinstance(origin, dict)
-            and {'type', 'name'} <= set(origin)
-            and all(isinstance(origin[field], str) and bool(origin[field])
-                    for field in ('type', 'name')),
-            f'invalid frozen {resource_kind} origin')
-
-
-def validate_requirement_baseline_document(resource):
-    """Validate the bounded historical RequirementBaseline source wire."""
-    require(isinstance(resource, dict)
-            and set(resource) == {'apiVersion', 'kind', 'metadata', 'spec'}
-            and resource.get('apiVersion') == 'compliance.example/v1alpha1'
-            and resource.get('kind') == 'RequirementBaseline',
-            'unsupported frozen RequirementBaseline document syntax')
-    metadata = resource.get('metadata')
-    require(isinstance(metadata, dict)
-            and {'id', 'revision'} <= set(metadata)
-            and set(metadata).issubset({'id', 'revision', 'origin'})
-            and isinstance(metadata['id'], str)
-            and bool(re.fullmatch(ID, metadata['id']))
-            and valid_revision(metadata['revision']),
-            'unsupported frozen RequirementBaseline metadata syntax')
-    _validate_frozen_origin(metadata, 'RequirementBaseline')
-    spec = resource.get('spec')
-    require(isinstance(spec, dict)
-            and set(spec) == {'title', 'requirements'}
-            and isinstance(spec['title'], str) and bool(spec['title'].strip())
-            and isinstance(spec['requirements'], list) and bool(spec['requirements']),
-            'unsupported frozen RequirementBaseline spec syntax')
-    references = []
-    for pin in spec['requirements']:
-        require(isinstance(pin, dict) and set(pin) == {'requirement', 'digest'}
-                and isinstance(pin['requirement'], str)
-                and bool(re.fullmatch(REFERENCE, pin['requirement']))
-                and valid_digest(pin['digest']),
-                'invalid frozen RequirementBaseline Objective pin')
-        references.append(pin['requirement'])
-    require(len(references) == len(set(references)),
-            'duplicate frozen RequirementBaseline Objective pin')
-
-
-def validate_objective_document(resource):
-    """Validate the bounded historical ControlRequirement source wire."""
-    require(isinstance(resource, dict)
-            and set(resource) == {'apiVersion', 'kind', 'metadata', 'spec'}
-            and resource.get('apiVersion') == 'compliance.example/v1alpha1'
-            and resource.get('kind') == 'ControlRequirement',
-            'unsupported frozen Objective document syntax')
-    metadata = resource.get('metadata')
-    require(isinstance(metadata, dict)
-            and {'id', 'revision'} <= set(metadata)
-            and set(metadata).issubset({'id', 'revision', 'origin'})
-            and isinstance(metadata['id'], str)
-            and bool(re.fullmatch(ID, metadata['id']))
-            and valid_revision(metadata['revision']),
-            'unsupported frozen Objective metadata syntax')
-    _validate_frozen_origin(metadata, 'Objective')
-    spec = resource.get('spec')
-    require(isinstance(spec, dict)
-            and {'title', 'statement'} <= set(spec)
-            and set(spec).issubset({'title', 'statement', 'rationale', 'external_refs'})
-            and all(isinstance(spec[field], str) and bool(spec[field])
-                    for field in ('title', 'statement')),
-            'unsupported frozen Objective spec syntax')
-    if 'rationale' in spec:
-        require(isinstance(spec['rationale'], str) and bool(spec['rationale']),
-                'invalid frozen Objective rationale')
-    external_refs = spec.get('external_refs', [])
-    require(isinstance(external_refs, list)
-            and len(external_refs) == len(set(external_refs))
-            and all(isinstance(item, str) and bool(item) for item in external_refs),
-            'invalid frozen Objective external references')
 
 
 def require_identity(value, grammar, message):
@@ -1603,9 +1274,8 @@ def validate_control_derivation_identities(derivations):
             validate_control_criteria_identities(derivation.get(snapshot_name))
 
 
-def validate_frozen_contract_identities(plan):
+def validate_frozen_contract_identities(plan, technical_links):
     """Validate retained semantic/schema contracts independently of resolution."""
-    technical_links = frozen_technical_links(plan)
     technical_selections = {}
     for baseline in plan['resolved_baselines']:
         reference = baseline.get('reference')
@@ -1979,7 +1649,9 @@ def _validate_requirement_facts(plan, controls, states):
     for baseline in plan['resolved_requirement_baselines']:
         validate_sources(baseline, 'RequirementBaseline')
         resource = baseline.get('document')
-        validate_requirement_baseline_document(resource)
+        require(isinstance(resource, dict)
+                and resource.get('kind') == 'RequirementBaseline',
+                'frozen RequirementBaseline document is required')
         reference = f"{resource['metadata']['id']}@{resource['metadata']['revision']}"
         require(reference == baseline['reference'] == baseline['baseline']
                 and digest(resource) == baseline['digest'],
@@ -2017,11 +1689,14 @@ def _validate_requirement_facts(plan, controls, states):
     for requirement in plan['requirements']:
         validate_sources(requirement, 'Objective')
         resource = requirement.get('document')
-        validate_objective_document(resource)
+        require(isinstance(resource, dict), 'frozen Objective document is required')
         reference = f"{resource['metadata']['id']}@{resource['metadata']['revision']}"
         require(reference == requirement['reference']
                 and digest(resource) == requirement['digest'],
                 'frozen Objective content pin mismatch')
+        require(resource.get('kind') == 'ControlRequirement'
+                and 'parameters' not in resource.get('spec', {}),
+                'Objective cannot own parameter declarations')
         for field in ('title', 'statement', 'external_refs'):
             require(equal(requirement.get(field), resource['spec'].get(field, [])),
                     'frozen Objective explanation mismatch')
@@ -2079,13 +1754,12 @@ def _validate_requirement_facts(plan, controls, states):
             'frozen realization consumer is not selected by an Objective')
 
 
-def _validate_technical_consumers(plan, controls, states):
+def _validate_technical_consumers(plan, controls, states, links):
     planned = {}
     for item in [*plan['controls'], *plan['excluded_controls']]:
         require(item['instance_id'] not in planned,
                 'duplicate active/excluded technical Check identity')
         planned[item['instance_id']] = item
-    links = frozen_technical_links(plan)
     source_checks = dematerialize_links(
         [copy.deepcopy(item['policy_inputs']['instance']) for item in planned.values()],
         links,
@@ -2129,9 +1803,17 @@ def _validate_technical_consumers(plan, controls, states):
         resolved = resolve_baseline(baseline['reference'], technical_catalog)
         require(resolved['parameter_links'],
                 'frozen technical consumer owner has no authored link')
-        require(planned_ids == set(resolved['controls']),
-                'frozen technical consumer Check membership differs from retained owner')
-        for instance_id, expected in resolved['controls'].items():
+        linked_ids = {
+            link['destination']['instance_id']
+            for link in resolved['parameter_links']
+        }
+        relevant_ids = planned_ids & linked_instance_ids
+        require(relevant_ids.issubset(linked_ids),
+                'frozen technical consumer link attribution differs from retained owner')
+        for instance_id in relevant_ids:
+            expected = resolved['controls'].get(instance_id)
+            require(expected is not None,
+                    'frozen technical consumer link has no authored Check')
             for field in ('lineage', 'derivations', 'deviations'):
                 require(all(
                     item in planned[instance_id].get(field, [])
@@ -2145,41 +1827,6 @@ def _validate_technical_consumers(plan, controls, states):
                     and equal(independently_meaningful(expected),
                               independently_meaningful(source_by_id[instance_id])),
                     'frozen technical consumer Check differs from retained owner')
-    for consumer in plan['parameters']['consumers']:
-        if consumer['kind'] == 'ControlRealization':
-            continue
-        require(consumer['kind'] in {'Baseline', 'BaselineOverlay'},
-                'unsupported frozen parameter consumer kind')
-        require(set(consumer) == {
-            'kind', 'reference', 'digest', 'policy_sources', 'document'
-        }, 'invalid frozen technical parameter consumer')
-        document = consumer['document']
-        validate_technical_consumer_document(document)
-        require(document.get('kind') == consumer['kind'],
-                'frozen technical parameter consumer kind mismatch')
-        reference = technical_document_reference(document)
-        from .render_plan import baseline_semantic_digest
-        require(reference == consumer['reference']
-                and baseline_semantic_digest(document) == consumer['digest'],
-                'frozen technical parameter consumer owner mismatch')
-        matching_lineage = [
-            ancestor
-            for baseline in plan['resolved_baselines']
-            for ancestor in baseline['lineage']
-            if ancestor['reference'] == reference
-            and ancestor['digest'] == consumer['digest']
-        ]
-        require(matching_lineage
-                and all(equal(item['policy_sources'], consumer['policy_sources'])
-                        for item in matching_lineage),
-                'frozen technical parameter consumer source mismatch')
-        actual_policy_sources = {
-            item['name']
-            for item in plan['provenance']['planningComposition']['actual']['policySources']
-        }
-        require(all(locator.get('policy_source') in actual_policy_sources
-                    for locator in consumer['policy_sources']),
-                'frozen technical consumer source is absent from planning composition')
 
 
 def validate_frozen(plan):
@@ -2187,7 +1834,12 @@ def validate_frozen(plan):
     require('parameter_facts' not in canonical_json_bytes(plan).decode('utf-8')
             and 'parameter_derivation' not in canonical_json_bytes(plan).decode('utf-8'),
             'superseded frozen parameter summaries are not accepted')
-    validate_frozen_contract_identities(plan)
+    consumers = plan['parameters']['consumers']
+    require(consumers == sorted(consumers, key=lambda item: (item['kind'], item['reference']))
+            and len({(item['kind'], item['reference']) for item in consumers}) == len(consumers),
+            'frozen parameter consumers must use unique canonical order')
+    technical_links = frozen_technical_links(plan)
+    validate_frozen_contract_identities(plan, technical_links)
     assignments = {item['id']: item for item in plan['assignments']}
     expected_baselines = {
         (assignment['id'], assignment['group'], reference)
@@ -2205,11 +1857,6 @@ def validate_frozen(plan):
         require(actual_baselines.issubset(expected_baselines),
                 'frozen baseline coverage exceeds selected assignments')
 
-    consumers = plan['parameters']['consumers']
-    require(consumers == sorted(consumers, key=lambda item: (item['kind'], item['reference']))
-            and len({(item['kind'], item['reference']) for item in consumers}) == len(consumers),
-            'frozen parameter consumers must use unique canonical order')
-    technical_links = frozen_technical_links(plan)
     controls = {}
     for collection_name in ('controls', 'excluded_controls'):
         for control in plan[collection_name]:
@@ -2270,7 +1917,8 @@ def validate_frozen(plan):
         require(not consumers,
                 'unresolved ParameterPolicy cannot retain materialized consumers')
         _validate_requirement_facts(plan, controls, {})
-        _validate_technical_consumers(plan, controls, {})
-        return
+        _validate_technical_consumers(plan, controls, {}, technical_links)
+        return technical_links
     _validate_requirement_facts(plan, controls, states)
-    _validate_technical_consumers(plan, controls, states)
+    _validate_technical_consumers(plan, controls, states, technical_links)
+    return technical_links

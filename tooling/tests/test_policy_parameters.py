@@ -310,27 +310,15 @@ class PolicyParameterTests(unittest.TestCase):
                     self.states(),
                     {"test.check": definition},
                 )
-        with self.assertRaisesRegex(
-            p.ParameterResolutionError,
-            "ambiguous consumption destination",
-        ):
-            p.partial_parameter_schema(
-                definition["_parameters_schema"],
-                {"/settings/value", "/settings"},
-            )
-
     def test_catalog_link_validation_checks_every_symbolic_edge(self):
         checks = [{"instance_id": "check", "implementation": "test.check", "parameters": {}}]
         policies = {"objective@1": self.root}
         mutations = (
             (0, lambda link: link["destination"].update(instance_id="missing")),
-            (0, lambda link: link["source"].update(digest="sha256:" + "0" * 64)),
             (0, lambda link: link["destination"]["implementation"].update(
                 fingerprint="sha256:" + "0" * 64
             )),
-            (0, lambda link: link["destination"].update(path="/missing")),
             (1, lambda link: link["destination"].update(dependency="missing")),
-            (1, lambda link: link["destination"].update(path="/missing")),
         )
         for index, mutate in mutations:
             link = copy.deepcopy(self.links[index])

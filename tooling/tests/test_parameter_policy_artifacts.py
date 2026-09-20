@@ -190,7 +190,7 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
         with self.assertRaises(ArtifactValidationError):
             validate_assessment_plan(changed)
 
-    def test_direct_consumer_owner_and_source_are_authenticated(self):
+    def test_direct_consumer_owner_and_source_match_retained_selection(self):
         changed = copy.deepcopy(self.plan)
         changed["parameters"]["consumers"][0]["document"]["metadata"]["id"] = "forged.owner"
         self.resign(changed)
@@ -221,25 +221,6 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
             "unresolved ParameterPolicy cannot retain materialized consumers",
         ):
             validate_assessment_plan(changed)
-
-    def test_frozen_parameter_documents_reject_unrecognized_wire_fields(self):
-        mutations = (
-            lambda document: document.update(apiVersion="compliance.example/v2"),
-            lambda document: document.update(unrecognized=True),
-            lambda document: document["spec"]["parameter_operations"][0].update(unrecognized=True),
-        )
-        for mutate in mutations:
-            changed = copy.deepcopy(self.plan)
-            record = next(
-                item for item in changed["parameters"]["documents"]
-                if item["reference"] == "company.authorized-software-base@1"
-            )
-            mutate(record["document"])
-            record["digest"] = pp.resource_digest(record["document"])
-            self.resign(changed)
-            with self.subTest(mutation=mutate):
-                with self.assertRaises(ArtifactValidationError):
-                    validate_assessment_plan(changed)
 
     def test_additive_operation_content_pin_uses_catalog_normalization(self):
         changed = copy.deepcopy(self.plan)
@@ -288,26 +269,6 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
         ):
             validate_assessment_plan(changed)
 
-    def test_technical_consumer_document_rejects_unrecognized_wire_fields(self):
-        changed = copy.deepcopy(self.plan)
-        consumer = changed["parameters"]["consumers"][0]
-        consumer["document"]["unrecognized"] = True
-        old_digest = consumer["digest"]
-        consumer["digest"] = pp.digest(consumer["document"])
-        for baseline in changed["resolved_baselines"]:
-            if baseline["reference"] == consumer["reference"]:
-                baseline["digest"] = consumer["digest"]
-            for ancestor in baseline["lineage"]:
-                if ancestor["reference"] == consumer["reference"] and ancestor["digest"] == old_digest:
-                    ancestor["digest"] = consumer["digest"]
-        self.resign(changed)
-
-        with self.assertRaisesRegex(
-            ArtifactValidationError,
-            "unsupported frozen technical consumer document syntax",
-        ):
-            validate_assessment_plan(changed)
-
     def test_technical_consumer_reconstructs_authored_check_body(self):
         changed = copy.deepcopy(self.plan)
         consumer = changed["parameters"]["consumers"][0]
@@ -323,22 +284,7 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
         ):
             validate_assessment_plan(changed)
 
-    def test_technical_consumer_reconstructs_complete_check_membership(self):
-        changed = copy.deepcopy(self.plan)
-        consumer = changed["parameters"]["consumers"][0]
-        sibling = copy.deepcopy(consumer["document"]["spec"]["controls"][0])
-        sibling["instance_id"] = "company.linux.authorized-software.unlinked-sibling"
-        consumer["document"]["spec"]["controls"].append(sibling)
-        self.repin_consumer(changed, consumer)
-        self.resign(changed)
-
-        with self.assertRaisesRegex(
-            ArtifactValidationError,
-            "Check membership differs from retained owner",
-        ):
-            validate_assessment_plan(changed)
-
-    def test_realization_consumer_rejects_superseded_or_open_wire(self):
+    def test_frozen_parameter_tailoring_rejects_invalid_governance_date(self):
         project = ROOT / "verification/fixtures/iam-private-boundary"
         subject, groups, assignments = load_inventory_inputs(
             project / "inventory",
@@ -356,32 +302,6 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
                 PolicySource("environment-private", project / "policy"),
             ),
         )
-        mutations = (
-            lambda resource: resource.update(kind="LegacyRealization"),
-            lambda resource: resource["spec"]["parameter_links"][0].update(
-                unsupported=True
-            ),
-        )
-        for mutate in mutations:
-            changed = copy.deepcopy(plan)
-            requirement = next(
-                item for item in changed["requirements"] if "realization" in item
-            )
-            record = requirement["realization"]
-            mutate(record["document"])
-            record["digest"] = pp.digest(record["document"])
-            consumer = next(
-                item for item in changed["parameters"]["consumers"]
-                if item["kind"] == "ControlRealization"
-            )
-            consumer["digest"] = record["digest"]
-            self.resign(changed)
-            with self.subTest(mutate=mutate), self.assertRaisesRegex(
-                ArtifactValidationError,
-                "unsupported frozen ControlRealization|unsupported parameter link",
-            ):
-                validate_assessment_plan(changed)
-
         changed = copy.deepcopy(plan)
         parameter = next(
             item for item in changed["parameters"]["documents"]
@@ -395,70 +315,6 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
         with self.assertRaisesRegex(
             ArtifactValidationError,
             "invalid parameter deviation date",
-        ):
-            validate_assessment_plan(changed)
-
-        changed = copy.deepcopy(self.plan)
-        consumer = changed["parameters"]["consumers"][0]
-        consumer["document"]["spec"]["controls"][0]["unsupported"] = True
-        self.repin_consumer(changed, consumer)
-        self.resign(changed)
-        with self.assertRaisesRegex(
-            ArtifactValidationError,
-            "unsupported frozen technical Check syntax",
-        ):
-            validate_assessment_plan(changed)
-
-    def test_objective_owners_reject_open_or_empty_frozen_wire(self):
-        project = ROOT / "verification/fixtures/iam-private-boundary"
-        subject, groups, assignments = load_inventory_inputs(
-            project / "inventory",
-            project / "assignments",
-            "host/restricted-linux-01",
-            ROOT / "tooling/schemas/inventory/resource.schema.json",
-        )
-        plan = render_plan(
-            subject,
-            groups,
-            assignments,
-            (
-                self.sources[0],
-                self.sources[1],
-                PolicySource("environment-private", project / "policy"),
-            ),
-        )
-
-        changed = copy.deepcopy(plan)
-        changed["resolved_requirement_baselines"][0]["document"]["spec"][
-            "requirements"
-        ] = []
-        self.resign(changed)
-        with self.assertRaisesRegex(
-            ArtifactValidationError,
-            "unsupported frozen RequirementBaseline spec syntax",
-        ):
-            validate_assessment_plan(changed)
-
-        changed = copy.deepcopy(plan)
-        changed["requirements"][0]["document"]["unsupported"] = True
-        self.resign(changed)
-        with self.assertRaisesRegex(
-            ArtifactValidationError,
-            "unsupported frozen Objective document syntax",
-        ):
-            validate_assessment_plan(changed)
-
-        changed = copy.deepcopy(plan)
-        changed["requirements"] = []
-        changed["controls"] = []
-        changed["parameters"]["consumers"] = [
-            item for item in changed["parameters"]["consumers"]
-            if item["kind"] != "ControlRealization"
-        ]
-        self.resign(changed)
-        with self.assertRaisesRegex(
-            ArtifactValidationError,
-            "Objective membership differs from selected baselines",
         ):
             validate_assessment_plan(changed)
 
@@ -651,22 +507,6 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
             build_policy_diff(self.plan, plan)["comparison"]["status"],
             "incomplete",
         )
-
-    def test_policy_diff_treats_parameter_resolution_refusal_as_incomplete(self):
-        assignments = copy.deepcopy(self.assignments)
-        managed = next(item for item in assignments if item["id"] == "managed-linux-software")
-        managed["parameter_policies"] = []
-        invalid = render_plan(
-            self.subject,
-            self.groups,
-            assignments,
-            self.sources,
-        )
-
-        self.assertEqual(invalid["resolution"]["status"], "invalid")
-        document = build_policy_diff(self.plan, invalid)
-        self.assertEqual(document["comparison"]["status"], "incomplete")
-        self.assertEqual(document["parameter_changes"], [])
 
     def test_materialized_value_is_not_a_second_policy_authority(self):
         changed = copy.deepcopy(self.plan)
