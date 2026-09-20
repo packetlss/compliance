@@ -19,6 +19,8 @@ require_file compliance.yaml
 require_file t3.json
 require_file .github/ISSUE_TEMPLATE/implementation.md
 require_file .github/PULL_REQUEST_TEMPLATE.md
+require_file .github/workflows/destination-validation.yml
+require_file .github/workflows/current-main-integration.yml
 require_file docs/adr/README.md
 require_file docs/history/pre-consolidation.md
 require_file toolchain/versions.env
@@ -203,9 +205,13 @@ if [[ -d .github/workflows ]]; then
   fi
 fi
 
+# The trusted integration workflow uses the repository-provided token only in
+# jobs whose GitHub permissions declare status publication. Keep all workflows
+# under the historical credential/acquisition bans; GH_TOKEN itself receives the
+# one file-scoped exception below because job-level permissions own its authority.
 active_validation_paths=(.github/workflows scripts verification/scenarios/scripts)
 if grep -R --exclude='validate-repository.sh' -nE \
-  'COMPLIANCE_CI_|PERSONAL_ACCESS_TOKEN|GH_PAT|GH_TOKEN|actions/create-github-app-token|packetlss-labs/compliance-' \
+  'COMPLIANCE_CI_|PERSONAL_ACCESS_TOKEN|GH_PAT|actions/create-github-app-token|packetlss-labs/compliance-' \
   "${active_validation_paths[@]}"; then
   fail "active validation must not retain historical sibling acquisition or credentials"
 fi
@@ -214,5 +220,31 @@ if grep -R --exclude='validate-repository.sh' -nE \
   "${active_validation_paths[@]}"; then
   fail "active validation must not clone historical component repositories"
 fi
+
+integration_workflow=.github/workflows/current-main-integration.yml
+other_workflows=()
+while IFS= read -r workflow; do
+  [[ "$workflow" == "$integration_workflow" ]] || other_workflows+=("$workflow")
+done < <(find .github/workflows -type f -print)
+token_restricted_paths=(scripts verification/scenarios/scripts "${other_workflows[@]}")
+if grep -R --exclude='validate-repository.sh' -nE \
+  'GH_TOKEN|GITHUB_TOKEN|github\.token' \
+  "${token_restricted_paths[@]}"; then
+  fail "repository-provided workflow-token bindings are limited to current-base integration"
+fi
+if grep -n 'pull_request_target' "$integration_workflow"; then
+  fail "current-base integration must not use pull_request_target"
+fi
+if grep -nE '(^|[[:space:]])git[[:space:]]+push([[:space:]]|$)' "$integration_workflow"; then
+  fail "current-base integration must not push a synthetic candidate"
+fi
+for context in component-validation verification-scenarios installed-release-provenance macos-portability; do
+  grep -q "name: $context" .github/workflows/destination-validation.yml \
+    || fail "required PR-head CI context is missing: $context"
+done
+for responsibility in 'scripts/dev gate repository' 'scripts/dev gate scenarios' 'scripts/dev gate package' '/bin/bash scripts/dev gate package'; do
+  grep -qF "$responsibility" "$integration_workflow" \
+    || fail "current-base integration is missing a required validation responsibility: $responsibility"
+done
 
 printf 'repository validation passed\n'
