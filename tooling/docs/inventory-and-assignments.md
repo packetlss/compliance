@@ -1,7 +1,6 @@
 # Inventory, Groups, and Policy Assignments
 
-Status: **Working proposal with prototype (v0.1)**  
-Last updated: **2026-09-13**
+Status: **Current experimental inventory and assignment contract**
 
 This document defines how governed assets enter the inventory, how they become
 members of a group DAG, and how group-level policy assignments resolve to
@@ -92,7 +91,7 @@ It must not:
 
 The compliance platform remains authoritative for its own objects: group
 definitions and selectors, policy assignments, baseline releases, rendered
-assessment plans, decisions, findings, and waivers.
+assessment plans, results, and waivers.
 
 Stable governed classifications may legitimately determine group, policy and
 realization applicability. Inventory should express domain facts rather than name
@@ -387,24 +386,20 @@ member policy resolution. For example, changing `persona=developer` to
 `persona=standard` changes identity when that label affects a relevant selector or
 realization, while unrelated annotations and unsupplied catalog material do not.
 
-## 9. Ownership and storage
+## 9. Ownership and materialization
 
-The current proposed ownership is:
+| Object | Authoring authority | Supplied runtime role |
+| --- | --- | --- |
+| Subject identity, lifecycle and governed labels | Designated upstream system or reviewed configuration | Normalized Governed Inventory authoritatively supplies facts to resolution |
+| Group definitions and selectors | Reviewed project configuration | Explicit group DAG and selection rules |
+| Explicit group membership | External inventory source or reviewed configuration | Normalized membership with supplied provenance |
+| Policy assignments | Policy owners | Explicit applicability bindings |
+| Baselines and overlays | Policy authors | Independently named materialized policy sources |
+| Resolved assessment plan | Planner over exact supplied inputs | Generated artifact; when retained, owns exact historical intent and operation facts |
 
-| Object | Authority | Initial storage |
-|---|---|---|
-| Subject identity and lifecycle | External system designated for the subject domain | Local projection store; local YAML projection in prototype |
-| Governed subject labels | External authority or reviewed configuration per label namespace | Local projection store with source provenance; authoritative resolution input when supplied |
-| Group definitions and selectors | Platform/security policy owners | Git-backed policy repository |
-| Explicit group membership | External inventory source or reviewed configuration | Projection store or Git, with provenance |
-| Policy assignments | Platform/security policy owners | Git-backed policy repository |
-| Baselines and overlays | Policy authors | Git-backed policy repository |
-| Rendered assessment plan | Assessment planner | Immutable plan/evidence store |
-
-If a field can change which controls apply, its authority and revision must be
-recorded. The local projection is not itself the authority merely because it
-stores a normalized copy. Collector-provided configuration evidence is not
-automatically a trusted policy-selection attribute.
+Content addressing does not authenticate upstream truth. Collector observations
+are not automatically governed policy-selection facts. Directory materialization is
+an input mechanism, not a projection-store or retention-service contract.
 
 ## 10. Inventory and current coverage operator views
 
@@ -555,10 +550,10 @@ an immutable outcome. The asset explanation and `status --by group` preserve the
 dimensions and never reduce them to a compliance percentage. Current coverage is
 queried separately through `coverage`.
 
-## 12. Prototype limitations
+## 12. Current representation and limits
 
-- The prototype reads Kubernetes-shaped YAML or equivalent JSON resources from
-  directories rather than inventory source adapters and a projection store.
+- Tooling reads Kubernetes-shaped YAML or equivalent JSON resources from explicit
+  directories. Upstream ingestion and storage remain external.
 - `Subject`, `InventoryGroup`, and `PolicyAssignment` are validated against
   `schemas/inventory/resource.schema.json` before normalization.
 - Only exact label matching and explicit members are currently modeled.
@@ -573,15 +568,15 @@ queried separately through `coverage`.
   multi-source relationship use case requires it.
 - Multi-document YAML is supported, but Kubernetes List resources are deferred
   until an API needs them.
-- Subject lifecycle now gates assessment: retired subjects are inactive and an
-  unknown lifecycle is invalid. Historical retention and reactivation workflow
-  are not yet implemented.
+- Subject lifecycle gates assessment: retired subjects are inactive and an
+  unknown lifecycle is invalid. Retention and reactivation workflow are external
+  operating concerns.
 - Assignment activation windows and enforcement modes are not implemented.
 - Coarse control applicability is validated by subject type; a first-class
   rendered `not_applicable` collection is still to be designed.
 - Coverage is deliberately calculated from the current supplied file projection and
   is never persisted as historical state. Frozen assessment history is interpreted
   only through its exact operation, retained plans, and results.
-- The accepted `FrameworkObligationDeclaration` and its ephemeral satisfaction
-  projection are not yet implemented; they do not create a second Coverage algorithm,
-  selector language, or latest compliance state.
+- The implemented experimental `FrameworkObligationDeclaration` and its ephemeral
+  satisfaction projection retain separate governance authority and do not create a
+  second Coverage algorithm, selector language, or latest compliance state.

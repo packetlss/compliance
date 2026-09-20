@@ -8,7 +8,7 @@ This root owns ordinary exploratory compliance projects whose ownership and info
 - Reusable controls/helpers/schemas belong to `policy-sources/control-library/`; synthetic verification-only policy belongs to `policy-sources/verification-policy/`.
 - Generated evidence, plans, results, adapter outputs, caches, credentials, tokens, private keys, provider state, approval, and apply concerns stay out of Git.
 - Fixtures are synthetic observations, not desired policy.
-- ADR 0007 successor schemas, canonical scenarios, and the IAM/private-boundary fixture remain separately routed work.
+- Tooling-owned schemas, canonical scenarios, and the IAM/private-boundary fixture have separate owners; follow their instruction routes.
 
 ## Validation
 

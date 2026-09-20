@@ -2,16 +2,27 @@
 
 `packetlss/compliance` is the **sole authoritative development and documentation repository for non-sensitive compliance source**.
 
-All six migrated source domains are authoritative here:
+The current source areas are:
 
 - tooling under `tooling/`;
 - reusable `control-library` under `policy-sources/control-library/policies/`;
 - source-only `verification-policy` under `policy-sources/verification-policy/policies/`;
-- ordinary `mock-fleet` and `server-personas` projects under `projects/`;
+- ordinary `mock-fleet`, `server-personas` and `alder-forge-dcc-level3` projects under `projects/`;
 - the synthetic IAM/private-boundary fixture under `verification/fixtures/iam-private-boundary/`; and
 - canonical verification scenarios under `verification/scenarios/`.
 
-The semantic composition remains:
+Compliance resolves governed inventory and policy into exact assessment plans,
+evaluates company-owned criteria against descriptive observations, and explains
+immutable historical outcomes with separately derived current qualification.
+Coverage explains current expected scope; framework satisfaction is bounded to an
+exact governance declaration and its required support. Neither claims external
+certification or continuous effectiveness.
+
+The experimental [producer interface](tooling/docs/producer-interface.md) supports
+schema discovery/export and document validation. External readers consume
+[purpose-specific derived responses](tooling/docs/cli.md#experimental-external-read-consumption).
+
+The semantic composition is:
 
 ```text
 tooling + N named policy sources + project inputs
@@ -30,7 +41,7 @@ Stable destination CI contexts are:
 - `installed-release-provenance`
 - `macos-portability`
 
-`verification-scenarios` is the real canonical composed gate and owns all 21 retained public CLI leaves and 19 retained domain features. Normal validation uses one repository checkout and no historical sibling-repository App/PAT acquisition path.
+`verification-scenarios` is the real canonical composed gate and owns all 27 retained public CLI leaves and 19 retained domain features. Normal validation uses one repository checkout and no historical sibling-repository App/PAT acquisition path.
 
 From the repository root, `scripts/dev setup` creates this worktree's isolated environment and installs the repository-pinned Python, uv, and OPA without sudo or global package-manager changes. Downloads are cached outside semantic roots. T3 currently requires the checked-in **Setup worktree** action to be imported into the project before its `runOnWorktreeCreate` setting can run it. Repository-managed `check`, `gate`, and `cli` commands wait for that setup if it is in progress, or safely repair a missing or stale environment themselves. Use `scripts/dev doctor` for read-only diagnosis; it never repairs state.
 
@@ -69,14 +80,14 @@ Current normative architecture is local:
 - `docs/REPOSITORIES.md` — logical ownership/repository boundaries;
 - `docs/DEVELOPMENT_WORKFLOW.md` — engineering lifecycle;
 - `docs/CONTRACT_MATURITY.md` — compatibility/freeze rules;
-- `docs/adr/` — accepted ADRs 0005–0012 and 0016–0018;
+- `docs/adr/` — accepted ADRs 0005–0012 and 0016–0023 (0013–0015 are superseded);
 - `t3.json` — shared T3 Code worktree setup and validation shortcuts;
 - `docs/history/pre-consolidation.md` — migration/history provenance;
 - `docs/history/retirement-readiness.md` — one-time retirement/cutover evidence.
 
 Historical `packetlss-labs` component repositories and `compliance-workspace` are archived provenance preserving pre-consolidation commits, issues, PRs, and releases. No active development or architecture work remains owned there.
 
-Current staged work is routed through [roadmap #85](https://github.com/packetlss/compliance/issues/85) and its promoted destination issues. Issues #31–#38 are completed or closed consolidation and architecture history, not active routing. Real private environment repositories remain separate. Firewall/network-policy work remains out of scope unless explicitly reopened.
+Current staged work is routed through [roadmap #85](https://github.com/packetlss/compliance/issues/85) and its promoted destination issues. Real private environment repositories remain separate. Firewall/network-policy work remains out of scope unless explicitly reopened.
 
 Normal T3 Code development is:
 
@@ -90,4 +101,4 @@ read-only exploration
   -> human squash merge
 ```
 
-Narrow nonsemantic work may use its PR body as the implementation contract. All merges require human final authority; the completed repository-retirement exception is no longer active.
+Narrow nonsemantic work may use its PR body as the implementation contract. All merges require human final authority.

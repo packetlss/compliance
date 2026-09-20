@@ -1,7 +1,7 @@
 # Standalone component validation
 
 Destination `component-validation` validates this producer's reusable policy and
-release contracts from the consolidated checkout. Workspace ADR 0005 governs the
+release contracts from the consolidated checkout. System ADR 0005 governs the
 separation of component, composed integration, and installed-release validation.
 
 ## Inputs and local command
@@ -35,8 +35,8 @@ The gate retains:
 - All retained library resource, parameter, policy, and evidence schemas,
   common evidence-envelope conformance, reference compatibility, and compiled
   Rego entrypoint validation.
-- Minimal valid producer documents for all 10 active evidence types, including
-  macOS and organizational assertions, plus typed optional AWS security-contact
+- Minimal valid producer documents for every active descriptive evidence type,
+  including macOS and IAM relationships, plus typed optional AWS security-contact
   and SaaS guest-access facts.
 - Package producer ordinary-construction and 11 conformance vectors, including
   nested extensions and complete-document identity preservation.
