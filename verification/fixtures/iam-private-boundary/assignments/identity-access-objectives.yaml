@@ -11,5 +11,5 @@ spec:
     - name: company.identity-access-objectives
       revision: "1"
   parameterPolicyRefs:
-    - name: company.iam.role-based-access-defaults
+    - name: restricted.iam.role-based-access
       revision: "1"

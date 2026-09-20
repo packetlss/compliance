@@ -119,6 +119,22 @@ def assert_plan(plan: dict, config: dict) -> None:
     controls = plan.get("controls", [])
     if {control.get("instance_id") for control in controls} != CONTROL_INSTANCES:
         fail("IAM plan lost one or more restricted technical checks")
+    freshness = {
+        dependency.get("max_age")
+        for control in controls
+        for dependency in control.get("evidence", [])
+    }
+    if freshness != {"3600s"}:
+        fail(f"private 1h ParameterPolicy tailoring did not reach every Check: {freshness}")
+    private_parameters = [
+        item for item in plan.get("parameters", {}).get("documents", [])
+        if item.get("reference") == "restricted.iam.role-based-access@1"
+    ]
+    if len(private_parameters) != 1 or {
+        source.get("policy_source")
+        for source in private_parameters[0].get("policy_sources", [])
+    } != {"environment-private"}:
+        fail("IAM plan lost the explicitly applicable private ParameterPolicy")
     for control in controls:
         if control.get("disposition") != "evaluate":
             fail(f"restricted control is no longer evaluated: {control}")

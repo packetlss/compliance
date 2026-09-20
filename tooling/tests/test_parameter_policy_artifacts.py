@@ -315,6 +315,22 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
             ):
                 validate_assessment_plan(changed)
 
+        changed = copy.deepcopy(plan)
+        parameter = next(
+            item for item in changed["parameters"]["documents"]
+            if item["reference"] == "restricted.iam.role-based-access@1"
+        )
+        parameter["document"]["spec"]["parameter_operations"][0]["deviation"][
+            "review_after"
+        ] = "not-a-date"
+        parameter["digest"] = pp.resource_digest(parameter["document"])
+        self.resign(changed)
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "invalid parameter deviation date",
+        ):
+            validate_assessment_plan(changed)
+
         changed = copy.deepcopy(self.plan)
         consumer = changed["parameters"]["consumers"][0]
         consumer["document"]["spec"]["controls"][0]["unsupported"] = True

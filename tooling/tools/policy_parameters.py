@@ -513,6 +513,12 @@ def validate_parameter_policy_structure(value):
                         and all(isinstance(deviation[field], str) and bool(deviation[field])
                                 for field in deviation),
                         'invalid parameter deviation')
+                try:
+                    FormatChecker().check(deviation['review_after'], 'date')
+                except FormatError as error:
+                    raise ParameterResolutionError(
+                        'invalid parameter deviation date'
+                    ) from error
     if 'parameter_contributions' in spec:
         items = spec['parameter_contributions']
         require(isinstance(items, list) and bool(items),
