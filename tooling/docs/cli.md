@@ -194,6 +194,10 @@ They show group-local exact slot accounting beside separately aggregated current
 plan alignment, selected-evidence timeliness, and recorded-waiver qualification.
 Frozen accounting-disposition counts keep inactive, unassigned, and no-assessable-
 policy members distinct even though none requires a result.
+An explicitly supplied missing results path or single non-result file is invalid and
+fails closed. Omit `--results` or supply an empty bounded directory to represent no
+retained results. A bounded directory may contain other JSON artifact families;
+only intrinsically valid result envelopes are admitted from it.
 The default per-asset table likewise keeps current waiver qualification distinct
 from the immutable historical outcome. A dependency-free check makes no positive
 evidence-timeliness claim.

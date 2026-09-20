@@ -695,11 +695,10 @@ def _historical_context(args: argparse.Namespace):
         raise ValueError(
             'historical reporting requires --plan, --at, and --as-of'
         )
-    results = args.results if args.results and args.results.exists() else None
     return load_historical_assessment_context(
         args.plan,
         args.assessed_plans,
-        results,
+        args.results,
         assessment_instant=args.at,
         query_instant=args.as_of,
         comparison_anchor_path=args.comparison_plan,

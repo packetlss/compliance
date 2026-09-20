@@ -173,11 +173,17 @@ def load_result_reports(path: Path | None) -> list[JsonObject]:
     reports: list[JsonObject] = []
     for candidate in paths:
         document = load_json(candidate)
-        if isinstance(document, dict) and str(document.get("schema", "")).startswith(
-            "compliance.example/assessment-results/"
-        ):
-            validate_assessment_results(document, source=candidate)
-            reports.append(document)
+        is_result = isinstance(document, dict) and str(
+            document.get("schema", "")
+        ).startswith("compliance.example/assessment-results/")
+        if not is_result:
+            if path.is_file():
+                raise ValueError(
+                    f"results input is not an assessment result: {path}"
+                )
+            continue
+        validate_assessment_results(document, source=candidate)
+        reports.append(document)
     return _unique_exact_documents(
         reports, identity_field="id", label="assessment result"
     )

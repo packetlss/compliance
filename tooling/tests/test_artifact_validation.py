@@ -1737,6 +1737,19 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             ):
                 load_result_reports(Path(directory))
 
+    def test_result_loader_rejects_explicit_missing_or_non_result_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with self.assertRaisesRegex(ValueError, "results path does not exist"):
+                load_result_reports(root / "missing.json")
+
+            other = root / "policy.json"
+            other.write_text(json.dumps({"kind": "Baseline"}), encoding="utf-8")
+            with self.assertRaisesRegex(
+                ValueError, "results input is not an assessment result"
+            ):
+                load_result_reports(other)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,6 +2,7 @@ import argparse
 import copy
 import importlib
 import io
+import shutil
 import subprocess
 import sys
 import unittest
@@ -49,7 +50,9 @@ class ExampleCoverageTests(unittest.TestCase):
         javascript = (browser / "app.js").read_text(encoding="utf-8")
         html = (browser / "index.html").read_text(encoding="utf-8")
 
-        for name in ("README.md", "index.html", "styles.css", "app.js"):
+        for name in (
+            "README.md", "index.html", "styles.css", "app.js", "test-app.cjs"
+        ):
             self.assertTrue((browser / name).is_file())
         for schema in (
             "inventory-assets-view/v1alpha1",
@@ -73,6 +76,33 @@ class ExampleCoverageTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, javascript)
         self.assertIn('type="file"', html)
+
+        for visible_projection_fact in (
+            "evidence_id",
+            "evidence_digest",
+            "retained_evidence",
+            "collector.id",
+            'document.view === "groups"',
+            "document.context",
+            "document.scope_changes",
+            "document.requirement_changes",
+            "document.control_changes",
+        ):
+            self.assertIn(visible_projection_fact, javascript)
+
+    def test_read_browser_rendering_behavior(self):
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("Node is unavailable for dependency-free browser logic exercise")
+        exercise = (
+            Path(__file__).resolve().parents[1]
+            / "examples/read-browser/test-app.cjs"
+        )
+        result = subprocess.run(
+            [node, str(exercise)], capture_output=True, text=True, check=False
+        )
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        self.assertIn("browser projection rendering passed", result.stdout)
 
     def test_every_feature_has_one_primary_scenario(self):
         document = validate_feature_coverage()

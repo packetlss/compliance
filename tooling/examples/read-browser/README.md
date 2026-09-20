@@ -36,6 +36,7 @@ read_responses="$(mktemp -d "${TMPDIR:-/tmp}/compliance-read-browser.XXXXXX")"
     --private-source ../verification/fixtures/iam-private-boundary/policy \
     --browser-output "$read_responses"
 )
+node tooling/examples/read-browser/test-app.cjs "$read_responses"/*.json
 python3 -m http.server 8765 --directory tooling/examples/read-browser
 ```
 

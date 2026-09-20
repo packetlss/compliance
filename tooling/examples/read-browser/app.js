@@ -52,7 +52,7 @@
   }
 
   function card(row, index) {
-    const entries = Object.entries(row).filter(([key]) => !["checks", "objectives", "support"].includes(key));
+    const entries = Object.entries(row).filter(([key]) => !["checks", "objectives"].includes(key));
     return `<section class="card"><h3>${escape(rowLabel(row, index))}</h3><dl>${entries.map(([key, value]) =>
       `<dt>${escape(key.replaceAll("_", " "))}</dt><dd>${key.includes("outcome") || key === "state" || key === "coverage_class" ? statusMarkup(value) : `<code>${escape(value)}</code>`}</dd>`
     ).join("")}</dl></section>`;
@@ -68,12 +68,37 @@
     const checks = rowsFor(document, "checks").map((item, index) => {
       const check = item.check || {};
       const outcome = item.historical_result?.historical_outcome;
-      const evidence = (item.required_evidence || []).map(dependency =>
-        `<li><strong>${escape(dependency.evidence_type)}</strong> (${escape(dependency.dependency_id)}) → ${escape(dependency.selection)}${dependency.inputs ? `; inputs ${escape(dependency.inputs)}` : ""}</li>`
-      ).join("");
+      const evidence = (item.required_evidence || []).map(dependency => {
+        const selected = dependency.selected_evidence;
+        const retained = selected?.retained_evidence;
+        const selection = selected ?
+          `; Evidence ${escape(selected.evidence_id)}; digest ${escape(selected.evidence_digest)}; collected ${escape(selected.collected_at)}` : "";
+        const collector = retained ?
+          `; retained collector ${escape(retained.collector.id)}@${escape(retained.collector.version)} (${escape(retained.match)})` : "";
+        return `<li><strong>${escape(dependency.evidence_type)}</strong> (${escape(dependency.dependency_id)}) → ${escape(dependency.selection)}${dependency.inputs ? `; inputs ${escape(dependency.inputs)}` : ""}${selection}${collector}</li>`;
+      }).join("");
       return `<section class="card"><h3>Check: ${escape(check.title || rowLabel(item, index))}</h3><p>${escape(check.purpose)}</p><p>${statusMarkup(outcome)}</p><p class="path">Check → required Evidence → result</p><ul>${evidence}</ul></section>`;
     }).join("");
     return policies + objectives + checks || card(document, 0);
+  }
+
+  function policyDiff(document) {
+    const sections = [
+      ["Comparison context", [document.context]],
+      ["Scope changes", document.scope_changes || []],
+      ["Requirement changes", document.requirement_changes || []],
+      ["Control changes", document.control_changes || []],
+    ];
+    return sections.map(([title, rows]) =>
+      `<section><h3>${escape(title)}</h3><div class="cards">${rows.filter(Boolean).map(card).join("") || '<p class="empty">None.</p>'}</div></section>`
+    ).join("");
+  }
+
+  function rowFieldFor(document, configuredField) {
+    if (document.schema === "compliance.example/assessment-status-view/v1alpha1") {
+      return document.view === "groups" ? "groups" : "assets";
+    }
+    return configuredField;
   }
 
   function render() {
@@ -93,8 +118,14 @@
       current_qualification: document.current_qualification ? "shown separately" : undefined,
     };
     const visibleFacts = Object.fromEntries(Object.entries(summary).filter(([, value]) => value !== undefined));
-    const body = document.schema === "compliance.example/assessment-explanation-view/v1alpha1" ?
-      explanation(document) : rowsFor(document, rowField).map(card).join("") || card(document, 0);
+    let body;
+    if (document.schema === "compliance.example/assessment-explanation-view/v1alpha1") {
+      body = explanation(document);
+    } else if (document.schema === "compliance.example/policy-diff/v1alpha1") {
+      body = policyDiff(document);
+    } else {
+      body = rowsFor(document, rowFieldFor(document, rowField)).map(card).join("") || card(document, 0);
+    }
     content.className = "";
     content.innerHTML = `<p class="eyebrow">${escape(label)}</p><h2>${escape(entry.name)}</h2>${facts(visibleFacts)}<div class="cards">${body}</div>`;
   }
