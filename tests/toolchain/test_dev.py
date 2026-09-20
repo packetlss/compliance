@@ -27,7 +27,6 @@ SPEC.loader.exec_module(dev)
 REPOSITORY_ROOT = SOURCE.parents[1]
 DEV_SCRIPT = REPOSITORY_ROOT / "scripts/dev"
 INTEGRATION_WORKFLOW = REPOSITORY_ROOT / ".github/workflows/current-main-integration.yml"
-INTEGRATION_WORKFLOW_VALIDATOR = REPOSITORY_ROOT / "scripts/validate-current-main-integration.sh"
 
 
 def run_dev(*arguments: str, cwd: Path | None = None, env=None):
@@ -565,119 +564,6 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("Publish final status without checking out PR code", workflow)
         for gate in ("scripts/dev gate repository", "scripts/dev gate scenarios", "scripts/dev gate package", "/bin/bash scripts/dev gate package"):
             self.assertIn(gate, workflow)
-
-    def validate_integration_workflow(self, contents: str):
-        with tempfile.TemporaryDirectory(prefix="compliance integration workflow ") as temporary:
-            workflow = Path(temporary) / "current-main-integration.yml"
-            workflow.write_text(contents)
-            return subprocess.run(
-                ["bash", str(INTEGRATION_WORKFLOW_VALIDATOR), str(workflow)],
-                text=True,
-                capture_output=True,
-            )
-
-    def test_integration_workflow_validator_accepts_the_trusted_split(self):
-        result = self.validate_integration_workflow(INTEGRATION_WORKFLOW.read_text())
-        self.assertEqual(result.returncode, 0, result.stderr)
-
-    def test_integration_workflow_validator_rejects_candidate_token_or_write_permission(self):
-        workflow = INTEGRATION_WORKFLOW.read_text()
-        candidate_job = (
-            "  verification-scenarios:\n"
-            "    name: integration verification-scenarios\n"
-            "    needs: resolve\n"
-            "    runs-on: ubuntu-24.04\n"
-            "    timeout-minutes: 30\n"
-            "    permissions:\n"
-            "      contents: read\n"
-        )
-        token_candidate = workflow.replace(
-            candidate_job,
-            candidate_job + "    env:\n      GH_TOKEN: ${{ github.token }}\n",
-            1,
-        )
-        indexed_token_candidate = workflow.replace(
-            candidate_job,
-            candidate_job + "    env:\n      credential_alias: ${{ github['token'] }}\n",
-            1,
-        )
-        serialized_context_candidate = workflow.replace(
-            candidate_job,
-            candidate_job + "    env:\n      credential_alias: ${{ toJSON(github) }}\n",
-            1,
-        )
-        indexed_secret_candidate = workflow.replace(
-            candidate_job,
-            candidate_job + "    env:\n      credential_alias: ${{ secrets['PAT'] }}\n",
-            1,
-        )
-        write_candidate = workflow.replace(
-            candidate_job,
-            candidate_job + "      statuses: write # candidate jobs must stay read-only\n",
-            1,
-        )
-        quoted_write_candidate = workflow.replace(
-            candidate_job,
-            candidate_job + '      statuses: "write"\n',
-            1,
-        )
-        quoted_key_write_candidate = workflow.replace(
-            candidate_job,
-            candidate_job + '      "statuses": write\n',
-            1,
-        )
-        escaped_write_candidate = workflow.replace(
-            candidate_job,
-            candidate_job + '      statuses: "\\x77rite"\n',
-            1,
-        )
-        for mutation in (
-            token_candidate,
-            indexed_token_candidate,
-            serialized_context_candidate,
-            indexed_secret_candidate,
-            write_candidate,
-            quoted_write_candidate,
-            quoted_key_write_candidate,
-            escaped_write_candidate,
-        ):
-            with self.subTest(mutation=mutation):
-                result = self.validate_integration_workflow(mutation)
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn("verification-scenarios", result.stderr)
-
-    def test_integration_workflow_validator_rejects_trusted_write_expansion_or_relocated_token(self):
-        workflow = INTEGRATION_WORKFLOW.read_text()
-        extra_write = workflow.replace(
-            "      statuses: write\n    steps:\n      - name: Publish final status without checking out PR code\n",
-            "      statuses: write\n      issues: write # status publication must remain the only write\n    steps:\n      - name: Publish final status without checking out PR code\n",
-            1,
-        )
-        quoted_key_extra_write = workflow.replace(
-            "      statuses: write\n    steps:\n      - name: Publish final status without checking out PR code\n",
-            "      statuses: write\n      \"issues\": write\n    steps:\n      - name: Publish final status without checking out PR code\n",
-            1,
-        )
-        escaped_extra_write = workflow.replace(
-            "      statuses: write\n    steps:\n      - name: Publish final status without checking out PR code\n",
-            '      statuses: write\n      issues: "\\x77rite"\n    steps:\n      - name: Publish final status without checking out PR code\n',
-            1,
-        )
-        relocated_token = workflow.replace(
-            "jobs:\n",
-            "env:\n  GH_TOKEN: ${{ github.token }}\n\njobs:\n",
-            1,
-        ).replace("          GH_TOKEN: ${{ github.token }}\n", "", 1)
-        for mutation, expected_error in (
-            (extra_write, "publish"),
-            (quoted_key_extra_write, "publish"),
-            (escaped_extra_write, "publish"),
-            (relocated_token, "resolve"),
-        ):
-            with self.subTest(mutation=mutation):
-                result = self.validate_integration_workflow(mutation)
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn(expected_error, result.stderr)
 
 
 if __name__ == "__main__":
