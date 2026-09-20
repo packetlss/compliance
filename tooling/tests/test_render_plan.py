@@ -586,6 +586,20 @@ class BaselineOverlayTests(unittest.TestCase):
             {item["destination"]["instance_id"] for item in links},
             {"test.first-check", "test.second-check"},
         )
+        duplicate = copy.deepcopy(consumers[0])
+        duplicate["document"]["metadata"]["id"] = "test.identical-third"
+        duplicate["reference"] = "test.identical-third@1"
+        duplicate["digest"] = baseline_semantic_digest(duplicate["document"])
+        frozen["parameters"]["consumers"].append(duplicate)
+        frozen["resolved_baselines"].append({
+            "reference": duplicate["reference"],
+            "lineage": [{
+                "reference": duplicate["reference"],
+                "digest": duplicate["digest"],
+                "policy_sources": locator,
+            }],
+        })
+        self.assertEqual(len(pp.frozen_technical_links(frozen)), 2)
 
     def test_substitution_rejects_replacement_link_for_another_check(self):
         overlay = self.company_overlay()

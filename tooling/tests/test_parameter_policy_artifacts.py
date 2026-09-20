@@ -72,6 +72,58 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
         self.assertEqual(state["value"], ["auditd", "curl", "postgresql"])
         self.assertEqual(len(state["composition"]["contributions"]), 1)
 
+    def test_unselected_realization_consumer_is_rejected(self):
+        changed = copy.deepcopy(self.plan)
+        changed["parameters"]["consumers"].append({
+            "kind": "ControlRealization",
+            "reference": "forged.unselected@1",
+            "digest": "sha256:" + "0" * 64,
+            "policy_sources": [{
+                "policy_source": "verification-policy",
+                "path": "realizations/forged.json",
+            }],
+        })
+        changed["parameters"]["consumers"].sort(
+            key=lambda item: (item["kind"], item["reference"])
+        )
+        self.resign(changed)
+
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "realization consumer is not selected",
+        ):
+            validate_assessment_plan(changed)
+
+    def test_independent_identical_direct_consumers_coalesce(self):
+        with tempfile.TemporaryDirectory() as directory:
+            policy_root = Path(directory) / "policies"
+            shutil.copytree(self.sources[1].path, policy_root)
+            source_path = (
+                policy_root
+                / "baselines/company/company-authorized-software.json"
+            )
+            duplicate = json.loads(source_path.read_text(encoding="utf-8"))
+            duplicate["metadata"]["id"] = "company.authorized-software-copy"
+            target = source_path.with_name("company-authorized-software-copy.json")
+            target.write_text(json.dumps(duplicate), encoding="utf-8")
+            assignments = copy.deepcopy(self.assignments)
+            managed = next(
+                item for item in assignments
+                if item["id"] == "managed-linux-software"
+            )
+            managed["baselines"].append("company.authorized-software-copy@1")
+            plan = render_plan(
+                self.subject,
+                self.groups,
+                assignments,
+                (self.sources[0], PolicySource("verification-policy", policy_root)),
+            )
+
+        self.assertEqual(plan["resolution"]["status"], "valid")
+        self.assertEqual(len(plan["controls"]), 1)
+        self.assertEqual(len(pp.frozen_technical_links(plan)), 1)
+        validate_assessment_plan(plan)
+
     def test_old_current_representation_is_rejected(self):
         changed = copy.deepcopy(self.plan)
         changed["requirements"] = [{"parameter_facts": {}}]

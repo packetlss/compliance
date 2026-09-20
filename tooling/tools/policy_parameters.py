@@ -359,9 +359,26 @@ def frozen_technical_links(plan):
         visited.update(ancestry)
     require(visited == set(catalog),
             'frozen technical consumer document is outside selected consuming ancestry')
-    links = [combined[key] for key in sorted(combined)]
-    validate_consumer_destinations(links)
-    return links
+    effective = {}
+    for (owner, _), link in sorted(combined.items()):
+        target = link['destination']
+        key = (
+            target['instance_id'], target['kind'],
+            target.get('dependency'), target['path'],
+        )
+        existing = effective.get(key)
+        require(existing is None
+                or (existing['owner'] != owner
+                    and equal(existing['link']['source'], link['source'])
+                    and equal(existing['link']['destination'], link['destination'])),
+                'ambiguous consumption destination')
+        effective.setdefault(key, {
+            'owner': owner,
+            'link': copy.deepcopy(link),
+        })
+    result = [effective[key]['link'] for key in sorted(effective)]
+    validate_consumer_destinations(result)
+    return result
 
 
 def normalized_resource_document(value, policies=None):
@@ -1992,6 +2009,11 @@ def _validate_requirement_facts(plan, controls, states):
         for item in plan['parameters']['consumers']
         if item['kind'] == 'ControlRealization'
     }
+    require(len(realization_consumers) == sum(
+        item['kind'] == 'ControlRealization'
+        for item in plan['parameters']['consumers']
+    ), 'duplicate frozen realization consumer')
+    used_realization_consumers = set()
     for requirement in plan['requirements']:
         validate_sources(requirement, 'Objective')
         resource = requirement.get('document')
@@ -2043,6 +2065,7 @@ def _validate_requirement_facts(plan, controls, states):
                 'frozen realization consumer attribution mismatch')
         if has_links:
             consumer = realization_consumers[realization_reference]
+            used_realization_consumers.add(realization_reference)
             require(set(consumer) == {'kind', 'reference', 'digest', 'policy_sources'},
                     'realization consumer duplicates authored links')
             require(consumer['digest'] == realization_record['digest']
@@ -2052,6 +2075,8 @@ def _validate_requirement_facts(plan, controls, states):
             require(check['instance_id'] in planned
                     and equal(check, planned[check['instance_id']]['policy_inputs']['instance']),
                     'frozen realization materialized destination mismatch')
+    require(used_realization_consumers == set(realization_consumers),
+            'frozen realization consumer is not selected by an Objective')
 
 
 def _validate_technical_consumers(plan, controls, states):
@@ -2102,8 +2127,18 @@ def _validate_technical_consumers(plan, controls, states):
         require(planned_ids == set(resolved['controls']),
                 'frozen technical consumer Check membership differs from retained owner')
         for instance_id, expected in resolved['controls'].items():
+            for field in ('lineage', 'derivations', 'deviations'):
+                require(all(
+                    item in planned[instance_id].get(field, [])
+                    for item in expected.get(field, [])
+                ), 'frozen technical consumer attribution differs from retained owner')
+            independently_meaningful = lambda item: {
+                key: value for key, value in item.items()
+                if key not in {'lineage', 'derivations', 'deviations'}
+            }
             require(instance_id in source_by_id
-                    and equal(expected, source_by_id[instance_id]),
+                    and equal(independently_meaningful(expected),
+                              independently_meaningful(source_by_id[instance_id])),
                     'frozen technical consumer Check differs from retained owner')
     for consumer in plan['parameters']['consumers']:
         if consumer['kind'] == 'ControlRealization':
