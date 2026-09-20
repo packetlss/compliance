@@ -159,6 +159,41 @@ selects projects without composing policy; its data/location is nonsemantic.
 `composition-lock` is the complete expected-composition abstraction. These current
 names do not create aliases for retired vocabulary or compatibility commitments.
 
+## Objective assurance and ParameterPolicy successor
+
+[ADR 0024](adr/0024-objective-assurance-and-parameter-policy.md) under
+[#192](https://github.com/packetlss/compliance/issues/192) is **Accepted design,
+not yet implemented**. The implemented ADR 0012/0016 representations in the
+current-contract table remain active until coordinated cutover; they are experimental migration inputs,
+not successor authority.
+
+The successor retains optional Objective assurance, exact zero/one/multiple
+realization resolution and conservative implemented Check outcomes. It removes
+`satisfaction.allOf`, constant RequirementBaseline membership `required: true`,
+fabricated adoption and absence-as-Assessment-FAIL. Implementation gaps remain
+unsuccessful required-policy states, separately accountable from evidence outcomes,
+refusal, unassigned Coverage and explicit N/A. ADR 0023 meanings remain frozen.
+
+RequirementBaseline becomes Objective grouping only. Explicitly assigned
+ParameterPolicy owns declarations, bind/tailor derivation and additive contributions;
+Check authors own exact typed consumption on both realization and direct technical
+paths. Contribution-only policy has no Objective/Requirement assessment row.
+Atomic defaults, explicit string-set union, complete attribution, stale-pin failure,
+policy-owned freshness and order independence remain unchanged.
+
+Retain source facts once in exact plans and independently reconstruct derived
+parameter summaries; preserve authored expectations and validate materialized
+inputs. Existing identity architecture remains, but the later coordinated migration
+intentionally changes member-plan digests, operation IDs, bound plan IDs and result
+identities. No schema/wire/algorithm freeze, alias, dual reader or historical
+conversion follows. Historical artifacts keep their original tooling and meaning.
+
+Follow-on A (assurance simplification) and B (parameter ownership/representation)
+require coordinated schema/source/runtime/consumer/test contracts and valid accepted
+checkpoints; this documentation tranche implements neither. Exact assignment
+relationships and semantic rules are settled in ADR 0024; wire layout and field
+spellings remain experimental.
+
 ## Historical/removed representations
 
 Current tooling rejects predecessor `project-config/v1alpha1`,

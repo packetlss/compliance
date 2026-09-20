@@ -14,6 +14,15 @@ specifies its embedded projection and concrete typed assertion examples. The
 promotion-stage statements below retain the original design history; #37 is closed
 promotion history. New residual architecture requires a focused exploration.
 
+> **Accepted successor, implementation pending:** [ADR 0024](0024-objective-assurance-and-parameter-policy.md)
+> supersedes Requirement-owned parameters, RequirementBaseline parameter derivation/
+> contributions, realization-only consumption and duplicated frozen summaries. It
+> also replaces fabricated adoption and failing-Requirement representation for
+> implementation absence with a separately accountable implementation gap, and
+> removes redundant `satisfaction.allOf` and membership `required: true`.
+> All ADR 0023 frozen meanings remain intact. Historical/current-runtime descriptions
+> below remain migration context, not authority for successor implementation.
+
 ## Context and authority
 
 ADRs 0013–0015 coupled exact policy assessment with externally authoritative
@@ -29,8 +38,9 @@ standalone technical baselines. Its external mapping/claim language does not
 make engine-established external legal or certification conformity a generic core
 responsibility. The external-adapter boundary is unchanged.
 
-[ADR 0012](0012-explicit-policy-parameter-resolution.md) remains unchanged, including
-parameter identity, resolution, direct typed consumption and policy-owned freshness.
+[ADR 0012](0012-explicit-policy-parameter-resolution.md) was unchanged by this
+original promotion. ADR 0024 now succeeds its parameter ownership/representation
+while preserving resolution, direct typed consumption and policy-owned freshness.
 Its earlier current-routing paragraph referring to ADRs 0013–0015 is historical
 routing, replaced by this decision; it does not restore their superseded duties.
 The distinction between valid company policy and differing external conditions
@@ -132,10 +142,10 @@ correctness, or prove that sourcing, policy and governance choices are sufficien
 Preserve independent technical `Baseline` / `BaselineOverlay` assessment and
 optional company requirement/realization assurance. Realizations remain design-time
 demonstration designs. An assigned requirement with zero applicable realizations
-retains `not_implemented` adoption and a failing requirement; exactly one applicable
-realization is selected and its complete `satisfaction.allOf` proof recipe is
-assessed; multiple applicable realizations make policy resolution ambiguous and the
-plan fails. Evidence never chooses policy or a realization. Preserve ADR 0012
+is an implementation gap without fabricated adoption or Assessment FAIL under
+ADR 0024; exactly one applicable realization retains its authored implementation
+state, and if implemented every declared Check is assessed; multiple applicable
+realizations make policy resolution ambiguous and the plan fails. Evidence never chooses policy or a realization. Preserve ADR 0012
 resolved parameters and direct typed dependency consumption, policy-owned freshness,
 independently attributable technical results, conservative roll-up and fail-only
 waivers. Neither adoption nor a waiver manufactures a passing observation.
@@ -228,8 +238,8 @@ accept invalid dependency targets or tolerate tampering/integrity failures.
 | Invalid group/identity/assignment/policy/dependency resolution | Affected required resolution is invalid; no partial valid plan or success synthesized from omitted inputs |
 | Required ADR 0012 parameter unresolved | Non-assessable policy; not an evidence `unknown` substitute |
 | No policy assignment | Unassigned/outside supplied assessment scope, not automatically N/A |
-| No matching realization for an assigned objective | Existing `not_implemented` realization/adoption state and failing requirement behavior, not Coverage, evidence `unknown`, or external N/A |
-| Exactly one applicable realization for an assigned objective | Select it and assess its complete `satisfaction.allOf` recipe; evidence cannot choose another policy path |
+| No matching realization for an assigned objective | ADR 0024 implementation gap without fabricated adoption or Assessment FAIL; unsuccessful required policy, not unassigned Coverage, evidence `unknown`, refusal or N/A |
+| Exactly one applicable realization for an assigned objective | Retain its authored implementation/N/A state; if implemented evaluate every declared Check under ADR 0024; evidence cannot choose another policy path |
 | Multiple applicable realizations for an assigned objective | Invalid/ambiguous policy resolution and plan failure; no ordering, specificity or assessment-time fallback |
 | Missing/stale/schema-invalid/ambiguous/inconclusive required evidence after valid dependency resolution | ADR 0010 `unknown`, never pass |
 | Admissible conclusive negative evidence | Normal `fail` |
@@ -273,8 +283,8 @@ conceptual obligations, not executable future-behavior fixtures or new schemas.
 | All mapped company checks pass, including mappings labelled complete | Exact company result only; neither framework satisfaction nor certification/legal conformity is manufactured |
 | Company policy allows 45m, external condition says 30m, evidence satisfies resolved company policy | Company result remains valid; generic core does not establish external conformity or change ADR 0012 bindings |
 | Required ADR 0012 parameter has no concrete value | Non-assessable policy; do not evaluate a partial plan or invent evidence `unknown` |
-| Assigned company objective has no matching realization | Existing `not_implemented` realization/adoption state and failing requirement behavior remain; Coverage still records the applicable assignment |
-| Assigned company objective has exactly one applicable realization | Assess every check in its complete `satisfaction.allOf` recipe; evidence does not select the realization |
+| Assigned company objective has no matching realization | ADR 0024 implementation gap prevents successful demonstration without fabricated adoption or Assessment FAIL; Coverage still records the applicable assignment |
+| Assigned company objective has exactly one applicable realization | Retain authored implementation/N/A state; if implemented assess every declared Check under ADR 0024; evidence does not select the realization |
 | Assigned company objective has multiple applicable realizations | Policy resolution is ambiguous and planning fails without order or specificity precedence |
 | Valid dependency lacks evidence, evidence is stale/schema-invalid/inconclusive, or newest tied candidates diverge under ADR 0010 | Required result is `unknown`; existing evidence-selection semantics remain unchanged |
 | Evaluator fails but trustworthy execution/result attribution exists | Attributable `error` under ADR 0010 |
