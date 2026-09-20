@@ -101,13 +101,22 @@
                 "uniqueItems": true,
                 "items": {"$ref": "#/$defs/policyLocator"}
               },
-              "links": {"type": "array", "minItems": 1, "uniqueItems": true}
+              "document": {"type": "object"},
+              "link_ids": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {"type": "string", "minLength": 1}
+              }
             },
             "allOf": [
               {
                 "if": {"properties": {"kind": {"const": "ControlRealization"}}},
-                "then": {"not": {"required": ["links"]}},
-                "else": {"required": ["links"]}
+                "then": {"not": {"anyOf": [
+                  {"required": ["document"]},
+                  {"required": ["link_ids"]}
+                ]}},
+                "else": {"required": ["document", "link_ids"]}
               }
             ]
           }
@@ -1127,7 +1136,8 @@
       "type": "object",
       "required": [
         "reference",
-        "digest"
+        "digest",
+        "policy_sources"
       ],
       "additionalProperties": false,
       "properties": {
@@ -1136,6 +1146,12 @@
         },
         "digest": {
           "$ref": "#/$defs/digest"
+        },
+        "policy_sources": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/policyLocator"}
         }
       }
     },

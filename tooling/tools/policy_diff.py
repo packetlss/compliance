@@ -514,11 +514,16 @@ def build_policy_diff(
         kind="requirement",
         identity=_requirement_identity,
     )
-    parameter_changes = _collection_changes(
-        _effective_parameters(before),
-        _effective_parameters(after),
-        kind="parameter",
-        identity=_parameter_identity,
+    comparison = _comparison(before, after)
+    parameter_changes = (
+        _collection_changes(
+            _effective_parameters(before),
+            _effective_parameters(after),
+            kind="parameter",
+            identity=_parameter_identity,
+        )
+        if comparison["status"] == "complete"
+        else []
     )
     control_changes = _control_changes(before, after)
     total_changes = (
@@ -528,7 +533,7 @@ def build_policy_diff(
     document: JsonObject = {
         "schema": POLICY_DIFF_SCHEMA,
         "subject_id": subject_id,
-        "comparison": _comparison(before, after),
+        "comparison": comparison,
         "context": {
             "changed": bool(context_fields),
             "changed_fields": context_fields,

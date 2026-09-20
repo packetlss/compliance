@@ -40,32 +40,65 @@
         },
         "parameter_links": {
           "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["id", "source", "destination"],
-            "additionalProperties": false,
-            "properties": {
-              "id": {"type": "string", "minLength": 1},
-              "source": {
-                "type": "object",
-                "required": ["policy", "digest", "slot", "declaration_digest", "schema_digest"],
-                "additionalProperties": false,
-                "properties": {
-                  "policy": {"type": "string"},
-                  "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-                  "slot": {"type": "string"},
-                  "declaration_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-                  "schema_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
-                }
-              },
-              "destination": {"type": "object"}
-            }
-          }
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/parameterLink"}
         }
       }
     }
   },
   "$defs": {
+    "parameterLink": {
+      "type": "object",
+      "required": ["id", "source", "destination"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "source": {
+          "type": "object",
+          "required": ["policy", "digest", "slot", "declaration_digest", "schema_digest"],
+          "additionalProperties": false,
+          "properties": {
+            "policy": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"},
+            "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "slot": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"},
+            "declaration_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "schema_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+          }
+        },
+        "destination": {
+          "type": "object",
+          "required": ["instance_id", "implementation", "kind", "path"],
+          "additionalProperties": false,
+          "properties": {
+            "instance_id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"},
+            "implementation": {
+              "type": "object",
+              "required": ["id", "version", "fingerprint"],
+              "additionalProperties": false,
+              "properties": {
+                "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"},
+                "version": {"$ref": "#/$defs/revision"},
+                "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+              }
+            },
+            "kind": {"enum": ["parameters", "evidence_inputs", "freshness"]},
+            "dependency": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"},
+            "path": {"type": "string", "pattern": "^/[^/].*"}
+          },
+          "allOf": [
+            {
+              "if": {"properties": {"kind": {"const": "parameters"}}},
+              "then": {"not": {"required": ["dependency"]}},
+              "else": {"required": ["dependency"]}
+            },
+            {
+              "if": {"properties": {"kind": {"const": "freshness"}}},
+              "then": {"properties": {"path": {"const": "/max_age"}}}
+            }
+          ]
+        }
+      }
+    },
     "revision": {
       "oneOf": [
         {

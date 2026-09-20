@@ -313,6 +313,71 @@ class PolicyResourceTests(unittest.TestCase):
         empty["spec"].pop("parameter_contributions")
         self.assertFalse(parameter_validator.is_valid(empty))
 
+    def test_direct_technical_parameter_links_have_a_strict_typed_interface(self):
+        link = {
+            "id": "allowed-software",
+            "source": {
+                "policy": "company.authorized-software@1",
+                "digest": "sha256:" + "1" * 64,
+                "slot": "allowed_software",
+                "declaration_digest": "sha256:" + "2" * 64,
+                "schema_digest": "sha256:" + "3" * 64,
+            },
+            "destination": {
+                "instance_id": "company.software",
+                "implementation": {
+                    "id": "linux.packages.only-allowed",
+                    "version": 1,
+                    "fingerprint": "sha256:" + "4" * 64,
+                },
+                "kind": "parameters",
+                "path": "/allowed",
+            },
+        }
+        mutations = (
+            lambda item: item["source"].update(policy="ambient-name"),
+            lambda item: item["source"].update(slot="not/a/slot"),
+            lambda item: item["destination"].update(path=""),
+            lambda item: item["destination"].update(path="allowed"),
+            lambda item: item["destination"].pop("implementation"),
+            lambda item: item["destination"].update(dependency="not-allowed"),
+        )
+        for filename in ("baseline.schema.json", "baseline-overlay.schema.json"):
+            schema = read_json(POLICIES / "schemas/policy" / filename)
+            validator = Draft202012Validator(schema)
+            if filename == "baseline.schema.json":
+                document = {
+                    "apiVersion": "compliance.example/v1",
+                    "kind": "Baseline",
+                    "metadata": {"id": "test.baseline", "version": 1},
+                    "spec": {
+                        "title": "Test baseline",
+                        "controls": [],
+                        "parameter_links": [link],
+                    },
+                }
+            else:
+                document = {
+                    "apiVersion": "compliance.example/v1",
+                    "kind": "BaselineOverlay",
+                    "metadata": {"id": "test.overlay", "revision": 1},
+                    "spec": {
+                        "title": "Test overlay",
+                        "extends": [{
+                            "baseline": "test.baseline@1",
+                            "digest": "sha256:" + "5" * 64,
+                        }],
+                        "operations": [],
+                        "parameter_links": [link],
+                    },
+                }
+            self.assertTrue(validator.is_valid(document), filename)
+            for mutate in mutations:
+                changed = copy.deepcopy(document)
+                mutate(changed["spec"]["parameter_links"][0])
+                with self.subTest(schema=filename, mutation=mutate):
+                    self.assertFalse(validator.is_valid(changed))
+
     def test_reusable_catalog_and_rego_entrypoints(self):
         source = PolicySource("control-library", POLICIES)
         controls, baselines, errors = load_policy_catalogs(source)

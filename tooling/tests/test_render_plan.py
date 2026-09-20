@@ -22,6 +22,7 @@ from tools.render_plan import (
     load_inventory_inputs,
     load_json,
     load_policy_catalogs,
+    load_parameter_policy_catalogs,
     load_requirement_catalogs,
     load_resource_documents,
     normalize_subject,
@@ -409,6 +410,104 @@ class BaselineOverlayTests(unittest.TestCase):
         )
         self.assertEqual(derivation["equivalence_ref"], "test/equivalence-review")
 
+    def test_substitution_can_replace_inherited_parameter_links(self):
+        source = {
+            "policy": "test.parameters@1",
+            "digest": "sha256:" + "1" * 64,
+            "slot": "expected",
+            "declaration_digest": "sha256:" + "2" * 64,
+            "schema_digest": "sha256:" + "3" * 64,
+        }
+        self.base["spec"]["parameter_links"] = [{
+            "id": "old-link",
+            "source": source,
+            "destination": {
+                "instance_id": "benchmark.setting",
+                "implementation": {
+                    "id": "test.setting-equals",
+                    "version": 1,
+                    "fingerprint": "sha256:" + "4" * 64,
+                },
+                "kind": "parameters",
+                "path": "/expected",
+            },
+        }]
+        self.catalog[self.base_reference] = catalog_document(self.base)
+        self.setting_fingerprint = resolve_baseline(
+            self.base_reference,
+            self.catalog,
+        )["controls"]["benchmark.setting"]["definition_fingerprint"]
+        overlay = self.company_overlay()
+        overlay["metadata"]["id"] = "company.substitute"
+        overlay["spec"]["operations"] = [{
+            "op": "substitute",
+            "target": "benchmark.setting",
+            "expected_parent_fingerprint": self.setting_fingerprint,
+            "implementation": "test.alternative-setting-equals",
+            "parameters": {"expected": "strict"},
+            "equivalence_ref": "test/equivalence-review",
+            "parameter_links": [{
+                "id": "replacement-link",
+                "source": source,
+                "destination": {
+                    "instance_id": "benchmark.setting",
+                    "implementation": {
+                        "id": "test.alternative-setting-equals",
+                        "version": 1,
+                        "fingerprint": "sha256:" + "5" * 64,
+                    },
+                    "kind": "parameters",
+                    "path": "/expected",
+                },
+            }],
+        }]
+        self.catalog["company.substitute@1"] = catalog_document(overlay)
+
+        resolved = resolve_baseline("company.substitute@1", self.catalog)
+
+        self.assertEqual(
+            [item["id"] for item in resolved["parameter_links"]],
+            ["replacement-link"],
+        )
+
+    def test_substitution_rejects_replacement_link_for_another_check(self):
+        overlay = self.company_overlay()
+        overlay["metadata"]["id"] = "company.substitute"
+        overlay["spec"]["operations"] = [{
+            "op": "substitute",
+            "target": "benchmark.setting",
+            "expected_parent_fingerprint": self.setting_fingerprint,
+            "implementation": "test.alternative-setting-equals",
+            "equivalence_ref": "test/equivalence-review",
+            "parameter_links": [{
+                "id": "wrong-target",
+                "source": {
+                    "policy": "test.parameters@1",
+                    "digest": "sha256:" + "1" * 64,
+                    "slot": "expected",
+                    "declaration_digest": "sha256:" + "2" * 64,
+                    "schema_digest": "sha256:" + "3" * 64,
+                },
+                "destination": {
+                    "instance_id": "benchmark.optional",
+                    "implementation": {
+                        "id": "test.alternative-setting-equals",
+                        "version": 1,
+                        "fingerprint": "sha256:" + "5" * 64,
+                    },
+                    "kind": "parameters",
+                    "path": "/expected",
+                },
+            }],
+        }]
+        self.catalog["company.substitute@1"] = catalog_document(overlay)
+
+        with self.assertRaisesRegex(
+            BaselineResolutionError,
+            "substitute-parameter-link-target-mismatch",
+        ):
+            resolve_baseline("company.substitute@1", self.catalog)
+
     def test_identical_multi_parent_controls_retain_each_derivation(self):
         first = self.company_overlay()
         first["metadata"]["id"] = "company.first"
@@ -636,6 +735,61 @@ class PolicySchemaTests(unittest.TestCase):
 
         self.assertEqual(len(catalog), 10)
         self.assertEqual(errors, [])
+
+    def test_equivalent_additive_parameter_documents_coalesce_after_normalization(self):
+        repository = Path(__file__).resolve().parents[2]
+        verification = repository / "policy-sources/verification-policy/policies"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first = root / "first"
+            second = root / "second"
+            schema_target = first / "schemas/policy/parameter-policy.schema.json"
+            schema_target.parent.mkdir(parents=True)
+            shutil.copyfile(
+                repository
+                / "policy-sources/control-library/policies/schemas/policy/parameter-policy.schema.json",
+                schema_target,
+            )
+            for name in (
+                "company-authorized-software.json",
+                "company-authorized-software-base.json",
+            ):
+                source = verification / "parameter-policies/company" / name
+                target = first / "parameter-policies/company" / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+            copied = load_json(
+                verification
+                / "parameter-policies/company/company-authorized-software-base.json"
+            )
+            copied["spec"]["parameter_operations"][0]["to"].reverse()
+            target = (
+                second
+                / "parameter-policies/company/company-authorized-software-base.json"
+            )
+            target.parent.mkdir(parents=True)
+            target.write_text(json.dumps(copied), encoding="utf-8")
+
+            outcomes = []
+            sources = (
+                PolicySource("first", first),
+                PolicySource("second", second),
+            )
+            for ordered in (sources, tuple(reversed(sources))):
+                catalog, errors = load_parameter_policy_catalogs(ordered)
+                outcomes.append((catalog, errors))
+
+        for catalog, errors in outcomes:
+            self.assertEqual(errors, [])
+            policy = catalog["company.authorized-software-base@1"]
+            self.assertEqual(
+                policy["spec"]["parameter_operations"][0]["to"],
+                ["auditd", "curl"],
+            )
+            self.assertEqual(
+                [item["policy_source"] for item in policy["_sources"]],
+                ["first", "second"],
+            )
 
     def test_policy_schemas_reject_removed_seal_operations(self):
         overlay = {

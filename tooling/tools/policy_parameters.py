@@ -29,6 +29,27 @@ def document(value):
     return {k: copy.deepcopy(v) for k, v in value.items() if not k.startswith('_')}
 
 
+def authored_parameter_links(value):
+    """Return links authored directly by one Check-owning policy document."""
+    spec = value.get('spec', {})
+    links = copy.deepcopy(spec.get('parameter_links', []))
+    for operation in spec.get('operations', []):
+        links.extend(copy.deepcopy(operation.get('parameter_links', [])))
+    return sorted(links, key=lambda item: item['id'])
+
+
+def frozen_consumer_links(consumer):
+    """Select the effective authored links retained for one technical consumer."""
+    authored = {item['id']: item for item in authored_parameter_links(consumer['document'])}
+    link_ids = consumer.get('link_ids')
+    require(isinstance(link_ids, list) and bool(link_ids)
+            and link_ids == sorted(set(link_ids)),
+            'frozen technical parameter link membership must be nonempty and canonical')
+    require(all(link_id in authored for link_id in link_ids),
+            'frozen technical parameter link was not authored by its owner')
+    return [copy.deepcopy(authored[link_id]) for link_id in link_ids]
+
+
 def normalized_resource_document(value, policies=None):
     """Project parameter resources into their contract-defined semantic order."""
     clean = document(value)
@@ -67,9 +88,16 @@ def resource_digest(value, policies=None):
 def validate_parameter_policy_structure(value):
     """Re-enforce the bounded ParameterPolicy wire used by frozen resolution."""
     clean = document(value)
+    require(set(clean) == {'apiVersion', 'kind', 'metadata', 'spec'},
+            'unsupported parameter policy document syntax')
+    require(clean.get('apiVersion') == 'compliance.example/v1alpha1',
+            'frozen parameter policy apiVersion mismatch')
     metadata = clean.get('metadata')
     require(clean.get('kind') == 'ParameterPolicy', 'frozen parameter policy kind mismatch')
     require(isinstance(metadata, dict), 'parameter policy metadata must be an object')
+    require({'id', 'revision'} <= set(metadata)
+            and set(metadata).issubset({'id', 'revision', 'origin'}),
+            'unsupported parameter policy metadata syntax')
     require(
         isinstance(metadata.get('id'), str) and bool(re.fullmatch(ID, metadata['id'])),
         'invalid frozen parameter policy identity',
@@ -78,6 +106,8 @@ def validate_parameter_policy_structure(value):
         valid_revision(metadata.get('revision')),
         'invalid frozen parameter policy revision',
     )
+    require('origin' not in metadata or isinstance(metadata['origin'], dict),
+            'parameter policy origin must be an object')
     spec = clean.get('spec')
     require(isinstance(spec, dict), 'parameter policy spec must be an object')
     require(set(spec).issubset({
@@ -86,15 +116,94 @@ def validate_parameter_policy_structure(value):
     if 'parameters' in spec:
         require(isinstance(spec['parameters'], dict) and bool(spec['parameters']),
                 'parameter policy declarations must be nonempty when present')
+        for slot, declaration in spec['parameters'].items():
+            require(isinstance(slot, str) and bool(re.fullmatch(SLOT, slot)),
+                    'invalid ParameterPolicy slot')
+            require(isinstance(declaration, dict)
+                    and {'required', 'binding_mode', 'schema', 'schema_digest'} <= set(declaration)
+                    and set(declaration).issubset({
+                        'required', 'binding_mode', 'schema', 'schema_digest',
+                        'composition', 'binding_scope', 'value', 'representation',
+                    }), 'unsupported parameter declaration syntax')
+            require(isinstance(declaration['required'], bool),
+                    'parameter declaration required must be boolean')
+            require(declaration['binding_mode'] in {'open', 'fixed'},
+                    'invalid parameter binding mode')
+            require(isinstance(declaration['schema'], dict)
+                    and valid_digest(declaration['schema_digest']),
+                    'invalid parameter schema contract')
+            if 'composition' in declaration:
+                require(declaration['composition'] == {'kind': 'additive-set'}
+                        and 'representation' not in declaration,
+                        'unsupported parameter composition')
+            if 'binding_scope' in declaration:
+                scope = declaration['binding_scope']
+                require(isinstance(scope, list) and bool(scope)
+                        and len(scope) == len(set(scope))
+                        and all(isinstance(item, str) and bool(re.fullmatch(ID, item))
+                                for item in scope),
+                        'invalid ParameterPolicy binding scope')
+            if declaration['binding_mode'] == 'fixed':
+                require('value' in declaration, 'fixed declaration requires a value')
+            else:
+                require('binding_scope' in declaration and 'value' not in declaration,
+                        'open declaration requires scope and cannot own a value')
+            require('representation' not in declaration
+                    or declaration['representation'] == 'duration',
+                    'unsupported parameter representation')
     if 'extends' in spec:
         parent = spec['extends']
         require(
             isinstance(parent, dict)
             and set(parent) == {'policy', 'digest'}
             and isinstance(parent.get('policy'), str)
-            and bool(re.fullmatch(REFERENCE, parent['policy'])),
+            and bool(re.fullmatch(REFERENCE, parent['policy']))
+            and valid_digest(parent.get('digest')),
             'invalid frozen parameter policy parent reference',
         )
+    if 'parameter_operations' in spec:
+        operations = spec['parameter_operations']
+        require(isinstance(operations, list) and bool(operations),
+                'parameter operations must be nonempty when present')
+        for operation in operations:
+            require(isinstance(operation, dict)
+                    and set(operation).issubset({
+                        'id', 'op', 'target', 'expected_parent_fingerprint',
+                        'from', 'to', 'deviation',
+                    })
+                    and {'id', 'op', 'target', 'expected_parent_fingerprint'} <= set(operation),
+                    'unsupported parameter operation syntax')
+            require(isinstance(operation['id'], str) and bool(operation['id'])
+                    and operation['op'] in {'bind', 'tailor'}
+                    and valid_digest(operation['expected_parent_fingerprint']),
+                    'invalid parameter operation')
+            target = operation['target']
+            require(isinstance(target, dict)
+                    and set(target) == {
+                        'policy', 'digest', 'slot', 'declaration_digest', 'schema_digest',
+                    }
+                    and isinstance(target.get('policy'), str)
+                    and bool(re.fullmatch(REFERENCE, target['policy']))
+                    and isinstance(target.get('slot'), str)
+                    and bool(re.fullmatch(SLOT, target['slot']))
+                    and all(valid_digest(target.get(field)) for field in (
+                        'digest', 'declaration_digest', 'schema_digest')),
+                    'invalid parameter operation target')
+            if operation['op'] == 'bind':
+                require('to' in operation and 'from' not in operation
+                        and 'deviation' not in operation,
+                        'bind operation requires only a destination value')
+            else:
+                require({'from', 'to', 'deviation'} <= set(operation),
+                        'tailor operation requires from, to, and deviation')
+                deviation = operation['deviation']
+                require(isinstance(deviation, dict)
+                        and set(deviation) == {
+                            'id', 'classification', 'rationale', 'approval_ref', 'review_after',
+                        }
+                        and all(isinstance(deviation[field], str) and bool(deviation[field])
+                                for field in deviation),
+                        'invalid parameter deviation')
     if 'parameter_contributions' in spec:
         items = spec['parameter_contributions']
         require(isinstance(items, list) and bool(items),
@@ -140,6 +249,10 @@ def valid_revision(value):
         isinstance(value, str)
         and bool(re.fullmatch(REVISION, value))
     )
+
+
+def valid_digest(value):
+    return isinstance(value, str) and bool(re.fullmatch(r'sha256:[0-9a-f]{64}', value))
 
 
 def duration(value):
@@ -853,7 +966,7 @@ def validate_frozen_contract_identities(plan):
         link
         for consumer in plan.get('parameters', {}).get('consumers', [])
         if consumer.get('kind') in {'Baseline', 'BaselineOverlay'}
-        for link in consumer.get('links', [])
+        for link in frozen_consumer_links(consumer)
     ]
     technical_selections = {}
     for baseline in plan['resolved_baselines']:
@@ -885,6 +998,10 @@ def validate_frozen_contract_identities(plan):
         require(
             lineage[-1].get('digest') == baseline.get('digest'),
             'frozen technical baseline terminal digest mismatch',
+        )
+        require(
+            equal(lineage[-1].get('policy_sources'), baseline.get('policy_sources')),
+            'frozen technical baseline terminal source mismatch',
         )
         key = (baseline.get('assignment'), baseline.get('group'), reference)
         require(
@@ -1298,7 +1415,7 @@ def _validate_technical_consumers(plan, controls, states):
         link
         for consumer in plan['parameters']['consumers']
         if consumer['kind'] != 'ControlRealization'
-        for link in consumer['links']
+        for link in frozen_consumer_links(consumer)
     ]
     source_checks = dematerialize_links(
         [copy.deepcopy(item['policy_inputs']['instance']) for item in planned.values()
@@ -1315,11 +1432,31 @@ def _validate_technical_consumers(plan, controls, states):
         require(consumer['kind'] in {'Baseline', 'BaselineOverlay'},
                 'unsupported frozen parameter consumer kind')
         require(set(consumer) == {
-            'kind', 'reference', 'digest', 'policy_sources', 'links'
+            'kind', 'reference', 'digest', 'policy_sources', 'document', 'link_ids'
         }, 'invalid frozen technical parameter consumer')
-        owner_links = consumer['links']
-        require(owner_links == sorted(owner_links, key=lambda item: item['id']),
-                'frozen technical parameter links must use canonical order')
+        document = consumer['document']
+        require(isinstance(document, dict)
+                and document.get('kind') == consumer['kind'],
+                'frozen technical parameter consumer kind mismatch')
+        metadata = document.get('metadata', {})
+        revision = metadata.get('revision', metadata.get('version'))
+        reference = f"{metadata.get('id')}@{revision}"
+        from .render_plan import baseline_semantic_digest
+        require(reference == consumer['reference']
+                and baseline_semantic_digest(document) == consumer['digest'],
+                'frozen technical parameter consumer owner mismatch')
+        matching_lineage = [
+            ancestor
+            for baseline in plan['resolved_baselines']
+            for ancestor in baseline['lineage']
+            if ancestor['reference'] == reference
+            and ancestor['digest'] == consumer['digest']
+        ]
+        require(matching_lineage
+                and all(equal(item['policy_sources'], consumer['policy_sources'])
+                        for item in matching_lineage),
+                'frozen technical parameter consumer source mismatch')
+        frozen_consumer_links(consumer)
 
 
 def validate_frozen(plan):
@@ -1345,11 +1482,15 @@ def validate_frozen(plan):
         require(actual_baselines.issubset(expected_baselines),
                 'frozen baseline coverage exceeds selected assignments')
 
+    consumers = plan['parameters']['consumers']
+    require(consumers == sorted(consumers, key=lambda item: (item['kind'], item['reference']))
+            and len({(item['kind'], item['reference']) for item in consumers}) == len(consumers),
+            'frozen parameter consumers must use unique canonical order')
     technical_links = [
         link
-        for consumer in plan['parameters']['consumers']
+        for consumer in consumers
         if consumer.get('kind') in {'Baseline', 'BaselineOverlay'}
-        for link in consumer.get('links', [])
+        for link in frozen_consumer_links(consumer)
     ]
     controls = {}
     for collection_name in ('controls', 'excluded_controls'):
@@ -1407,10 +1548,10 @@ def validate_frozen(plan):
                 'frozen ParameterPolicy reconstruction failed '
                 f'({error}) without a retained planning refusal')
         validate_frozen_parameter_inputs(plan)
+        require(not consumers,
+                'unresolved ParameterPolicy cannot retain materialized consumers')
+        _validate_requirement_facts(plan, controls, {})
+        _validate_technical_consumers(plan, controls, {})
         return
-    consumers = plan['parameters']['consumers']
-    require(consumers == sorted(consumers, key=lambda item: (item['kind'], item['reference']))
-            and len({(item['kind'], item['reference']) for item in consumers}) == len(consumers),
-            'frozen parameter consumers must use unique canonical order')
     _validate_requirement_facts(plan, controls, states)
     _validate_technical_consumers(plan, controls, states)

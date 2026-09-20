@@ -284,10 +284,18 @@ def freeze_policy_inputs(plan):
         for assignment in plan['assignments']:
             for reference in assignment['baselines']:
                 identity = pp.digest({'reference': reference})
+                policy_sources = [{
+                    'policy_source': policy_source_name,
+                    'path': 'baselines/test.json',
+                }]
                 plan['resolved_baselines'].append({'assignment': assignment['id'], 'group': assignment['group'],
                     'reference': reference, 'title': 'Synthetic technical policy',
-                    'digest': identity, 'lineage': [{'reference': reference, 'digest': identity}],
-                    'deviations': [], 'policy_sources': [{'policy_source': policy_source_name, 'path': 'baselines/test.json'}]})
+                    'digest': identity, 'lineage': [{
+                        'reference': reference,
+                        'digest': identity,
+                        'policy_sources': copy.deepcopy(policy_sources),
+                    }],
+                    'deviations': [], 'policy_sources': policy_sources})
     requirements = {}
     for record in plan['requirements']:
         identifier, revision = record['reference'].rsplit('@', 1)

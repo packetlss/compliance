@@ -135,7 +135,7 @@ class PolicyParameterTests(unittest.TestCase):
         return catalog, resolutions
 
     def test_default_does_not_bind_and_missing_value_fails_closed(self):
-        self.base["spec"]["parameter_operations"] = []
+        self.base["spec"].pop("parameter_operations")
         states, _ = p.resolve("company@1", self.catalog)
         with self.assertRaisesRegex(p.ParameterResolutionError, "unresolved"):
             p.complete(states)

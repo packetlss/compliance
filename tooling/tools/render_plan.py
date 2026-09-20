@@ -1601,6 +1601,7 @@ def load_parameter_policy_catalogs(
     catalog: dict[str, JsonObject] = {}
     if schema_path is None:
         return catalog, errors
+    pending: list[tuple[PolicySource, str, JsonObject]] = []
     for source in sources:
         if not (source.path / directory).is_dir():
             continue
@@ -1611,8 +1612,25 @@ def load_parameter_policy_catalogs(
             schema_filename,
             schema_path,
         )
-        _qualify_catalog(incoming, source)
         errors.extend(incoming_errors)
+        pending.extend(
+            (source, reference, policy)
+            for reference, policy in sorted(incoming.items())
+        )
+    if errors:
+        return catalog, errors
+    normalization_catalog: dict[str, JsonObject] = {}
+    for _, reference, policy in pending:
+        normalization_catalog.setdefault(reference, policy)
+    for source, reference, policy in pending:
+        normalized_policy = pp.normalized_resource_document(
+            policy,
+            normalization_catalog,
+        )
+        normalized_policy['_digest'] = content_digest(normalized_policy)
+        normalized_policy['_source'] = policy['_source']
+        incoming = {reference: normalized_policy}
+        _qualify_catalog(incoming, source)
         _merge_policy_catalog(
             catalog,
             incoming,
@@ -1813,7 +1831,11 @@ def resolve_baseline(
             "reference": reference,
             "title": document["spec"]["title"],
             "digest": document["_digest"],
-            "lineage": [{"reference": reference, "digest": document["_digest"]}],
+            "lineage": [{
+                "reference": reference,
+                "digest": document["_digest"],
+                "policy_sources": copy.deepcopy(document.get("_sources", [])),
+            }],
             "controls": controls,
             "parameter_links": copy.deepcopy(
                 document["spec"].get("parameter_links", [])
@@ -2009,6 +2031,29 @@ def resolve_baseline(
                 control["evidence"] = copy.deepcopy(operation["evidence"])
             control["alignment"] = "substituted"
             control["equivalence_ref"] = operation["equivalence_ref"]
+            if "parameter_links" in operation:
+                affected = [
+                    link_id
+                    for link_id, link in parameter_links.items()
+                    if link["destination"]["instance_id"] == target
+                ]
+                for link_id in affected:
+                    del parameter_links[link_id]
+                for link in operation["parameter_links"]:
+                    if link["destination"]["instance_id"] != target:
+                        raise BaselineResolutionError(
+                            "substitute-parameter-link-target-mismatch",
+                            baseline=reference,
+                            target=target,
+                            link=link["id"],
+                        )
+                    if link["id"] in parameter_links:
+                        raise BaselineResolutionError(
+                            "duplicate-parameter-link",
+                            baseline=reference,
+                            link=link["id"],
+                        )
+                    parameter_links[link["id"]] = copy.deepcopy(link)
         elif operation_name == "annotate":
             annotations = operation.get("annotations", {})
             allowed = {"severity", "remediation", "external_refs"}
@@ -2050,7 +2095,11 @@ def resolve_baseline(
         control["lineage"].append({"baseline": reference, "operation": operation_name})
         control["definition_fingerprint"] = control_definition_fingerprint(control)
 
-    baseline_lineage.append({"reference": reference, "digest": document["_digest"]})
+    baseline_lineage.append({
+        "reference": reference,
+        "digest": document["_digest"],
+        "policy_sources": copy.deepcopy(document.get("_sources", [])),
+    })
     resolved = {
         "reference": reference,
         "title": document["spec"]["title"],
@@ -2434,7 +2483,7 @@ def render_plan(
                     owner_document = baselines[owner_reference]
                     links = [
                         copy.deepcopy(link)
-                        for link in owner_document["spec"].get("parameter_links", [])
+                        for link in pp.authored_parameter_links(owner_document)
                         if link["id"] in effective_link_ids
                     ]
                     if not links:
@@ -2444,15 +2493,28 @@ def render_plan(
                         "reference": owner_reference,
                         "digest": owner_document["_digest"],
                         "policy_sources": copy.deepcopy(owner_document.get("_sources", [])),
-                        "links": sorted(links, key=lambda item: item["id"]),
+                        "document": pp.document(owner_document),
+                        "link_ids": sorted(link["id"] for link in links),
                     }
                     key = (owner_document["kind"], owner_reference)
                     existing_consumer = parameter_consumers.get(key)
-                    if existing_consumer is not None and existing_consumer != consumer:
-                        resolution_errors.append({
-                            "type": "parameter-consumer-conflict",
-                            "reference": owner_reference,
-                        })
+                    if existing_consumer is not None:
+                        existing_owner = {
+                            field: value for field, value in existing_consumer.items()
+                            if field != "link_ids"
+                        }
+                        incoming_owner = {
+                            field: value for field, value in consumer.items()
+                            if field != "link_ids"
+                        }
+                        if existing_owner != incoming_owner:
+                            resolution_errors.append({
+                                "type": "parameter-consumer-conflict",
+                                "reference": owner_reference,
+                            })
+                        consumer["link_ids"] = sorted(set(
+                            existing_consumer["link_ids"] + consumer["link_ids"]
+                        ))
                     parameter_consumers[key] = consumer
 
             resolved_baselines.append({
