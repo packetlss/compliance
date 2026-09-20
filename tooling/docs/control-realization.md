@@ -272,7 +272,7 @@ independently of their evidence-derived `status`. A gap Objective has `status: n
 a baseline rolls up only existing outcomes and has `status: null` when all its
 Objectives are gaps. Mixed gaps and actual FAIL/ERROR/UNKNOWN/WAIVED/PASS preserve
 both dimensions. Explicit N/A remains attributable; all-N/A is N/A, never PASS.
-A contribution-only baseline has no Objective or baseline result row.
+A contribution-only ParameterPolicy has no Objective, Check, or baseline result row.
 
 Overall result `outcome` aggregates actual outcomes; it is null for gap-only
 assessment. Exact operation accounting retains that result slot. `all_passed`

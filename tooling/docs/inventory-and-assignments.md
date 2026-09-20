@@ -270,7 +270,9 @@ a second selector language; they target stable group IDs.
 ## 5. Assignment contract
 
 A policy assignment creates the many-to-many relationship between groups and
-baselines:
+explicit governed policy references. Technical Baseline/BaselineOverlay and
+RequirementBaseline references use `baselineRefs`; ParameterPolicy applicability
+uses the separate typed `parameterPolicyRefs` surface:
 
 ```yaml
 apiVersion: compliance.example/v1alpha1
@@ -284,17 +286,24 @@ spec:
   baselineRefs:
     - name: company.macos-policy
       revision: "1"
+  parameterPolicyRefs:
+    - name: company.endpoint-settings
+      revision: "1"
 ```
 
 Revisions are strings and should be quoted in YAML. The planner normalizes each
-pair to the immutable internal reference `name@revision`.
+pair to the immutable internal reference `name@revision`. An assignment must
+select at least one reference across the two collections; it may select baseline
+policy only, ParameterPolicy only, or both.
 
 The wire reference is kindless. Under
 [ADR 0019](../../docs/adr/0019-typed-identifier-namespaces-and-schema-uri-ownership.md),
-a supplied composition must therefore reject the same `name@revision` appearing in
-both the technical Baseline/BaselineOverlay catalog and the RequirementBaseline
-catalog before planning, without preference or fallback. This fail-closed collision
-admission rule is implemented under #136.
+a supplied composition must therefore reject the same `name@revision` referenced
+through `baselineRefs` when it appears in both the technical
+Baseline/BaselineOverlay catalog and the RequirementBaseline catalog before
+planning, without preference or fallback. This fail-closed collision admission
+rule is implemented under #136. `parameterPolicyRefs` are resolved only against
+the ParameterPolicy catalog and never through `baselineRefs`.
 
 The assignment contains no Rego, evidence, or control parameters. The baseline
 contains no group selectors or asset IDs. This boundary allows inventory
@@ -305,14 +314,17 @@ Initial assignment rules are:
 1. Assignments target groups only.
 2. To target one asset, create an explicitly populated singleton group. This
    preserves the same explanation and resolution path as every other policy.
-3. A group can have multiple assignments and one baseline can be assigned to
-   multiple groups.
+3. A group can have multiple assignments and one governed policy reference can be
+   assigned to multiple groups.
 4. Assignments accumulate; they have no order or implicit precedence.
 5. Identical control instances reached through several assignments are
    evaluated once while retaining every assignment path as provenance.
 6. Divergent definitions with the same control instance ID make the assessment
    plan invalid until policy authors resolve the conflict explicitly.
-7. Assignments reference immutable baseline revisions within a policy release.
+7. Assignments reference immutable baseline or ParameterPolicy revisions within a
+   policy release.
+8. Loading or consuming a ParameterPolicy, or targeting one of its slots with a
+   contribution, does not make it applicable; only `parameterPolicyRefs` does.
 
 Assignment metadata may later add activation windows or an advisory/enforced
 mode. Collection cadence and waivers remain separate concepts.

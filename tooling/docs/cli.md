@@ -656,6 +656,6 @@ carry `implementation_gap` independently from nullable `status`; gap-only result
 have null `outcome`. Actual evidence outcomes remain unchanged. Complete accounting
 is not successful demonstration: `all_passed` also requires no implementation gaps.
 Coverage and historical explanation expose the appropriate current or frozen basis.
-Contribution-only parameter baselines create no assessment rows. Current admission
+Contribution-only ParameterPolicy resources create no assessment rows. Current admission
 rejects predecessor membership/satisfaction representations; historical artifacts
 retain their meaning with historical tooling. See [realizations](control-realization.md).

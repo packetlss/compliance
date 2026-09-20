@@ -44,11 +44,13 @@ It does not repeat assignments, baseline bodies or digests, control bodies/diges
 requirement document digests, realization/adoption/satisfaction bodies, full
 provenance, inventory acquisition facts or legacy presentation counters.
 
-Assignments appear once per operation as `{id, target_group, baselines}` and only
-when their target resolves for a selected member. Applicability is rederived from
-member group facts. Validation recomputes the witness denominator, operation ID,
-member commitment for the concrete plan, compact expected membership,
-assignment applicability and the existing parameter/provenance/roll-up invariants.
+Assignments appear once per operation as
+`{id, target_group, baselines, parameter_policies}` and only when their target
+resolves for a selected member. The two policy-reference collections remain
+separate. Applicability is rederived from member group facts. Validation recomputes
+the witness denominator, operation ID, member commitment for the concrete plan,
+compact expected membership, assignment applicability and the existing
+parameter/provenance/roll-up invariants.
 Content identity identifies the frozen supplied facts; it does not authenticate
 their real-world truth or claim inventory exhaustiveness.
 
@@ -212,6 +214,6 @@ carry `implementation_gap` independently from nullable `status`; gap-only result
 have null `outcome`. Actual evidence outcomes remain unchanged. Complete accounting
 is not successful demonstration: `all_passed` also requires no implementation gaps.
 Coverage and historical explanation expose the appropriate current or frozen basis.
-Contribution-only parameter baselines create no assessment rows. Current admission
+Contribution-only ParameterPolicy resources create no assessment rows. Current admission
 rejects predecessor membership/satisfaction representations; historical artifacts
 retain their meaning with historical tooling. See [realizations](control-realization.md).
