@@ -173,13 +173,12 @@ the #169 cutover keeps `organization.assertion/v1` and
 organization conclusion/assertion family. Issue #164's direction is superseded for
 these organizational semantics.
 
-The currently implemented `iam.service.observation/v1` is a separate required
-follow-on boundary correction. Its arbitrary condition and
-`positive`/`negative`/`inconclusive` service conclusion, consumed by
-`iam.integration.required`, cannot remain a pass/fail-producing assertion path. A
-later bounded change must preserve the legitimate descriptive consumer-to-service
-relationship and policy/governance designation of the approved service, without
-redesigning IAM in this tranche.
+The bounded follow-on [#172](https://github.com/packetlss/compliance/pull/172)
+removed `iam.service.observation/v1` from the current contract. The retained
+`iam.integration.observation/v1` path describes the exact-subject
+consumer-to-service relationship, while Governed Policy supplies the required
+service consumed by `iam.integration.required`. No service-level conclusion,
+selector, trust mechanism or result dependency was introduced.
 
 ## Consequences and preserved boundaries
 

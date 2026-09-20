@@ -1,6 +1,6 @@
 # Contract maturity and compatibility
 
-Status: **Current pre-freeze development policy**
+Status: **Current selective-freeze development policy**
 
 Historical detailed audits remain in `packetlss-labs/compliance-workspace`; this file owns the active compatibility/freeze rules after documentation authority transfers.
 
@@ -20,6 +20,65 @@ Maturity terms:
 - **Historical/removed** — retained only in historical source/releases, not current product surface.
 
 Historical readability and recommended current use are separate concerns.
+
+## Frozen semantic architecture
+
+[ADR 0023](adr/0023-foundational-semantic-responsibility-boundaries.md) is the
+first explicit compatibility freeze. It freezes only the responsibility and meaning
+layer across Governed Inventory, Governed Policy, Coverage, descriptive Evidence and
+Assessment:
+
+- normalized Governed Inventory authoritatively supplies the subject identity and
+  governed subject facts consumed by resolution, while operation selection and
+  Governed Policy retain their separate selection and interpretation roles;
+- Governed Policy owns desired technical intent, applicability consequences,
+  complete criteria and direct technical policy;
+- Coverage remains a deterministic current/ephemeral explanation, never an
+  assessment input, artifact, identity, snapshot or historical result;
+- Evidence remains descriptive observed reality and cannot select policy or encode
+  another domain's conclusion;
+- Governed Policy ownership of a complete criterion plus Control-unaware descriptive
+  observations is the first admission gate for an `AssessmentResult`;
+- Assessment owns deterministic evaluation of resolved policy against qualifying
+  evidence;
+- PASS, FAIL, UNKNOWN, ERROR, WAIVED and assessment refusal retain the meanings in
+  ADR 0023, without freezing a general aggregation order;
+- direct technical policy remains valid without a synthetic Objective;
+- closed-world claims remain bounded to exact supplied inputs; and
+- historical results retain their exact operation/plan meaning rather than becoming
+  mutable latest-state records.
+
+A semantically compatible successor must preserve those commitments even if it uses
+different representations. Reassigning an owner, weakening a boundary or changing a
+frozen meaning requires explicit successor architecture and a deliberate
+compatibility/migration decision.
+
+Everything below remains classified at its own representational maturity. In
+particular, current schemas, identifiers, schema URIs, identity algorithms, CLI and
+machine-readable views, assessment v4 wires, Requirement/Realization and framework-
+declaration representations, evidence organization, and their aggregation/wire
+details remain experimental unless separately frozen. A coordinated pre-wire
+migration may replace those representations without a compatibility reader while
+preserving ADR 0023 semantics and historical meaning under historical tooling.
+
+The next intended sequence is interface-first rather than an automatic identity
+freeze:
+
+```text
+foundational semantic freeze
+  -> product/developer-interface exploration
+  -> bounded collector/read-model/browser falsification
+  -> reassessment
+  -> later selective identity/wire freeze work
+```
+
+The exploration space includes schema discovery/catalog and validation, generated
+SDKs/types/builders/examples, collector conformance, evidence-schema reorganization,
+derived machine-consumable read models and a possible single canonical semantic read
+model shared by CLI, a thin read-only web UI, visualization and integrations. Raw
+`assessment-results/v4` is not thereby a visualization API; plan-owned policy meaning
+must not be duplicated into authoritative results for convenience, and no second
+semantic interpretation layer is authorized.
 
 ## Identity-algorithm freeze lifecycle
 
