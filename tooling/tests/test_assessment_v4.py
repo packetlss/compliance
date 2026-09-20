@@ -407,10 +407,48 @@ class AssessmentV4Tests(unittest.TestCase):
             self.run_assessment([])
         opa.assert_not_called()
 
+    def test_schema_preparation_preserves_opaque_reference_annotations(self):
+        from tools.evidence_selection import prepare_schemas
+        from tools.render_plan import load_evidence_schema_catalog
+        catalog, errors = load_evidence_schema_catalog(self.sources)
+        self.assertEqual(errors, [])
+        for keyword in ('$ref', '$dynamicRef'):
+            for value in ('https://example.invalid/annotation', 123):
+                with self.subTest(keyword=keyword, value=value):
+                    annotated = copy.deepcopy(catalog)
+                    schema = annotated['test.evidence/v1']['_schema_document']
+                    schema['_annotation'] = {keyword: value}
+                    schema['properties']['payload']['examples'] = [{keyword: value}]
+                    validators, _ = prepare_schemas(annotated, {'test.evidence/v1'})
+                    self.assertEqual(validators['test.evidence/v1'].schema, schema)
+                    validators['test.evidence/v1'].validate(self.document())
+                    with patch('tools.evaluate_plan.load_evidence_schema_catalog',
+                               return_value=(annotated, [])):
+                        report, opa = self.run_assessment([self.document()])
+                    self.assertEqual(report['outcome'], 'pass')
+                    self.assertEqual(opa.call_count, 1)
+
+    def test_actual_nested_schema_references_refuse_before_assessment(self):
+        from referencing.exceptions import Unresolvable
+        from tools.render_plan import load_evidence_schema_catalog
+        catalog, _ = load_evidence_schema_catalog(self.sources)
+        for keyword in ('$ref', '$dynamicRef'):
+            for target in ('https://example.invalid/schema', '#/$defs/missing'):
+                with self.subTest(keyword=keyword, target=target):
+                    changed = copy.deepcopy(catalog)
+                    changed['test.evidence/v1']['_schema_document']['$defs'] = {
+                        'unused': {'allOf': [{keyword: target}]},
+                    }
+                    with patch('tools.evaluate_plan.load_evidence_schema_catalog',
+                               return_value=(changed, [])):
+                        expected = Unresolvable if target.startswith('#') else ValueError
+                        with self.assertRaises(expected):
+                            self.run_assessment([])
+
     def test_schema_catalog_and_validator_failures_are_shared_refusals(self):
         from tools.render_plan import load_evidence_schema_catalog
         original, _ = load_evidence_schema_catalog(self.sources)
-        for replacement in ({}, {'test.evidence/v1': {**original['test.evidence/v1'], '$ref':'#/missing'}}):
+        for replacement in ({}, {'test.evidence/v1': {**original['test.evidence/v1'], '_schema_document': {**original['test.evidence/v1']['_schema_document'], '$ref': '#/missing'}}}):
             with patch('tools.evaluate_plan.load_evidence_schema_catalog', return_value=(replacement, [])):
                 with self.assertRaises(Exception): self.run_assessment([])
         with patch('tools.evidence_selection.Draft202012Validator.iter_errors', side_effect=RuntimeError('validator bug')):

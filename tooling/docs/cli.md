@@ -594,3 +594,10 @@ internal modules behind the unified command, but those module paths are not
 supported scripts or a public Python API. Operator documentation and automation
 must use `compliance` so configuration, discovery, help, exit status, and error
 handling remain consistent.
+
+## Experimental producer commands
+
+`compliance producer list`, `producer schema`, and `producer validate` expose
+explicit-source Evidence contracts and a small tooling-owned Subject check without
+project configuration or assessment. See the [producer interface](producer-interface.md)
+for file/stdin validation, ownership, limits, examples and the installed/no-Git exercise.

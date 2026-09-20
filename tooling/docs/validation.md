@@ -67,7 +67,7 @@ policy, plan, or result is written into the checkout.
 The complete feature suite is owned by
 [`verification/scenarios`](../../verification/scenarios/integration/README.md).
 Its gate owns composed integration and explicit immutable input selection. The retained
-tooling catalog contains 24 public CLI leaves and 19 domain features. The
+tooling catalog contains 27 public CLI leaves and 19 domain features. The
 co-located scenario project consumes the current committed destination revision;
 component tests do not depend back on its feature manifest.
 

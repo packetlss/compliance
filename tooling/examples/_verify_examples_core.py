@@ -54,6 +54,9 @@ MOCK_FLEET_AWS_SUBJECTS = frozenset(
 )
 
 CLI_EXAMPLES = {
+    ("producer", "list"): "explicit producer contract discovery",
+    ("producer", "schema"): "canonical producer schema export",
+    ("producer", "validate"): "standalone document validation",
     ("config", "show"): "resolved project registry and project configuration",
     ("config", "validate"): "strict project registry and project validation",
     ("config", "list"): "project registry",
@@ -471,6 +474,16 @@ class ExampleRunner:
 
     def run(self) -> None:
         validate_feature_coverage()
+        producer_source = WORKSPACE_ROOT / "policy-sources/control-library/policies"
+        producer_example = WORKSPACE_ROOT / "policy-sources/control-library/examples/producer/linux-packages.json"
+        source_args = ["--policy-source", f"library={producer_source}"]
+        self.cli(("producer", "list"), ["producer", "list", *source_args],
+                 contains=("linux.packages/v1",))
+        self.cli(("producer", "schema"), ["producer", "schema", *source_args,
+                 "--type", "linux.packages/v1"], contains=('"$id"',))
+        self.cli(("producer", "validate"), ["producer", "validate", *source_args,
+                 "--type", "linux.packages/v1", "--input", str(producer_example)],
+                 contains=('"document_valid": true', '"validation_scope": "document-only"'))
         mock = self._project("mock-fleet")
         iam = self._project("iam-realization")
         rollout = self._project("linux-hardening-rollout")

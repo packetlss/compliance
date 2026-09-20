@@ -532,6 +532,18 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-20 — Experimental producer surface (#186)
+
+The [producer interface](producer-interface.md) exposes existing explicit-source
+Evidence catalog admission, complete canonical schema export and document-only
+validation, plus one normalized Subject resource check using the installed
+inventory schema. Typed documents remain the interoperability contract; tooling
+and policy schema ownership stay separate. The external standard-library collector
+exercise supplies falsification evidence without generated bindings, policy-aware
+construction, a schema registry, changed assessment admission or a compatibility
+freeze. Exact authored schemas are retained apart from internal catalog locators.
+
+
 ### 2026-09-13 — Project-governed framework obligation declaration (#159; superseded in part by ADR 0022)
 
 System [ADR 0021](../../docs/adr/0021-project-governed-framework-obligation-declarations.md)

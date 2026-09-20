@@ -555,7 +555,7 @@ The policy roots remain independently named/digested. Co-location does not merge
 
 Each ordinary project remains logically isolated with its own inventory, assignments, fixtures, waivers, and generated-state paths.
 
-Canonical verification scenarios are under `verification/scenarios/` and own the complete composed integration/feature suite: all 24 retained public CLI leaves and 19 retained domain features.
+Canonical verification scenarios are under `verification/scenarios/` and own the complete composed integration/feature suite: all 27 retained public CLI leaves and 19 retained domain features.
 
 ## Private-source boundary
 
@@ -604,7 +604,7 @@ No new publisher, tag namespace, signing/attestation system, registry, or releas
 Validation has three stable owners:
 
 1. **`component-validation`** — repository/tooling/policy/project/IAM focused gates.
-2. **`verification-scenarios`** — canonical non-Git composed integration and complete 21/19 feature coverage.
+2. **`verification-scenarios`** — canonical non-Git composed integration and complete 27/19 feature coverage.
 3. **`installed-release-provenance`** — standalone installed package, locked artifacts, release preparation/tag behavior, and generic policy-source release conformance.
 
 Normal validation uses one repository checkout. It does not use migration-era sibling repository App credentials, PAT fallback, sibling `repository:` checkouts, or repository-coordinate integration manifests.

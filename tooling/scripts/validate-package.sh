@@ -404,3 +404,24 @@ printf 'Standalone tooling package validation passed for Python %s.\n' \
 # Prove actual installed composition and v4 assessment without Git.
 "$temporary/venv/bin/python" -I "$TOOLING_ROOT/scripts/check-installed-composition.py"
 PATH="$runtime_path" "$temporary/venv/bin/python" -I "$TOOLING_ROOT/scripts/check-installed-assessment.py"
+
+# Acquisition/setup ends here; the producer runs from a separate no-Git directory
+# with only installed tooling and explicitly materialized policy/example inputs.
+producer_runtime="$temporary/producer-runtime"
+mkdir -p "$producer_runtime" "$temporary/producer-no-runtime-bin"
+cp -R "$REPOSITORY_ROOT/policy-sources/control-library/policies" "$producer_runtime/policy"
+cp -R "$REPOSITORY_ROOT/policy-sources/control-library/examples/producer" "$producer_runtime/examples"
+cp "$TOOLING_ROOT/examples/producer/subject.json" "$producer_runtime/subject.json"
+cp "$REPOSITORY_ROOT/verification/scenarios/scripts/assert-producer.py" "$producer_runtime/exercise.py"
+for forbidden in git opa; do
+  cat > "$temporary/producer-no-runtime-bin/$forbidden" <<'BLOCK'
+#!/bin/sh
+echo "producer exercise must not invoke Git or OPA" >&2
+exit 97
+BLOCK
+  chmod +x "$temporary/producer-no-runtime-bin/$forbidden"
+done
+cd "$producer_runtime"
+PATH="$temporary/producer-no-runtime-bin:$PATH" "$venv_python" -I exercise.py \
+  --compliance "$venv_compliance" --policy-source exercise=policy \
+  --examples examples --subject-example subject.json

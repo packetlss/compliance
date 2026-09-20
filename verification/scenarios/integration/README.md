@@ -78,7 +78,7 @@ public CLI and separately materialized private IAM realization; their proof is
 experimental and does not freeze the v4 representation.
 
 The complete feature runner executes once and requires exactly one owner for
-each of the 24 retained CLI leaves and 19 retained domain features. Generated
+each of the 27 retained CLI leaves and 19 retained domain features. Generated
 outputs stay in a temporary run directory and are removed. Before and after
 execution, the assembly is byte-compared with the transformed committed export;
 the destination checkout must remain clean.
@@ -102,3 +102,13 @@ the applicable committed roots atomically. Review semantic source identities and
 expected outcomes directly; do not turn the destination revision or materialized
 paths into policy identity, precedence, or an active lock. If a change requires a
 new common composition abstraction, return it as an architectural finding.
+
+## External producer falsification
+
+The three experimental producer leaves are registered in the complete CLI feature
+suite. The scenario-owned `scripts/assert-producer.py` runs against an installed
+wheel in the separate package gate; `scripts/assert-producer-criteria.py` runs here
+against the same reviewed observation and existing package criteria. The producer
+needs no OPA or policy criteria; direct criterion reuse remains separate from
+producer validation and assessment admission. See the
+[walkthrough](../../../tooling/docs/producer-interface.md) for inputs and claim limits.

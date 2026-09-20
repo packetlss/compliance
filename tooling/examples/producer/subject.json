@@ -1,0 +1,19 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "Subject",
+  "metadata": {
+    "name": "producer-example",
+    "labels": {"environment": "synthetic"}
+  },
+  "spec": {
+    "id": "host/producer-example",
+    "type": "linux-host",
+    "lifecycle": "active",
+    "source": {
+      "name": "reviewed-synthetic-inventory",
+      "externalId": "synthetic-host-1",
+      "observedAt": "2000-01-01T00:00:00Z"
+    },
+    "attributes": {"adapter_detail": {"rack": "example-rack", "ports": [2, 1]}}
+  }
+}

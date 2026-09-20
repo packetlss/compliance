@@ -877,5 +877,46 @@ class PolicySourceBoundaryTests(unittest.TestCase):
                 self.assertEqual(list(external_refs(read_json(path))), [])
 
 
+
+class PackageProducerConformanceTests(unittest.TestCase):
+    """Policy-owned examples use the unchanged canonical observation contract."""
+
+    def test_package_vectors_and_ordinary_construction_preserve_extensions(self):
+        import subprocess
+        import sys
+        from tools._canonical_json import canonical_json_bytes
+        from tools.evaluate_plan import EVIDENCE_FORMAT_CHECKER
+        from tools.evidence_provenance import evidence_document_digest
+
+        examples = ROOT / 'examples/producer'
+        schema = read_json(POLICIES / 'schemas/evidence/linux-packages-v1.schema.json')
+        validator = Draft202012Validator(schema, format_checker=EVIDENCE_FORMAT_CHECKER)
+        document = read_json(examples / 'linux-packages.json')
+        collected = json.loads(subprocess.check_output([
+            sys.executable, '-I', str(examples / 'collect_packages.py'),
+            '--id', document['id'], '--subject', document['subject']['id'],
+            '--collected-at', document['collected_at'],
+            '--observation', str(examples / 'package-observation.json'),
+        ], text=True))
+        self.assertEqual(collected, document)
+        self.assertEqual(evidence_document_digest(collected), evidence_document_digest(document))
+        stripped = copy.deepcopy(collected)
+        del stripped['payload']['packages'][0]['repository']
+        self.assertNotEqual(evidence_document_digest(stripped), evidence_document_digest(document))
+        for vector in read_json(examples / 'conformance.json'):
+            with self.subTest(vector=vector['name']):
+                candidate = copy.deepcopy(document)
+                for change in vector['changes']:
+                    target = candidate
+                    for part in change['path'][:-1]:
+                        target = target[part]
+                    if change.get('remove'):
+                        del target[change['path'][-1]]
+                    else:
+                        target[change['path'][-1]] = change['value']
+                canonical_json_bytes(candidate)
+                self.assertEqual(validator.is_valid(candidate), vector['valid'])
+
+
 if __name__ == "__main__":
     unittest.main()

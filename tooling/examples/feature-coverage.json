@@ -85,6 +85,15 @@
       "features": [
         "policy.control-implementations"
       ]
+    },
+    "external-producer": {
+      "role": "verification",
+      "project": null,
+      "features": [
+        "cli.producer.list",
+        "cli.producer.schema",
+        "cli.producer.validate"
+      ]
     }
   }
 }
