@@ -101,6 +101,29 @@
     return configuredField;
   }
 
+  function assessmentStatus(document, configuredField) {
+    const accounting = document.whole_operation ?
+      `<section><h3>Whole operation accounting</h3>${card(document.whole_operation, 0)}</section>` : "";
+    const rowField = rowFieldFor(document, configuredField);
+    const title = rowField === "groups" ? "Frozen group accounting" : "Frozen asset accounting";
+    const rows = rowsFor(document, rowField).map(card).join("") || '<p class="empty">None.</p>';
+    return `${accounting}<section><h3>${title}</h3><div class="cards">${rows}</div></section>`;
+  }
+
+  function framework(document) {
+    const context = {
+      declaration: document.declaration,
+      framework: document.framework,
+      scope: document.scope,
+      state: document.state,
+      statement: document.statement,
+    };
+    const obligations = rowsFor(document, "obligations").map(card).join("") ||
+      '<p class="empty">None.</p>';
+    return `<section><h3>Exact declaration and bounded claim</h3>${card(context, 0)}</section>` +
+      `<section><h3>Declared obligations</h3><div class="cards">${obligations}</div></section>`;
+  }
+
   function render() {
     navigation.innerHTML = state.responses.map((entry, index) =>
       `<button type="button" data-index="${index}" aria-current="${index === state.selected}">${escape(entry.name)}</button>`
@@ -121,6 +144,10 @@
     let body;
     if (document.schema === "compliance.example/assessment-explanation-view/v1alpha1") {
       body = explanation(document);
+    } else if (document.schema === "compliance.example/assessment-status-view/v1alpha1") {
+      body = assessmentStatus(document, rowField);
+    } else if (document.schema.startsWith("compliance.example/framework-satisfaction-")) {
+      body = framework(document);
     } else if (document.schema === "compliance.example/policy-diff/v1alpha1") {
       body = policyDiff(document);
     } else {

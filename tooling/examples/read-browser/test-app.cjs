@@ -33,6 +33,11 @@ const documents = [
   {
     schema: "compliance.example/assessment-status-view/v1alpha1",
     view: "groups",
+    whole_operation: {
+      selected_assets: 2,
+      expected_result_slots: 2,
+      missing_result_slots: 1,
+    },
     groups: [{
       group_id: "overlap-a",
       frozen_accounting: { selected_assets: 2, expected_result_slots: 2 },
@@ -64,6 +69,11 @@ const documents = [
   },
   {
     schema: "compliance.example/framework-satisfaction-explanation/v1alpha1",
+    declaration: { name: "exact-declaration", revision: "2026-09" },
+    framework: { id: "exact-framework", profile: "bounded-profile", version: "1" },
+    scope: { id: "exact-scope", description: "Bounded supplied scope." },
+    state: "satisfied",
+    statement: "Satisfied under declared coverage.",
     obligations: [{
       id: "obligation-one",
       state: "satisfied",
@@ -95,6 +105,9 @@ function select(index) {
 
 assert.match(select(0), /overlap-a/);
 assert.match(content.innerHTML, /selected_assets/);
+assert.match(content.innerHTML, /Whole operation accounting/);
+assert.match(content.innerHTML, /missing result slots/);
+assert.match(content.innerHTML, /Frozen group accounting/);
 
 const explanation = select(1);
 assert.match(explanation, /evidence:exact/);
@@ -103,6 +116,11 @@ assert.match(explanation, /example-collector@1/);
 assert.match(explanation, /exact_evidence_id_and_digest/);
 
 const framework = select(2);
+assert.match(framework, /Exact declaration and bounded claim/);
+assert.match(framework, /exact-declaration/);
+assert.match(framework, /exact-framework/);
+assert.match(framework, /exact-scope/);
+assert.match(framework, /Satisfied under declared coverage/);
 assert.match(framework, /framework-owner/);
 assert.match(framework, /affirmative/);
 
