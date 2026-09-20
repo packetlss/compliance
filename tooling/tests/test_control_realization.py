@@ -10,11 +10,8 @@ from jsonschema import Draft202012Validator, FormatChecker
 from contract_fixtures import fixture_root
 
 from tools.control_realization import (
-    ControlRealizationError,
+    compact_plan_outcomes,
     roll_up_plan_requirements,
-    roll_up_realization,
-    roll_up_requirement_baseline,
-    select_realization,
     validate_realization,
     validate_realization_lineage,
 )
@@ -133,139 +130,109 @@ class ControlRealizationTests(unittest.TestCase):
             [],
         )
 
+    def _render_iam_plan(self, profile="restricted-linux", *, private_root=None, reverse=False):
+        example = self.root / "iam"
+        subject, groups, assignments = load_inventory_inputs(
+            example / "inventory", example / "assignments",
+            "host/restricted-linux-01",
+            self.root / "schemas/inventory/resource.schema.json",
+        )
+        subject["labels"]["iam-profile"] = profile
+        sources = (
+            PolicySource("control-library", self.root / "shared"),
+            PolicySource("verification-policy", self.root / "selection"),
+            PolicySource("environment-private", private_root or example / "policy"),
+        )
+        return render_plan(subject, groups, assignments, sources[::-1] if reverse else sources)
+
     def test_trusted_label_selects_exactly_one_complete_realization(self):
-        company_subject = {
-            "id": "host/company-linux-01",
-            "type": "linux-host",
-            "labels": {"iam-profile": "company-linux"},
-        }
-        candidates = (self.company_realization, self.realization)
-        for ordered in (candidates, tuple(reversed(candidates))):
-            with self.subTest(order=[item["metadata"]["id"] for item in ordered]):
-                restricted = select_realization(
-                    self.requirement,
-                    self.results["subject"],
-                    ordered,
-                )
-                company = select_realization(
-                    self.requirement,
-                    company_subject,
-                    ordered,
-                )
+        for reverse in (False, True):
+            for profile, expected in (
+                ("restricted-linux", "restricted.linux.central-role-access@1"),
+                ("company-linux", "company.linux.central-role-access@1"),
+            ):
+                with self.subTest(profile=profile, reverse=reverse):
+                    plan = self._render_iam_plan(profile, reverse=reverse)
+                    self.assertEqual(plan_disposition(plan), "result_required")
+                    self.assertEqual(len(plan["requirements"]), 1)
+                    requirement = plan["requirements"][0]
+                    self.assertEqual(requirement["realization"]["reference"], expected)
+                    self.assertEqual(len(plan["controls"]), 4)
+                    self.assertEqual(
+                        set(requirement["technical_instance_ids"]),
+                        {item["instance_id"] for item in plan["controls"]},
+                    )
 
-                self.assertEqual(
-                    restricted["metadata"]["id"],
-                    "restricted.linux.central-role-access",
-                )
-                self.assertEqual(
-                    company["metadata"]["id"],
-                    "company.linux.central-role-access",
-                )
-
-    def test_missing_or_ambiguous_realization_selection_is_an_error(self):
-        missing = copy.deepcopy(self.results["subject"])
-        missing["labels"] = {}
+    def test_ambiguous_realization_selection_is_a_plan_error(self):
         duplicate = copy.deepcopy(self.company_realization)
         duplicate["metadata"]["id"] = "company.linux.central-role-access-copy"
         duplicate["spec"]["applies_to"]["match_labels"] = {
             "iam-profile": "restricted-linux"
         }
-
-        candidates = (self.company_realization, self.realization)
-        ambiguous = (*candidates, duplicate)
-        for ordered in (candidates, tuple(reversed(candidates))):
-            with self.subTest(
-                case="missing",
-                order=[item["metadata"]["id"] for item in ordered],
-            ):
-                with self.assertRaisesRegex(
-                    ControlRealizationError,
-                    "no realization applies",
-                ):
-                    select_realization(self.requirement, missing, ordered)
-        for ordered in (ambiguous, tuple(reversed(ambiguous))):
-            with self.subTest(
-                case="ambiguous",
-                order=[item["metadata"]["id"] for item in ordered],
-            ):
-                with self.assertRaisesRegex(
-                    ControlRealizationError,
-                    "multiple realizations",
-                ):
-                    select_realization(
-                        self.requirement,
-                        self.results["subject"],
-                        ordered,
-                    )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "realizations").mkdir()
+            # Reverse file order independently of named-source order.
+            for documents in ((duplicate, self.realization), (self.realization, duplicate)):
+                for index, document in enumerate(documents):
+                    (root / "realizations" / f"{index}.json").write_text(json.dumps(document))
+                for reverse in (False, True):
+                    with self.subTest(first=documents[0]["metadata"]["id"], reverse=reverse):
+                        plan = self._render_iam_plan(private_root=root, reverse=reverse)
+                        self.assertEqual(plan_disposition(plan), "invalid")
+                        errors = [item for item in plan["resolution"]["errors"]
+                                  if item["type"] == "multiple-control-realizations"]
+                        self.assertEqual(len(errors), 1)
+                        self.assertEqual(errors[0]["realizations"], [
+                            "company.linux.central-role-access-copy@1",
+                            "restricted.linux.central-role-access@1",
+                        ])
 
     def test_failing_technical_check_fails_requirement_and_top_baseline(self):
-        requirement_assessment = roll_up_realization(
-            self.requirement,
-            self.realization,
-            self.results,
-        )
-        baseline_assessment = roll_up_requirement_baseline(
-            self.baseline,
-            [requirement_assessment],
-        )
-
-        self.assertEqual(requirement_assessment["status"], "fail")
-        self.assertEqual(requirement_assessment["adoption"]["status"], "implemented")
+        plan = self._render_iam_plan()
+        requirements, baselines = compact_plan_outcomes(plan, self.results["results"])
+        self.assertEqual(requirements[0]["status"], "fail")
+        self.assertEqual(baselines[0]["status"], "fail")
+        self.assertEqual(plan["requirements"][0]["adoption"]["status"], "implemented")
         self.assertEqual(
-            requirement_assessment["realization_based_on"]["realization"],
+            plan["requirements"][0]["realization"]["based_on"]["realization"],
             "company.linux.central-role-access@1",
         )
-        self.assertEqual(requirement_assessment["check_summary"]["pass"], 3)
-        self.assertEqual(requirement_assessment["check_summary"]["fail"], 1)
-        self.assertEqual(baseline_assessment["status"], "fail")
 
     def test_every_required_check_passing_awards_top_baseline_pass(self):
-        results = copy.deepcopy(self.results)
-        for result in results["results"]:
+        results = copy.deepcopy(self.results["results"])
+        for result in results:
             result["status"] = "pass"
-
-        requirement_assessment = roll_up_realization(
-            self.requirement,
-            self.realization,
-            results,
-        )
-        baseline_assessment = roll_up_requirement_baseline(
-            self.baseline,
-            [requirement_assessment],
-        )
-
-        self.assertEqual(requirement_assessment["status"], "pass")
-        self.assertEqual(baseline_assessment["status"], "pass")
+        requirements, baselines = compact_plan_outcomes(self._render_iam_plan(), results)
+        self.assertEqual(requirements[0]["status"], "pass")
+        self.assertEqual(baselines[0]["status"], "pass")
 
     def test_missing_or_not_applicable_required_check_is_unknown_not_pass(self):
-        missing = copy.deepcopy(self.results)
-        missing["results"] = missing["results"][:-1]
-        for result in missing["results"]:
+        plan = self._render_iam_plan()
+        passing = copy.deepcopy(self.results["results"])
+        for result in passing:
             result["status"] = "pass"
-        not_applicable = copy.deepcopy(self.results)
-        for result in not_applicable["results"]:
-            result["status"] = "pass"
-        not_applicable["results"][0]["status"] = "not_applicable"
-
-        self.assertEqual(
-            roll_up_realization(self.requirement, self.realization, missing)["status"],
-            "unknown",
-        )
-        self.assertEqual(
-            roll_up_realization(
-                self.requirement,
-                self.realization,
-                not_applicable,
-            )["status"],
-            "unknown",
-        )
+        not_applicable = copy.deepcopy(passing)
+        not_applicable[0]["status"] = "not_applicable"
+        # An incomplete result list is conservative here; artifact admission
+        # separately refuses incomplete persisted plan/result pairs.
+        for results in (passing[:-1], not_applicable):
+            with self.subTest(results=results):
+                requirements, baselines = compact_plan_outcomes(plan, results)
+                self.assertEqual(requirements[0]["status"], "unknown")
+                self.assertEqual(baselines[0]["status"], "unknown")
 
     def test_stale_parent_requirement_pin_is_rejected(self):
         realization = copy.deepcopy(self.realization)
         realization["spec"]["requirement"]["digest"] = "sha256:" + "0" * 64
-
-        with self.assertRaisesRegex(ControlRealizationError, "does not match"):
-            roll_up_realization(self.requirement, realization, self.results)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "realizations").mkdir()
+            (root / "realizations/invalid.json").write_text(json.dumps(realization))
+            plan = self._render_iam_plan(private_root=root)
+        self.assertEqual(plan_disposition(plan), "invalid")
+        self.assertTrue(any(item["type"] == "requirement-digest-mismatch"
+                            for item in plan["resolution"]["errors"]))
 
     def test_stale_based_on_pin_is_rejected_without_merging_content(self):
         realization = copy.deepcopy(self.realization)
@@ -276,61 +243,47 @@ class ControlRealizationTests(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertIn("does not match", errors[0])
 
-    def test_adoption_state_does_not_imply_a_pass(self):
-        not_implemented = copy.deepcopy(self.realization)
-        not_implemented["spec"]["adoption"] = {
-            "status": "not_implemented",
-            "method": "none",
-            "owner": "restricted-environment-iam-team",
-        }
-        del not_implemented["spec"]["checks"]
-        del not_implemented["spec"]["satisfaction"]
-        not_applicable = copy.deepcopy(not_implemented)
-        not_applicable["spec"]["adoption"] = {
-            "status": "not_applicable",
-            "method": "none",
+    def test_explicit_not_applicable_realization_preserves_approved_determination(self):
+        realization = copy.deepcopy(self.realization)
+        realization["spec"]["adoption"] = {
+            "status": "not_applicable", "method": "none",
             "owner": "restricted-environment-iam-team",
             "determination": {
                 "rationale": "The illustrative subject is outside the IAM requirement scope.",
-                "approval_ref": "governance/APP-001",
-                "review_after": "2027-08-23",
+                "approval_ref": "governance/APP-001", "review_after": "2027-08-23",
             },
         }
-
+        del realization["spec"]["checks"]
+        del realization["spec"]["satisfaction"]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "realizations").mkdir()
+            (root / "realizations/adoption.json").write_text(json.dumps(realization))
+            plan = self._render_iam_plan(private_root=root)
+        self.assertEqual(plan_disposition(plan), "result_required")
+        self.assertEqual(plan["requirements"][0]["adoption"], realization["spec"]["adoption"])
         self.assertEqual(
-            roll_up_realization(
-                self.requirement,
-                not_implemented,
-                self.results,
-            )["status"],
-            "fail",
+            plan["requirements"][0]["realization"]["reference"],
+            "restricted.linux.central-role-access@1",
         )
-        self.assertEqual(
-            roll_up_realization(
-                self.requirement,
-                not_applicable,
-                self.results,
-            )["status"],
-            "not_applicable",
-        )
-
-    def test_top_baseline_rejects_assessment_for_different_requirement_digest(self):
-        assessment = roll_up_realization(
-            self.requirement,
-            self.realization,
-            self.results,
-        )
-        assessment["requirement_digest"] = "sha256:" + "0" * 64
-
-        with self.assertRaisesRegex(ControlRealizationError, "does not match baseline pin"):
-            roll_up_requirement_baseline(self.baseline, [assessment])
+        self.assertEqual(plan["controls"], [])
+        requirements, baselines = compact_plan_outcomes(plan, [])
+        self.assertEqual(requirements[0]["status"], "not_applicable")
+        self.assertEqual(baselines[0]["status"], "not_applicable")
 
     def test_unreferenced_technical_check_is_rejected_as_incomplete_mapping(self):
         realization = copy.deepcopy(self.realization)
-        realization["spec"]["satisfaction"]["allOf"].pop()
-
-        with self.assertRaisesRegex(ControlRealizationError, "omitted from satisfaction"):
-            roll_up_realization(self.requirement, realization, self.results)
+        omitted = realization["spec"]["satisfaction"]["allOf"].pop()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "realizations").mkdir()
+            (root / "realizations/invalid.json").write_text(json.dumps(realization))
+            plan = self._render_iam_plan(private_root=root)
+        self.assertEqual(plan_disposition(plan), "invalid")
+        errors = [item for item in plan["resolution"]["errors"]
+                  if item["type"] == "incomplete-realization-satisfaction"]
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(errors[0]["unreferenced"], [omitted])
 
     def test_registered_iam_project_renders_restricted_realization(self):
         example = self.root / "iam"
@@ -408,40 +361,17 @@ class ControlRealizationTests(unittest.TestCase):
         self.assertEqual(baselines[0]["status"], "fail")
 
     def test_missing_realization_is_assessable_not_implemented_failure(self):
-        example = self.root / "iam"
-        subject, groups, assignments = load_inventory_inputs(
-            example / "inventory",
-            example / "assignments",
-            "host/restricted-linux-01",
-            self.root / "schemas/inventory/resource.schema.json",
-        )
-        subject["labels"]["iam-profile"] = "unrealized-linux"
-        assignments[0]["target"]["group"] = "company-assets"
-
-        plan = render_plan(
-            subject,
-            groups,
-            assignments,
-            (
-                PolicySource(
-                    "control-library",
-                    self.root / "shared",
-                ),
-                PolicySource(
-                    "verification-policy",
-                    self.root / "selection",
-                ),
-                PolicySource("environment-private", example / "policy"),
-            ),
-        )
-        requirements, baselines = roll_up_plan_requirements(plan, [])
-
-        self.assertEqual(plan["resolution"]["status"], "valid")
-        self.assertEqual(plan_disposition(plan), "result_required")
-        self.assertEqual(plan["controls"], [])
-        self.assertEqual(plan["requirements"][0]["adoption"]["status"], "not_implemented")
-        self.assertEqual(requirements[0]["status"], "fail")
-        self.assertEqual(baselines[0]["status"], "fail")
+        for reverse in (False, True):
+            with self.subTest(reverse=reverse):
+                plan = self._render_iam_plan("unrealized-linux", reverse=reverse)
+                requirements, baselines = compact_plan_outcomes(plan, [])
+                self.assertEqual(plan["resolution"]["status"], "valid")
+                self.assertEqual(plan_disposition(plan), "result_required")
+                self.assertEqual(plan["controls"], [])
+                self.assertEqual(plan["requirements"][0]["adoption"]["status"], "not_implemented")
+                self.assertNotIn("realization", plan["requirements"][0])
+                self.assertEqual(requirements[0]["status"], "fail")
+                self.assertEqual(baselines[0]["status"], "fail")
 
 
 if __name__ == "__main__":

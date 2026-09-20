@@ -1443,6 +1443,23 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ArtifactValidationError, 'frozen realization satisfaction'):
             validate_assessment_plan(plan)
 
+    def test_frozen_baseline_rejects_different_requirement_digest(self):
+        plan = copy.deepcopy(self.iam_plan)
+        baseline = plan["resolved_requirement_baselines"][0]
+        baseline["requirements"][0]["digest"] = "sha256:" + "0" * 64
+        selected = baseline["parameter_derivation"]["ancestry"][-1]
+        selected["document"]["spec"]["requirements"][0]["digest"] = "sha256:" + "0" * 64
+        selected["digest"] = content_digest(selected["document"])
+        baseline["digest"] = selected["digest"]
+        refresh_operation(plan)
+        plan["id"] = artifact_digest(plan)
+
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "frozen realization provenance has no matching baseline membership",
+        ):
+            validate_assessment_plan(plan)
+
     def test_plan_rejects_retired_realization_classification(self):
         plan = copy.deepcopy(self.iam_plan)
         plan["requirements"][0]["realization"]["classification"] = "restricted"
