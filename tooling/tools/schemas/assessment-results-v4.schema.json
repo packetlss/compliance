@@ -11,7 +11,7 @@
     "plan_id": {"$ref": "#/$defs/digest"},
     "subject_id": {"$ref": "#/$defs/subjectId"},
     "evaluated_at": {"type": "string", "format": "date-time"},
-    "outcome": {"$ref": "#/$defs/overallStatus"},
+    "outcome": {"anyOf": [{"$ref": "#/$defs/overallStatus"}, {"type": "null"}]},
     "provenance": {"$ref": "#/$defs/evaluationProvenance"},
     "dependency_dispositions": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/dependencyDisposition"}},
     "results": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/technicalOutcome"}},
@@ -244,13 +244,13 @@
     },
     "requirementOutcome": {
       "type": "object", "additionalProperties": false,
-      "required": ["requirement", "status", "reason"],
-      "properties": {"requirement": {"$ref": "#/$defs/reference"}, "status": {"$ref": "#/$defs/status"}, "reason": {"type": "string", "minLength": 1}}
+      "required": ["requirement", "status", "reason", "implementation_gap"],
+      "properties": {"requirement": {"$ref": "#/$defs/reference"}, "status": {"anyOf": [{"$ref": "#/$defs/status"}, {"type": "null"}]}, "reason": {"type": "string", "minLength": 1}, "implementation_gap": {"type": "boolean"}}
     },
     "baselineOutcome": {
       "type": "object", "additionalProperties": false,
-      "required": ["baseline", "status", "reason"],
-      "properties": {"baseline": {"$ref": "#/$defs/reference"}, "status": {"$ref": "#/$defs/status"}, "reason": {"type": "string", "minLength": 1}}
+      "required": ["baseline", "status", "reason", "implementation_gap"],
+      "properties": {"baseline": {"$ref": "#/$defs/reference"}, "status": {"anyOf": [{"$ref": "#/$defs/status"}, {"type": "null"}]}, "reason": {"type": "string", "minLength": 1}, "implementation_gap": {"type": "boolean"}}
     }
   }
 }

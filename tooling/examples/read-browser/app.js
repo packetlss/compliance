@@ -63,7 +63,7 @@
       `<section class="card"><h3>${escape(policy.title)}</h3><p class="path">Asset → policy ${escape(policy.reference)}</p><p>${escape(policy.paths)}</p></section>`
     ).join("");
     const objectives = (document.objectives || []).map(objective =>
-      `<section class="card"><h3>Objective: ${escape(objective.title)}</h3><p>${escape(objective.statement)}</p><p>${statusMarkup(objective.historical_outcome)}</p></section>`
+      `<section class="card"><h3>Objective: ${escape(objective.title)}</h3><p>${escape(objective.statement)}</p><p>Implementation: ${escape(objective.implementation_state)}</p><p>Assessment outcome: ${statusMarkup(objective.historical_outcome)}</p><p>${escape(objective.historical_reason)}</p></section>`
     ).join("");
     const checks = rowsFor(document, "checks").map((item, index) => {
       const check = item.check || {};
@@ -138,6 +138,7 @@
       assessment_instant: document.operation?.evaluated_at,
       query_instant: document.query_instant || document.operation?.query_instant,
       historical_outcome: document.historical_outcome,
+      implementation_gap: document.implementation_gap,
       current_qualification: document.current_qualification ? "shown separately" : undefined,
     };
     const visibleFacts = Object.fromEntries(Object.entries(summary).filter(([, value]) => value !== undefined));

@@ -72,3 +72,8 @@ the distinct realization and technical outcomes.
 
 `assert-scenario.py` and the canonical scenario gate remain the primary executable
 owners. The walkthrough does not add a second semantic assertion path.
+
+The scenario also removes only the applicable SaaS realization and proves a gap-only
+SaaS result with no adoption or Assessment outcome, alongside unchanged passing Linux
+policy. Exact accounting is complete but unsuccessful; historical explanation retains
+the separate gap basis. Fresh negative guest-access Evidence still produces FAIL.

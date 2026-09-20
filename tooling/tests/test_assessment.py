@@ -468,16 +468,22 @@ class AssessmentOperatorViewTests(unittest.TestCase):
         plan["requirements"][0]["adoption"] = {
             "status": "not_implemented",
             "method": "none",
-            "owner": "unassigned",
+            "owner": "platform-team",
         }
-        plan["requirements"][0].pop("realization")
-        report = self.result(status="fail")
+        plan["requirements"][0]["implementation_state"] = "not_implemented"
+        plan["requirements"][0]["technical_instance_ids"] = []
+        plan["controls"] = []
+        report = self.result(status=None)
+        report["results"] = []
+        report["provenance"]["selectedEvidence"] = []
         report["requirement_assessments"] = [{
             "requirement": "test.requirement@1",
-            "status": "fail",
-            "reason": "The applicable requirement has no implemented realization.",
+            "status": None,
+            "implementation_gap": True,
+            "reason": "The selected realization explicitly declares non-implementation.",
         }]
         account = self.account_with_result(report)
+        account["members"][0]["implementation_gap"] = True
 
         view = build_explanation_view(account, account["members"][0], plan, report)
         rendered = render_explanation_view(view)
@@ -485,11 +491,11 @@ class AssessmentOperatorViewTests(unittest.TestCase):
         self.assertEqual(view["objectives"][0]["adoption"], "not_implemented")
         self.assertEqual(
             view["objectives"][0]["historical_reason"],
-            "The applicable requirement has no implemented realization.",
+            "The selected realization explicitly declares non-implementation.",
         )
-        self.assertIn("Frozen adoption: not implemented", rendered)
+        self.assertIn("Implementation: not implemented", rendered)
         self.assertIn(
-            "Historical reason: The applicable requirement has no implemented realization.",
+            "Historical reason: The selected realization explicitly declares non-implementation.",
             rendered,
         )
         self.assertNotIn(view["operation"]["operation_id"], rendered)
@@ -572,6 +578,39 @@ class AssessmentOperatorViewTests(unittest.TestCase):
         rendered = render_mappings_view(view)
         self.assertIn("Assessment mappings", rendered)
         self.assertNotIn("framework mappings", rendered.lower())
+
+    def test_objective_gap_mapping_does_not_contaminate_technical_mapping(self):
+        plan = assessment_plan(
+            [{"name": "shared", "digest": "sha256:" + "7" * 64}], with_requirement=True)
+        objective = plan["requirements"][0]
+        objective.update(implementation_state="no_realization", technical_instance_ids=[])
+        objective.pop("adoption")
+        objective.pop("realization")
+        report = self.result(status="pass")
+        report["requirement_assessments"] = [{
+            "requirement": objective["reference"], "status": None,
+            "implementation_gap": True, "reason": "No applicable realization exists.",
+        }]
+        account = self.account_with_result(report)
+        member = account["members"][0]
+        member["plan_id"] = plan["id"]
+        member["policy"] = copy.deepcopy(plan["operation"]["members"][0]["policy"])
+        for row in member["policy"]["requirements"] + member["policy"]["controls"]:
+            row["external_refs"] = ["EXAMPLE:1"]
+        for plans in ([plan], []):
+            with self.subTest(retained_plan=bool(plans)):
+                view = build_mappings_view(account, [report], plans)
+                rows = {row["mapping_level"]: row for row in view["mappings"]}
+                self.assertTrue(rows["objective"]["implementation_gap"])
+                self.assertIsNone(rows["objective"]["historical_outcome"])
+                self.assertFalse(rows["technical"]["implementation_gap"])
+                self.assertEqual(rows["technical"]["historical_outcome"], "pass")
+                rendered = render_mappings_view(view)
+                for line in rendered.splitlines():
+                    if "  OBJECTIVE  " in line:
+                        self.assertIn("  GAP  PLAN ALIGNMENT UNAVAILABLE  ", line)
+                    if "  TECHNICAL  " in line:
+                        self.assertIn("  PASS  -  PLAN ALIGNMENT UNAVAILABLE  ", line)
 
     def test_mapping_projection_adds_only_exact_plan_owned_titles(self):
         plan = copy.deepcopy(self.plan)

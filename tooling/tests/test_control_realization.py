@@ -47,7 +47,6 @@ class ControlRealizationTests(unittest.TestCase):
                     'requirements': [{
                         'requirement': f'review.same-objective@{revision}',
                         'digest': pp.digest(requirement),
-                        'required': True,
                     }],
                 }
                 for folder, document in (('requirements', requirement), ('requirement-baselines', baseline)):
@@ -254,7 +253,6 @@ class ControlRealizationTests(unittest.TestCase):
             },
         }
         del realization["spec"]["checks"]
-        del realization["spec"]["satisfaction"]
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             (root / "realizations").mkdir()
@@ -271,19 +269,10 @@ class ControlRealizationTests(unittest.TestCase):
         self.assertEqual(requirements[0]["status"], "not_applicable")
         self.assertEqual(baselines[0]["status"], "not_applicable")
 
-    def test_unreferenced_technical_check_is_rejected_as_incomplete_mapping(self):
+    def test_obsolete_satisfaction_is_rejected(self):
         realization = copy.deepcopy(self.realization)
-        omitted = realization["spec"]["satisfaction"]["allOf"].pop()
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            (root / "realizations").mkdir()
-            (root / "realizations/invalid.json").write_text(json.dumps(realization))
-            plan = self._render_iam_plan(private_root=root)
-        self.assertEqual(plan_disposition(plan), "invalid")
-        errors = [item for item in plan["resolution"]["errors"]
-                  if item["type"] == "incomplete-realization-satisfaction"]
-        self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0]["unreferenced"], [omitted])
+        realization["spec"]["satisfaction"] = {"allOf": []}
+        self.assertIn("obsolete realization satisfaction", validate_realization(self.requirement, realization))
 
     def test_registered_iam_project_renders_restricted_realization(self):
         example = self.root / "iam"
@@ -360,7 +349,7 @@ class ControlRealizationTests(unittest.TestCase):
         self.assertEqual(requirements[0]["check_summary"]["fail"], 1)
         self.assertEqual(baselines[0]["status"], "fail")
 
-    def test_missing_realization_is_assessable_not_implemented_failure(self):
+    def test_missing_realization_is_accounted_gap_without_assessment_outcome(self):
         for reverse in (False, True):
             with self.subTest(reverse=reverse):
                 plan = self._render_iam_plan("unrealized-linux", reverse=reverse)
@@ -368,10 +357,80 @@ class ControlRealizationTests(unittest.TestCase):
                 self.assertEqual(plan["resolution"]["status"], "valid")
                 self.assertEqual(plan_disposition(plan), "result_required")
                 self.assertEqual(plan["controls"], [])
-                self.assertEqual(plan["requirements"][0]["adoption"]["status"], "not_implemented")
+                self.assertNotIn("adoption", plan["requirements"][0])
+                self.assertEqual(plan["requirements"][0]["implementation_state"], "no_realization")
                 self.assertNotIn("realization", plan["requirements"][0])
-                self.assertEqual(requirements[0]["status"], "fail")
-                self.assertEqual(baselines[0]["status"], "fail")
+                self.assertIsNone(requirements[0]["status"])
+                self.assertIsNone(baselines[0]["status"])
+                self.assertTrue(requirements[0]["implementation_gap"])
+                self.assertTrue(baselines[0]["implementation_gap"])
+
+    def test_gap_basis_is_independent_from_every_evidence_outcome(self):
+        plan = self._render_iam_plan()
+        gap = copy.deepcopy(self._render_iam_plan("unrealized-linux")["requirements"][0])
+        gap["reference"] = "test.gap@1"
+        plan["requirements"].append(gap)
+        plan["resolved_requirement_baselines"][0]["requirements"].append({
+            "requirement": gap["reference"], "digest": gap["digest"],
+        })
+        for outcome in ("pass", "fail", "error", "unknown", "waived"):
+            with self.subTest(outcome=outcome):
+                children = [{"instance_id": c["instance_id"], "status": outcome} for c in plan["controls"]]
+                requirements, baselines = compact_plan_outcomes(plan, children)
+                self.assertEqual(requirements[0]["status"], outcome)
+                self.assertFalse(requirements[0]["implementation_gap"])
+                self.assertIsNone(requirements[1]["status"])
+                self.assertTrue(requirements[1]["implementation_gap"])
+                self.assertEqual(baselines[0]["status"], outcome)
+                self.assertTrue(baselines[0]["implementation_gap"])
+
+    def test_explicit_nonimplementation_preserves_selected_authored_basis(self):
+        realization = copy.deepcopy(self.realization)
+        realization["spec"]["adoption"] = {
+            "status": "not_implemented", "method": "none", "owner": "platform-team",
+        }
+        realization["spec"].pop("checks")
+        realization["spec"].pop("parameter_links", None)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "realizations").mkdir()
+            (root / "realizations/gap.json").write_text(json.dumps(realization))
+            plan = self._render_iam_plan(private_root=root)
+        self.assertEqual(plan["requirements"][0]["adoption"], realization["spec"]["adoption"])
+        self.assertEqual(plan["requirements"][0]["implementation_state"], "not_implemented")
+        self.assertIn("realization", plan["requirements"][0])
+        self.assertEqual(plan["controls"], [])
+        requirements, baselines = compact_plan_outcomes(plan, [])
+        self.assertIsNone(requirements[0]["status"])
+        self.assertTrue(baselines[0]["implementation_gap"])
+
+    def test_gap_only_evaluation_is_exactly_accounted_without_assessment_outcome(self):
+        from datetime import UTC, datetime
+        from tools.evaluate_plan import evaluate_plan_document
+        from tools.operation import account_operation
+        from tools.artifact_validation import validate_assessment_results, ArtifactValidationError
+        from tools.assessment_provenance import artifact_digest, validate_result_against_plan
+        plan = self._render_iam_plan("unrealized-linux")
+        sources = (PolicySource("control-library", self.root / "shared"),
+                   PolicySource("verification-policy", self.root / "selection"),
+                   PolicySource("environment-private", self.root / "iam/policy"))
+        with tempfile.TemporaryDirectory() as temporary:
+            report = evaluate_plan_document(plan, Path(temporary), sources,
+                evaluated_at=datetime(2026, 8, 28, 12, tzinfo=UTC))
+        self.assertIsNone(report["outcome"])
+        self.assertEqual(report["results"], [])
+        validate_assessment_results(report)
+        validate_result_against_plan(report, plan)
+        account = account_operation(plan, [report], report["evaluated_at"], assessed_plans=[plan])
+        self.assertTrue(account["accounting_complete"])
+        self.assertFalse(account["all_passed"])
+        self.assertTrue(account["members"][0]["implementation_gap"])
+        for forged in ("pass", "fail", "unknown", "waived", "not_applicable"):
+            corrupted = copy.deepcopy(report)
+            corrupted["requirement_assessments"][0]["status"] = forged
+            corrupted["id"] = artifact_digest(corrupted)
+            with self.assertRaises(ArtifactValidationError):
+                validate_assessment_results(corrupted)
 
 
 if __name__ == "__main__":

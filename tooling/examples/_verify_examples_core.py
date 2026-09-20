@@ -1040,11 +1040,13 @@ class ExampleRunner:
         )
         self.domain(
             "requirements.realization-roll-up",
-            set(iam_requirement) == {"requirement", "status", "reason"}
+            set(iam_requirement) == {"requirement", "status", "reason", "implementation_gap"}
+            and not iam_requirement["implementation_gap"]
+            and not iam_document["requirement_baseline_assessments"][0]["implementation_gap"]
             and Counter(result["status"] for result in iam_document["results"])
             == {"pass": 3, "fail": 1}
             and set(iam_document["requirement_baseline_assessments"][0])
-            == {"baseline", "status", "reason"},
+            == {"baseline", "status", "reason", "implementation_gap"},
         )
 
         rollout_results = self.root / "linux-hardening-rollout/results"

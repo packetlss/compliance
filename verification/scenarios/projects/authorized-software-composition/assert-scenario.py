@@ -107,6 +107,9 @@ def run(root):
             assert check["parameters"] == {"ecosystem": "linux-native", "allowed": allowed}
             assert check["evidence"] == [{"id": "observation", "type": "linux.packages/v1", "max_age": "86400s"}]
             requirement, = plan["requirements"]
+            assert len(report["requirement_assessments"]) == 1
+            assert [row["baseline"] for row in report["requirement_baseline_assessments"]] == ["company.authorized-software-base@1"]
+            assert not any(row["implementation_gap"] for row in report["requirement_assessments"])
             state = requirement["parameter_facts"]["states"]["allowed_software"]
             assert state["value"] == allowed
             assert state["composition"]["kind"] == "additive-set"

@@ -380,6 +380,21 @@ class FrameworkDeclarationTests(unittest.TestCase):
                     waiver_text,
                 )
 
+        # A retained implementation gap is not assessed FAIL/UNKNOWN and supplies
+        # no passing support. Framework's existing not-established meaning survives.
+        gap_reports = copy.deepcopy(reports)
+        gap_reports[0]["requirement_assessments"][0].update(
+            status=None, implementation_gap=True, reason="No applicable realization exists.")
+        gap_reports[0]["results"] = []
+        gap_plans = copy.deepcopy(plans)
+        gap_plans[0]["requirements"][0]["technical_instance_ids"] = []
+        gap_explanation = build_explanation(item, historical, gap_plans, gap_reports)
+        self.assertEqual(gap_explanation["state"], "not_established")
+        gap_support = gap_explanation["obligations"][0]["support"][0]["subject_support"][0]
+        self.assertIsNone(gap_support["outcomes"][0]["status"])
+        self.assertTrue(gap_support["outcomes"][0]["implementation_gap"])
+        self.assertIn("Objective implementation example.objective@1: GAP", render_explanation(gap_explanation))
+
     def test_missing_assessed_history_is_attributable_and_not_established(self):
         item = declaration()
         item["spec"]["obligations"][0]["basis"] = {

@@ -715,15 +715,11 @@
                       "additionalProperties": false,
                       "required": [
                         "reference",
-                        "required",
                         "external_refs"
                       ],
                       "properties": {
                         "reference": {
                           "$ref": "#/$defs/reference"
-                        },
-                        "required": {
-                          "type": "boolean"
                         },
                         "external_refs": {
                           "$ref": "#/$defs/externalRefs"
@@ -1120,8 +1116,7 @@
       "type": "object",
       "required": [
         "requirement",
-        "digest",
-        "required"
+        "digest"
       ],
       "additionalProperties": false,
       "properties": {
@@ -1130,9 +1125,6 @@
         },
         "digest": {
           "$ref": "#/$defs/digest"
-        },
-        "required": {
-          "type": "boolean"
         }
       }
     },
@@ -1337,12 +1329,10 @@
         "statement",
         "external_refs",
         "policy_sources",
-        "required",
-        "adoption",
-        "satisfaction",
         "technical_instance_ids",
         "provenance",
-        "parameter_facts"
+        "parameter_facts",
+        "implementation_state"
       ],
       "additionalProperties": false,
       "properties": {
@@ -1371,28 +1361,8 @@
             "$ref": "#/$defs/policyLocator"
           }
         },
-        "required": {
-          "type": "boolean"
-        },
         "adoption": {
           "$ref": "#/$defs/adoption"
-        },
-        "satisfaction": {
-          "type": "object",
-          "required": [
-            "allOf"
-          ],
-          "additionalProperties": false,
-          "properties": {
-            "allOf": {
-              "type": "array",
-              "uniqueItems": true,
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            }
-          }
         },
         "technical_instance_ids": {
           "type": "array",
@@ -1415,6 +1385,14 @@
         },
         "parameter_facts": {
           "type": "object"
+        },
+        "implementation_state": {
+          "enum": [
+            "no_realization",
+            "not_implemented",
+            "not_applicable",
+            "implemented"
+          ]
         }
       }
     },

@@ -17,7 +17,7 @@ not supply active scope; use current GitHub implementation contracts for that.
 - [ADR 0010 — Required evidence, attributable errors, and assessment refusal](0010-required-evidence-status-and-assessment-refusal.md)
 - [ADR 0011 — Separate historical assessment outcomes from operational evidence timeliness](0011-historical-assessment-and-operational-evidence-timeliness.md)
 - [ADR 0012 — Explicit policy-parameter resolution and policy-owned evidence freshness](0012-explicit-policy-parameter-resolution.md) — parameter ownership/representation partially superseded by ADR 0024; runtime cutover pending.
-- [ADR 0016 — Closed-world company policy assessment](0016-closed-world-policy-assessment.md) — supersedes ADRs 0013–0015; bounded closed-world assessment. Implementation-absence representation partially superseded by ADR 0024; runtime cutover pending.
+- [ADR 0016 — Closed-world company policy assessment](0016-closed-world-policy-assessment.md) — supersedes ADRs 0013–0015; bounded closed-world assessment. Implementation-absence representation superseded by ADR 0024 Tranche A, implemented under #199.
 - [ADR 0017 — Author policy and technical-check meaning on canonical source objects](0017-source-authored-policy-and-check-meaning.md)
 - [ADR 0018 — Retain minimal durable assessment explanation facts](0018-durable-assessment-explanation-facts.md)
 - [ADR 0019 — Typed identifier namespaces and schema URI ownership](0019-typed-identifier-namespaces-and-schema-uri-ownership.md)
@@ -25,7 +25,7 @@ not supply active scope; use current GitHub implementation contracts for that.
 - [ADR 0021 — Project-governed framework obligation declarations and bounded satisfaction](0021-project-governed-framework-obligation-declarations.md) — framework governance and satisfaction; its external-judgment category is superseded by ADR 0022.
 - [ADR 0022 — Criterion ownership is the first assessment admission gate](0022-criterion-ownership-and-external-judgment-retirement.md) — criterion ownership; current runtime excludes external-judgment and conclusion-producing assertion families.
 - [ADR 0023 — Freeze foundational semantic responsibility boundaries](0023-foundational-semantic-responsibility-boundaries.md) — freezes foundational semantic responsibilities only; representations remain experimental.
-- [ADR 0024 — Separate Objective assurance from governed parameter policy](0024-objective-assurance-and-parameter-policy.md) — accepted design under [#192](https://github.com/packetlss/compliance/issues/192), not yet implemented. Partially supersedes ADRs 0012 and 0016 while preserving every ADR 0023 frozen invariant; separates implementation gaps from Assessment outcomes and explicitly assigned ParameterPolicy from Objective grouping.
+- [ADR 0024 — Separate Objective assurance from governed parameter policy](0024-objective-assurance-and-parameter-policy.md) — accepted design under [#192](https://github.com/packetlss/compliance/issues/192); Tranche A implemented under #199, Tranche B pending. Partially supersedes ADRs 0012 and 0016 while preserving every ADR 0023 frozen invariant; separates implementation gaps from Assessment outcomes and explicitly assigned ParameterPolicy from Objective grouping.
 
 ## Superseded decisions
 

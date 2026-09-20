@@ -8,7 +8,7 @@
   "spec": {
     "based_on": {
       "realization": "company.linux.central-role-access@1",
-      "digest": "sha256:7d684322c0c6d86255c806c34b11efbbfb72aebe12a1a52f4b3e09c213a59fdc"
+      "digest": "sha256:5d57cbc4381d9375637d6ccad89a3859fa98b178204f3185e0cedd8170f68505"
     },
     "requirement": {
       "requirement": "company.iam.role-based-access@1",
@@ -90,15 +90,6 @@
         }
       }
     ],
-    "satisfaction": {
-      "allOf": [
-        "restricted.linux.rbac.sssd-installed",
-        "restricted.linux.rbac.sssd-domain-configured",
-        "restricted.linux.rbac.ssh-central-group-required",
-        "restricted.linux.rbac.unmanaged-local-login-absent",
-        "restricted.linux.rbac.company-iam-integration"
-      ]
-    },
     "parameter_links": [
       {
         "id": "restricted.linux.rbac.sssd-installed.freshness",

@@ -141,7 +141,7 @@ component contracts below define local details without creating compatibility pr
 | Authored policy/check meaning | Required baseline titles and Control title/purpose are identity-bearing authored meaning, frozen into plans for offline interpretation and never executable inputs. ADR 0017. |
 | Assessment explanation | Result-owned unsuccessful dependency dispositions and safe criterion-error codes; exact dependency joins to plan-owned meaning. No copied policy/check prose or combined explanation identity. ADR 0018. |
 | Inventory and Evidence producers | Subject identity/labels supply governed facts; attributes remain adapter-specific. Typed Evidence uses the seven-field envelope and descriptive observation units. Schema-permitted extensions remain preserved and identity-bearing, but undeclared facts cannot become criterion inputs. [Producer interface](../tooling/docs/producer-interface.md), [policy model](../tooling/docs/policy-model.md). |
-| Optional Requirement/Realization assurance | Exactly-one applicable realization, adoption, `based_on`, typed parameter links, complete `satisfaction.allOf` and current roll-up representation remain experimental. No core realization classification enum; confidentiality is a source/acquisition/access/deployment boundary. [Control realization](../tooling/docs/control-realization.md). |
+| Optional Requirement/Realization assurance | Exactly-one applicable realization, adoption, `based_on`, typed parameter links, complete required Check membership, distinct implementation gaps and evidence-derived roll-up remain experimental. No core realization classification enum; confidentiality is a source/acquisition/access/deployment boundary. [Control realization](../tooling/docs/control-realization.md). |
 | Frozen operation representation | Embedded plan operation, `member_plan_digest`, selector-sensitive `operation_id`, operation-bound plan IDs and exact slot accounting. Complete accounting is separate from success; results reference their exact plan. ADR 0016 and [operation accounting](../tooling/docs/operation-accounting.md). |
 | Framework declaration and satisfaction | Separate durable governance ledger with four basis categories and ephemeral `satisfied` / `not_satisfied` / `not_established` interpretation. Exact declaration, frozen scope anchor and required retained support; no declaration content in ordinary plans/results. ADRs 0021/0022 and [CLI](../tooling/docs/cli.md). |
 | Operator/read responses | Purpose-specific Inventory, Coverage, Assessment, mappings, Framework and Policy Diff JSON; derived and non-persisted, not artifact families or assessment inputs. [CLI](../tooling/docs/cli.md). |
@@ -162,10 +162,9 @@ names do not create aliases for retired vocabulary or compatibility commitments.
 ## Objective assurance and ParameterPolicy successor
 
 [ADR 0024](adr/0024-objective-assurance-and-parameter-policy.md) under
-[#192](https://github.com/packetlss/compliance/issues/192) is **Accepted design,
-not yet implemented**. The implemented ADR 0012/0016 representations in the
-current-contract table remain active until coordinated cutover; they are experimental migration inputs,
-not successor authority.
+[#192](https://github.com/packetlss/compliance/issues/192) has **Tranche A implemented
+under #199; Tranche B pending**. The ADR 0012 parameter representation remains active
+until Tranche B; it is an experimental migration input, not successor authority.
 
 The successor retains optional Objective assurance, exact zero/one/multiple
 realization resolution and conservative implemented Check outcomes. It removes
@@ -189,8 +188,8 @@ identities. No schema/wire/algorithm freeze, alias, dual reader or historical
 conversion follows. Historical artifacts keep their original tooling and meaning.
 
 Follow-on A (assurance simplification) and B (parameter ownership/representation)
-require coordinated schema/source/runtime/consumer/test contracts and valid accepted
-checkpoints; this documentation tranche implements neither. Exact assignment
+require coordinated valid checkpoints. Tranche A now implements assurance
+simplification; Tranche B parameter ownership and representation remains pending. Exact assignment
 relationships and semantic rules are settled in ADR 0024; wire layout and field
 spellings remain experimental.
 

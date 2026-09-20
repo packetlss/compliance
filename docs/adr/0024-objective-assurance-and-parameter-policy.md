@@ -1,6 +1,6 @@
 # ADR 0024: Separate Objective assurance from governed parameter policy
 
-- **Status:** Accepted design, not yet implemented; experimental representation
+- **Status:** Accepted; Tranche A implemented under #199, Tranche B pending; experimental representation
 - **Date:** 2026-09-20
 - **Contract:** [#192](https://github.com/packetlss/compliance/issues/192)
 - **Supersedes in part:** [ADR 0012](0012-explicit-policy-parameter-resolution.md), parameter ownership and redundant frozen representation; [ADR 0016](0016-closed-world-policy-assessment.md), fabricated missing-realization adoption and failing-Requirement representation

@@ -99,7 +99,6 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
                 "requirements": [{
                     "requirement": requirement["reference"],
                     "digest": requirement["digest"],
-                    "required": True,
                 }],
                 "parameter_operations": [operation],
             },
@@ -403,8 +402,8 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             ),
             "realization satisfaction": lambda plan: plan["requirements"][0][
                 "parameter_facts"
-            ]["realization"]["spec"]["satisfaction"].update(
-                allOf=["bad_instance"]
+            ]["realization"]["spec"].update(
+                satisfaction={"allOf": ["bad_instance"]}
             ),
             "realization check": lambda plan: plan["requirements"][0][
                 "parameter_facts"
@@ -820,7 +819,7 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
             ),
             "requirement membership required flag": lambda: iam_plan(
                 lambda plan: plan["requirements"][0].update(
-                    required=not plan["requirements"][0]["required"]
+                    required=True
                 )
             ),
             "invalid evidence TYPE copy": lambda: invalid_parameterized_plan(
@@ -917,7 +916,6 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         requirement_pin = {
             "requirement": requirement["reference"],
             "digest": requirement["digest"],
-            "required": True,
         }
         base_document = {
             "metadata": {"id": "test.baseline", "revision": 1},
@@ -1438,7 +1436,6 @@ class AssessmentArtifactValidationTests(unittest.TestCase):
         requirement = plan['requirements'][0]
         self.assertGreater(len(requirement['technical_instance_ids']), 1)
         requirement['technical_instance_ids'] = requirement['technical_instance_ids'][:1]
-        requirement['satisfaction']['allOf'] = requirement['technical_instance_ids'][:]
         plan['id'] = artifact_digest(plan)
         with self.assertRaisesRegex(ArtifactValidationError, 'frozen realization satisfaction'):
             validate_assessment_plan(plan)

@@ -314,8 +314,7 @@
       "type": "object",
       "required": [
         "requirement",
-        "digest",
-        "required"
+        "digest"
       ],
       "additionalProperties": false,
       "properties": {
@@ -326,9 +325,6 @@
         },
         "digest": {
           "$ref": "#/$defs/digest"
-        },
-        "required": {
-          "const": true
         }
       }
     }

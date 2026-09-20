@@ -1513,16 +1513,6 @@ def load_requirement_catalogs(
                 "realization": realization_reference,
                 "instance_ids": duplicates,
             })
-        required_ids = spec.get("satisfaction", {}).get("allOf", [])
-        if set(check_ids) != set(required_ids):
-            errors.append({
-                "type": "incomplete-realization-satisfaction",
-                "source": realization["_source"],
-                "realization": realization_reference,
-                "undefined": sorted(set(required_ids) - set(check_ids)),
-                "unreferenced": sorted(set(check_ids) - set(required_ids)),
-            })
-
         for index, instance in enumerate(checks):
             implementation = instance["implementation"]
             definition = (controls or {}).get(implementation)
@@ -2131,16 +2121,12 @@ def render_plan(
                     if matching_realizations:
                         realization_reference, realization = matching_realizations[0]
                         adoption = copy.deepcopy(realization["spec"]["adoption"])
-                        satisfaction = copy.deepcopy(
-                            realization["spec"].get("satisfaction", {"allOf": []})
-                        )
+                        implementation_state = adoption["status"]
+                        technical_ids = [check["instance_id"] for check in realization["spec"].get("checks", [])]
                     else:
-                        adoption = {
-                            "status": "not_implemented",
-                            "method": "none",
-                            "owner": "unassigned",
-                        }
-                        satisfaction = {"allOf": []}
+                        adoption = None
+                        implementation_state = "no_realization"
+                        technical_ids = []
 
                     requirement_candidate: JsonObject = {
                         "reference": requirement_reference,
@@ -2149,10 +2135,9 @@ def render_plan(
                         "statement": requirement["spec"]["statement"],
                         "external_refs": requirement["spec"].get("external_refs", []),
                         "policy_sources": requirement.get("_sources", []),
-                        "required": pin["required"],
-                        "adoption": adoption,
-                        "satisfaction": satisfaction,
-                        "technical_instance_ids": satisfaction["allOf"],
+                        "implementation_state": implementation_state,
+                        **({"adoption": adoption} if adoption is not None else {}),
+                        "technical_instance_ids": technical_ids,
                         "provenance": [baseline_provenance],
                         "parameter_facts": {"document": pp.document(requirement), "states": parameter_states[requirement_reference]},
                     }
@@ -2183,9 +2168,8 @@ def render_plan(
                     else:
                         comparable = (
                             "digest",
-                            "required",
+                            "implementation_state",
                             "adoption",
-                            "satisfaction",
                             "technical_instance_ids",
                             "realization",
                             "parameter_facts",

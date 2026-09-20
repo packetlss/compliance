@@ -251,13 +251,15 @@ def validate_assessment_plan(
                 f"/requirements/{index}/technical_instance_ids: controls are missing: "
                 + ", ".join(missing)
             )
-        all_of = requirement["satisfaction"]["allOf"]
-        if all_of != technical_ids:
-            errors.append(
-                f"/requirements/{index}: satisfaction.allOf and "
-                "technical_instance_ids must be identical"
-            )
-        adoption_status = requirement["adoption"]["status"]
+        implementation_state = requirement["implementation_state"]
+        adoption_status = requirement.get("adoption", {}).get("status")
+        if implementation_state == "no_realization":
+            if "adoption" in requirement or "realization" in requirement or technical_ids:
+                errors.append(f"/requirements/{index}: zero-match must not fabricate adoption or checks")
+        elif adoption_status != implementation_state or "realization" not in requirement:
+            errors.append(f"/requirements/{index}: implementation state must match selected adoption")
+        if implementation_state != "implemented" and technical_ids:
+            errors.append(f"/requirements/{index}: non-implemented Objective must have no checks")
         if adoption_status == "implemented":
             if not technical_ids:
                 errors.append(
@@ -268,10 +270,6 @@ def validate_assessment_plan(
                 errors.append(
                     f"/requirements/{index}/realization: required for implemented adoption"
                 )
-        elif adoption_status == "not_implemented" and "realization" in requirement:
-            errors.append(
-                f"/requirements/{index}/realization: not_implemented must not select a realization"
-            )
 
     if errors:
         _raise("assessment plan", errors, source)
@@ -282,7 +280,7 @@ def validate_assessment_plan(
         _raise("assessment plan", [str(error)], source)
 
 
-def result_outcome(document: JsonObject) -> str:
+def result_outcome(document: JsonObject) -> str | None:
     """Derive the immutable overall outcome from the recorded outcome sets."""
     items = [
         *document.get("results", []),
@@ -292,7 +290,7 @@ def result_outcome(document: JsonObject) -> str:
     for status in ("fail", "error", "unknown", "waived", "pass", "not_applicable"):
         if any(item.get("status") == status for item in items):
             return status
-    return "no_controls"
+    return None if any(item.get("implementation_gap") for item in items) else "no_controls"
 
 
 def validate_assessment_results(
@@ -305,6 +303,12 @@ def validate_assessment_results(
     _validate_schema(document, assessment_results_schema_path(), "assessment results", source)
     errors: list[str] = []
 
+    for row in document["requirement_assessments"]:
+        if row["implementation_gap"] != (row["status"] is None):
+            errors.append("/requirement_assessments: gaps must have no Assessment outcome")
+    for row in document["requirement_baseline_assessments"]:
+        if row["status"] is None and not row["implementation_gap"]:
+            errors.append("/requirement_baseline_assessments: absent outcome requires an implementation gap")
     result_ids = [item["instance_id"] for item in document["results"]]
     if result_ids != sorted(set(result_ids)):
         errors.append("/results: instance IDs must be unique and canonically ordered")

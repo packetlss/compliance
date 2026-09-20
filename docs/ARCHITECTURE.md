@@ -263,19 +263,19 @@ explanation uses the exact retained plan/result pair and never current re-resolu
 ## Objective assurance and governed parameter policy
 
 [ADR 0024](adr/0024-objective-assurance-and-parameter-policy.md), accepted under
-[#192](https://github.com/packetlss/compliance/issues/192), is **accepted design,
-not yet implemented**. It succeeds ADR 0012's parameter ownership/representation
+[#192](https://github.com/packetlss/compliance/issues/192), has **Tranche A implemented under #199; Tranche B pending**. It succeeds ADR 0012's parameter ownership/representation
 and ADR 0016's implementation-absence reporting while preserving all ADR 0023
 frozen invariants. Current experimental runtime contracts remain documented in
 [realizations](../tooling/docs/control-realization.md) and
 [parameters](../tooling/docs/policy-parameters.md) until coordinated migration.
 
 `ControlRequirement` owns Objective meaning and mappings. `RequirementBaseline`
-remains a non-empty grouping of exact required Objective membership, with no
-constant `required: true`, parameter operations, contributions or parameter-only
-derivation. An implemented `ControlRealization` owns one complete non-empty set
-of unique Checks: every Check is required and evaluated. Remove `satisfaction.allOf`
-and keep one resolved membership relation for materialization, validation and
+groups exact Objective membership without a constant membership flag. At this
+Tranche A checkpoint, active parameter operations, contributions and derivation
+remain until Tranche B cuts over their consumers; contribution-only policy creates
+no assessment row. The accepted successor removes those parameter responsibilities. An implemented `ControlRealization` owns one complete non-empty set
+of unique Checks: every Check is required and evaluated. The runtime removes `satisfaction.allOf`
+and retains one resolved membership relation for materialization, validation and
 roll-up. Selection remains exactly zero/one/multiple with ambiguity failing closed;
 `based_on` remains provenance only.
 
@@ -425,22 +425,19 @@ unresolved required parameters, invalid dependency targets and integrity/tamperi
 fail closed. Required unresolved policy is non-assessable, not evidence `unknown`.
 After valid dependency resolution, missing/stale/invalid/inconclusive evidence is
 ADR 0010 `unknown`, attributable execution failures are `error`, and shared integrity
-preventing trustworthy publication requires refusal. The current experimental
-runtime retains design-time realizations, complete `satisfaction.allOf` recipes,
-conservative roll-up, fail-only waivers and immutable result attribution. A subject
-with no applicable assignment has Coverage `unassigned` and no expected result.
-For an assigned requirement, current zero-match handling synthesizes
-`not_implemented` adoption and a failing requirement; exactly one realization is
-selected and assessed completely; multiple applicable realizations make planning
-invalid. These representation contracts stay active until coordinated ADR 0024
-cutover; absence-as-fail is not the successor meaning of Assessment FAIL.
+preventing trustworthy publication requires refusal. ADR 0024 Tranche A retains
+complete required Check membership, conservative evidence-derived roll-up, fail-only
+waivers and immutable result attribution. No applicable assignment is unassigned
+Coverage and has no expected result. An assigned Objective with zero realizations
+has `no_realization` implementation state and no adoption; a selected authored
+non-implementation retains its declaration. Both are implementation gaps with no
+Assessment outcome. Exactly one implemented realization evaluates every Check;
+multiple applicable realizations make planning invalid. Explicit N/A stays separate.
 
-ADR 0024 replaces fabricated adoption and absence-as-fail with separately
-accountable implementation gaps: zero matches retains the exact resolution basis;
-one selected non-implemented realization retains its authored declaration; one
-implemented realization evaluates every declared required Check. Gaps prevent
-required-policy success without emitting Assessment FAIL or UNKNOWN. Multiple
-matches remain invalid. Evidence never chooses policy or realization alternatives.
+Objective/baseline result rows retain `implementation_gap` separately from nullable
+`status`; gap-only results have null `outcome`. Actual outcomes remain visible in
+mixed operations. Gaps prevent `all_passed`, while exact accounting can be complete.
+Evidence never chooses policy or realization alternatives.
 
 No assignment is unassigned/outside supplied assessment scope, not automatic N/A.
 Existing explicit N/A remains distinct pending separate architecture review. Never

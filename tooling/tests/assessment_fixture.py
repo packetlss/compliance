@@ -76,14 +76,13 @@ def assessment_plan(policy_sources, *, with_requirement=False):
             "statement": "The test condition is satisfied.",
             "external_refs": [],
             "policy_sources": locator,
-            "required": True,
             "adoption": {
                 "status": "implemented",
                 "method": "automated",
                 "owner": "test",
                 "implementation_ref": "test/implementation",
             },
-            "satisfaction": {"allOf": ["test.check"]},
+            "implementation_state": "implemented",
             "technical_instance_ids": ["test.check"],
             "realization": {
                 "reference": "test.realization@1",
@@ -113,8 +112,7 @@ def assessment_plan(policy_sources, *, with_requirement=False):
             "requirements": [{
                 "requirement": "test.requirement@1",
                 "digest": requirement_digest,
-                "required": True,
-            }],
+                }],
         }]
         plan["controls"][0].update({
             "alignment": "realization",
@@ -299,7 +297,7 @@ def freeze_policy_inputs(plan):
             rid, rev = record['realization']['reference'].rsplit('@', 1)
             realization = {'metadata': {'id': rid, 'revision': rev}, 'spec': {
                 'requirement': {'requirement': record['reference'], 'digest': record['digest']},
-                'adoption': copy.deepcopy(record['adoption']), 'satisfaction': copy.deepcopy(record['satisfaction']),
+                'adoption': copy.deepcopy(record['adoption']),
                 'checks': [copy.deepcopy(c['policy_inputs']['instance']) for c in plan['controls'] if c['instance_id'] in record['technical_instance_ids']]}}
             if 'based_on' in record['realization']:
                 realization['spec']['based_on'] = copy.deepcopy(

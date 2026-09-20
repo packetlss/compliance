@@ -54,12 +54,6 @@
           }
         }
       }
-    ],
-    "satisfaction": {
-      "allOf": [
-        "company.saas.administrative-access.sso-enforced",
-        "company.saas.administrative-access.guest-access-disabled"
-      ]
-    }
+    ]
   }
 }

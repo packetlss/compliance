@@ -14,8 +14,7 @@
     "requirements": [
       {
         "requirement": "company.iam.role-based-access@1",
-        "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7",
-        "required": true
+        "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7"
       }
     ],
     "parameter_operations": [

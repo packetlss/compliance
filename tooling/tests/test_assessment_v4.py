@@ -887,6 +887,35 @@ class V4JcsProjectionVectors(unittest.TestCase):
             'sha256:7e1851b5bb0dfb1b1556720984bf8fdb62d7b187aa1f7d39f6f1062724488293',
         )
 
+    def test_gap_result_projection_vector(self):
+        # Fixed ASCII projection independently serialized with sorted compact JSON.
+        # This records absence of Assessment outcome, not a new outcome enum value.
+        from tools.assessment_provenance import result_identity_projection
+        import hashlib
+        document = {
+            "schema": "compliance.example/assessment-results/v4",
+            "digestAlgorithm": "compliance.example/assessment-results-digest/v1alpha1",
+            "plan_id": "sha256:" + "1" * 64, "subject_id": "host/gap",
+            "evaluated_at": "2026-09-20T00:00:00Z", "outcome": None,
+            "provenance": {
+                "evaluationComposition": {"compositionDigestAlgorithm": "compliance.example/composition-digest/v1alpha1", "compositionDigest": "sha256:" + "2" * 64},
+                "evaluator": {"name": "opa", "version": "1.18.2", "executableSha256": "sha256:" + "3" * 64},
+                "evidence": {"setDigestAlgorithm": "compliance.example/evidence-set-digest/v1alpha1", "setDigest": "sha256:" + "4" * 64},
+                "selectedEvidence": [],
+            },
+            "dependency_dispositions": [], "results": [],
+            "requirement_assessments": [{"requirement": "test.objective@1", "status": None,
+                "implementation_gap": True, "reason": "No applicable realization exists."}],
+            "requirement_baseline_assessments": [{"baseline": "test.objectives@1", "status": None,
+                "implementation_gap": True, "reason": "Required objectives have implementation gaps and no Assessment outcome."}],
+        }
+        independent = {key: value for key, value in document.items() if key != "provenance"}
+        independent.update(document["provenance"])
+        expected = "sha256:" + hashlib.sha256(json.dumps(independent, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        self.assertEqual(expected, "sha256:0f98ee7a2e49a4411795f9df7d46aec34bc6834374306f411c86d7258ad6a048")
+        self.assertEqual(result_identity_projection(document), independent)
+        self.assertEqual(artifact_digest(document), expected)
+
     def test_operation_bound_plan_id_vector(self):
         from tools.assessment_provenance import operation_plan_id
         self.assertEqual(

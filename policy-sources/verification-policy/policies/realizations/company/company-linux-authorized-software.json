@@ -35,11 +35,6 @@
         }
       }
     ],
-    "satisfaction": {
-      "allOf": [
-        "company.linux.authorized-software.only-allowed"
-      ]
-    },
     "parameter_links": [
       {
         "id": "allowed-software",

@@ -1,7 +1,7 @@
 # Explicit policy parameters
 
 > **Successor routing:** [ADR 0024](../../docs/adr/0024-objective-assurance-and-parameter-policy.md)
-> is accepted design under #192, not yet implemented. It separates Objective
+> has Tranche A implemented under #199; parameter Tranche B remains pending. It separates Objective
 > implementation gaps from Assessment outcomes, simplifies required Check membership,
 > moves parameter ownership to explicitly assigned ParameterPolicy, supports both
 > Check-authoring consumption paths and reconstructs frozen summaries. This document
@@ -233,7 +233,7 @@ record freezes its semantic identity, exact owner document/digest/source identit
 canonical authored member set, and every applicability path. A contribution-only
 selected baseline remains present in `resolved_requirement_baselines` with an empty
 `requirements` array and empty resolved state; it does not create a target
-requirement record.
+requirement record or any Objective/baseline assessment row.
 
 Coverage owns an ephemeral deterministic projection of **current** effective values
 and derivation through the existing planner/resolver. This does not freeze command

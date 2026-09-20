@@ -192,6 +192,7 @@ def _asset_status(
         "groups": groups,
         "expected_result_slot": _slot(member),
         "historical_outcome": member.get("historical_outcome"),
+        "implementation_gap": member["implementation_gap"],
         "historical_interpretation": member["historical_interpretation"],
         "current_qualification": _qualification(member, query_instant),
         "external_refusal": copy.deepcopy(external_refusal),
@@ -280,6 +281,7 @@ def build_run_view(
                 "asset_type": member["subject"]["type"],
                 "expected_result_slot": _slot(member),
                 "historical_outcome": member["state"] if member["result_present"] else None,
+                "implementation_gap": member["implementation_gap"],
             }
             for member in account["members"]
         ],
@@ -310,7 +312,7 @@ def render_run_view(view: JsonObject) -> str:
             f'all_passed={str(summary["all_passed"]).lower()}'
         ),
         "",
-        "ASSET  EXPECTATION  RESULT SLOT  HISTORICAL OUTCOME",
+        "ASSET  EXPECTATION  RESULT SLOT  HISTORICAL OUTCOME  IMPLEMENTATION GAP",
     ]
     for asset in view["assets"]:
         slot = asset["expected_result_slot"]
@@ -319,7 +321,7 @@ def render_run_view(view: JsonObject) -> str:
             "FILLED" if slot["present"] else "MISSING" if slot["required"] else "NOT REQUIRED"
         )
         outcome = (asset["historical_outcome"] or "-").replace("_", " ").upper()
-        lines.append(f'{asset["asset_id"]}  {expectation}  {presence}  {outcome}')
+        lines.append(f'{asset["asset_id"]}  {expectation}  {presence}  {outcome}  {"GAP" if asset["implementation_gap"] else "-"}')
     return "\n".join(lines)
 
 
@@ -405,7 +407,7 @@ def _group_status(
             "missing_result_slots": sum(not m["result_present"] for m in required),
             "accounting_complete": group_complete,
             "all_passed": bool(required) and group_interpretable and all(
-                m["historical_outcome"] == "pass" for m in required
+                m["historical_outcome"] == "pass" and not m["implementation_gap"] for m in required
             ) and len(required) == len(frozen),
         },
         "visible_assets": len(visible),
@@ -572,7 +574,7 @@ def render_status_view(view: JsonObject) -> str:
             )
         return "\n".join(lines)
     lines.append(
-        "ASSET  ACCOUNTING DISPOSITION  RESULT SLOT  HISTORICAL OUTCOME  PLAN ALIGNMENT  "
+        "ASSET  ACCOUNTING DISPOSITION  RESULT SLOT  HISTORICAL OUTCOME  IMPLEMENTATION GAP  PLAN ALIGNMENT  "
         "CURRENT EVIDENCE  CURRENT WAIVERS  EXTERNAL REFUSAL"
     )
     for asset in view["assets"]:
@@ -586,6 +588,7 @@ def render_status_view(view: JsonObject) -> str:
             f'{asset["asset_id"]}  '
             f'{slot["accounting_disposition"].replace("_", " ").upper()}  '
             f'{presence}  {outcome}  '
+            f'{"GAP" if asset["implementation_gap"] else "-"}  '
             f'{current["plan_alignment"].replace("_", " ").upper()}  '
             f'{current["selected_evidence"]["status"].replace("_", " ").upper()}  '
             f'{_asset_waivers_text(current)}  '
@@ -678,12 +681,17 @@ def build_mappings_view(
             for item in member["policy"][policy_key]:
                 identity = item["reference" if level == "objective" else "instance_id"]
                 outcome = _specific_outcome(member, report, result_key, identity_key, identity)
+                implementation_gap = False
                 if level == "objective":
                     exact_item = plan_requirements.get(identity)
+                    recorded = next((row for row in (report or {}).get("requirement_assessments", [])
+                                     if row["requirement"] == identity), None)
+                    implementation_gap = (
+                        exact_item["implementation_state"] in {"no_realization", "not_implemented"}
+                        if exact_item else recorded["implementation_gap"] if recorded else None
+                    )
                     policy_alignment = (
-                        "realized"
-                        if exact_item and exact_item.get("realization")
-                        else "not_implemented"
+                        exact_item["implementation_state"]
                         if exact_item
                         else "unavailable"
                     )
@@ -710,6 +718,7 @@ def build_mappings_view(
                         "policy_alignment": policy_alignment,
                         "expected_result_slot": _slot(member),
                         "historical_outcome": outcome,
+                        "implementation_gap": implementation_gap,
                         "historical_interpretation": member["historical_interpretation"],
                         "current_qualification": {
                             "plan_alignment": member["plan_alignment"],
@@ -769,7 +778,7 @@ def render_mappings_view(view: JsonObject) -> str:
         lines.append(filter_line)
     lines.extend([
         "",
-        "MAPPING  LEVEL  ASSET  POLICY OBJECT  POLICY TITLE  HISTORICAL OUTCOME  PLAN ALIGNMENT  POLICY ALIGNMENT",
+        "MAPPING  LEVEL  ASSET  POLICY OBJECT  POLICY TITLE  HISTORICAL OUTCOME  IMPLEMENTATION GAP  PLAN ALIGNMENT  POLICY ALIGNMENT",
     ])
     for mapping in view["mappings"]:
         outcome = (mapping["historical_outcome"] or "-").replace("_", " ").upper()
@@ -777,6 +786,7 @@ def render_mappings_view(view: JsonObject) -> str:
             f'{mapping["external_ref"]}  {mapping["mapping_level"].upper()}  '
             f'{mapping["asset_id"]}  {mapping["policy_object"]}  '
             f'{mapping["policy_object_title"] or "-"}  {outcome}  '
+            f'{"GAP" if mapping["implementation_gap"] else "-"}  '
             f'{mapping["current_qualification"]["plan_alignment"].replace("_", " ").upper()}  '
             f'{mapping["policy_alignment"].replace("_", " ").upper()}'
         )
@@ -1019,6 +1029,7 @@ def build_explanation_view(
         },
         "expected_result_slot": slot,
         "historical_outcome": result["outcome"] if result else None,
+        "implementation_gap": member["implementation_gap"],
         "current_qualification": _qualification(member, account["query_instant"]),
         "external_refusal": copy.deepcopy(external_refusal),
     }
@@ -1165,7 +1176,8 @@ def _objectives(plan: JsonObject, result: JsonObject | None) -> list[JsonObject]
             "title": requirement["title"],
             "statement": requirement["statement"],
             "reference": requirement["reference"],
-            "adoption": requirement["adoption"]["status"],
+            "adoption": requirement.get("adoption", {}).get("status"),
+            "implementation_state": requirement["implementation_state"],
             "realization": (
                 requirement["realization"]["reference"]
                 if requirement.get("realization")
@@ -1219,6 +1231,7 @@ def render_explanation_view(view: JsonObject) -> str:
     lines = [
         f'Asset: {view["asset"]["id"]}',
         f'Historical outcome: {outcome}',
+        f'Implementation gap: {view["implementation_gap"]}',
         "Exact result slot: " + (
             "filled" if slot["present"] else "missing" if slot["required"] else "not required"
         ),
@@ -1249,7 +1262,7 @@ def render_explanation_view(view: JsonObject) -> str:
         for item in view["raw_result_facts"]:
             lines.append(
                 f'  Check identity {item["instance_id"]}: '
-                f'{item["historical_outcome"].upper()} — {item.get("reason") or ""}'
+                f'{(item["historical_outcome"] or "-").upper()} — {item.get("reason") or ""}'
             )
             for disposition in item["dependency_dispositions"]:
                 lines.append(
@@ -1288,7 +1301,7 @@ def render_explanation_view(view: JsonObject) -> str:
             )
             lines.append(f'    {objective["statement"]}')
             lines.append(
-                f'    Frozen adoption: {objective["adoption"].replace("_", " ")}'
+                f'    Implementation: {objective["implementation_state"].replace("_", " ")}'
             )
             if objective["historical_reason"]:
                 lines.append(f'    Historical reason: {objective["historical_reason"]}')
