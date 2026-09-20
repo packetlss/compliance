@@ -1,6 +1,20 @@
-# Policy and Baseline Model
+# Policy and Baseline Model (superseded)
 
-Status: **Current experimental policy and assessment contract**
+Status: **Superseded historical design note; not a current contract**
+
+This document is retained only to explain the prototype model from before ADRs
+0023 and 0024. Its `allOf` roll-up, baseline/requirement-owned parameter model,
+resource inventory, and forward-looking implementation statements are not active
+authority and must not be used for current authoring or artifact interpretation.
+
+Current authority is the repository [system architecture](../../docs/ARCHITECTURE.md)
+and the focused tooling contracts for [artifact provenance](artifact-provenance.md),
+[inventory and assignments](inventory-and-assignments.md),
+[explicit ParameterPolicy](policy-parameters.md), and
+[Objective/Realization assurance](control-realization.md). Historical sections below
+are intentionally not rewritten into a misleading hybrid contract.
+
+---
 
 This document describes how policy as code can represent host configuration,
 software baselines, SaaS settings, and other state expressible as JSON without

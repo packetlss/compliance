@@ -404,9 +404,10 @@ does not yet:
 - provide a generic process/GRC/activity-history evidence abstraction.
 
 Complete embedded checks and non-inheriting `based_on` provenance are the
-accepted initial authoring model. ADR 0012 promotes explicit parameter binding
-and consumption for later implementation in #73; realization templates and
-automatic realization inheritance remain deferred.
+accepted authoring model. ADR 0024 Tranche B now places declarations, binding,
+tailoring, and contributions on explicitly applicable `ParameterPolicy` resources;
+realization-owned symbolic links consume their resolved values for Objective-backed
+Checks. Realization templates and automatic realization inheritance remain deferred.
 
 The stable Linux hardening rollout scenario in
 `verification/scenarios/projects/linux-hardening-rollout` uses only

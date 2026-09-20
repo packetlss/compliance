@@ -100,7 +100,7 @@ adds no universal report model, public Python API, service or latest-state store
 | Concern | Local contract |
 | --- | --- |
 | Commands, projections and external read consumption | [CLI](cli.md) |
-| Policy, Controls, evidence and assessment | [Policy model](policy-model.md) |
+| Policy, Controls, evidence and assessment | [Artifact provenance](artifact-provenance.md), [policy parameters](policy-parameters.md), [control realization](control-realization.md) |
 | Inventory, assignments and current Coverage | [Inventory and assignments](inventory-and-assignments.md) |
 | Exact operation scope and accounting | [Operation accounting](operation-accounting.md) |
 | Plan/result ownership, validation and history | [Artifact provenance](artifact-provenance.md) |

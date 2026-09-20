@@ -5,8 +5,9 @@ An evolving architecture for a compliance platform built around
 
 The current design discussion lives in
 [`docs/architecture.md`](docs/architecture.md). The policy repository,
-evidence, control, and baseline design is developed further in
-[`docs/policy-model.md`](docs/policy-model.md). The model for deriving company
+evidence, control, frozen-artifact, and parameter contracts are detailed in
+[`docs/artifact-provenance.md`](docs/artifact-provenance.md) and
+[`docs/policy-parameters.md`](docs/policy-parameters.md). The model for deriving company
 policy from external benchmarks is in
 [`docs/baseline-inheritance.md`](docs/baseline-inheritance.md). Inventory
 grouping and group-to-baseline assignment are documented in
@@ -53,7 +54,7 @@ Consequently, `Objectives: 0` is a valid and expected plan summary for a
 project that assigns only technical baselines. It means no high-level
 requirements were assigned; it does not mean the technical checks are missing
 or ineffective. See
-[`docs/policy-model.md`](docs/policy-model.md#two-policy-paths-one-assessment-plan)
+[`docs/control-realization.md`](docs/control-realization.md)
 for the selection rules and reporting semantics.
 
 Runnable end-to-end examples are available for:
