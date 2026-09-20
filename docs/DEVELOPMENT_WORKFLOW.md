@@ -189,7 +189,33 @@ CI may cancel a superseded run for an older head of the same PR. It must not pat
 
 ## Review and definition of done
 
-Review the current PR head, not a stale earlier revision. The candidate must contain the freshly resolved current `main` head; advancing `main` requires candidate integration and new exact-head evidence. `scripts/dev readiness` checks the compact PR review record and required contexts but never posts, mutates, or merges. A PR is complete only when its implementation contract is satisfied, required local/CI validation is recorded and green, fresh-context review is recorded, implementation findings are captured, generated/temporary state is clean, and no unresolved architectural finding remains.
+Review the current PR head, not a stale earlier revision. Independent review and
+the four stable destination contexts are PR-head evidence: they bind to the exact
+authored head and a head change invalidates all of them. A base-only advance does
+not invalidate that evidence.
+
+Before merge, an unchanged PR head that does not already contain its current base
+also needs successful `integration-current-main` evidence attached to that head.
+The trusted on-demand workflow constructs a disposable local merge of the exact
+current base and exact PR head, runs the four validation responsibilities on that
+combined candidate, and publishes a commit status whose description is exactly
+`base=<40-hex-current-base-sha>`. It never pushes the synthetic commit or updates
+the PR branch. Run `scripts/dev integration` explicitly to request it; `scripts/dev
+readiness` is read-only and only reports whether the review, head contexts, and
+when needed the exact head/base integration status are current.
+
+Synthetic integration is mechanical compatibility evidence, not architectural
+approval. Examine the intervening base delta and return to implementation or
+architecture when it changes semantic or architecture authority, trust/release
+boundaries, public or cross-component contracts, explicit dependencies, accepted
+scope/invariants, or exposes a material semantic conflict. Independent parallel
+work may otherwise remain on its reviewed head until human squash merge.
+
+A PR is complete only when its implementation contract is satisfied, required
+local/CI validation is recorded and green, fresh-context review is recorded,
+current-base integration evidence is present when required, implementation
+findings are captured, generated/temporary state is clean, and no unresolved
+architectural finding remains.
 
 Historical preservation is distinct from current compatibility. Do not keep active complexity solely because an unfrozen historical artifact exists.
 

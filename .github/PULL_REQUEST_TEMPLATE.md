@@ -35,4 +35,6 @@ None.
 
 ## Integration or migration impact
 
-None.
+- Current integration base:
+- Evidence: <!-- Head contains base, or integration-current-main status on this exact head/base -->
+- Base-delta interaction finding: <!-- None, or describe return to implementation/architecture -->
