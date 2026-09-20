@@ -28,6 +28,7 @@ require_file tooling/AGENTS.md
 require_file tooling/pyproject.toml
 require_file tooling/uv.lock
 require_file scripts/dev
+require_file scripts/validate-current-main-integration.sh
 require_file toolchain/dev.py
 require_file toolchain/bin/sha256sum
 require_file tests/toolchain/test_dev.py
@@ -205,12 +206,12 @@ if [[ -d .github/workflows ]]; then
   fi
 fi
 
-# The trusted integration resolver/publisher uses the repository-scoped workflow
-# token solely to publish its one status context. PR-controlled candidate jobs
-# are read-only and are checked by the focused workflow contract tests instead.
-active_validation_paths=(.github/workflows/destination-validation.yml scripts verification/scenarios/scripts)
-if grep -R --exclude='validate-repository.sh' -nE \
-  'COMPLIANCE_CI_|PERSONAL_ACCESS_TOKEN|GH_PAT|GH_TOKEN|actions/create-github-app-token|packetlss-labs/compliance-' \
+# The trusted integration resolver/publisher has one narrow workflow-token
+# exception. The dedicated validator below proves that candidate jobs cannot
+# receive it and that the status writers do not execute candidate code.
+active_validation_paths=(.github/workflows scripts verification/scenarios/scripts)
+if grep -R --exclude='validate-repository.sh' --exclude='validate-current-main-integration.sh' -nE \
+  'COMPLIANCE_CI_|PERSONAL_ACCESS_TOKEN|GH_PAT|actions/create-github-app-token|packetlss-labs/compliance-' \
   "${active_validation_paths[@]}"; then
   fail "active validation must not retain historical sibling acquisition or credentials"
 fi
@@ -221,12 +222,16 @@ if grep -R --exclude='validate-repository.sh' -nE \
 fi
 
 integration_workflow=.github/workflows/current-main-integration.yml
-if grep -n 'pull_request_target' "$integration_workflow"; then
-  fail "current-base integration must not use pull_request_target"
+other_workflows=()
+while IFS= read -r workflow; do
+  [[ "$workflow" == "$integration_workflow" ]] || other_workflows+=("$workflow")
+done < <(find .github/workflows -type f -print)
+if ((${#other_workflows[@]})) && grep -nE \
+  'GH_TOKEN|GITHUB_TOKEN|github\.token|secrets\.|GH_PAT|PERSONAL_ACCESS_TOKEN|APP_TOKEN|actions/create-github-app-token' \
+  "${other_workflows[@]}"; then
+  fail "only the trusted current-base integration resolver/publisher may use a workflow credential"
 fi
-if grep -nE '(^|[[:space:]])git[[:space:]]+push([[:space:]]|$)' "$integration_workflow"; then
-  fail "current-base integration must not push a synthetic candidate"
-fi
+bash scripts/validate-current-main-integration.sh "$integration_workflow"
 for context in component-validation verification-scenarios installed-release-provenance macos-portability; do
   grep -q "name: $context" .github/workflows/destination-validation.yml \
     || fail "required PR-head CI context is missing: $context"
