@@ -20,6 +20,14 @@ job_block() {
   ' "$workflow"
 }
 
+permission_block() {
+  awk '
+    $0 == "    permissions:" { found=1; next }
+    found && $0 ~ /^    [A-Za-z0-9_-]+:/ { exit }
+    found { print }
+  '
+}
+
 require_absent() {
   local expression="$1" message="$2"
   if grep -nE "$expression" "$workflow"; then
@@ -28,33 +36,36 @@ require_absent() {
 }
 
 require_candidate_job() {
-  local name="$1" block writes
+  local name="$1" block permissions
   block="$(job_block "$name")"
   [[ -n "$block" ]] || fail "candidate job is missing: $name"
-  printf '%s\n' "$block" | grep -qx '    permissions:' \
-    || fail "$name must declare job permissions"
-  printf '%s\n' "$block" | grep -qx '      contents: read' \
-    || fail "$name must have only read repository contents"
-  writes="$(printf '%s\n' "$block" | grep -i 'write' || true)"
-  [[ -z "$writes" ]] || fail "$name must not have write permissions"
+  [[ "$(printf '%s\n' "$block" | grep -xc '    permissions:' || true)" == 1 ]] \
+    || fail "$name must declare exactly one permissions map"
+  permissions="$(printf '%s\n' "$block" | permission_block)"
+  [[ "$permissions" == '      contents: read' ]] \
+    || fail "$name must have exactly contents: read permission"
   printf '%s\n' "$block" | grep -q 'persist-credentials: false' \
     || fail "$name must disable checkout credential persistence"
-  if printf '%s\n' "$block" | grep -nE 'GH_TOKEN|GITHUB_TOKEN|github\.token|github[[:space:]]*\[|secrets\.|GH_PAT|PERSONAL_ACCESS_TOKEN|APP_TOKEN|actions/create-github-app-token'; then
+  if printf '%s\n' "$block" | grep -nE "GH_TOKEN|GITHUB_TOKEN|GH_PAT|PERSONAL_ACCESS_TOKEN|APP_TOKEN|actions/create-github-app-token|secrets|$credential_expression"; then
     fail "$name must not receive a credential"
   fi
 }
 
 require_trusted_job() {
-  local name="$1" block writes
+  local name="$1" expected_permissions="$2" block permissions
   block="$(job_block "$name")"
   [[ -n "$block" ]] || fail "trusted job is missing: $name"
-  writes="$(printf '%s\n' "$block" | grep -i 'write' || true)"
-  [[ "$writes" == '      statuses: write' ]] \
-    || fail "$name must have only statuses: write permission"
+  [[ "$(printf '%s\n' "$block" | grep -xc '    permissions:' || true)" == 1 ]] \
+    || fail "$name must declare exactly one permissions map"
+  permissions="$(printf '%s\n' "$block" | permission_block)"
+  [[ "$permissions" == "$expected_permissions" ]] \
+    || fail "$name must have only its accepted permissions"
   if printf '%s\n' "$block" | grep -nE 'actions/checkout|(^|[^A-Za-z])git[[:space:]]+(fetch|checkout|merge|rebase|push)|scripts/|toolchain/|GITHUB_WORKSPACE'; then
     fail "$name must not checkout or execute candidate code"
   fi
 }
+
+credential_expression='\$\{\{[^}]*([Gg][Ii][Tt][Hh][Uu][Bb]|[Ss][Ee][Cc][Rr][Ee][Tt][Ss])'
 
 require_absent 'pull_request_target' 'must not use pull_request_target'
 require_absent '(^|[[:space:]])git[[:space:]]+push([[:space:]]|$)' 'must not push a synthetic candidate'
@@ -65,8 +76,8 @@ for candidate in component-validation verification-scenarios installed-release-p
   require_candidate_job "$candidate"
 done
 
-require_trusted_job resolve
-require_trusted_job publish
+require_trusted_job resolve $'      contents: read\n      statuses: write'
+require_trusted_job publish '      statuses: write'
 resolve="$(job_block resolve)"
 printf '%s\n' "$resolve" | grep -qx '      contents: read' \
   || fail 'resolve must retain contents: read for trusted API resolution'
@@ -75,7 +86,7 @@ if printf '%s\n' "$publish" | grep -qx '      contents: read'; then
   fail 'publish must not receive repository contents permission'
 fi
 
-token_expression='GH_TOKEN|GITHUB_TOKEN|github\.token|github[[:space:]]*\[|GH_PAT|PERSONAL_ACCESS_TOKEN|APP_TOKEN|actions/create-github-app-token'
+token_expression="GH_TOKEN|GITHUB_TOKEN|GH_PAT|PERSONAL_ACCESS_TOKEN|APP_TOKEN|actions/create-github-app-token|secrets|$credential_expression"
 token_bindings="$(grep -nE "$token_expression" "$workflow" || true)"
 [[ "$(printf '%s\n' "$token_bindings" | sed '/^$/d' | wc -l | tr -d ' ')" == 3 ]] \
   || fail 'workflow credentials must be limited to the three trusted GH_TOKEN bindings'

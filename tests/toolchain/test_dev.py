@@ -601,6 +601,16 @@ class WorkflowContractTests(unittest.TestCase):
             candidate_job + "    env:\n      credential_alias: ${{ github['token'] }}\n",
             1,
         )
+        serialized_context_candidate = workflow.replace(
+            candidate_job,
+            candidate_job + "    env:\n      credential_alias: ${{ toJSON(github) }}\n",
+            1,
+        )
+        indexed_secret_candidate = workflow.replace(
+            candidate_job,
+            candidate_job + "    env:\n      credential_alias: ${{ secrets['PAT'] }}\n",
+            1,
+        )
         write_candidate = workflow.replace(
             candidate_job,
             candidate_job + "      statuses: write # candidate jobs must stay read-only\n",
@@ -616,7 +626,21 @@ class WorkflowContractTests(unittest.TestCase):
             candidate_job + '      "statuses": write\n',
             1,
         )
-        for mutation in (token_candidate, indexed_token_candidate, write_candidate, quoted_write_candidate, quoted_key_write_candidate):
+        escaped_write_candidate = workflow.replace(
+            candidate_job,
+            candidate_job + '      statuses: "\\x77rite"\n',
+            1,
+        )
+        for mutation in (
+            token_candidate,
+            indexed_token_candidate,
+            serialized_context_candidate,
+            indexed_secret_candidate,
+            write_candidate,
+            quoted_write_candidate,
+            quoted_key_write_candidate,
+            escaped_write_candidate,
+        ):
             with self.subTest(mutation=mutation):
                 result = self.validate_integration_workflow(mutation)
                 self.assertNotEqual(result.returncode, 0)
@@ -634,6 +658,11 @@ class WorkflowContractTests(unittest.TestCase):
             "      statuses: write\n      \"issues\": write\n    steps:\n      - name: Publish final status without checking out PR code\n",
             1,
         )
+        escaped_extra_write = workflow.replace(
+            "      statuses: write\n    steps:\n      - name: Publish final status without checking out PR code\n",
+            '      statuses: write\n      issues: "\\x77rite"\n    steps:\n      - name: Publish final status without checking out PR code\n',
+            1,
+        )
         relocated_token = workflow.replace(
             "jobs:\n",
             "env:\n  GH_TOKEN: ${{ github.token }}\n\njobs:\n",
@@ -642,6 +671,7 @@ class WorkflowContractTests(unittest.TestCase):
         for mutation, expected_error in (
             (extra_write, "publish"),
             (quoted_key_extra_write, "publish"),
+            (escaped_extra_write, "publish"),
             (relocated_token, "resolve"),
         ):
             with self.subTest(mutation=mutation):
