@@ -35,7 +35,7 @@ require_candidate_job() {
     || fail "$name must declare job permissions"
   printf '%s\n' "$block" | grep -qx '      contents: read' \
     || fail "$name must have only read repository contents"
-  writes="$(printf '%s\n' "$block" | grep -E '^[[:space:]]+[A-Za-z0-9_-]+:[[:space:]]+write[[:space:]]*$' || true)"
+  writes="$(printf '%s\n' "$block" | grep -E '^[[:space:]]+[A-Za-z0-9_-]+:.*write' || true)"
   [[ -z "$writes" ]] || fail "$name must not have write permissions"
   printf '%s\n' "$block" | grep -q 'persist-credentials: false' \
     || fail "$name must disable checkout credential persistence"
@@ -48,7 +48,7 @@ require_trusted_job() {
   local name="$1" block writes
   block="$(job_block "$name")"
   [[ -n "$block" ]] || fail "trusted job is missing: $name"
-  writes="$(printf '%s\n' "$block" | grep -E '^[[:space:]]+[A-Za-z0-9_-]+:[[:space:]]+write[[:space:]]*$' || true)"
+  writes="$(printf '%s\n' "$block" | grep -E '^[[:space:]]+[A-Za-z0-9_-]+:.*write' || true)"
   [[ "$writes" == '      statuses: write' ]] \
     || fail "$name must have only statuses: write permission"
   if printf '%s\n' "$block" | grep -nE 'actions/checkout|(^|[^A-Za-z])git[[:space:]]+(fetch|checkout|merge|rebase|push)|scripts/|toolchain/|GITHUB_WORKSPACE'; then
@@ -75,12 +75,21 @@ if printf '%s\n' "$publish" | grep -qx '      contents: read'; then
   fail 'publish must not receive repository contents permission'
 fi
 
-token_bindings="$(grep -nE 'GH_TOKEN|GITHUB_TOKEN|github\.token|GH_PAT|PERSONAL_ACCESS_TOKEN|APP_TOKEN|actions/create-github-app-token' "$workflow" || true)"
-expected_token_bindings="$(grep -nE '^[[:space:]]+GH_TOKEN: \$\{\{ github\.token \}\}[[:space:]]*$' "$workflow" || true)"
-[[ -n "$expected_token_bindings" ]] || fail 'trusted jobs must bind the workflow token explicitly'
-[[ "$(printf '%s\n' "$expected_token_bindings" | sed '/^$/d' | wc -l | tr -d ' ')" == 3 ]] \
-  || fail 'only resolve and publish may bind GH_TOKEN'
-[[ "$token_bindings" == "$expected_token_bindings" ]] \
-  || fail 'workflow credentials must be limited to trusted GH_TOKEN bindings'
+token_expression='GH_TOKEN|GITHUB_TOKEN|github\.token|GH_PAT|PERSONAL_ACCESS_TOKEN|APP_TOKEN|actions/create-github-app-token'
+token_bindings="$(grep -nE "$token_expression" "$workflow" || true)"
+[[ "$(printf '%s\n' "$token_bindings" | sed '/^$/d' | wc -l | tr -d ' ')" == 3 ]] \
+  || fail 'workflow credentials must be limited to the three trusted GH_TOKEN bindings'
+resolve_tokens="$(printf '%s\n' "$resolve" | grep -E "$token_expression" || true)"
+resolve_expected="$(printf '%s\n' "$resolve" | grep -E '^[[:space:]]+GH_TOKEN: \$\{\{ github\.token \}\}[[:space:]]*$' || true)"
+[[ "$resolve_tokens" == "$resolve_expected" ]] \
+  || fail 'resolve must use only explicit GH_TOKEN bindings'
+[[ "$(printf '%s\n' "$resolve_expected" | sed '/^$/d' | wc -l | tr -d ' ')" == 2 ]] \
+  || fail 'resolve must contain exactly two GH_TOKEN bindings'
+publish_tokens="$(printf '%s\n' "$publish" | grep -E "$token_expression" || true)"
+publish_expected="$(printf '%s\n' "$publish" | grep -E '^[[:space:]]+GH_TOKEN: \$\{\{ github\.token \}\}[[:space:]]*$' || true)"
+[[ "$publish_tokens" == "$publish_expected" ]] \
+  || fail 'publish must use only its explicit GH_TOKEN binding'
+[[ "$(printf '%s\n' "$publish_expected" | sed '/^$/d' | wc -l | tr -d ' ')" == 1 ]] \
+  || fail 'publish must contain exactly one GH_TOKEN binding'
 
 printf 'current-main integration workflow validation passed\n'

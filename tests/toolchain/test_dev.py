@@ -598,14 +598,37 @@ class WorkflowContractTests(unittest.TestCase):
         )
         write_candidate = workflow.replace(
             candidate_job,
-            candidate_job + "      statuses: write\n",
+            candidate_job + "      statuses: write # candidate jobs must stay read-only\n",
             1,
         )
-        for mutation in (token_candidate, write_candidate):
+        quoted_write_candidate = workflow.replace(
+            candidate_job,
+            candidate_job + '      statuses: "write"\n',
+            1,
+        )
+        for mutation in (token_candidate, write_candidate, quoted_write_candidate):
             with self.subTest(mutation=mutation):
                 result = self.validate_integration_workflow(mutation)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("verification-scenarios", result.stderr)
+
+    def test_integration_workflow_validator_rejects_trusted_write_expansion_or_relocated_token(self):
+        workflow = INTEGRATION_WORKFLOW.read_text()
+        extra_write = workflow.replace(
+            "      statuses: write\n    steps:\n      - name: Publish final status without checking out PR code\n",
+            "      statuses: write\n      issues: write # status publication must remain the only write\n    steps:\n      - name: Publish final status without checking out PR code\n",
+            1,
+        )
+        relocated_token = workflow.replace(
+            "jobs:\n",
+            "env:\n  GH_TOKEN: ${{ github.token }}\n\njobs:\n",
+            1,
+        ).replace("          GH_TOKEN: ${{ github.token }}\n", "", 1)
+        for mutation in (extra_write, relocated_token):
+            with self.subTest(mutation=mutation):
+                result = self.validate_integration_workflow(mutation)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("publish" if mutation == extra_write else "resolve", result.stderr)
 
 
 if __name__ == "__main__":
