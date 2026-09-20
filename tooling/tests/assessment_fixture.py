@@ -315,6 +315,7 @@ def freeze_policy_inputs(plan):
                            'kind': 'ControlRealization',
                            'metadata': {'id': rid, 'revision': rev}, 'spec': {
                 'requirement': {'requirement': record['reference'], 'digest': record['digest']},
+                'applies_to': {'subject_types': [plan['subject']['type']]},
                 'adoption': copy.deepcopy(record['adoption']),
                 'checks': [copy.deepcopy(c['policy_inputs']['instance']) for c in plan['controls'] if c['instance_id'] in record['technical_instance_ids']]}}
             if 'based_on' in record['realization']:

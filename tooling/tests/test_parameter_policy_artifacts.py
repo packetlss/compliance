@@ -256,6 +256,65 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
         ):
             validate_assessment_plan(changed)
 
+    def test_technical_consumer_reconstructs_complete_check_membership(self):
+        changed = copy.deepcopy(self.plan)
+        consumer = changed["parameters"]["consumers"][0]
+        sibling = copy.deepcopy(consumer["document"]["spec"]["controls"][0])
+        sibling["instance_id"] = "company.linux.authorized-software.unlinked-sibling"
+        consumer["document"]["spec"]["controls"].append(sibling)
+        self.repin_consumer(changed, consumer)
+        self.resign(changed)
+
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "Check membership differs from retained owner",
+        ):
+            validate_assessment_plan(changed)
+
+    def test_realization_consumer_rejects_superseded_or_open_wire(self):
+        project = ROOT / "verification/fixtures/iam-private-boundary"
+        subject, groups, assignments = load_inventory_inputs(
+            project / "inventory",
+            project / "assignments",
+            "host/restricted-linux-01",
+            ROOT / "tooling/schemas/inventory/resource.schema.json",
+        )
+        plan = render_plan(
+            subject,
+            groups,
+            assignments,
+            (
+                self.sources[0],
+                self.sources[1],
+                PolicySource("environment-private", project / "policy"),
+            ),
+        )
+        mutations = (
+            lambda resource: resource.update(kind="LegacyRealization"),
+            lambda resource: resource["spec"]["parameter_links"][0].update(
+                unsupported=True
+            ),
+        )
+        for mutate in mutations:
+            changed = copy.deepcopy(plan)
+            requirement = next(
+                item for item in changed["requirements"] if "realization" in item
+            )
+            record = requirement["realization"]
+            mutate(record["document"])
+            record["digest"] = pp.digest(record["document"])
+            consumer = next(
+                item for item in changed["parameters"]["consumers"]
+                if item["kind"] == "ControlRealization"
+            )
+            consumer["digest"] = record["digest"]
+            self.resign(changed)
+            with self.subTest(mutate=mutate), self.assertRaisesRegex(
+                ArtifactValidationError,
+                "unsupported frozen ControlRealization|unsupported parameter link",
+            ):
+                validate_assessment_plan(changed)
+
         changed = copy.deepcopy(self.plan)
         consumer = changed["parameters"]["consumers"][0]
         consumer["document"]["spec"]["controls"][0]["unsupported"] = True
