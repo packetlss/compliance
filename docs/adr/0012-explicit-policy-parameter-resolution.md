@@ -23,6 +23,15 @@ extension.
 > governed contribution composition. The declaration/binding/tailoring/consumption
 > model of this ADR remains current.
 
+> **Accepted successor, implementation pending:** [ADR 0024](0024-objective-assurance-and-parameter-policy.md)
+> supersedes Requirement-owned parameters, RequirementBaseline parameter derivation/
+> contributions, realization-only consumption and duplicated frozen summaries. It
+> also replaces fabricated adoption and failing-Requirement representation for
+> implementation absence with a separately accountable implementation gap, and
+> removes redundant `satisfaction.allOf` and membership `required: true`.
+> All ADR 0023 frozen meanings remain intact. Historical/current-runtime descriptions
+> below remain migration context, not authority for successor implementation.
+
 ## Context and authority
 
 The parameter decision accepted under #37 required durable authority for a common

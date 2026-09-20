@@ -185,6 +185,40 @@ contributions. Atomic default semantics remain intact. The coordinated in-place
 schema/runtime/frozen-plan/Coverage cutover changes no artifact version or identity
 algorithm and introduces no compatibility reader or freeze.
 
+## Objective assurance and ParameterPolicy successor
+
+[ADR 0024](adr/0024-objective-assurance-and-parameter-policy.md) under
+[#192](https://github.com/packetlss/compliance/issues/192) is **Accepted design,
+not yet implemented**. The implemented ADR 0012/0016 representations described
+above and below remain experimental migration inputs, not successor authority.
+
+The successor retains optional Objective assurance, exact zero/one/multiple
+realization resolution and conservative implemented Check outcomes. It removes
+`satisfaction.allOf`, constant RequirementBaseline membership `required: true`,
+fabricated adoption and absence-as-Assessment-FAIL. Implementation gaps remain
+unsuccessful required-policy states, separately accountable from evidence outcomes,
+refusal, unassigned Coverage and explicit N/A. ADR 0023 meanings remain frozen.
+
+RequirementBaseline becomes Objective grouping only. Explicitly assigned
+ParameterPolicy owns declarations, bind/tailor derivation and additive contributions;
+Check authors own exact typed consumption on both realization and direct technical
+paths. Contribution-only policy has no Objective/Requirement assessment row.
+Atomic defaults, explicit string-set union, complete attribution, stale-pin failure,
+policy-owned freshness and order independence remain unchanged.
+
+Retain source facts once in exact plans and independently reconstruct derived
+parameter summaries; preserve authored expectations and validate materialized
+inputs. Existing identity architecture remains, but the later coordinated migration
+intentionally changes member-plan digests, operation IDs, bound plan IDs and result
+identities. No schema/wire/algorithm freeze, alias, dual reader or historical
+conversion follows. Historical artifacts keep their original tooling and meaning.
+
+Follow-on A (assurance simplification) and B (parameter ownership/representation)
+require coordinated schema/source/runtime/consumer/test contracts and valid accepted
+checkpoints; this documentation tranche implements neither. Exact assignment
+relationships and semantic rules are settled in ADR 0024; wire layout and field
+spellings remain experimental.
+
 ## Typed identifier namespaces and schema URI ownership
 
 [ADR 0019](adr/0019-typed-identifier-namespaces-and-schema-uri-ownership.md) is
@@ -298,8 +332,8 @@ projection. Information classification remains a source/package ownership,
 acquisition, repository-access, deployment, or adopter-annotation concern under
 ADR 0006; it is not a universal runtime enum or an assessment-engine access
 decision. Existing realization selection, adoption, `based_on`, parameter links,
-`satisfaction.allOf`, roll-up, source isolation, and identity algorithms remain
-unchanged. Historical artifacts retain their historical meaning and tooling.
+`satisfaction.allOf`, roll-up, source isolation, and identity algorithms were
+unchanged by #120; ADR 0024 now accepts the later membership simplification. Historical artifacts retain their historical meaning and tooling.
 
 ## Closed-world operation accounting
 
@@ -321,8 +355,10 @@ observations and observed consumer relationships may use ordinary evidence
 dependencies only after ADR 0022's criterion-ownership admission gate. Governance
 owns external applicability, sufficiency, inventory exhaustiveness, issuance/review/
 adoption and reviewed external/non-core determinations; mappings
-never establish external conformity. ADR 0010/0012, explicit N/A, missing-realization
-failure, fail-only waivers and technical-only assessment remain unchanged.
+never establish external conformity. ADR 0010/0012 invariants, explicit N/A, fail-only waivers and technical-only
+assessment remain. ADR 0024 supersedes the missing-realization representation:
+implementation absence is an unsuccessful demonstration without Assessment FAIL
+or fabricated adoption, pending coordinated runtime migration.
 Issue #37 is closed architecture history. New semantics or escalation require a
 new focused architecture promotion. Historical artifacts require their historical
 tooling; no historical result is reinterpreted.

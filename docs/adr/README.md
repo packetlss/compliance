@@ -27,7 +27,7 @@ Accepted destination decisions:
 - [ADR 0014 — Attributable applicability determinations and authority acceptance](0014-attributable-applicability-and-authority-acceptance.md) — superseded by [ADR 0016](0016-closed-world-policy-assessment.md); historical design.
 - [ADR 0015 — Bounded external claims and explicit assurance recognition](0015-bounded-external-claims-and-assurance-recognition.md) — superseded by [ADR 0016](0016-closed-world-policy-assessment.md); historical design.
 
-- [ADR 0016 — Closed-world company policy assessment](0016-closed-world-policy-assessment.md) — experimental, implemented under #78; supersedes ADRs 0013–0015 and clarifies ADR 0006. Its promotion history is #37; ADR 0012 remains unchanged.
+- [ADR 0016 — Closed-world company policy assessment](0016-closed-world-policy-assessment.md) — experimental, implemented under #78; supersedes ADRs 0013–0015 and clarifies ADR 0006. Its promotion history is #37; ADR 0024 subsequently supersedes implementation-absence representation.
 
 - [ADR 0017 — Author policy and technical-check meaning on canonical source objects](0017-source-authored-policy-and-check-meaning.md) — accepted and implemented under #100; experimental, not frozen. Its architecture contract is #97.
 - [ADR 0018 — Retain minimal durable assessment explanation facts](0018-durable-assessment-explanation-facts.md) — implemented under #102; experimental, not frozen. Its architecture contract is #98.
@@ -41,6 +41,8 @@ Accepted destination decisions:
 - [ADR 0022 — Criterion ownership is the first assessment admission gate](0022-criterion-ownership-and-external-judgment-retirement.md) — accepted under [#167](https://github.com/packetlss/compliance/issues/167) and implemented by [#169](https://github.com/packetlss/compliance/issues/169). It requires a complete Governed Policy criterion and Control-unaware descriptive observations before an `AssessmentResult` is admissible; it retires the ADR 0021 `external-judgment` target architecture while preserving historical artifacts under their original tooling.
 
 - [ADR 0023 — Freeze foundational semantic responsibility boundaries](0023-foundational-semantic-responsibility-boundaries.md) — accepted through [#175](https://github.com/packetlss/compliance/issues/175). It freezes ten responsibility and meaning invariants across Governed Inventory, Governed Policy, Coverage, descriptive Evidence, Assessment, outcome/refusal meaning, bounded claims and immutable history while leaving current wires, schemas, identifiers and detailed experimental representations unfrozen.
+
+- [ADR 0024 — Separate Objective assurance from governed parameter policy](0024-objective-assurance-and-parameter-policy.md) — accepted design under [#192](https://github.com/packetlss/compliance/issues/192), not yet implemented. Partially supersedes ADRs 0012 and 0016 while preserving every ADR 0023 frozen invariant; separates implementation gaps from Assessment outcomes and explicitly assigned ParameterPolicy from Objective grouping.
 
 Current system-level documents:
 

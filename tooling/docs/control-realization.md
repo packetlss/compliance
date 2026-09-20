@@ -1,5 +1,13 @@
 # Control Requirements and Environment Realizations
 
+> **Successor routing:** [ADR 0024](../../docs/adr/0024-objective-assurance-and-parameter-policy.md)
+> is accepted design under #192, not yet implemented. It separates Objective
+> implementation gaps from Assessment outcomes, simplifies required Check membership,
+> moves parameter ownership to explicitly assigned ParameterPolicy, supports both
+> Check-authoring consumption paths and reconstructs frozen summaries. This document
+> describes the current experimental runtime until coordinated migration; its
+> superseded representations are not the successor implementation contract.
+
 Status: **Implemented initial contract (v0.1)**  
 Last updated: **2026-09-13**
 

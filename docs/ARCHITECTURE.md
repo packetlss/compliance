@@ -1,6 +1,6 @@
 # System architecture
 
-This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 and 0016–0023 (ADRs 0013–0015 are superseded) in `docs/adr/`.
+This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 and 0016–0024 (ADRs 0013–0015 are superseded) in `docs/adr/`.
 
 Historical `packetlss-labs/compliance-workspace` architecture remains migration/design provenance. After this documentation-authority transfer, this repository owns current normative system architecture.
 
@@ -44,7 +44,7 @@ ADR 0007 `composition-lock` is the sole forward complete expected-composition ab
 [ADR 0019](adr/0019-typed-identifier-namespaces-and-schema-uri-ownership.md)
 accepts typed lookup namespaces rather than a global or source-qualified semantic ID
 space. Semantic policy IDs use dot-separated kebab-case segments; revisions remain
-separate `id@revision` pins; requirement slots and technical properties remain
+separate `id@revision` pins; parameter slots and technical properties remain
 owner-local snake_case; and evidence types retain dispatch-significant `/vN` wire
 versions. Authority-looking ID prefixes are ordinary authored segments and grant no
 trust, precedence or source ownership.
@@ -62,6 +62,8 @@ RequirementBaseline catalogs therefore share one assignment-reference collision
 admission namespace: a composition containing both kinds at the same reference must
 fail before planning without precedence or fallback. This rule is implemented under
 #136 and is independent of policy-source, file, and traversal order.
+The accepted ADR 0024 successor adds a separate typed ParameterPolicy assignment
+surface/catalog; it does not extend the kindless baseline reference namespace.
 
 JSON Schema `$id` is a predictable absolute HTTPS schema-contract URI, separate
 from semantic resource lookup and exact schema content. Before explicit
@@ -179,54 +181,98 @@ artifacts. The coordinated schema/source/plan/reporter migration is implemented
 under [#100](https://github.com/packetlss/compliance/issues/100). The contract
 remains experimental and is not frozen.
 
-## Explicit policy parameters and freshness
+## Objective assurance and governed parameter policy
 
-[ADR 0012](adr/0012-explicit-policy-parameter-resolution.md) is implemented under [#73](https://github.com/packetlss/compliance/issues/73). The [experimental parameter contract](../tooling/docs/policy-parameters.md) defines the coordinated schema/runtime/consumer representation. Its common model is declaration → explicit binding → optional explicit descendant tailoring → concrete effective value → explicit dependency consumption → resolved assessment plan. Required unresolved parameters and independently applicable divergent bindings prevent an assessable plan. Source/file order, ancestry, assignment scope or specificity, strictness and min/max never choose values; constraints and JSON Schema defaults cannot manufacture them.
+[ADR 0024](adr/0024-objective-assurance-and-parameter-policy.md), accepted under
+[#192](https://github.com/packetlss/compliance/issues/192), is **accepted design,
+not yet implemented**. It succeeds ADR 0012's parameter ownership/representation
+and ADR 0016's implementation-absence reporting while preserving all ADR 0023
+frozen invariants. Current experimental runtime contracts remain documented in
+[realizations](../tooling/docs/control-realization.md) and
+[parameters](../tooling/docs/policy-parameters.md) until coordinated migration.
 
-[ADR 0020](adr/0020-governed-policy-composition-without-sealing.md) is implemented
-under [#144](https://github.com/packetlss/compliance/issues/144). Technical and
-parameter sealing are absent: valid governed descendants tailor inherited policy
-through the existing exact pins, fingerprints and provenance facts.
+`ControlRequirement` owns Objective meaning and mappings. `RequirementBaseline`
+remains a non-empty grouping of exact required Objective membership, with no
+constant `required: true`, parameter operations, contributions or parameter-only
+derivation. An implemented `ControlRealization` owns one complete non-empty set
+of unique Checks: every Check is required and evaluated. Remove `satisfaction.allOf`
+and keep one resolved membership relation for materialization, validation and
+roll-up. Selection remains exactly zero/one/multiple with ambiguity failing closed;
+`based_on` remains provenance only.
 
-Requirement slots have stable technology-neutral identity with exact declaration/revision/type-schema pins. Realizations retain explicit typed links into required dependency inputs; plans materialize every linked value with immutable provenance, and evaluation does not resolve parameters again. Technical destinations belong to an exact resolved implementation/interface, including after substitution. Selected derivation permits explicit tailoring; independently assigning divergent ancestor and descendant policies is a conflict.
+Implementation state is independent of evidence-derived Assessment outcome.
+Zero applicable realizations records an implementation gap without fabricated
+adoption; authored non-implementation retains its exact governed declaration.
+Both prevent successful Objective, baseline and operation demonstration, without
+creating technical results, Assessment FAIL/UNKNOWN, waiver eligibility, refusal,
+unassigned scope or N/A. Keep them in frozen accounting and report gaps alongside
+actual outcomes. Explicit attributable N/A retains its existing meaning. Implemented
+realizations retain conservative actual Check roll-up (fail, error, unknown,
+waived, all-pass), including incomplete child N/A behavior and exact membership
+validation. ADR 0024 specifies the complete state/reporting obligations.
 
-[#127](https://github.com/packetlss/compliance/issues/127) accepted one bounded
-exception to atomic complete-value composition, implemented under
-[#129](https://github.com/packetlss/compliance/issues/129), then amended by #144.
-It keeps the explicit string-only opt-in, exactly one compatible declaration and
-base, deterministic canonical union, and complete attribution, while permitting
-every compatible independently applicable contribution after valid base tailoring,
-including for a fixed base. Ordinary arrays, objects, scalars, direct technical-
-baseline values, and declarations without the explicit opt-in remain atomic.
+### Explicit parameter applicability and consumption
 
-Contributions target only stable `(ControlRequirement ID, slot name)` identity;
-current resolution binds them to the exact supplied declaration and base. A
-contribution neither imports nor selects its requirement, does not mutate or tailor
-the base, and carries no exact-version or parent-state coupling. Source/file/
-assignment/traversal order grants no precedence. Removal, denial, suppression,
-override, subtraction, non-string members, generic merge/reducer behavior, and direct
-technical-Baseline composition remain outside the accepted model. The runtime fails
-closed on absent, ambiguous, incompatible, invalid or unconsumable resolution.
+`ParameterPolicy` owns typed owner-local declarations, exact base binding and
+selected descendant tailoring, and independently applicable string-set
+contributions. Stable slot identity becomes `(ParameterPolicy owner ID, slot)`;
+exact consumers and bind/tailor operations retain revision/content/declaration/schema
+pins. Contributions target the stable owner/slot without prior-state coupling.
+ParameterPolicy owns no Objective or Check and generates no assessment row.
 
-Effective evidence `max_age` belongs to policy/baseline/requirement intent. Controls retain evidence dependency contracts and optional capability restrictions; realizations link semantic freshness slots where applicable. Maintained baselines bind effective ages explicitly; objective realizations consume pinned semantic freshness slots. Controls no longer provide effective-age defaults. ADR 0010 still owns assessment-time evidence semantics and ADR 0011 immutable historical selection attribution; the future-timestamp question is unchanged.
+Project `PolicyAssignment` gains an explicit typed ParameterPolicy reference
+collection using existing group targeting and subject applicability; baseline
+references retain their current kinds and collision rules. An assignment selects
+one or both collections, never neither. Only explicit assignment selects roots;
+exact ancestry supplies derivation input. Resource discovery, consumer links and
+contribution targets never activate policy or import an owner. This bounded
+relationship is accepted; field spellings remain experimental.
 
-Policy resolution determines company intent; assessment tests evidence against that
-intent and never selects policy or a realization. Passing company policy does not
-establish external conformity. ADR 0016
-places external comparison outside the generic core unless a future explicit company
-policy dependency models a concrete condition. Fixed/open external binding restrictions
-do not authenticate issuer authority. Missing realization adoption remains distinct
-from unresolved parameters and missing evidence. Ordinary named private policy sources
-need no new resource family or precedence. ADR 0012 extends the existing provenance-bearing
-plan, not the adapter or authorization artifact surface.
+The Check-authoring policy owns consumption: `ControlRealization` for Objective
+Checks, `Baseline` / `BaselineOverlay` for direct technical Checks. Each exact link
+targets an implementation-pinned instance and typed input or named Evidence
+dependency, including freshness. Final-interface validation follows overlay
+substitution. Materialize one complete value per destination; no additive technical
+Baseline merging or source-order precedence is introduced. Unconsumed governed
+values create no assessment obligation; all selected required slots and all
+consumer references must resolve before an assessable plan.
 
-The frozen plan must retain the exact resolved requirement/declaration/schema/base,
-all contributions and applicability paths, canonical effective set, member origins,
-and exact materialized realization consumers. This extends existing plan-owned
-parameter provenance without a new artifact, resource, cache, digest family or
-identity family. Coverage owns only an ephemeral deterministic projection of current
-effective values and derivation through the existing resolver; historical assessment
-explanation uses the exact retained plan/result pair and never current re-resolution.
+### Preserved parameter and historical invariants
+
+Retain ADR 0012's atomic default, explicit bind/tailor semantics and deviations,
+exact parent/expected-state checks, direct typed consumption, positive integral
+fixed-duration normalization, policy-owned freshness and no manufactured defaults.
+ADR 0020's removal of sealing remains intact: fixed base ownership does not prevent
+valid descendant tailoring or independently applicable additive contributions.
+
+Explicit string-set opt-in is the only additive exception. Require one compatible
+applicable declaration/base, apply valid tailoring only to the base, then union
+every independently applicable contribution. Use exact string equality and UTF-8
+byte ordering, validate members and final set, and retain every origin and
+applicability path. No removal, suppression, expressions, conversion, source-order
+precedence or generic registry is permitted. Missing, ambiguous, stale, invalid or
+incompatible policy fails before an assessable plan, never as evidence UNKNOWN.
+
+Effective Evidence `max_age` remains explicit policy intent supplied literally or
+through an exact link; Controls own dependency contracts and capability constraints,
+not effective-age defaults. Assessment consumes resolved values without resolving
+policy again. ADR 0010 Evidence semantics, ADR 0011 historical selection attribution,
+private-source boundaries and the external-adapter handoff remain unchanged.
+
+The exact plan retains each independently meaningful selected source document,
+schema, pin, authored operation/expectation, contribution, applicability path,
+consumer/interface and operation/provenance fact once. Materialized Check inputs
+remain execution facts validated against reconstruction. Reconstruct effective
+slot/derivation state, before/after summaries and member attribution from frozen
+inputs instead of persisting competing copies. Authored expectations such as
+`expected_parent_fingerprint` remain inputs. Historical interpretation never
+reopens current policy; Coverage remains a current ephemeral resolver projection.
+
+The later pre-freeze migration intentionally changes current member-plan digests,
+operation IDs, bound plan IDs and result identities through changed committed
+projections. Existing identity architecture/domain responsibilities remain intact;
+no `/v1` freeze, compatibility alias, historical reader or automatic conversion
+is added. Historical artifacts retain meaning under historical tooling.
 
 ## Closed-world policy assessment
 
@@ -291,7 +337,8 @@ certification/legal conformity. ADR 0021 separately permits the narrower **Satis
 under declared coverage** projection only from an exact closed project-governance
 declaration plus exact retained assessment support.
 External conformity comparison is outside the generic core unless a future explicit
-company-policy dependency models a concrete condition. ADR 0012 remains unchanged.
+company-policy dependency models a concrete condition. ADR 0012 parameter
+invariants survive with ADR 0024 successor ownership.
 
 ### Preserved failure and N/A boundaries
 
@@ -300,14 +347,17 @@ unresolved required parameters, invalid dependency targets and integrity/tamperi
 fail closed. Required unresolved policy is non-assessable, not evidence `unknown`.
 After valid dependency resolution, missing/stale/invalid/inconclusive evidence is
 ADR 0010 `unknown`, attributable execution failures are `error`, and shared integrity
-preventing trustworthy publication requires refusal. Preserve design-time realizations,
-complete `satisfaction.allOf` recipes, conservative roll-up, fail-only waivers and
-immutable result attribution. A subject with no applicable assignment has Coverage
-`unassigned` and no expected result. For an assigned requirement, zero applicable
-realizations retains `not_implemented` adoption and a failing requirement; exactly
-one is selected and assessed completely; multiple applicable realizations make
-resolution ambiguous and planning fails. Evidence never chooses among policy or
-realization alternatives.
+preventing trustworthy publication requires refusal. Under the accepted ADR 0024
+successor, preserve complete required Check membership, conservative implemented
+roll-up, fail-only waivers and immutable result attribution. A subject with no
+applicable assignment has Coverage `unassigned` and no expected result. For an
+assigned Objective, zero applicable realizations is an implementation gap without
+fabricated adoption; one selected non-implemented realization retains its authored
+declaration and gap; one implemented realization evaluates every Check; multiple
+applicable realizations make planning invalid. Gaps prevent required-policy success
+without emitting Assessment FAIL or UNKNOWN. Evidence never chooses policy or
+realization alternatives. Current runtime absence-as-fail is pending migration,
+not the successor meaning of FAIL.
 
 No assignment is unassigned/outside supplied assessment scope, not automatic N/A.
 Existing explicit N/A remains distinct pending separate architecture review. Never

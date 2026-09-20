@@ -1,5 +1,13 @@
 # Explicit policy parameters
 
+> **Successor routing:** [ADR 0024](../../docs/adr/0024-objective-assurance-and-parameter-policy.md)
+> is accepted design under #192, not yet implemented. It separates Objective
+> implementation gaps from Assessment outcomes, simplifies required Check membership,
+> moves parameter ownership to explicitly assigned ParameterPolicy, supports both
+> Check-authoring consumption paths and reconstructs frozen summaries. This document
+> describes the current experimental runtime until coordinated migration; its
+> superseded representations are not the successor implementation contract.
+
 Current implementation contract: [#73](https://github.com/packetlss/compliance/issues/73),
 as amended by [ADR 0020](../../docs/adr/0020-governed-policy-composition-without-sealing.md)
 and implemented under [#144](https://github.com/packetlss/compliance/issues/144).
