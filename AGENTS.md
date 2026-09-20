@@ -56,7 +56,7 @@ Implementation-local questions may be resolved only when they do not change sema
 Detailed requirement/realization assurance contracts remain separately routed; do
 not redesign them incidentally.
 
-## Validation and pull requests## Validation and pull requests
+## Validation and pull requests
 
 Use applicable fast tests against the working tree during implementation. Select full canonical local gates by change impact or reproduction need; they are not an unconditional pre-PR requirement. Canonical gates that export committed inputs require a clean, committed candidate revision; create a checkpoint commit before running them. Local evidence never substitutes for exact-head CI.
 
