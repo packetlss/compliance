@@ -1,536 +1,137 @@
-# OPA Compliance Toolset — Architecture
+# Tooling architecture
 
-Status: **Working draft (v0.1)**  
-Last updated: **2026-09-13**
+Status: **Current; interfaces and representations remain experimental**
 
-This document is a shared design surface, not a finished specification. It
-records our current model, the reasoning behind it, and the questions that
-still need decisions.
+[System architecture](../../docs/ARCHITECTURE.md) owns system responsibilities;
+[contract maturity](../../docs/CONTRACT_MATURITY.md) owns compatibility status.
+This document routes the detailed tooling contracts. ADR 0023 freezes semantic
+responsibilities, not these modules, schemas, identities or interface wires.
 
-## 1. Intent
+## Current execution model
 
-Build a self-hosted compliance toolset that turns human-readable controls into
-testable, versioned policy; evaluates typed JSON evidence consistently with
-Open Policy Agent (OPA); and produces results that people can understand,
-review, and audit. Policy evaluation remains off the governed object.
-
-The toolset should answer four different questions without conflating them:
-
-1. **What should be true?** — controls and policy intent.
-2. **Is it true now?** — evaluation against typed evidence.
-3. **What happened?** — durable evidence, findings, and decision history.
-4. **What happens next?** — enforcement, remediation, or an approved exception.
-
-## 2. Initial design principles
-
-- **OPA decides; it does not collect or orchestrate.** Rego evaluates supplied input and
-  data. Collection, scheduling, workflow, storage, and remediation belong
-  outside the policy engine.
-- **Governed objects do not carry policy.** An on-host component may collect
-  evidence, but policy distribution and evaluation happen elsewhere.
-- **One control model, multiple enforcement points.** The same control intent
-  may be checked in CI, at admission time, and continuously, while adapters
-  supply context appropriate to each point.
-- **Policy and evidence are versioned together.** A result is only reproducible
-  when it identifies the policy bundle, input snapshot or digest, data
-  dependencies, evaluator version, and evaluation time.
-- **Observations are separated from conclusions.** Collectors produce typed
-  evidence; policies produce decisions; the platform turns decisions into findings.
-- **Inventory separates authoring authority from resolution authority.** External
-  systems or reviewed configuration remain authoritative editors and sources for
-  governed-subject facts. The exact normalized projection supplied to an operation
-  is nevertheless authoritative input to its deterministic closed-world resolution;
-  the core does not reconstruct or heuristically repair upstream facts.
-- **Canonical inventory resources use Kubernetes conventions.** Versioned,
-  typed YAML/JSON objects use `apiVersion`, `kind`, `metadata`, labels,
-  annotations, selectors, and explicit references. This convention does not
-  require a Kubernetes cluster; source-specific formats such as Ansible
-  inventory can be translated by adapters.
-- **Explainability is part of the policy contract.** A denial alone is not a
-  useful compliance result. Decisions should include control identity, reason,
-  affected resource, severity, and remediation guidance.
-- **Exceptions are explicit data.** Waivers are scoped, attributable, expiring,
-  and auditable—not comments embedded in policy.
-- **Frameworks map to controls; they do not duplicate logic.** A reusable
-  technical control can map to several framework requirements such as ISO 27001,
-  SOC 2, PCI DSS, or an internal standard. Company policy and operational
-  concerns may also exist without any external mapping. When external wording
-  is broad, a reviewed company interpretation and complete realization bridge
-  it to attributable checks; the framework prose is not executable policy.
-- **Framework accounting is project governance, not policy composition.** The
-  implemented experimental `FrameworkObligationDeclaration` from system ADR 0021
-  owns a closed, versioned ledger and declared project scope outside ordinary policy
-  sources and assessment plans. Pure governance declarations need no circular
-  assertion evidence; their reviewed determination may be affirmative, conclusively
-  negative, or not established without becoming an assessment result. Under ADR 0022,
-  independently observable material remains assessed only when company Compliance
-  policy owns the complete criterion and evaluates Control-unaware descriptive facts;
-  drift alone is not sufficient. Its bounded satisfaction view is ephemeral and cannot
-  establish external conformity or population completeness.
-- **Verification is scenario-first and claim-aware.** Stable verification
-  projects use deterministic, real-world-shaped synthetic situations and map
-  implemented features onto those stories. They expose the complete path from
-  an internal or external concern through company intent, operating practice, technical
-  realization, evidence, results, and exceptions without turning mapped checks
-  into unsupported framework-conformance claims.
-- **Technical policy does not require a regulatory wrapper.** Concrete package,
-  hardening, and application-configuration baselines remain useful on their
-  own. High-level requirements and realizations are added only when a complete
-  objective-level assurance claim is needed; a subject may receive both kinds
-  of policy in one rendered plan.
-- **One operator CLI, separate runtime responsibilities.** Inventory, planning,
-  evaluation, and reporting share a discoverable command surface and project
-  configuration through the sole supported `compliance` operator entry point
-  while remaining separate internal modules. Those module paths are not a
-  public Python API. Collectors remain external processes connected through
-  typed evidence documents.
-- **Current operator views follow Inventory → Coverage → Assessment.**
-  Inventory presents supplied normalized facts. Coverage is an ephemeral query
-  projection over the existing membership, assignment, policy-resolution,
-  planning, adoption, and disposition owners. Assessment remains the historical
-  result concern. Coverage has no resource, persistence, identity, cache,
-  artifact, or alternate resolution algorithm.
-  Under the #127 additive-set design implemented by #129,
-  Coverage also owns the ephemeral projection of current effective parameter
-  values and derivation through that same resolver; historical explanation remains
-  anchored only to the exact retained plan/result pair.
-- **Assessment reporting is exact-operation-first.** `assessment run`, `status`,
-  `status --by group`, `mappings`, and `explain` project the frozen operation,
-  exact bound plans/results, and separately derived current qualification. They do
-  not call Coverage, select a latest result, reconstruct a historical denominator
-  from current inputs, or create a shared reporting/diagnostic framework.
-- **Assessment plans are the interoperability boundary.** A resolved technical
-  control retains stable identity, parameters, fingerprint, lineage, and
-  provenance in the assessment plan. Separately implemented programs may map
-  that plan into backend-specific output; core tooling neither loads those
-  programs nor treats their output as execution or evidence.
-
-## 3. Proposed system shape
-
-```mermaid
-flowchart LR
-    IS[External inventory sources] --> IP[Inventory adapters and projection]
-    IP --> H[Groups and baseline assignments]
-    S[Governed systems and APIs] --> C[Evidence collectors and adapters]
-    C --> F[Typed JSON evidence]
-    F --> ES[Evidence store]
-    ES --> E[Evaluation service / OPA]
-    P[Policy source] --> B[Build, test, sign policy release]
-    B --> E
-    H --> AP[Resolved assessment plan]
-    B --> AP
-    AP --> E
-    W[Waivers] --> E
-    E --> R[Decision results]
-    R --> X[Report and findings service]
-    ES --> X
-    X --> A[API, UI, reports, exports]
-    X --> N[Notifications and workflow]
-    AP -. external handoff .-> XA[External IaC, PaC, MDM, ticketing, or configuration program]
-    XA -. separately approved execution .-> S
-```
-
-This separates two broad areas:
-
-### Collection plane
-
-Source-specific collectors observe governed objects and emit typed JSON
-evidence. A collector may run as an endpoint agent, over SSH, as an API client,
-or in an integration service. It knows how to observe state, but it does not
-contain compliance policy or decide whether that state is acceptable.
-
-### Inventory projection plane
-
-Source adapters ingest inventory from systems such as Ansible, CMDBs, service
-catalogs, cloud APIs, and static reviewed files. The platform normalizes those
-records into subjects, retains source identity and snapshot provenance, and
-calculates group membership for policy resolution. It is a read-only consumer:
-the upstream systems remain authoritative, and inventory ingestion does not
-write lifecycle, ownership, labels, or configuration back to them.
-
-For each operation, the supplied normalized projection is the authoritative input
-to resolution. Governed persona, access-profile, deployment-model, environment,
-lifecycle and factual-membership classifications may legitimately drive applicable
-groups, policy and realizations. Classifications and groups may overlap; all
-assignments accumulate without order or specificity precedence. Inventory should
-not directly name policy-resource or realization IDs/digests because policy owns the
-mapping from domain classifications to implementation semantics. This ownership
-guidance is not a new schema prohibition.
-
-An eventual immutable source snapshot is a separate ingestion/provenance concern,
-not a current assessment identity or artifact. Historical assessment reproduction
-uses the operation's mode-sensitive frozen selection and resolution facts. The
-platform is authoritative only for its own concerns, including group rules, policy
-assignments, policies, rendered plans, decisions, and findings.
-
-### Evaluation plane
-
-The evaluator resolves a subject's groups and baseline assignments, assembles
-the relevant evidence, and evaluates a pinned policy bundle in OPA. Evaluators
-are hosted away from governed objects and can scale independently.
-
-### Reporting plane
-
-The reporting service consumes immutable decisions and evidence references. It
-maintains finding lifecycles, history, dashboards, notifications, exports, and
-audit views. It does not recalculate policy outcomes.
-
-System [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) owns immutable historical outcomes, exact operation-bound plan alignment and query-time operational evidence timeliness. #80 implements its derived historical view and separate dimension aggregation. A historical result never ages into another logical outcome; only support from its exact selected evidence and recorded waiver interval receives temporal qualification. #90 retains the validated identity-bound selection/temporal facts in current v4. See [artifact provenance](artifact-provenance.md#exact-planresult-contract) and [CLI behavior](cli.md#historical-results-and-operational-views).
-
-### Policy management plane
-
-Git-backed policy, control metadata, evidence schemas, baselines, and tests are
-built into immutable policy releases. A release contains the OPA bundle plus a
-compiled catalog and schemas used by the assessment planner. Promotion and
-rollback are independent of collector and reporting releases.
-
-A deployed environment may assemble several named releases or partial policy
-trees locally. Source order has no precedence: identical identities coalesce
-with provenance and divergent identities fail. The plan retains actual named
-source content once in its ADR 0007 planning composition. This lets a restricted
-environment combine verified shared policy with private overlays or complete
-realizations without exposing those details to central CI.
-
-### External adapter boundary
-
-Core tooling ends at resolved desired technical controls plus evidence-backed
-assessment. The provenance-bearing assessment plan exposes subject, operation,
-member-plan and bound-plan identity, actual planning composition, stable
-`implementation` and `instance_id`, resolved `parameters`,
-`definition_fingerprint`, disposition, derivations, deviations, source and
-baseline lineage, and requirement/realization lineage where applicable.
-
-External programs may consume the complete plan to map those records into IaC,
-PaC, MDM, ticketing, configuration-management, or similar outputs. Core does
-not load executable adapters or templates from policy sources and assessment
-does not require an adapter. External output is neither proof of execution nor
-compliance evidence. If it records provenance, it references the source
-assessment plan.
-
-## 4. Core domain model
-
-| Concept | Meaning |
-|---|---|
-| **Subject** | A governed resource in scope: repository, cluster, cloud account, workload, identity, etc. The CLI presents Subjects as assets without renaming this domain or wire identity. |
-| **Inventory projection** | A normalized supplied view of subjects and governed applicability facts. Upstream systems/reviewed configuration own fact authoring; the exact projection is authoritative to closed-world resolution for that operation. It is not an assessment-wide snapshot identity. |
-| **Evidence document** | A typed JSON observation about a subject, with provenance, collection time, and freshness. |
-| **Control requirement** | A technology-neutral company outcome that may map to an external framework objective. |
-| **Control implementation** | Reusable Rego that evaluates one technical condition against a particular evidence contract. |
-| **Control instance** | A stable, parameterized technical desired-state check supplied directly by a baseline or by a requirement realization. |
-| **Control realization** | The complete environment-specific set of technical instances and satisfaction rule used to assess one control requirement. |
-| **Framework requirement** | An external or internal requirement mapped to one or more controls. |
-| **Decision** | The immutable output of one policy evaluation. |
-| **Finding** | A tracked compliance issue derived from one or more failing decisions. |
-| **Group** | A node in the subject-group DAG, populated by explicit membership or selectors. |
-| **Policy assignment** | A mapping from a stable inventory group to one or more baselines. |
-| **Baseline** | A named set of parameterized control instances. |
-| **Assessment plan** | The fully resolved, immutable policy to evaluate for one subject. |
-| **External adapter** | A separate program that may consume an assessment plan and owns its own backend mapping, output, credentials, state, approval, and execution semantics. |
-| **Evidence** | Material supporting a result: observations, decision metadata, references, or artifacts. |
-| **Waiver** | A time-bounded, approved exception with scope, owner, and rationale. |
-| **Remediation** | Guidance or an action intended to resolve a finding. |
-
-An important boundary: a **decision** is an event, while a **finding** has a
-lifecycle. Repeated failed evaluations should update or corroborate a finding,
-not create endless duplicate tickets.
-
-## 5. Policy contract
-
-Each policy package should expose a predictable result shape. Exact naming is
-still open, but the semantic contract should resemble:
-
-```json
-{
-  "control_id": "access.mfa.required",
-  "resource": {
-    "type": "identity",
-    "id": "user/123"
-  },
-  "status": "fail",
-  "severity": "high",
-  "reason": "Interactive administrator account does not require MFA",
-  "remediation": "Require phishing-resistant MFA for the account",
-  "evidence_refs": ["evidence://identity/user-123/authentication"],
-  "metadata": {
-    "policy_version": "sha256:...",
-    "input_schema_version": "identity/v1"
-  }
-}
-```
-
-Candidate status values are `pass`, `fail`, `unknown`, `not_applicable`,
-`error`, and `waived`. Treating missing or stale data as `unknown` avoids
-accidentally reporting absence of evidence as compliance. A valid waiver must
-remain distinguishable from a pass.
-
-## 6. Principal workflows
-
-### Policy lifecycle
-
-1. Author a control and its Rego implementation.
-2. Validate control manifests, implementation parameter schemas, baselines, and
-   overlays; resolve inheritance and validate each effective control instance.
-3. Build an immutable bundle and produce provenance.
-4. Promote the bundle through environments.
-5. Distribute it to evaluation points with rollback support.
-
-### Continuous assessment
-
-1. Discover subjects and collect source-specific observations.
-2. Validate observations against versioned evidence schemas.
-3. Resolve the group DAG and baseline assignments into an assessment plan.
-4. Validate the rendered plan's strict schema, member/operation identity,
-   derived accounting disposition, and provenance invariants.
-5. Resolve active waivers and evaluate the plan's controls.
-6. Validate and persist the decision envelope and evidence references.
-7. Open, update, suppress, or close findings based on state transitions.
-
-### External adaptation
-
-1. Resolve inventory, assignments, baselines, overlays, and realizations once
-   into the immutable assessment plan.
-2. Persist and validate that provenance-bearing plan.
-3. Let a separately installed program consume the plan and map stable control
-   IDs, fingerprints, parameters, and provenance into its own output.
-4. Keep backend capability, conflict, credential, state, approval, and
-   execution semantics outside core tooling.
-5. Collect fresh actual-state evidence independently and evaluate it with OPA.
-
-External-framework reporting preserves two different claims. An objective
-mapping reports the rolled-up result of a complete `ControlRequirement` and its
-selected realization. A technical mapping reports only the independently
-attributable check and its alignment to the mapped parent. Tailored or excluded
-checks remain explicit; passing effective company policy does not silently
-assert unaltered framework conformance.
-
-An assurance explanation also needs to connect those policy objects to the
-organization's intended way of working. The operating-practice narrative says
-how people, platforms, ownership, approvals, and change workflows are expected
-to implement the company objective. It does not become evidence merely because
-it is documented. Procedural behavior that must affect an automated objective
-result requires an appropriate evidence contract and independently
-attributable check; otherwise it remains an explicit assurance gap.
-
-Internal and external concerns converge on company-owned policy rather than
-forming competing top-level hierarchies:
+The installed `compliance` CLI resolves explicit normalized inventory, assignments
+and independently named policy sources into provenance-bearing assessment plans.
+Assessment evaluates the resolved criteria against qualifying descriptive Evidence
+using OPA away from governed subjects. Collectors observe state without desired
+policy or Control knowledge. The core does not host evaluation/reporting services,
+Evidence stores, finding lifecycles, scheduling, notifications or authentication.
 
 ```text
-Internal concern -> company objective or technical baseline
-External requirement -> reviewed company interpretation -> company objective
-Company objective -> realization -> technical controls
-Technical controls -> optional external adaptation and delivery
-Technical controls -> observed evidence and assessment
+Governed Inventory + Governed Policy -> resolved assessment plan
+                                              + descriptive Evidence + waivers
+                                              -> Assessment -> exact plan/result history
+
+explicit current inputs -> Inventory / Coverage projections
+explicit retained history -> Assessment / mappings projections
+exact governance declaration + required history -> Framework satisfaction
+explicit before/after plans -> Policy Diff
 ```
 
-A company baseline can therefore be assigned widely for its own operational
-value and also carry technical mappings that support several external
-requirements. A company `ControlRequirement` can exist with no external
-reference, or it can be the reviewed interpretation of one or more external
-requirements. The same external reference may need several company objectives.
-Mappings are many-to-many reporting relationships; they do not impose policy
-precedence, copy vague framework prose into Rego, or implicitly merge control
-parameters.
+Technical Baseline/Overlay assessment is complete without a synthetic Objective.
+Optional Requirement/Realization assurance shares planning and evaluation while
+retaining its own selection, adoption and roll-up contracts. Governance owns
+reviewed external/non-core determinations; mappings supply traceability only.
 
-For a technically realized objective, the immutable plan explains the resolved
-implementation contract, while evidence and results explain what was concluded
-at the recorded assessment instant. Evidence within recorded age limits does not
-establish present-state certainty under ADR 0011. External generated or applied output is not
-proof by itself. Portions of a requirement concerning
-governance, people, or process need appropriate attributable evidence and
-checks or must remain visible as unverified rather than being inferred from a
-host setting.
+## Authority, retention and time
 
-Whole-framework fulfillment is broader than either mapping level. It requires
-a versioned framework and declared scope, complete accounting for applicable,
-omitted, and approved not-applicable requirements, and defensible results for
-every required objective. A small profile or a set of passing mapped controls
-cannot by itself establish certification, legal compliance, or complete
-framework conformance. See
-[`verification-scenarios.md`](verification-scenarios.md) for the accepted
-scenario and assurance-narrative rules.
+Authored policy owns intent, criteria and check meaning. Normalized Governed
+Inventory owns the supplied subject facts consumed by resolution. Evidence records
+descriptive observations; provenance binds supplied content without authenticating
+upstream truth. Governance owns waiver resources and framework declarations.
 
-Technical baselines and requirement baselines are complementary entry points
-to the same plan and evaluator. A subject can have direct technical controls,
-realized objectives, or both. Direct technical controls report desired-state
-compliance without manufacturing a parent objective. Realized objectives add a
-reviewed completeness assertion and conservative roll-up over their technical
-results. Only the latter can produce an objective or requirement-baseline tick;
-neither automatically constitutes certification or a legal conclusion.
+Generated plans, results, Evidence, caches and response captures stay untracked and
+do not become authored policy. A retained validated bound plan/result pair is,
+however, the exact historical assertion: the plan owns resolved intent, operation
+membership and planning provenance; the result owns immutable conclusions,
+evaluation provenance, selected Evidence, unsuccessful dispositions and applied
+waivers. Retention is an external operating choice, not a core store obligation.
 
-## 7. Repository boundaries
+Historical outcome, exact accounting, plan alignment, selected-evidence timeliness
+and recorded waiver qualification remain separate dimensions. Query-time
+qualification neither changes the outcome nor reselects Evidence or re-resolves
+historical policy. Current Coverage, governance determinations and framework
+satisfaction are distinct from historical Assessment outcomes. None establishes
+continuous effectiveness, external conformity or real-world completeness.
 
-Repository topology is governed by destination [ADR 0005](../../docs/adr/0005-content-addressed-development-boundaries.md), the current system [architecture](../../docs/ARCHITECTURE.md), and [repository map](../../docs/REPOSITORIES.md). Repository names, checkout paths, commits, and acquisition metadata are not canonical semantic or runtime identity.
+## Producer interface
 
-Logical boundaries remain explicit across any source layout. Tooling, each
-named policy source, release units, verification scenarios, and independently
-operable projects retain distinct ownership and identity. Co-locating
-non-sensitive development source does not merge policy-source catalogs,
-invent source precedence, or combine project inventories and artifacts.
+The experimental [producer interface](producer-interface.md) discovers contracts
+from explicitly materialized policy sources, exports exact canonical schemas and
+validates one ordinary typed Evidence document. Tooling alone does not include
+policy-owned Evidence schemas. The analogous Subject check uses the installed
+tooling-owned inventory schema and validates only one normalized resource.
 
-Real need-to-know boundaries remain physically and operationally separate. A
-private environment owns its inventory, assignments, waivers, private policy,
-collector configuration, credentials, and runtime locations. Branches and
-ordinary source-directory boundaries are not access controls. Environment-local
-assembly combines verified shared policy with private inputs without granting a
-central source or CI context access to restricted material.
+Document validation covers supported representation, exact type/schema and envelope/
+payload validity. It does not establish observation truth, freshness, selection,
+policy applicability or criterion satisfaction. Caller-supplied identity and
+schema-permitted extensions remain intact; extensions do not become criterion
+inputs. There is no network registry, implicit source precedence or generated SDK.
+The isolated standard-library collector exercise demonstrates ordinary construction
+without private imports, project configuration, OPA or policy knowledge.
 
-After inputs are materialized, evaluation must not require `.git`, submodule
-commands, mutable branch lookups, repository coordinates, or hosted-provider
-access. Content-addressed policy sources, exact distribution bytes, evaluator
-identity, evidence identity, release composition, and generated-artifact
-provenance remain the authoritative identities.
+## Derived-read interface
 
-Each independently operable project follows the canonical layout in
-[`project-layout.md`](project-layout.md). Authored inventory and assignments
-are kept apart from generated evidence, per-subject plans, and per-subject
-results. Project configuration declares the complete path contract, while
-named policy catalogs and schemas remain independently identified and versioned
-logical dependencies regardless of source placement.
+The experimental [CLI/query boundary](cli.md#experimental-external-read-consumption)
+provides purpose-specific responses. Historical Assessment entry points share only
+a derived, non-persisted validated context: one exact operation-bearing anchor,
+explicit retained assessed plans/results, explicit relevant instants and an optional
+comparison anchor. Existing owners perform intrinsic validation, exact identity
+resolution, competing-result detection and mandatory available plan/result relations
+before full interpretation, accounting and qualification.
 
-## 8. Trust and security boundaries
+Inventory/Coverage consume current inputs through their existing resolver.
+Framework retains declaration validation and satisfaction semantics; Policy Diff
+validates explicit before/after plans independently. No context contains every domain.
+Missing expected results leave unfilled slots, not inferred refusals. An orphaned
+result exposes only bounded result-owned facts. Invalid or contradictory supplied
+artifacts reject full interpretation.
 
-- Authenticate collectors and evaluation clients; authorize them by tenant,
-  environment, and asset scope.
-- Authenticate evidence provenance so an asset cannot submit observations on
-  behalf of an unrelated asset.
-- Sign policy bundles and verify them before activation.
-- Make evidence append-oriented and integrity-verifiable.
-- Record provenance for facts and reference data.
-- Preserve the external source, source object identity, observation time, and
-  adapter revision for imported inventory attributes; do not silently resolve
-  conflicting authoritative values by ingestion order.
-- Minimize sensitive data in OPA input and decision logs; apply field-level
-  redaction before persistence.
-- Separate policy-authoring authority from waiver-approval authority.
-- Define fail-open versus fail-closed behavior per enforcement point, never as
-  a platform-wide accidental default.
+Explanations join plan-owned titles, dependency inputs and mappings to result facts
+through exact plan and dependency identities. Optional retained Evidence enriches
+collector presentation only after exact ID+digest matching; missing bytes do not
+erase retained historical facts. Caller-trusted external refusal context remains
+separate from core result history. Inventory views omit arbitrary annotations and
+attributes. The isolated browser consumes derived responses and only navigates,
+filters, sorts and formats them; it does not interpret raw artifacts. This boundary
+adds no universal report model, public Python API, service or latest-state store.
 
-## 9. Decisions we should make next
+## Detailed current contracts
 
-### A. End-to-end control families
+| Concern | Local contract |
+| --- | --- |
+| Commands, projections and external read consumption | [CLI](cli.md) |
+| Policy, Controls, evidence and assessment | [Policy model](policy-model.md) |
+| Inventory, assignments and current Coverage | [Inventory and assignments](inventory-and-assignments.md) |
+| Exact operation scope and accounting | [Operation accounting](operation-accounting.md) |
+| Plan/result ownership, validation and history | [Artifact provenance](artifact-provenance.md) |
+| Explicit parameters and freshness | [Policy parameters](policy-parameters.md) |
+| Baseline derivation | [Baseline inheritance](baseline-inheritance.md) |
+| Optional Objective assurance | [Control realization](control-realization.md) |
+| Project configuration and isolation | [Project layout](project-layout.md) |
+| Waivers | [Waivers](waivers.md) |
+| Actual composition and expected enforcement | [Composition](composition.md) |
+| Source/distribution release ownership | [Release distribution](release-distribution.md) |
+| Focused validation and canonical scenarios | [Validation](validation.md), [scenario contract](verification-scenarios.md) |
 
-The deterministic mock API collector normalizes provider responses into
-domain-specific evidence without carrying desired policy. Typed macOS evidence
-schemas, controls, and synthetic fixtures retain the platform-neutral evidence
-and evaluation contracts without an active real-host collector. A future
-host-observation path requires a concrete deployment owner and privacy boundary.
-The IAM project proves a Linux host requirement realized through package,
-identity-domain, SSH, and account evidence.
+## External and private boundaries
 
-Dedicated verification should migrate toward stable, scenario-first projects
-that remain deterministic while representing credible operational contexts.
-Development projects remain free to discover new behavior, and boundary
-examples remain separate where host state, privacy, private policy, or
-repository isolation is the property being demonstrated. Several logical
-projects may share one repository when ownership and visibility match, but
-their inventories and generated artifacts must remain isolated. The accepted
-direction and proposed migration are defined in
-[`verification-scenarios.md`](verification-scenarios.md).
+The assessment plan is the external-adapter handoff. External programs own backend
+mapping, credentials, state, approval and apply behavior. Policy sources supply data
+and criteria, not executable adapters. Adapter output does not prove deployment or
+criterion satisfaction; Assessment remains usable without an adapter.
 
-### B. Policy execution granularity
-
-The effective policy is always rendered from the group DAG into an immutable
-assessment plan, and results remain attributable to individual controls. We
-will prototype whether OPA should receive one control or the complete plan per
-evaluation call. The current proposal is described in
-[`policy-model.md`](policy-model.md).
-
-Inventory ownership, group membership, assignment binding, and deterministic
-resolution are detailed in
-[`inventory-and-assignments.md`](inventory-and-assignments.md).
-
-### C. Evaluation trigger
-
-Choose whether evidence arrival triggers evaluation, a scheduler evaluates the
-latest evidence, or both. This choice affects how we express a complete
-assessment across evidence collected at different times.
-
-### D. Policy ownership model
-
-Choose between centrally curated policy, team-owned policy with guardrails, or
-a layered model where organizational baselines and local additions compose.
-
-### E. Evidence retention and freshness
-
-Assessment-time stale or absent required evidence produces `unknown`, not `pass`,
-under ADR 0010. [ADR 0011](../../docs/adr/0011-historical-assessment-and-operational-evidence-timeliness.md) separately defines query-time
-timeliness without changing historical results or existing freshness eligibility.
-#32 retains the required factual temporal provenance; deriving timeliness must
-not depend on long-term evidence-byte retention. Evidence storage/retention design
-remains outside that decision.
-
-### F. High-level requirements and private technical realizations
-
-External mappings on technical checks provide traceability but do not prove
-that an environment has completely implemented a higher-level objective. The
-implemented initial contract in
-[`control-realization.md`](control-realization.md) adds a
-technology-neutral `ControlRequirement`, an environment-private
-`ControlRealization`, and an explicit satisfaction rule. This lets a local
-deployment calculate a defensible parent and requirement-baseline result while
-keeping technical implementation details inside a need-to-know boundary.
-
-The executable flow uses complete shared and restricted realizations,
-an `allOf` rule over embedded technical instances, trusted-label exactly-one
-selection, and an optional non-inheriting `based_on` provenance pin. It has no
-template/binding layer or automatic realization merge. Policy validation checks
-the complete catalog, the planner selects exactly one realization and freezes
-its expanded checks into the subject plan, and local evaluation rolls technical
-results into requirement and requirement-baseline results.
-
-### G. External adaptation from resolved controls
-
-The assessment plan is sufficient for an external program to distinguish
-multiple instances of one implementation, resolved parameter differences,
-control-definition drift, active versus excluded disposition, overlay
-derivations and deviations, source/baseline lineage, and
-requirement/realization lineage. Core creates no duplicate configuration-plan
-artifact.
-
-An external adapter owns mapping those records to backend output and all
-backend capability, composition, conflict, credential, state, approval, and
-execution behavior. Policy sources provide data and control parameter schemas,
-not executable adapter code. Assessment remains complete without an adapter
-installed.
-
-### H. Operational personas, feature policy, and waivers
-
-The Linux hardening rollout owned by the current verification integration source
-exercises servers whose approved persona or feature requires a deliberate
-hardening difference. A trusted inventory label selects a stable group and
-reviewed derived baseline.
-A durable persona-wide change to desired policy is an overlay deviation; a
-temporary inability of one scoped subject to meet that effective policy uses a
-project-owned waiver. The initial contract targets one exact subject and
-technical control, validates approval and bounded lifecycle data, rejects
-overlapping windows, and converts only an underlying failure to the distinct
-`waived` result. The result snapshots the approval and original failure while
-desired policy remains unchanged.
-
-The same scenario assigns the company identity/access objective and selects the
-complete shared Linux realization. One subject proves the objective from fresh
-technical evidence; another has no access evidence and remains `unknown` while
-its separate audit-package failure is waived. This demonstrates that company
-operations policy, optional external objective mapping, resolved desired
-controls, actual-state evidence, and exceptions can overlap without
-collapsing their claims. See [`verification-scenarios.md`](verification-scenarios.md)
-and [`waivers.md`](waivers.md).
-
-## 10. Working assumptions (not decisions)
-
-- Continue exercising several evidence domains rather than designing a
-  universal provider configuration schema.
-- Rego remains the executable policy language; higher-level authoring can be
-  considered later if real users struggle with it.
-- Policies are stored in Git and delivered as immutable bundles.
-- The control plane stores decision metadata and evidence references; large raw
-  artifacts may live in an object store.
-- Evaluation is service-hosted and never runs on the governed object.
-- External adaptation and execution remain separate from assessment authority.
-  Any future delivery workflow must preserve approval and post-change
-  verification boundaries.
+Private inputs remain in separately authorized environments. Tooling runs with
+materialized content and no Git or hosted-provider dependency. Content-addressed
+provenance and independently named sources preserve exact attribution, identical-only
+coalescing and fail-closed divergence without source-order precedence. Repository
+layout and acquisition metadata do not establish semantic identity or trust.
 
 ## 11. Decision log
+
+The entries below preserve implementation and design history, including superseded
+proposals. They are not current implementation scope or an independent normative
+layer. Use the current contracts above and accepted system ADRs for present behavior;
+GitHub owns active delivery scope and sequencing.
 
 ### 2026-09-20 — Validated derived-read projections and browser falsification (#187)
 

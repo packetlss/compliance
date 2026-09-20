@@ -126,7 +126,8 @@ Runtime/provenance tests should materialize committed inputs into temporary non-
 
 ## Validation architecture
 
-Three stable contexts own the validation layers.
+Three stable contexts own the validation layers; `macos-portability` is an
+additional required native-platform context. All four report on every PR.
 
 ### `component-validation`
 
@@ -196,7 +197,10 @@ Historical preservation is distinct from current compatibility. Do not keep acti
 
 Real private environment inputs remain outside this repository. The synthetic IAM fixture tests private-source isolation only by separately materializing `environment-private`; it does not convert a public/co-located fixture into an access-control boundary.
 
-Generated evidence/results, credentials, backend state, adapter output and private operational data remain non-authoritative/untracked.
+Generated evidence/plans/results, backend state and adapter output remain untracked
+execution material, not authored policy authority. Exact retained validated
+plans/results still own their historical assertion. Credentials and real private
+operational data stay outside this repository.
 
 ## Firewall boundary
 

@@ -16,7 +16,7 @@ suite, and checks this repository's revision and cleanliness before and after.
 It works at any checkout location, including a direct Git worktree. It neither
 discovers nor validates a parent repository or sibling checkout. The optional
 `COMPLIANCE_TOOLING_SHA` environment variable asserts an exact candidate head.
-GitHub Actions supplies that head and retains the `tooling-validation` check.
+GitHub Actions supplies that head within the required `component-validation` context.
 It uses only the normal read-only token for this repository.
 
 For an edit/test cycle before committing, run:

@@ -1,10 +1,10 @@
 # Actual composition and expected enforcement
 
-Status: implemented through #31–#36; assessment v4 emission completed under #32.
+Status: **Current experimental composition contract**
 
 [ADR 0007](../../docs/adr/0007-unified-actual-and-expected-composition-provenance.md)
 and [ADR 0009](../../docs/adr/0009-active-compliance-vocabulary.md) govern this
-successor. `composition-lock/v1alpha1` is the sole forward complete expected
+contract. `composition-lock/v1alpha1` is the sole forward complete expected
 composition. It neither acquires inputs nor supplies missing actual provenance.
 
 ## Project configuration
@@ -173,7 +173,7 @@ V1alpha3 planning and assessment now use the v4 artifact line implemented under
 #32, including assessment views that internally render comparison plans. Fresh
 actual composition/enforcement is observed before planning and again before
 evaluation; persisted-plan policy drift refuses evaluation. See the
-[v4 artifact contract](artifact-provenance.md#v4-provenance-and-semantic-identity).
+[v4 artifact contract](artifact-provenance.md#exact-planresult-contract).
 Only successor configs, composition locks and v4 assessments are supported.
 Retired discriminators fail strict validation. `release show/validate` is removed;
 `composition show/validate` owns successor diagnostics.
