@@ -1,17 +1,16 @@
 {
   "apiVersion": "compliance.example/v1alpha1",
-  "kind": "RequirementBaseline",
+  "kind": "ParameterPolicy",
   "metadata": {
     "id": "company.database-software",
     "revision": 1
   },
   "spec": {
-    "title": "Synthetic database software authorization",
     "parameter_contributions": [
       {
         "id": "database-packages",
         "target": {
-          "requirement": "company.authorized-software",
+          "policy": "company.authorized-software",
           "slot": "allowed_software"
         },
         "members": [

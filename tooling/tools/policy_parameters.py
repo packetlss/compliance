@@ -5,6 +5,7 @@ import copy
 import re
 
 from jsonschema import Draft202012Validator, FormatChecker, ValidationError
+from jsonschema.exceptions import FormatError
 from referencing import Registry
 
 from .assessment_provenance import digest
@@ -17,7 +18,7 @@ from .identifiers import (
     SLOT,
     is_canonical_control_evidence_inputs_schema_id,
     is_canonical_control_parameter_schema_id,
-    is_canonical_requirement_parameter_schema_id,
+    is_canonical_parameter_policy_schema_id,
 )
 
 
@@ -29,7 +30,189 @@ def document(value):
     return {k: copy.deepcopy(v) for k, v in value.items() if not k.startswith('_')}
 
 
-def normalized_resource_document(value, requirements=None):
+def authored_parameter_links(value):
+    """Return links authored directly by one Check-owning policy document."""
+    spec = value.get('spec', {})
+    links = copy.deepcopy(spec.get('parameter_links', []))
+    for operation in spec.get('operations', []):
+        links.extend(copy.deepcopy(operation.get('parameter_links', [])))
+    return sorted(links, key=lambda item: item['id'])
+
+
+def validate_parameter_link_structure(link):
+    """Validate the bounded symbolic link wire without a current policy schema."""
+    require(isinstance(link, dict) and set(link) == {'id', 'source', 'destination'},
+            'unsupported parameter link syntax')
+    require(isinstance(link['id'], str) and bool(link['id']),
+            'parameter link id must be nonempty')
+    source = link['source']
+    require(isinstance(source, dict) and set(source) == {
+        'policy', 'digest', 'slot', 'declaration_digest', 'schema_digest',
+    }, 'unsupported parameter link source syntax')
+    require(isinstance(source['policy'], str) and bool(re.fullmatch(REFERENCE, source['policy']))
+            and isinstance(source['slot'], str) and bool(re.fullmatch(SLOT, source['slot']))
+            and all(valid_digest(source[field]) for field in (
+                'digest', 'declaration_digest', 'schema_digest')),
+            'invalid parameter link source')
+    destination = link['destination']
+    require(isinstance(destination, dict)
+            and {'instance_id', 'implementation', 'kind', 'path'} <= set(destination)
+            and set(destination).issubset({
+                'instance_id', 'implementation', 'kind', 'dependency', 'path',
+            }), 'unsupported parameter link destination syntax')
+    require(isinstance(destination['instance_id'], str)
+            and bool(re.fullmatch(ID, destination['instance_id'])),
+            'invalid parameter link destination instance')
+    validate_implementation_pin_identities(destination['implementation'])
+    require(valid_digest(destination['implementation'].get('fingerprint')),
+            'invalid frozen implementation fingerprint')
+    require(destination['kind'] in {'parameters', 'evidence_inputs', 'freshness'}
+            and isinstance(destination['path'], str)
+            and bool(re.fullmatch(r'/[^/].*', destination['path'])),
+            'invalid parameter link destination interface')
+    if destination['kind'] == 'parameters':
+        require('dependency' not in destination,
+                'parameter destination cannot name an Evidence dependency')
+    else:
+        require(isinstance(destination.get('dependency'), str)
+                and bool(re.fullmatch(SLOT, destination['dependency'])),
+                'Evidence destination requires a dependency')
+    if destination['kind'] == 'freshness':
+        require(destination['path'] == '/max_age',
+                'freshness destination must target /max_age')
+
+
+def technical_document_reference(resource):
+    metadata = resource.get('metadata', {})
+    revision = metadata.get('revision', metadata.get('version'))
+    return f"{metadata.get('id')}@{revision}"
+
+
+def _merge_technical_links(target, owner, incoming):
+    for link in incoming:
+        key = (owner, link['id'])
+        existing = target.get(key)
+        require(existing is None or equal(existing, link),
+                'inherited technical parameter link conflict')
+        target[key] = copy.deepcopy(link)
+
+
+def frozen_technical_links(plan):
+    """Reconstruct all effective direct technical links from frozen owner documents."""
+    records = [
+        item for item in plan.get('parameters', {}).get('consumers', [])
+        if item.get('kind') in {'Baseline', 'BaselineOverlay'}
+    ]
+    catalog = {item['reference']: item for item in records}
+    require(len(catalog) == len(records), 'duplicate frozen technical consumer document')
+    actual_sources = (
+        plan.get('provenance', {})
+        .get('planningComposition', {})
+        .get('actual', {})
+        .get('policySources')
+    )
+    actual_policy_sources = (
+        {item['name'] for item in actual_sources}
+        if isinstance(actual_sources, list) else None
+    )
+    from .render_plan import baseline_semantic_digest
+    for item in records:
+        require(set(item) == {
+            'kind', 'reference', 'digest', 'policy_sources', 'document',
+        }, 'invalid frozen technical parameter consumer')
+        require(item['kind'] == item['document']['kind']
+                and item['reference'] == technical_document_reference(item['document'])
+                and item['digest'] == baseline_semantic_digest(item['document']),
+                'frozen technical parameter consumer owner mismatch')
+        matching_lineage = [
+            ancestor
+            for baseline in plan['resolved_baselines']
+            for ancestor in baseline['lineage']
+            if ancestor['reference'] == item['reference']
+            and ancestor['digest'] == item['digest']
+        ]
+        require(matching_lineage
+                and all(equal(ancestor['policy_sources'], item['policy_sources'])
+                        for ancestor in matching_lineage),
+                'frozen technical parameter consumer source mismatch')
+        if actual_policy_sources is not None:
+            require(all(locator.get('policy_source') in actual_policy_sources
+                        for locator in item['policy_sources']),
+                    'frozen technical consumer source is absent from planning composition')
+    technical_catalog = {
+        item['reference']: {
+            **copy.deepcopy(item['document']),
+            '_digest': item['digest'],
+            '_sources': copy.deepcopy(item['policy_sources']),
+        }
+        for item in records
+    }
+    combined = {}
+    visited = set()
+    from .render_plan import BaselineResolutionError, resolve_baseline
+    for baseline in plan.get('resolved_baselines', []):
+        if baseline['reference'] not in catalog:
+            continue
+        try:
+            resolved = resolve_baseline(baseline['reference'], technical_catalog)
+        except BaselineResolutionError as error:
+            message = {
+                'duplicate-parameter-link': 'duplicate technical parameter link',
+                'unknown-baseline': 'missing frozen technical consumer ancestor document',
+            }.get(error.details.get('type'), 'invalid frozen technical consumer replay')
+            raise ParameterResolutionError(message) from error
+        links = resolved['parameter_links']
+        if not links:
+            continue
+        for link in links:
+            validate_parameter_link_structure(link)
+        ancestry = [item['reference'] for item in resolved['lineage']]
+        selected_lineage = [
+            (item['reference'], item['digest']) for item in baseline['lineage']
+        ]
+        reconstructed_lineage = [
+            (reference, catalog[reference]['digest']) for reference in ancestry
+        ]
+        require(selected_lineage == reconstructed_lineage,
+                'frozen technical consumer ancestry differs from selected baseline')
+        authored = {
+            reference: authored_parameter_links(technical_catalog[reference])
+            for reference in ancestry
+        }
+        for link in links:
+            owners = [
+                reference for reference in ancestry
+                if any(equal(link, candidate) for candidate in authored[reference])
+            ]
+            require(len(owners) == 1,
+                    'frozen technical parameter link has ambiguous structural owner')
+            _merge_technical_links(combined, owners[0], [link])
+        visited.update(ancestry)
+    require(visited == set(catalog),
+            'frozen technical consumer document is outside selected consuming ancestry')
+    effective = {}
+    for (owner, _), link in sorted(combined.items()):
+        target = link['destination']
+        key = (
+            target['instance_id'], target['kind'],
+            target.get('dependency'), target['path'],
+        )
+        existing = effective.get(key)
+        require(existing is None
+                or (existing['owner'] != owner
+                    and equal(existing['link']['source'], link['source'])
+                    and equal(existing['link']['destination'], link['destination'])),
+                'ambiguous consumption destination')
+        effective.setdefault(key, {
+            'owner': owner,
+            'link': copy.deepcopy(link),
+        })
+    result = [effective[key]['link'] for key in sorted(effective)]
+    validate_consumer_destinations(result)
+    return result
+
+
+def normalized_resource_document(value, policies=None):
     """Project parameter resources into their contract-defined semantic order."""
     clean = document(value)
     spec = clean.get('spec', {})
@@ -45,11 +228,11 @@ def normalized_resource_document(value, requirements=None):
             'target': item['target'],
         }))
     if 'parameter_operations' in spec:
-        requirement_catalog = requirements or {}
+        policy_catalog = policies or {}
         for operation in spec['parameter_operations']:
             target = operation.get('target', {})
-            requirement = requirement_catalog.get(target.get('requirement'))
-            declaration = (requirement or {}).get('spec', {}).get('parameters', {}).get(target.get('slot'))
+            policy = policy_catalog.get(target.get('policy'))
+            declaration = (policy or {}).get('spec', {}).get('parameters', {}).get(target.get('slot'))
             if declaration and declaration.get('composition') == {'kind': 'additive-set'}:
                 for field in ('from', 'to'):
                     if field in operation:
@@ -60,43 +243,135 @@ def normalized_resource_document(value, requirements=None):
     return clean
 
 
-def resource_digest(value, requirements=None):
-    return digest(normalized_resource_document(value, requirements))
+def resource_digest(value, policies=None):
+    return digest(normalized_resource_document(value, policies))
 
 
-def validate_baseline_structure(value):
-    """Re-enforce the bounded RequirementBaseline wire needed by frozen resolution."""
+def validate_parameter_policy_structure(value):
+    """Re-enforce the bounded ParameterPolicy wire used by frozen resolution."""
     clean = document(value)
+    require(set(clean) == {'apiVersion', 'kind', 'metadata', 'spec'},
+            'unsupported parameter policy document syntax')
+    require(clean.get('apiVersion') == 'compliance.example/v1alpha1',
+            'frozen parameter policy apiVersion mismatch')
     metadata = clean.get('metadata')
-    require(isinstance(metadata, dict), 'requirement baseline metadata must be an object')
+    require(clean.get('kind') == 'ParameterPolicy', 'frozen parameter policy kind mismatch')
+    require(isinstance(metadata, dict), 'parameter policy metadata must be an object')
+    require({'id', 'revision'} <= set(metadata)
+            and set(metadata).issubset({'id', 'revision', 'origin'}),
+            'unsupported parameter policy metadata syntax')
     require(
         isinstance(metadata.get('id'), str) and bool(re.fullmatch(ID, metadata['id'])),
-        'invalid frozen requirement baseline identity',
+        'invalid frozen parameter policy identity',
     )
     require(
         valid_revision(metadata.get('revision')),
-        'invalid frozen requirement baseline revision',
+        'invalid frozen parameter policy revision',
     )
+    require('origin' not in metadata or isinstance(metadata['origin'], dict),
+            'parameter policy origin must be an object')
     spec = clean.get('spec')
-    require(isinstance(spec, dict), 'requirement baseline spec must be an object')
+    require(isinstance(spec, dict), 'parameter policy spec must be an object')
     require(set(spec).issubset({
-        'title', 'requirements', 'extends', 'parameter_operations', 'parameter_contributions',
-    }), 'unsupported requirement baseline syntax')
-    if 'requirements' in spec:
-        require(isinstance(spec['requirements'], list) and bool(spec['requirements']),
-                'requirement baseline requirements must be nonempty when present')
-    for pin in spec.get('requirements', []):
-        require(isinstance(pin, dict) and set(pin) == {'requirement', 'digest'},
-                'invalid exact Objective membership')
+        'parameters', 'extends', 'parameter_operations', 'parameter_contributions',
+    }), 'unsupported parameter policy syntax')
+    if 'parameters' in spec:
+        require(isinstance(spec['parameters'], dict) and bool(spec['parameters']),
+                'parameter policy declarations must be nonempty when present')
+        for slot, declaration in spec['parameters'].items():
+            require(isinstance(slot, str) and bool(re.fullmatch(SLOT, slot)),
+                    'invalid ParameterPolicy slot')
+            require(isinstance(declaration, dict)
+                    and {'required', 'binding_mode', 'schema', 'schema_digest'} <= set(declaration)
+                    and set(declaration).issubset({
+                        'required', 'binding_mode', 'schema', 'schema_digest',
+                        'composition', 'binding_scope', 'value', 'representation',
+                    }), 'unsupported parameter declaration syntax')
+            require(isinstance(declaration['required'], bool),
+                    'parameter declaration required must be boolean')
+            require(declaration['binding_mode'] in {'open', 'fixed'},
+                    'invalid parameter binding mode')
+            require(isinstance(declaration['schema'], dict)
+                    and valid_digest(declaration['schema_digest']),
+                    'invalid parameter schema contract')
+            if 'composition' in declaration:
+                require(declaration['composition'] == {'kind': 'additive-set'}
+                        and 'representation' not in declaration,
+                        'unsupported parameter composition')
+            if 'binding_scope' in declaration:
+                scope = declaration['binding_scope']
+                require(isinstance(scope, list) and bool(scope)
+                        and len(scope) == len(set(scope))
+                        and all(isinstance(item, str) and bool(re.fullmatch(ID, item))
+                                for item in scope),
+                        'invalid ParameterPolicy binding scope')
+            if declaration['binding_mode'] == 'fixed':
+                require('value' in declaration, 'fixed declaration requires a value')
+            else:
+                require('binding_scope' in declaration and 'value' not in declaration,
+                        'open declaration requires scope and cannot own a value')
+            require('representation' not in declaration
+                    or declaration['representation'] == 'duration',
+                    'unsupported parameter representation')
     if 'extends' in spec:
         parent = spec['extends']
         require(
             isinstance(parent, dict)
-            and set(parent) == {'baseline', 'digest'}
-            and isinstance(parent.get('baseline'), str)
-            and bool(re.fullmatch(REFERENCE, parent['baseline'])),
-            'invalid frozen requirement baseline parent reference',
+            and set(parent) == {'policy', 'digest'}
+            and isinstance(parent.get('policy'), str)
+            and bool(re.fullmatch(REFERENCE, parent['policy']))
+            and valid_digest(parent.get('digest')),
+            'invalid frozen parameter policy parent reference',
         )
+    if 'parameter_operations' in spec:
+        operations = spec['parameter_operations']
+        require(isinstance(operations, list) and bool(operations),
+                'parameter operations must be nonempty when present')
+        for operation in operations:
+            require(isinstance(operation, dict)
+                    and set(operation).issubset({
+                        'id', 'op', 'target', 'expected_parent_fingerprint',
+                        'from', 'to', 'deviation',
+                    })
+                    and {'id', 'op', 'target', 'expected_parent_fingerprint'} <= set(operation),
+                    'unsupported parameter operation syntax')
+            require(isinstance(operation['id'], str) and bool(operation['id'])
+                    and operation['op'] in {'bind', 'tailor'}
+                    and valid_digest(operation['expected_parent_fingerprint']),
+                    'invalid parameter operation')
+            target = operation['target']
+            require(isinstance(target, dict)
+                    and set(target) == {
+                        'policy', 'digest', 'slot', 'declaration_digest', 'schema_digest',
+                    }
+                    and isinstance(target.get('policy'), str)
+                    and bool(re.fullmatch(REFERENCE, target['policy']))
+                    and isinstance(target.get('slot'), str)
+                    and bool(re.fullmatch(SLOT, target['slot']))
+                    and all(valid_digest(target.get(field)) for field in (
+                        'digest', 'declaration_digest', 'schema_digest')),
+                    'invalid parameter operation target')
+            if operation['op'] == 'bind':
+                require('to' in operation and 'from' not in operation
+                        and 'deviation' not in operation,
+                        'bind operation requires only a destination value')
+            else:
+                require({'from', 'to', 'deviation'} <= set(operation),
+                        'tailor operation requires from, to, and deviation')
+                deviation = operation['deviation']
+                require(isinstance(deviation, dict)
+                        and set(deviation) == {
+                            'id', 'classification', 'rationale', 'approval_ref', 'review_after',
+                        }
+                        and all(isinstance(deviation[field], str) and bool(deviation[field])
+                                for field in deviation),
+                        'invalid parameter deviation')
+                try:
+                    FormatChecker().check(deviation['review_after'], 'date')
+                except FormatError as error:
+                    raise ParameterResolutionError(
+                        'invalid parameter deviation date'
+                    ) from error
     if 'parameter_contributions' in spec:
         items = spec['parameter_contributions']
         require(isinstance(items, list) and bool(items),
@@ -108,19 +383,20 @@ def validate_baseline_structure(value):
             target = contribution.get('target')
             require(isinstance(contribution.get('id'), str) and bool(contribution['id']),
                     'additive contribution id must be nonempty')
-            require(isinstance(target, dict) and set(target) == {'requirement', 'slot'},
+            require(isinstance(target, dict) and set(target) == {'policy', 'slot'},
                     'unsupported additive contribution target syntax')
-            require(isinstance(target.get('requirement'), str)
-                    and bool(re.fullmatch(ID, target['requirement'])),
-                    'invalid additive contribution requirement target')
+            require(isinstance(target.get('policy'), str)
+                    and bool(re.fullmatch(ID, target['policy'])),
+                    'invalid additive contribution policy target')
             require(isinstance(target.get('slot'), str)
                     and bool(re.fullmatch(SLOT, target['slot'])),
                     'invalid additive contribution slot target')
             members = contribution.get('members')
             require(isinstance(members, list) and all(isinstance(member, str) for member in members),
                     'additive contribution members must be JSON strings')
-    require(bool(spec.get('requirements')) or bool(spec.get('parameter_contributions')),
-            'requirement baseline requires a requirement or parameter contribution')
+    require(bool(spec.get('parameters')) or bool(spec.get('extends'))
+            or bool(spec.get('parameter_contributions')),
+            'parameter policy requires declarations, ancestry, or a contribution')
 
 
 def require(condition, message):
@@ -141,6 +417,10 @@ def valid_revision(value):
         isinstance(value, str)
         and bool(re.fullmatch(REVISION, value))
     )
+
+
+def valid_digest(value):
+    return isinstance(value, str) and bool(re.fullmatch(r'sha256:[0-9a-f]{64}', value))
 
 
 def duration(value):
@@ -211,20 +491,20 @@ def value_for(declaration, value):
     return duration(value) if declaration.get('representation') == 'duration' else copy.deepcopy(value)
 
 
-def declarations(requirement):
-    clean = normalized_resource_document(requirement)
+def declarations(policy):
+    clean = normalized_resource_document(policy)
     reference = f"{clean['metadata']['id']}@{clean['metadata']['revision']}"
     states = {}
     for name, declaration in sorted(clean['spec'].get('parameters', {}).items()):
         require(
             isinstance(name, str) and bool(re.fullmatch(SLOT, name)),
-            'invalid requirement parameter slot',
+            'invalid ParameterPolicy slot',
         )
         require(declaration['schema_digest'] == digest(declaration['schema']), 'stale parameter schema digest')
         validate_schema(
             declaration['schema'],
             identity_validator=lambda schema_id: (
-                is_canonical_requirement_parameter_schema_id(
+                is_canonical_parameter_policy_schema_id(
                     schema_id,
                     clean['metadata']['id'],
                     name,
@@ -243,16 +523,16 @@ def declarations(requirement):
                     isinstance(item, str) and bool(re.fullmatch(ID, item))
                     for item in binding_scope
                 ),
-                'invalid requirement parameter binding scope',
+                'invalid ParameterPolicy binding scope',
             )
             require(
                 len(binding_scope) == len(set(binding_scope)),
-                'invalid requirement parameter binding scope',
+                'invalid ParameterPolicy binding scope',
             )
         require(fixed or binding_scope is not None, 'open declaration requires structural binding scope')
-        pin = {'requirement': reference, 'digest': digest(clean), 'slot': name,
+        pin = {'policy': reference, 'digest': digest(clean), 'slot': name,
                'declaration_digest': digest(declaration), 'schema_digest': declaration['schema_digest']}
-        state = {'identity': {'requirement': clean['metadata']['id'], 'slot': name},
+        state = {'identity': {'policy': clean['metadata']['id'], 'slot': name},
                  'pin': pin, 'declaration': copy.deepcopy(declaration),
                  'bound': fixed, 'history': []}
         if fixed:
@@ -265,33 +545,30 @@ def fingerprint(state):
     return digest({k: v for k, v in state.items() if k != 'history'})
 
 
-def resolve(reference, baselines, requirements, stack=()):
+def resolve(reference, policies, stack=()):
     require(reference not in stack, 'parameter derivation cycle')
-    require(reference in baselines, 'missing parameter baseline')
-    baseline = baselines[reference]
-    validate_baseline_structure(baseline)
-    clean_baseline = normalized_resource_document(baseline, requirements)
-    spec = clean_baseline['spec']
+    require(reference in policies, 'missing ParameterPolicy')
+    policy = policies[reference]
+    validate_parameter_policy_structure(policy)
+    clean_policy = normalized_resource_document(policy, policies)
+    spec = clean_policy['spec']
     states, ancestry = {}, []
-    for pin in spec.get('requirements', []):
-        requirement = requirements.get(pin['requirement'])
-        require(requirement is not None and resource_digest(requirement) == pin['digest'],
-                'stale requirement pin')
-        require(pin['requirement'] not in states, 'duplicate requirement membership')
-        states[pin['requirement']] = declarations(requirement)
     if 'extends' in spec:
         parent_pin = spec['extends']
-        parent = baselines.get(parent_pin['baseline'])
-        require(parent is not None and resource_digest(parent, requirements) == parent_pin['digest'],
+        parent = policies.get(parent_pin['policy'])
+        require(parent is not None and resource_digest(parent, policies) == parent_pin['digest'],
                 'stale parent policy pin')
-        require(equal(sorted(spec.get('requirements', []), key=lambda p: p['requirement']),
-                      sorted(parent['spec'].get('requirements', []), key=lambda p: p['requirement'])),
-                'parameter derivation cannot change requirement membership')
-        states, ancestry = resolve(parent_pin['baseline'], baselines, requirements, (*stack, reference))
+        require(not spec.get('parameters'),
+                'descendant ParameterPolicy cannot redeclare inherited slots')
+        states, ancestry = resolve(parent_pin['policy'], policies, (*stack, reference))
+    else:
+        slots = declarations(policy)
+        if slots:
+            states[reference] = slots
     seen_ids, seen_targets = set(), set()
     for operation in sorted(spec.get('parameter_operations', []), key=lambda op: op['id']):
         target = operation['target']
-        key = (target['requirement'], target['slot'])
+        key = (target['policy'], target['slot'])
         require(operation['id'] not in seen_ids and key not in seen_targets, 'duplicate or ambiguous parameter operation')
         seen_ids.add(operation['id'])
         seen_targets.add(key)
@@ -301,7 +578,7 @@ def resolve(reference, baselines, requirements, stack=()):
         require(operation['expected_parent_fingerprint'] == fingerprint(state), 'stale parameter parent fingerprint')
         require(
             state['declaration'].get('binding_scope') is not None
-            and clean_baseline['metadata']['id'] in state['declaration']['binding_scope'],
+            and clean_policy['metadata']['id'] in state['declaration']['binding_scope'],
             'parameter operation outside structural scope',
         )
         before = fingerprint(state)
@@ -319,10 +596,10 @@ def resolve(reference, baselines, requirements, stack=()):
             state['value'] = value_for(state['declaration'], operation['to'])
         else:
             raise ParameterResolutionError('unsupported parameter operation')
-        state['history'].append({'baseline': reference, 'operation': copy.deepcopy(operation),
+        state['history'].append({'policy': reference, 'operation': copy.deepcopy(operation),
                                  'before_fingerprint': before, 'after_fingerprint': fingerprint(state)})
-    ancestry.append({'reference': reference, 'digest': digest(clean_baseline),
-                     'document': clean_baseline, 'policy_sources': copy.deepcopy(baseline.get('_sources', []))})
+    ancestry.append({'reference': reference, 'digest': digest(clean_policy),
+                     'document': clean_policy, 'policy_sources': copy.deepcopy(policy.get('_sources', []))})
     return states, ancestry
 
 
@@ -332,20 +609,20 @@ def complete(states):
             require(state['bound'] or not state['declaration']['required'], 'required policy parameter unresolved')
 
 
-def reconcile_selected_slots(states, selected):
+def reconcile_selected_slots(states, selected, *, selection):
     """Independently selected exact pins cannot split one semantic slot identity."""
     candidate = dict(selected)
     for slots in states.values():
         for state in slots.values():
-            identity = (state['identity']['requirement'], state['identity']['slot'])
-            value = fingerprint(state)
+            identity = (state['identity']['policy'], state['identity']['slot'])
+            value = digest({'selection': selection, 'state': state})
             require(identity not in candidate or candidate[identity] == value,
                     'independently selected stable parameter identity conflict')
             candidate[identity] = value
     selected.update(candidate)
 
 
-def compose_selected(resolutions, baselines, requirements=None):
+def compose_selected(resolutions, policies):
     """Apply independently applicable additive contributions to resolved base states."""
     ordered = sorted(
         resolutions,
@@ -357,30 +634,32 @@ def compose_selected(resolutions, baselines, requirements=None):
     selected = {}
     occurrences = {}
     for resolved in ordered:
-        reconcile_selected_slots(resolved['states'], selected)
+        reconcile_selected_slots(
+            resolved['states'], selected, selection=resolved['reference'],
+        )
         for slots in resolved['states'].values():
             for state in slots.values():
-                identity = (state['identity']['requirement'], state['identity']['slot'])
+                identity = (state['identity']['policy'], state['identity']['slot'])
                 occurrences.setdefault(identity, []).append((resolved, state))
 
     contributions = {}
     for resolved in ordered:
         reference = resolved['reference']
-        baseline = baselines[reference]
-        clean = normalized_resource_document(baseline, requirements)
+        policy = policies[reference]
+        clean = normalized_resource_document(policy, policies)
         owner = {
             'reference': reference,
             'digest': digest(clean),
             'document': clean,
-            'policy_sources': copy.deepcopy(baseline.get('_sources', [])),
+            'policy_sources': copy.deepcopy(policy.get('_sources', [])),
         }
         seen = set()
-        for contribution in baseline['spec'].get('parameter_contributions', []):
+        for contribution in policy['spec'].get('parameter_contributions', []):
             target = contribution['target']
             identity = {
-                'baseline': reference,
+                'policy': clean['metadata']['id'],
                 'id': contribution['id'],
-                'requirement': target['requirement'],
+                'target_policy': target['policy'],
                 'slot': target['slot'],
             }
             key = tuple(identity.values())
@@ -391,27 +670,30 @@ def compose_selected(resolutions, baselines, requirements=None):
             if record is None:
                 record = {
                     'identity': identity,
-                    'owner': owner,
                     'members': canonical_members,
+                    'origins': [],
                     'applicability': [],
                 }
                 contributions[key] = record
             else:
-                require(equal(record['owner'], owner)
-                        and equal(record['members'], canonical_members),
+                require(equal(record['members'], canonical_members),
                         'divergent additive contribution identity')
             path = copy.deepcopy(resolved['applicability'])
+            origin = {'owner': copy.deepcopy(owner), 'applicability': path}
+            if origin not in record['origins']:
+                record['origins'].append(origin)
             if path not in record['applicability']:
                 record['applicability'].append(path)
 
     contributions_by_slot = {}
     for record in contributions.values():
-        identity = (record['identity']['requirement'], record['identity']['slot'])
+        identity = (record['identity']['target_policy'], record['identity']['slot'])
         require(identity in occurrences, 'additive contribution has no applicable declaration or base')
         representative = occurrences[identity][0][1]
         require(validate_composition(representative['declaration']) == 'additive-set',
                 'additive contribution targets an atomic or incompatible slot')
         require(representative['bound'], 'additive contribution has no applicable declaration or base')
+        record['origins'].sort(key=canonical_json_bytes)
         record['applicability'].sort(key=canonical_json_bytes)
         contributions_by_slot.setdefault(identity, []).append(record)
 
@@ -428,7 +710,7 @@ def compose_selected(resolutions, baselines, requirements=None):
                 if item['reference'] == resolved['reference']
             )
             origin = {
-                'baseline': resolved['reference'],
+                'policy': resolved['reference'],
                 'digest': ancestry['digest'],
                 'applicability': copy.deepcopy(resolved['applicability']),
             }
@@ -475,6 +757,20 @@ def compose_selected(resolutions, baselines, requirements=None):
             state['composition'] = copy.deepcopy(composition)
 
 
+def effective_states(resolutions):
+    """Return one exact resolved state per declaration reference and slot."""
+    result = {}
+    for resolved in resolutions:
+        for reference, slots in resolved['states'].items():
+            target = result.setdefault(reference, {})
+            for slot, state in slots.items():
+                previous = target.get(slot)
+                require(previous is None or equal(previous, state),
+                        'independently selected stable parameter identity conflict')
+                target[slot] = copy.deepcopy(state)
+    return result
+
+
 def implementation_pin(definition):
     validate_schema(
         definition['_parameters_schema'],
@@ -501,6 +797,45 @@ def assign_path(target, path, value):
     current[parts[-1]] = copy.deepcopy(value)
 
 
+def remove_path(target, path):
+    """Remove one symbolic destination and prune containers created for it."""
+    parts = [part.replace('~1', '/').replace('~0', '~') for part in path[1:].split('/')]
+    current = target
+    parents = []
+    for part in parts[:-1]:
+        require(isinstance(current, dict) and part in current,
+                'materialized destination path is absent')
+        parents.append((current, part))
+        current = current[part]
+    require(isinstance(current, dict) and parts[-1] in current,
+            'materialized destination path is absent')
+    del current[parts[-1]]
+    for parent, part in reversed(parents):
+        if parent[part] == {}:
+            del parent[part]
+        else:
+            break
+
+
+def dematerialize_links(checks, links):
+    """Reconstruct authored Check inputs from exact links and execution inputs."""
+    result = copy.deepcopy(checks)
+    by_id = {check['instance_id']: check for check in result}
+    for link in sorted(links, key=lambda item: item['id'], reverse=True):
+        target = link['destination']
+        check = by_id[target['instance_id']]
+        if target['kind'] == 'parameters':
+            container = check['parameters']
+        else:
+            container = check['evidence'][target['dependency']]
+            if target['kind'] == 'evidence_inputs':
+                container = container['inputs']
+        remove_path(container, target['path'])
+        if check.get('evidence') == {}:
+            check.pop('evidence')
+    return result
+
+
 def declared_path(schema, path):
     """Only explicitly named object inputs are initial typed destinations."""
     current = schema
@@ -510,18 +845,155 @@ def declared_path(schema, path):
         current = current['properties'][part]
 
 
+def _pointer_parts(path):
+    return tuple(
+        part.replace('~1', '/').replace('~0', '~')
+        for part in path[1:].split('/')
+    )
+
+
+def _overlapping_paths(paths):
+    ordered = sorted((_pointer_parts(path), path) for path in paths)
+    for index, (parts, path) in enumerate(ordered):
+        for other_parts, other_path in ordered[index + 1:]:
+            if other_parts[:len(parts)] == parts:
+                return path, other_path
+    return None
+
+
+def validate_consumer_destinations(links, *, owner_local_ids=False):
+    """Reject duplicate owner IDs and overlapping typed destination interfaces."""
+    identifiers = [link['id'] for link in links]
+    if owner_local_ids:
+        require(len(identifiers) == len(set(identifiers)),
+                'duplicate consumption link identity')
+    containers = {}
+    for link in links:
+        target = link['destination']
+        key = (
+            target['instance_id'],
+            target['kind'],
+            target.get('dependency'),
+        )
+        containers.setdefault(key, []).append(target['path'])
+    for key in sorted(containers, key=lambda item: tuple(part or '' for part in item)):
+        require(_overlapping_paths(containers[key]) is None,
+                'ambiguous consumption destination: overlapping paths')
+
+
 def partial_parameter_schema(schema, paths):
     """Leave symbolic leaf values open until full post-materialization validation."""
+    paths = sorted(paths)
+    require(_overlapping_paths(paths) is None,
+            'ambiguous consumption destination: overlapping paths')
     result = copy.deepcopy(schema)
     for path in paths:
         declared_path(schema, path)
-        parts = [p.replace('~1', '/').replace('~0', '~') for p in path[1:].split('/')]
+        parts = _pointer_parts(path)
         parent = result
         for part in parts[:-1]:
             parent = parent['properties'][part]
         parent['required'] = [name for name in parent.get('required', []) if name != parts[-1]]
         parent['properties'][parts[-1]] = {}
     return result
+
+
+def _path_present(value, path):
+    current = value
+    for part in _pointer_parts(path):
+        if not isinstance(current, dict) or part not in current:
+            return False
+        current = current[part]
+    return True
+
+
+def validate_evidence_interfaces(check, definition, links):
+    """Validate authored Evidence bindings with symbolic leaves left unresolved."""
+    contracts = definition['spec']['evidence']
+    identifiers = [item['id'] for item in contracts]
+    require(len(identifiers) == len(set(identifiers)),
+            'ambiguous evidence dependency identity')
+    bindings = check.get('evidence', {})
+    require(set(bindings).issubset(set(identifiers)),
+            'unknown evidence dependency binding')
+    for contract in contracts:
+        dependency = contract['id']
+        binding = bindings.get(dependency, {})
+        require(isinstance(binding, dict)
+                and set(binding).issubset({'max_age', 'inputs'}),
+                'unsupported evidence dependency binding')
+        dependency_links = [
+            link for link in links
+            if link['destination'].get('dependency') == dependency
+        ]
+        freshness_links = [
+            link for link in dependency_links
+            if link['destination']['kind'] == 'freshness'
+        ]
+        if freshness_links:
+            require('max_age' not in binding,
+                    'literal value cannot replace or imitate symbolic consumption')
+        else:
+            require('max_age' in binding,
+                    'explicit policy freshness required for every evidence dependency')
+            duration(binding['max_age'])
+        input_links = [
+            link for link in dependency_links
+            if link['destination']['kind'] == 'evidence_inputs'
+        ]
+        inputs = binding.get('inputs', {})
+        input_schema = contract.get('inputs_schema')
+        if input_schema is None:
+            require(not inputs and not input_links,
+                    'evidence dependency has no declared input interface')
+            continue
+        linked_paths = {link['destination']['path'] for link in input_links}
+        for path in linked_paths:
+            require(not _path_present(inputs, path),
+                    'literal value cannot replace or imitate symbolic consumption')
+        schema = partial_parameter_schema(input_schema, linked_paths)
+        Draft202012Validator(schema, format_checker=FormatChecker()).validate(inputs)
+
+
+def validate_consumer_links(links, checks, controls, parameter_policies,
+                            *, owner_local_ids=True):
+    """Validate symbolic source and destination pins without resolving values."""
+    for link in links:
+        validate_parameter_link_structure(link)
+    validate_consumer_destinations(links, owner_local_ids=owner_local_ids)
+    by_id = {check['instance_id']: check for check in checks}
+    require(len(by_id) == len(checks), 'ambiguous required check identity')
+    for link in links:
+        source = link['source']
+        policy = parameter_policies.get(source['policy'])
+        require(policy is not None, 'consumption source ParameterPolicy is absent')
+        state = declarations(policy).get(source['slot'])
+        require(state is not None and equal(state['pin'], source),
+                'stale consumption declaration pin')
+        target = link['destination']
+        check = by_id.get(target['instance_id'])
+        require(check is not None, 'consumption requires a defined required check')
+        definition = controls.get(check['implementation'])
+        require(definition is not None, 'consumption Check implementation is absent')
+        require(equal(implementation_pin(definition), target['implementation']),
+                'stale post-substitution implementation destination')
+        if target['kind'] == 'parameters':
+            declared_path(definition['_parameters_schema'], target['path'])
+            continue
+        contracts = [
+            dependency for dependency in definition['spec']['evidence']
+            if dependency['id'] == target['dependency']
+        ]
+        require(len(contracts) == 1,
+                'consumption requires an unambiguous evidence dependency')
+        if target['kind'] == 'freshness':
+            require(target['path'] == '/max_age'
+                    and state['declaration'].get('representation') == 'duration',
+                    'freshness requires a direct duration slot')
+        elif target['kind'] == 'evidence_inputs':
+            declared_path(contracts[0].get('inputs_schema', {}), target['path'])
+        else:
+            raise ParameterResolutionError('unsupported consumption destination')
 
 
 def evidence_for(instance, definition):
@@ -607,15 +1079,16 @@ def validate_control_contract_identity(definition):
     )
 
 
-def consume(realization, slots, controls):
-    checks = copy.deepcopy(realization['spec'].get('checks', []))
+def consume_links(links, checks, states, controls):
+    """Materialize exact ParameterPolicy values into one Check-owner interface."""
+    checks = copy.deepcopy(checks)
     by_id = {check['instance_id']: check for check in checks}
-    required_ids = [check['instance_id'] for check in realization['spec'].get('checks', [])]
-    consumed, destinations, link_ids, records = set(), set(), set(), []
-    for link in sorted(realization['spec'].get('parameter_links', []), key=lambda item: item['id']):
-        require(link['id'] not in link_ids, 'duplicate consumption link identity')
-        link_ids.add(link['id'])
-        state = slots.get(link['source']['slot'])
+    required_ids = [check['instance_id'] for check in checks]
+    validate_consumer_destinations(links)
+    records = []
+    for link in sorted(links, key=lambda item: item['id']):
+        source = link['source']
+        state = states.get(source['policy'], {}).get(source['slot'])
         require(state is not None and equal(state['pin'], link['source']), 'stale consumption declaration pin')
         require(state['bound'], 'consumed slot is unresolved')
         target = link['destination']
@@ -623,9 +1096,6 @@ def consume(realization, slots, controls):
         require(check is not None and target['instance_id'] in required_ids, 'consumption requires a defined required check')
         definition = controls[check['implementation']]
         require(equal(implementation_pin(definition), target['implementation']), 'stale post-substitution implementation destination')
-        key = (target['instance_id'], target['kind'], target.get('dependency'), target['path'])
-        require(key not in destinations, 'ambiguous consumption destination')
-        destinations.add(key)
         if target['kind'] == 'parameters':
             declared_path(definition['_parameters_schema'], target['path'])
             assign_path(check.setdefault('parameters', {}), target['path'], state['value'])
@@ -642,11 +1112,7 @@ def consume(realization, slots, controls):
                 assign_path(binding.setdefault('inputs', {}), target['path'], state['value'])
             else:
                 raise ParameterResolutionError('unsupported consumption destination')
-        consumed.add(link['source']['slot'])
-        records.append({'link': copy.deepcopy(link), 'value': copy.deepcopy(state['value'])})
-    if realization['spec']['adoption']['status'] == 'implemented':
-        require(all(name in consumed for name, state in slots.items() if state['declaration']['required']),
-                'required parameter has no required dependency consumption edge')
+        records.append({'link': copy.deepcopy(link)})
     for check in checks:
         definition = controls[check['implementation']]
         Draft202012Validator(definition['_parameters_schema'], format_checker=FormatChecker()).validate(check.get('parameters', {}))
@@ -654,9 +1120,22 @@ def consume(realization, slots, controls):
     return checks, records
 
 
+def consume(owner, states, controls):
+    links = owner['spec'].get('parameter_links', [])
+    validate_consumer_destinations(links, owner_local_ids=True)
+    return consume_links(
+        links,
+        owner['spec'].get('checks', []),
+        states,
+        controls,
+    )
+
+
 def validate_realization_reference_identity(realization):
-    """Re-enforce semantic identities retained in an opaque frozen realization."""
-    require(isinstance(realization, dict), 'frozen realization must be an object')
+    """Validate identities and links consumed from a frozen realization owner."""
+    require(isinstance(realization, dict)
+            and realization.get('kind') == 'ControlRealization',
+            'frozen realization must be a ControlRealization')
     metadata = realization.get('metadata')
     spec = realization.get('spec')
     require(isinstance(metadata, dict), 'frozen realization metadata must be an object')
@@ -678,6 +1157,10 @@ def validate_realization_reference_identity(realization):
             and bool(re.fullmatch(REFERENCE, based_on['realization'])),
             'invalid frozen realization parent reference',
         )
+    links = spec.get('parameter_links', [])
+    require(isinstance(links, list), 'realization parameter links must be an array')
+    for link in links:
+        validate_parameter_link_structure(link)
 
 
 def require_identity(value, grammar, message):
@@ -685,27 +1168,6 @@ def require_identity(value, grammar, message):
         isinstance(value, str) and bool(re.fullmatch(grammar, value)),
         message,
     )
-
-
-def validate_parameter_pin_identities(pin, *, requirement=None, slot=None):
-    require(isinstance(pin, dict), 'frozen parameter pin must be an object')
-    require_identity(
-        pin.get('requirement'),
-        REFERENCE,
-        'invalid frozen parameter requirement reference',
-    )
-    require_identity(
-        pin.get('slot'),
-        SLOT,
-        'invalid frozen parameter slot',
-    )
-    if requirement is not None:
-        require(
-            pin.get('requirement') == requirement,
-            'frozen parameter pin requirement mismatch',
-        )
-    if slot is not None:
-        require(pin.get('slot') == slot, 'frozen parameter pin slot mismatch')
 
 
 def validate_implementation_pin_identities(pin):
@@ -812,265 +1274,7 @@ def validate_control_derivation_identities(derivations):
             validate_control_criteria_identities(derivation.get(snapshot_name))
 
 
-def validate_requirement_declaration_identities(
-    declaration,
-    requirement_id,
-    slot,
-):
-    require(
-        isinstance(declaration, dict),
-        'frozen requirement parameter declaration must be an object',
-    )
-    schema = declaration.get('schema')
-    validate_schema(
-        schema,
-        identity_validator=lambda schema_id: (
-            is_canonical_requirement_parameter_schema_id(
-                schema_id,
-                requirement_id,
-                slot,
-            )
-        ),
-    )
-    require(
-        declaration.get('schema_digest') == digest(schema),
-        'stale parameter schema digest',
-    )
-    binding_scope = declaration.get('binding_scope')
-    if binding_scope is not None:
-        require(
-            isinstance(binding_scope, list)
-            and all(
-                isinstance(item, str) and bool(re.fullmatch(ID, item))
-                for item in binding_scope
-            ),
-            'invalid requirement parameter binding scope',
-        )
-
-
-def validate_contribution_identity(identity):
-    require(isinstance(identity, dict), 'frozen contribution identity must be an object')
-    require_identity(
-        identity.get('baseline'),
-        REFERENCE,
-        'invalid frozen contribution baseline reference',
-    )
-    require_identity(
-        identity.get('requirement'),
-        ID,
-        'invalid frozen contribution requirement identity',
-    )
-    require_identity(
-        identity.get('slot'),
-        SLOT,
-        'invalid frozen contribution slot',
-    )
-
-
-def validate_parameter_state_identities(
-    state,
-    requirement_reference,
-    slot,
-    requirement_digest=None,
-):
-    require(isinstance(state, dict), 'frozen parameter state must be an object')
-    identity = state.get('identity')
-    require(isinstance(identity, dict), 'frozen parameter identity must be an object')
-    require_identity(
-        identity.get('requirement'),
-        ID,
-        'invalid frozen parameter requirement identity',
-    )
-    require_identity(
-        identity.get('slot'),
-        SLOT,
-        'invalid frozen parameter identity slot',
-    )
-    requirement_id = requirement_reference.rsplit('@', 1)[0]
-    require(
-        identity == {'requirement': requirement_id, 'slot': slot},
-        'frozen parameter identity mismatch',
-    )
-    validate_parameter_pin_identities(
-        state.get('pin'),
-        requirement=requirement_reference,
-        slot=slot,
-    )
-    if requirement_digest is not None:
-        require(
-            state['pin'].get('digest') == requirement_digest,
-            'stale frozen parameter requirement pin',
-        )
-    validate_requirement_declaration_identities(
-        state.get('declaration'),
-        requirement_id,
-        slot,
-    )
-    require(
-        state['pin'].get('declaration_digest') == digest(state['declaration']),
-        'stale frozen parameter declaration pin',
-    )
-    require(
-        state['pin'].get('schema_digest') == state['declaration'].get('schema_digest'),
-        'stale frozen parameter schema pin',
-    )
-    require('sealed' not in state, 'frozen parameter state contains removed sealed field')
-    for history in state.get('history', []):
-        require(isinstance(history, dict), 'frozen parameter history must be an object')
-        require_identity(
-            history.get('baseline'),
-            REFERENCE,
-            'invalid frozen parameter history baseline reference',
-        )
-        operation = history.get('operation')
-        require(isinstance(operation, dict), 'frozen parameter history operation must be an object')
-        require(operation.get('op') != 'seal', 'frozen parameter history contains removed seal operation')
-        validate_parameter_pin_identities(
-            operation.get('target'),
-            requirement=requirement_reference,
-            slot=slot,
-        )
-
-    composition = state.get('composition')
-    if not isinstance(composition, dict):
-        return
-    for origin in composition.get('base_origins', []):
-        require(isinstance(origin, dict), 'frozen additive base origin must be an object')
-        require_identity(
-            origin.get('baseline'),
-            REFERENCE,
-            'invalid frozen additive base reference',
-        )
-        applicability = origin.get('applicability', {})
-        require(isinstance(applicability, dict), 'frozen additive applicability must be an object')
-        require_identity(
-            applicability.get('baseline'),
-            REFERENCE,
-            'invalid frozen additive applicability reference',
-        )
-    for contribution in composition.get('contributions', []):
-        require(isinstance(contribution, dict), 'frozen contribution must be an object')
-        validate_contribution_identity(contribution.get('identity'))
-        owner = contribution.get('owner', {})
-        require(isinstance(owner, dict), 'frozen contribution owner must be an object')
-        require_identity(
-            owner.get('reference'),
-            REFERENCE,
-            'invalid frozen contribution owner reference',
-        )
-        validate_requirement_baseline_document_identities(owner.get('document'))
-        for applicability in contribution.get('applicability', []):
-            require(isinstance(applicability, dict), 'frozen contribution applicability must be an object')
-            require_identity(
-                applicability.get('baseline'),
-                REFERENCE,
-                'invalid frozen contribution applicability reference',
-            )
-    for member in composition.get('member_origins', []):
-        require(isinstance(member, dict), 'frozen additive member must be an object')
-        for origin in member.get('origins', []):
-            require(isinstance(origin, dict), 'frozen additive member origin must be an object')
-            if origin.get('kind') == 'base':
-                require_identity(
-                    origin.get('baseline'),
-                    REFERENCE,
-                    'invalid frozen additive member baseline reference',
-                )
-                applicability = origin.get('applicability', {})
-                require(isinstance(applicability, dict), 'frozen additive applicability must be an object')
-                require_identity(
-                    applicability.get('baseline'),
-                    REFERENCE,
-                    'invalid frozen additive member applicability reference',
-                )
-            elif origin.get('kind') == 'contribution':
-                validate_contribution_identity(origin.get('identity'))
-
-
-def validate_parameter_link_identities(link, controls=None):
-    require(isinstance(link, dict), 'frozen parameter link must be an object')
-    validate_parameter_pin_identities(link.get('source'))
-    destination = link.get('destination')
-    require(isinstance(destination, dict), 'frozen parameter destination must be an object')
-    require_identity(
-        destination.get('instance_id'),
-        ID,
-        'invalid frozen parameter destination instance identity',
-    )
-    validate_implementation_pin_identities(destination.get('implementation'))
-    implementation_id = destination['implementation']['id']
-    if controls is not None and implementation_id in controls:
-        require(
-            equal(
-                destination['implementation'],
-                implementation_pin(controls[implementation_id]),
-            ),
-            'stale frozen implementation destination',
-        )
-    if 'dependency' in destination:
-        require_identity(
-            destination.get('dependency'),
-            SLOT,
-            'invalid frozen parameter destination dependency',
-        )
-
-
-def validate_realization_contract_identities(
-    realization,
-    requirement_reference,
-    controls,
-):
-    validate_realization_reference_identity(realization)
-    spec = realization['spec']
-    requirement_pin = spec.get('requirement')
-    require(isinstance(requirement_pin, dict), 'frozen realization requirement must be an object')
-    require_identity(
-        requirement_pin.get('requirement'),
-        REFERENCE,
-        'invalid frozen realization requirement reference',
-    )
-    require(
-        requirement_pin.get('requirement') == requirement_reference,
-        'frozen realization requirement reference mismatch',
-    )
-    require('satisfaction' not in spec, 'obsolete realization satisfaction')
-    adoption = spec.get('adoption')
-    require(isinstance(adoption, dict) and adoption.get('status') in
-            {'implemented', 'not_implemented', 'not_applicable'},
-            'invalid frozen realization adoption')
-    checks = spec.get('checks', [])
-    require(isinstance(checks, list), 'frozen realization checks must be an array')
-    check_ids = []
-    for check in checks:
-        validate_control_instance_identities(check)
-        check_ids.append(check['instance_id'])
-    require(
-        len(check_ids) == len(set(check_ids)),
-        'duplicate frozen realization check identity',
-    )
-    require(
-        bool(check_ids) if spec['adoption']['status'] == 'implemented' else not check_ids,
-        'frozen realization checks differ from implementation state',
-    )
-    for link in spec.get('parameter_links', []):
-        validate_parameter_link_identities(link, controls)
-
-
-def validate_requirement_baseline_document_identities(document):
-    require(isinstance(document, dict), 'frozen requirement baseline must be an object')
-    validate_baseline_structure(document)
-    spec = document['spec']
-    for pin in spec.get('requirements', []):
-        require_identity(
-            pin.get('requirement'),
-            REFERENCE,
-            'invalid frozen requirement baseline requirement reference',
-        )
-    for operation in spec.get('parameter_operations', []):
-        validate_parameter_pin_identities(operation.get('target'))
-
-
-def validate_frozen_contract_identities(plan):
+def validate_frozen_contract_identities(plan, technical_links):
     """Validate retained semantic/schema contracts independently of resolution."""
     technical_selections = {}
     for baseline in plan['resolved_baselines']:
@@ -1103,6 +1307,10 @@ def validate_frozen_contract_identities(plan):
             lineage[-1].get('digest') == baseline.get('digest'),
             'frozen technical baseline terminal digest mismatch',
         )
+        require(
+            equal(lineage[-1].get('policy_sources'), baseline.get('policy_sources')),
+            'frozen technical baseline terminal source mismatch',
+        )
         key = (baseline.get('assignment'), baseline.get('group'), reference)
         require(
             key not in technical_selections,
@@ -1121,7 +1329,7 @@ def validate_frozen_contract_identities(plan):
     }
     realization_memberships = set()
     for requirement in plan['requirements']:
-        realization = requirement.get('parameter_facts', {}).get('realization')
+        realization = requirement.get('realization', {}).get('document')
         if not isinstance(realization, dict):
             continue
         metadata = realization.get('metadata', {})
@@ -1157,10 +1365,19 @@ def validate_frozen_contract_identities(plan):
             )
             from .render_plan import control_definition_fingerprint
             instance = facts['instance']
+            fingerprint_instance = instance
+            instance_links = [
+                link for link in technical_links
+                if link['destination']['instance_id'] == control['instance_id']
+            ]
+            if instance_links:
+                fingerprint_instance = dematerialize_links(
+                    [instance], instance_links
+                )[0]
             instance_fingerprint = (
                 digest(instance)
                 if control['alignment'] == 'realization'
-                else control_definition_fingerprint(instance)
+                else control_definition_fingerprint(fingerprint_instance)
             )
             require(
                 instance_fingerprint == control['definition_fingerprint'],
@@ -1302,18 +1519,10 @@ def validate_frozen_contract_identities(plan):
                         selected is not None,
                         'frozen technical Control provenance has no selected technical baseline',
                     )
-                    if 'lineage' in selected:
-                        technical_lineage.update(
-                            ancestor['reference']
-                            for ancestor in selected['lineage']
-                        )
-                    else:
-                        technical_lineage.update(
-                            ancestor['reference']
-                            for ancestor in selected['parameter_derivation'][
-                                'ancestry'
-                            ]
-                        )
+                    technical_lineage.update(
+                        ancestor['reference']
+                        for ancestor in selected['lineage']
+                    )
                     for deviation in selected.get('deviations', []):
                         if deviation not in technical_deviations:
                             technical_deviations.append(deviation)
@@ -1347,285 +1556,307 @@ def validate_frozen_contract_identities(plan):
                 'frozen Control deviation has no selected baseline attribution',
             )
 
-    for requirement in plan['requirements']:
-        frozen = requirement['parameter_facts']['document']
-        require(isinstance(frozen, dict), 'frozen requirement must be an object')
-        metadata = frozen.get('metadata')
-        spec = frozen.get('spec')
-        require(isinstance(metadata, dict), 'frozen requirement metadata must be an object')
-        requirement_id = metadata.get('id')
-        require(
-            isinstance(requirement_id, str) and bool(re.fullmatch(ID, requirement_id)),
-            'invalid frozen requirement identity',
-        )
-        require(
-            valid_revision(metadata.get('revision')),
-            'invalid frozen requirement revision',
-        )
-        requirement_reference = f"{requirement_id}@{metadata['revision']}"
-        require(
-            requirement.get('reference') == requirement_reference,
-            'frozen requirement reference mismatch',
-        )
-        require(
-            requirement.get('digest') == digest(frozen),
-            'frozen requirement digest mismatch',
-        )
-        require(isinstance(spec, dict), 'frozen requirement spec must be an object')
-        for field in ('title', 'statement', 'external_refs'):
-            require(
-                equal(requirement.get(field), spec.get(field, [])),
-                'frozen requirement explanation mismatch',
-            )
-        parameters = spec.get('parameters', {})
-        require(isinstance(parameters, dict), 'frozen requirement parameters must be an object')
-        for slot, declaration in parameters.items():
-            require(
-                isinstance(slot, str) and bool(re.fullmatch(SLOT, slot)),
-                'invalid requirement parameter slot',
-            )
-            validate_requirement_declaration_identities(
-                declaration,
-                requirement_id,
-                slot,
-            )
-        states = requirement['parameter_facts'].get('states', {})
-        require(isinstance(states, dict), 'frozen requirement parameter states must be an object')
-        require(
-            set(states) == set(parameters),
-            'frozen requirement parameter state coverage mismatch',
-        )
-        for slot, state in states.items():
-            require_identity(slot, SLOT, 'invalid frozen requirement parameter state slot')
-            validate_parameter_state_identities(
-                state,
-                requirement_reference,
-                slot,
-                requirement['digest'],
-            )
-            require(
-                slot in parameters
-                and equal(state.get('declaration'), parameters[slot]),
-                'frozen parameter declaration differs from requirement',
-            )
-        realization = requirement['parameter_facts'].get('realization')
-        require(
-            ('realization' in requirement) == (realization is not None),
-            'frozen realization record presence mismatch',
-        )
-        if realization is not None:
-            validate_realization_contract_identities(
-                realization,
-                requirement_reference,
-                controls,
-            )
-            require(
-                realization['spec'].get('requirement') == {
-                    'requirement': requirement_reference,
-                    'digest': requirement['digest'],
-                },
-                'frozen realization requirement pin mismatch',
-            )
-            if 'realization' in requirement:
-                realization_reference = (
-                    f"{realization['metadata']['id']}@"
-                    f"{realization['metadata']['revision']}"
-                )
-                require(
-                    requirement['realization'].get('reference') == realization_reference,
-                    'frozen realization reference mismatch',
-                )
-                require(
-                    requirement['realization'].get('digest') == digest(realization),
-                    'frozen realization digest mismatch',
-                )
-                require(
-                    equal(
-                        requirement['realization'].get('based_on'),
-                        realization['spec'].get('based_on'),
-                    ),
-                    'frozen realization parent mismatch',
-                )
-            check_ids = [check['instance_id'] for check in realization['spec'].get('checks', [])]
-            require(
-                equal(
-                    requirement.get('adoption'),
-                    realization['spec'].get('adoption'),
-                )
-                and requirement['implementation_state'] == realization['spec']['adoption']['status']
-                and equal(
-                    requirement.get('technical_instance_ids'),
-                    check_ids,
-                ),
-                'frozen realization satisfaction or adoption mismatch',
-            )
-            checks, consumption = consume(realization, states, controls)
-            require(
-                equal(
-                    consumption,
-                    requirement['parameter_facts'].get('consumption', []),
-                ),
-                'frozen consumption records mismatch',
-            )
-            planned = {
-                control['instance_id']: control
-                for control in plan['controls']
-            }
-            for check in checks:
-                require(
-                    check['instance_id'] in planned
-                    and equal(
-                        check,
-                        planned[check['instance_id']]['policy_inputs']['instance'],
-                    ),
-                    'frozen materialized destination mismatch',
-                )
-        else:
-            require(
-                'adoption' not in requirement
-                and requirement['implementation_state'] == 'no_realization'
-                and requirement.get('technical_instance_ids') == [],
-                'missing-realization record differs from frozen coverage',
-            )
-        for consumption in requirement['parameter_facts'].get('consumption', []):
-            require(isinstance(consumption, dict), 'frozen consumption must be an object')
-            validate_parameter_link_identities(consumption.get('link'), controls)
+    return
+def validate_frozen_parameter_inputs(plan):
+    """Validate retained ParameterPolicy documents and explicit applicability."""
+    frozen = plan.get('parameters')
+    require(isinstance(frozen, dict), 'frozen ParameterPolicy facts must be an object')
+    require(set(frozen) == {'documents', 'applicability', 'consumers'},
+            'unsupported frozen ParameterPolicy representation')
+    documents = frozen['documents']
+    require(isinstance(documents, list), 'frozen ParameterPolicy documents must be an array')
+    references = [item.get('reference') for item in documents]
+    require(references == sorted(set(references)),
+            'frozen ParameterPolicy documents must use unique canonical order')
+    catalog = {}
+    actual_policy_sources = {
+        item['name']
+        for item in plan['provenance']['planningComposition']['actual']['policySources']
+    }
+    for item in documents:
+        require(isinstance(item, dict)
+                and set(item) == {'reference', 'digest', 'document', 'policy_sources'},
+                'invalid frozen ParameterPolicy document record')
+        resource = item['document']
+        validate_parameter_policy_structure(resource)
+        reference = f"{resource['metadata']['id']}@{resource['metadata']['revision']}"
+        require(reference == item['reference'], 'frozen ParameterPolicy reference mismatch')
+        require(isinstance(item['policy_sources'], list) and bool(item['policy_sources']),
+                'frozen ParameterPolicy source attribution is required')
+        require(all(locator.get('policy_source') in actual_policy_sources
+                    for locator in item['policy_sources']),
+                'frozen ParameterPolicy source is absent from planning composition')
+        catalog[reference] = {**copy.deepcopy(resource), '_sources': copy.deepcopy(item['policy_sources'])}
+    for item in documents:
+        require(resource_digest(item['document'], catalog) == item['digest'],
+                'frozen ParameterPolicy content pin mismatch')
 
-    requirement_digests = {
-        requirement['reference']: requirement['digest']
-        for requirement in plan['requirements']
+    applicability = frozen['applicability']
+    require(isinstance(applicability, list), 'frozen ParameterPolicy applicability must be an array')
+    require(applicability == sorted(applicability, key=canonical_json_bytes)
+            and len({canonical_json_bytes(item) for item in applicability}) == len(applicability),
+            'frozen ParameterPolicy applicability must be unique and canonical')
+    expected = sorted([
+        {
+            'group': assignment['group'],
+            'assignment': assignment['id'],
+            'parameter_policy': reference,
+        }
+        for assignment in plan['assignments']
+        for reference in assignment.get('parameter_policies', [])
+    ], key=canonical_json_bytes)
+    require(equal(applicability, expected),
+            'frozen ParameterPolicy applicability differs from assignments')
+    return frozen, catalog, applicability
+
+
+def reconstruct_frozen_parameters(plan):
+    """Reconstruct effective parameter state from retained historical source facts."""
+    _, catalog, applicability = validate_frozen_parameter_inputs(plan)
+
+    resolutions = []
+    visited = set()
+    for path in applicability:
+        reference = path['parameter_policy']
+        states, ancestry = resolve(reference, catalog)
+        complete(states)
+        resolutions.append({
+            'reference': reference,
+            'applicability': copy.deepcopy(path),
+            'states': states,
+            'ancestry': ancestry,
+        })
+        visited.update(item['reference'] for item in ancestry)
+    require(visited == set(catalog),
+            'frozen ParameterPolicy table contains unselected source documents')
+    compose_selected(resolutions, catalog)
+    return effective_states(resolutions), resolutions, catalog
+
+
+def _validate_requirement_facts(plan, controls, states):
+    actual_policy_sources = {
+        item['name']
+        for item in plan['provenance']['planningComposition']['actual']['policySources']
     }
-    requirement_parameters = {
-        requirement['reference']: requirement['parameter_facts']['document'][
-            'spec'
-        ].get('parameters', {})
-        for requirement in plan['requirements']
-    }
-    requirement_memberships = {}
+
+    def validate_sources(record, resource_kind):
+        sources = record.get('policy_sources')
+        require(isinstance(sources, list) and bool(sources)
+                and all(locator.get('policy_source') in actual_policy_sources
+                        for locator in sources),
+                f'frozen {resource_kind} source is absent from planning composition')
+
     for baseline in plan['resolved_requirement_baselines']:
-        require(
-            baseline.get('baseline') == baseline.get('reference'),
-            'frozen requirement baseline selection reference mismatch',
-        )
-        derivation = baseline.get('parameter_derivation', {})
-        states = derivation.get('states', {})
-        require(isinstance(states, dict), 'frozen derivation states must be an object')
-        for reference, slots in states.items():
-            require_identity(reference, REFERENCE, 'invalid frozen derivation requirement reference')
-            require(isinstance(slots, dict), 'frozen derivation requirement states must be an object')
-            if reference in requirement_parameters:
-                require(
-                    set(slots) == set(requirement_parameters[reference]),
-                    'frozen derivation parameter state coverage mismatch',
-                )
-            for slot, state in slots.items():
-                require_identity(slot, SLOT, 'invalid frozen derivation parameter slot')
-                validate_parameter_state_identities(
-                    state,
-                    reference,
-                    slot,
-                    requirement_digests.get(reference),
-                )
-                if reference in requirement_parameters:
-                    require(
-                        slot in requirement_parameters[reference]
-                        and equal(
-                            state.get('declaration'),
-                            requirement_parameters[reference][slot],
-                        ),
-                        'frozen derivation declaration differs from requirement',
-                    )
-        for ancestor in derivation.get('ancestry', []):
-            require(isinstance(ancestor, dict), 'frozen derivation ancestor must be an object')
-            require_identity(
-                ancestor.get('reference'),
-                REFERENCE,
-                'invalid frozen requirement baseline reference',
-            )
-            ancestor_document = ancestor.get('document')
-            validate_requirement_baseline_document_identities(ancestor_document)
-            expected_reference = (
-                f"{ancestor_document['metadata']['id']}@"
-                f"{ancestor_document['metadata']['revision']}"
-            )
-            require(
-                ancestor['reference'] == expected_reference,
-                'frozen requirement baseline reference mismatch',
-            )
-            require(
-                ancestor.get('digest') == digest(ancestor_document),
-                'frozen parent document digest mismatch',
-            )
-        ancestry = derivation.get('ancestry', [])
-        require(
-            isinstance(ancestry, list) and bool(ancestry),
-            'frozen requirement baseline ancestry must be a non-empty array',
-        )
-        selected = ancestry[-1]
-        require(
-            selected.get('reference') == baseline.get('reference'),
-            'frozen requirement baseline terminal reference mismatch',
-        )
-        require(
-            selected.get('digest') == baseline.get('digest'),
-            'frozen requirement baseline terminal digest mismatch',
-        )
-        require(
-            equal(
-                baseline.get('requirements'),
-                selected['document']['spec'].get('requirements', []),
-            ),
-            'frozen baseline membership differs from selected policy',
-        )
-        for pin in baseline.get('requirements', []):
-            requirement_memberships.setdefault(pin.get('requirement'), []).append(pin)
+        validate_sources(baseline, 'RequirementBaseline')
+        resource = baseline.get('document')
+        require(isinstance(resource, dict)
+                and resource.get('kind') == 'RequirementBaseline',
+                'frozen RequirementBaseline document is required')
+        reference = f"{resource['metadata']['id']}@{resource['metadata']['revision']}"
+        require(reference == baseline['reference'] == baseline['baseline']
+                and digest(resource) == baseline['digest'],
+                'frozen RequirementBaseline content pin mismatch')
+        require(resource['spec'].get('title') == baseline['title']
+                and equal(resource['spec'].get('requirements', []), baseline['requirements']),
+                'frozen RequirementBaseline projection mismatch')
+        require(not ({'parameters', 'parameter_operations', 'parameter_contributions'}
+                     & set(resource['spec'])),
+                'RequirementBaseline cannot own parameter state')
+    memberships = {
+        (pin['requirement'], pin['digest'])
+        for baseline in plan['resolved_requirement_baselines']
+        for pin in baseline['requirements']
+    }
+    requirement_memberships = [
+        (requirement['reference'], requirement['digest'])
+        for requirement in plan['requirements']
+    ]
+    if plan['resolution']['status'] == 'valid':
+        require(len(requirement_memberships) == len(set(requirement_memberships))
+                and set(requirement_memberships) == memberships,
+                'frozen Objective membership differs from selected baselines')
+    planned = {item['instance_id']: item for item in plan['controls']}
+    realization_consumers = {
+        item['reference']: item
+        for item in plan['parameters']['consumers']
+        if item['kind'] == 'ControlRealization'
+    }
+    require(len(realization_consumers) == sum(
+        item['kind'] == 'ControlRealization'
+        for item in plan['parameters']['consumers']
+    ), 'duplicate frozen realization consumer')
+    used_realization_consumers = set()
+    for requirement in plan['requirements']:
+        validate_sources(requirement, 'Objective')
+        resource = requirement.get('document')
+        require(isinstance(resource, dict), 'frozen Objective document is required')
+        reference = f"{resource['metadata']['id']}@{resource['metadata']['revision']}"
+        require(reference == requirement['reference']
+                and digest(resource) == requirement['digest'],
+                'frozen Objective content pin mismatch')
+        require(resource.get('kind') == 'ControlRequirement'
+                and 'parameters' not in resource.get('spec', {}),
+                'Objective cannot own parameter declarations')
+        for field in ('title', 'statement', 'external_refs'):
+            require(equal(requirement.get(field), resource['spec'].get(field, [])),
+                    'frozen Objective explanation mismatch')
+        expected_provenance = [{
+            'group': baseline['group'],
+            'assignment': baseline['assignment'],
+            'baseline': baseline['reference'],
+        } for baseline in plan['resolved_requirement_baselines']
+          if any(pin['requirement'] == reference and pin['digest'] == requirement['digest']
+                 for pin in baseline['requirements'])]
+        require(equal(sorted(requirement['provenance'], key=canonical_json_bytes),
+                      sorted(expected_provenance, key=canonical_json_bytes)),
+                'frozen Objective assignment attribution mismatch')
+        realization_record = requirement.get('realization')
+        if realization_record is None:
+            require('adoption' not in requirement
+                    and requirement['implementation_state'] == 'no_realization'
+                    and requirement['technical_instance_ids'] == [],
+                    'missing-realization record differs from frozen coverage')
+            continue
+        validate_sources(realization_record, 'ControlRealization')
+        realization = realization_record.get('document')
+        validate_realization_reference_identity(realization)
+        realization_reference = f"{realization['metadata']['id']}@{realization['metadata']['revision']}"
+        require(realization_reference == realization_record['reference']
+                and digest(realization) == realization_record['digest'],
+                'frozen realization content pin mismatch')
+        require(realization['spec']['requirement'] == {
+            'requirement': reference,
+            'digest': requirement['digest'],
+        }, 'frozen realization Objective pin mismatch')
+        checks = realization['spec'].get('checks', [])
+        require(equal(requirement['technical_instance_ids'],
+                      [check['instance_id'] for check in checks])
+                and equal(requirement.get('adoption'), realization['spec']['adoption'])
+                and requirement['implementation_state'] == realization['spec']['adoption']['status'],
+                'frozen realization membership or adoption mismatch')
+        materialized, records = consume(realization, states, controls)
+        has_links = bool(realization['spec'].get('parameter_links', []))
+        require(has_links == (realization_reference in realization_consumers),
+                'frozen realization consumer attribution mismatch')
+        if has_links:
+            consumer = realization_consumers[realization_reference]
+            used_realization_consumers.add(realization_reference)
+            require(set(consumer) == {'kind', 'reference', 'digest', 'policy_sources'},
+                    'realization consumer duplicates authored links')
+            require(consumer['digest'] == realization_record['digest']
+                    and equal(consumer['policy_sources'], realization_record['policy_sources']),
+                    'frozen realization consumer owner mismatch')
+        for check in materialized:
+            require(check['instance_id'] in planned
+                    and equal(check, planned[check['instance_id']]['policy_inputs']['instance']),
+                    'frozen realization materialized destination mismatch')
+    require(used_realization_consumers == set(realization_consumers),
+            'frozen realization consumer is not selected by an Objective')
 
-    for requirement in plan['requirements']:
-        memberships = requirement_memberships.get(requirement['reference'], [])
-        require(
-            bool(memberships)
-            and all(
-                pin.get('digest') == requirement['digest']
-                for pin in memberships
-            ),
-            'frozen requirement membership differs from selected baseline',
-        )
-    for requirement in plan['requirements']:
-        expected = [
-            {
-                'group': baseline['group'],
-                'assignment': baseline['assignment'],
-                'baseline': baseline['reference'],
+
+def _validate_technical_consumers(plan, controls, states, links):
+    planned = {}
+    for item in [*plan['controls'], *plan['excluded_controls']]:
+        require(item['instance_id'] not in planned,
+                'duplicate active/excluded technical Check identity')
+        planned[item['instance_id']] = item
+    source_checks = dematerialize_links(
+        [copy.deepcopy(item['policy_inputs']['instance']) for item in planned.values()],
+        links,
+    )
+    source_by_id = {item['instance_id']: item for item in source_checks}
+    materialized, _ = consume_links(links, source_checks, states, controls)
+    for check in materialized:
+        require(equal(check, planned[check['instance_id']]['policy_inputs']['instance']),
+                'frozen technical materialized destination mismatch')
+    technical_records = {
+        consumer['reference']: consumer
+        for consumer in plan['parameters']['consumers']
+        if consumer['kind'] in {'Baseline', 'BaselineOverlay'}
+    }
+    technical_catalog = {
+        reference: {
+            **copy.deepcopy(record['document']),
+            '_digest': record['digest'],
+            '_sources': copy.deepcopy(record['policy_sources']),
+        }
+        for reference, record in technical_records.items()
+    }
+    from .render_plan import resolve_baseline
+    linked_instance_ids = {
+        link['destination']['instance_id'] for link in links
+    }
+    for baseline in plan['resolved_baselines']:
+        provenance = {
+            'group': baseline['group'],
+            'assignment': baseline['assignment'],
+            'baseline': baseline['reference'],
+        }
+        planned_ids = {
+            instance_id for instance_id, item in planned.items()
+            if provenance in item['provenance']
+        }
+        if not (planned_ids & linked_instance_ids):
+            continue
+        require(baseline['reference'] in technical_catalog,
+                'frozen technical consumer owner is missing')
+        resolved = resolve_baseline(baseline['reference'], technical_catalog)
+        require(resolved['parameter_links'],
+                'frozen technical consumer owner has no authored link')
+        linked_ids = {
+            link['destination']['instance_id']
+            for link in resolved['parameter_links']
+        }
+        relevant_ids = planned_ids & linked_instance_ids
+        require(relevant_ids.issubset(linked_ids),
+                'frozen technical consumer link attribution differs from retained owner')
+        for instance_id in relevant_ids:
+            expected = resolved['controls'].get(instance_id)
+            require(expected is not None,
+                    'frozen technical consumer link has no authored Check')
+            for field in ('lineage', 'derivations', 'deviations'):
+                require(all(
+                    item in planned[instance_id].get(field, [])
+                    for item in expected.get(field, [])
+                ), 'frozen technical consumer attribution differs from retained owner')
+            independently_meaningful = lambda item: {
+                key: value for key, value in item.items()
+                if key not in {'lineage', 'derivations', 'deviations'}
             }
-            for baseline in plan['resolved_requirement_baselines']
-            if any(
-                pin.get('requirement') == requirement['reference']
-                and pin.get('digest') == requirement['digest']
-                for pin in baseline.get('requirements', [])
-            )
-        ]
-        require(
-            equal(
-                sorted(requirement.get('provenance', []), key=canonical_json_bytes),
-                sorted(expected, key=canonical_json_bytes),
-            ),
-            'frozen requirement assignment attribution mismatch',
-        )
+            require(instance_id in source_by_id
+                    and equal(independently_meaningful(expected),
+                              independently_meaningful(source_by_id[instance_id])),
+                    'frozen technical consumer Check differs from retained owner')
 
 
 def validate_frozen(plan):
-    """Check stored derivations and destinations without reopening policy sources."""
-    validate_frozen_contract_identities(plan)
-    if plan['resolution']['status'] != 'valid':
-        return
+    """Validate the ADR 0024 source-fact representation without current inputs."""
+    require('parameter_facts' not in canonical_json_bytes(plan).decode('utf-8')
+            and 'parameter_derivation' not in canonical_json_bytes(plan).decode('utf-8'),
+            'superseded frozen parameter summaries are not accepted')
+    consumers = plan['parameters']['consumers']
+    require(consumers == sorted(consumers, key=lambda item: (item['kind'], item['reference']))
+            and len({(item['kind'], item['reference']) for item in consumers}) == len(consumers),
+            'frozen parameter consumers must use unique canonical order')
+    technical_links = frozen_technical_links(plan)
+    validate_frozen_contract_identities(plan, technical_links)
     assignments = {item['id']: item for item in plan['assignments']}
-    expected_selections = {(a['id'], a['group'], reference) for a in assignments.values() for reference in a['baselines']}
-    actual_selections = [(b['assignment'], b['group'], b['reference'])
-                         for b in [*plan['resolved_baselines'], *plan['resolved_requirement_baselines']]]
-    require(len(actual_selections) == len(set(actual_selections)) and set(actual_selections) == expected_selections,
-            'frozen derivation coverage differs from selected assignments')
-    expected_requirements = {pin['requirement'] for baseline in plan['resolved_requirement_baselines'] for pin in baseline['requirements']}
-    require(expected_requirements == {r['reference'] for r in plan['requirements']}, 'frozen requirement membership coverage is incomplete')
+    expected_baselines = {
+        (assignment['id'], assignment['group'], reference)
+        for assignment in assignments.values()
+        for reference in assignment['baselines']
+    }
+    actual_baselines = {
+        (item['assignment'], item['group'], item['reference'])
+        for item in [*plan['resolved_baselines'], *plan['resolved_requirement_baselines']]
+    }
+    if plan['resolution']['status'] == 'valid':
+        require(expected_baselines == actual_baselines,
+                'frozen baseline coverage differs from selected assignments')
+    else:
+        require(actual_baselines.issubset(expected_baselines),
+                'frozen baseline coverage exceeds selected assignments')
+
     controls = {}
     for collection_name in ('controls', 'excluded_controls'):
         for control in plan[collection_name]:
@@ -1633,103 +1864,61 @@ def validate_frozen(plan):
             definition = copy.deepcopy(facts['definition'])
             definition['_parameters_schema'] = facts['parameters_schema']
             definition['_implementation_modules'] = facts.get('implementation_modules', [])
+            validate_control_contract_identity(definition)
             instance = facts['instance']
             from .render_plan import control_definition_fingerprint
-            instance_fingerprint = digest(instance) if control['alignment'] == 'realization' else control_definition_fingerprint(instance)
-            require(instance_fingerprint == control['definition_fingerprint'], 'frozen policy instance fingerprint mismatch')
-            require(definition['metadata']['id'] == control['implementation'], 'frozen implementation definition identity mismatch')
-            require(instance['instance_id'] == control['instance_id'] and instance['implementation'] == control['implementation'],
+            source_instance = instance
+            instance_links = [
+                link for link in technical_links
+                if link['destination']['instance_id'] == control['instance_id']
+            ]
+            if instance_links:
+                source_instance = dematerialize_links([instance], instance_links)[0]
+            expected_fingerprint = (
+                digest(instance)
+                if control['alignment'] == 'realization'
+                else control_definition_fingerprint(source_instance)
+            )
+            require(expected_fingerprint == control['definition_fingerprint'],
+                    'frozen policy instance fingerprint mismatch')
+            require(instance['instance_id'] == control['instance_id']
+                    and instance['implementation'] == control['implementation'],
                     'frozen technical input identity mismatch')
-            require(equal(instance.get('parameters', {}), control['parameters']), 'frozen technical value mismatch')
+            require(equal(instance.get('parameters', {}), control['parameters']),
+                    'frozen technical value mismatch')
             resolved_evidence = evidence_for(instance, definition)
             if collection_name == 'controls':
-                require(equal(resolved_evidence, control['evidence']), 'frozen policy freshness mismatch')
-                require(definition['spec']['entrypoint'] == control['entrypoint'], 'frozen implementation entrypoint mismatch')
-            Draft202012Validator(definition['_parameters_schema'], format_checker=FormatChecker()).validate(control['parameters'])
+                require(equal(resolved_evidence, control['evidence']),
+                        'frozen policy freshness mismatch')
+                require(definition['spec']['entrypoint'] == control['entrypoint'],
+                        'frozen implementation entrypoint mismatch')
             previous = controls.get(control['implementation'])
-            require(previous is None or equal(previous, definition), 'divergent frozen implementation definitions')
+            require(previous is None or equal(previous, definition),
+                    'divergent frozen implementation definitions')
             controls[control['implementation']] = definition
-    requirements = {r['reference']: r['parameter_facts']['document'] for r in plan['requirements']}
-    by_reference = {r['reference']: r for r in plan['requirements']}
-    frozen_catalog = {}
-    frozen_resolutions = []
-    for baseline in plan['resolved_requirement_baselines']:
-        facts = baseline['parameter_derivation']
-        catalog = {}
-        for ancestor in facts['ancestry']:
-            require(ancestor['digest'] == digest(ancestor['document']), 'frozen parent document digest mismatch')
-            ancestor_document = ancestor['document']
-            require(
-                ancestor['reference'] == (
-                    f"{ancestor_document['metadata']['id']}@{ancestor_document['metadata']['revision']}"
-                ),
-                'frozen requirement baseline reference mismatch',
-            )
-            require(ancestor['reference'] not in catalog, 'duplicate frozen derivation ancestor')
-            catalog[ancestor['reference']] = {**ancestor['document'], '_sources': ancestor['policy_sources']}
-            existing = frozen_catalog.get(ancestor['reference'])
-            require(existing is None or equal(existing, catalog[ancestor['reference']]),
-                    'divergent frozen derivation ancestor')
-            frozen_catalog[ancestor['reference']] = catalog[ancestor['reference']]
-        states, ancestry = resolve(baseline['reference'], catalog, requirements)
-        complete(states)
-        frozen_resolutions.append({
-            'reference': baseline['reference'],
-            'applicability': {
-                'group': baseline['group'],
-                'assignment': baseline['assignment'],
-                'baseline': baseline['reference'],
-            },
-            'states': states,
-            'ancestry': ancestry,
-            'frozen': facts,
-            'baseline_record': baseline,
-        })
-    compose_selected(frozen_resolutions, frozen_catalog, requirements)
-    for resolved in frozen_resolutions:
-        baseline = resolved['baseline_record']
-        facts = resolved['frozen']
-        states = resolved['states']
-        ancestry = resolved['ancestry']
-        require(equal(states, facts['states']) and equal(ancestry, facts['ancestry']), 'frozen derivation inconsistent')
-        require(baseline['digest'] == ancestry[-1]['digest'], 'selected baseline digest mismatch')
-        require(equal(baseline['requirements'], ancestry[-1]['document']['spec'].get('requirements', [])),
-                'frozen baseline membership differs from selected policy')
-        for reference, slots in states.items():
-            record = by_reference[reference]
-            frozen = record['parameter_facts']
-            require(digest(frozen['document']) == record['digest'], 'frozen requirement digest mismatch')
-            declaration_document = frozen['document']
-            require(reference == f"{declaration_document['metadata']['id']}@{declaration_document['metadata']['revision']}",
-                    'frozen requirement reference mismatch')
-            for field in ('title', 'statement', 'external_refs'):
-                require(equal(record[field], declaration_document['spec'].get(field, [])), 'frozen requirement explanation mismatch')
-            require(equal(slots, frozen['states']), 'assigned parameter state conflict')
-            if 'realization' not in frozen:
-                require('adoption' not in record and record['implementation_state'] == 'no_realization' and record['technical_instance_ids'] == []
-                        and 'realization' not in record, 'missing-realization record differs from frozen coverage')
-                continue
-            realization = frozen['realization']
-            validate_realization_reference_identity(realization)
-            require(digest(realization) == record['realization']['digest'], 'frozen realization digest mismatch')
-            require(record['realization']['reference'] == f"{realization['metadata']['id']}@{realization['metadata']['revision']}",
-                    'frozen realization reference mismatch')
-            require(realization['spec']['requirement'] == {'requirement': reference, 'digest': record['digest']},
-                    'frozen realization requirement pin mismatch')
-            require(equal(record['adoption'], realization['spec']['adoption'])
-                    and record['implementation_state'] == realization['spec']['adoption']['status']
-                    and equal(record['technical_instance_ids'], [check['instance_id'] for check in realization['spec'].get('checks', [])]),
-                    'evaluated requirement differs from frozen realization satisfaction')
-            checks, records = consume(realization, slots, controls)
-            require(equal(records, frozen['consumption']), 'frozen consumption records mismatch')
-            planned = {control['instance_id']: control for control in plan['controls']}
-            for check in checks:
-                require(equal(check, planned[check['instance_id']]['policy_inputs']['instance']),
-                        'frozen materialized destination mismatch')
-    for record in plan['requirements']:
-        expected = [{'group': b['group'], 'assignment': b['assignment'], 'baseline': b['reference']}
-                    for b in plan['resolved_requirement_baselines']
-                    if any(pin['requirement'] == record['reference'] and pin['digest'] == record['digest']
-                           for pin in b['requirements'])]
-        require(equal(sorted(record['provenance'], key=canonical_json_bytes), sorted(expected, key=canonical_json_bytes)),
-                'frozen requirement assignment attribution mismatch')
+
+    try:
+        states, _, _ = reconstruct_frozen_parameters(plan)
+    except ParameterResolutionError as error:
+        parameter_failure = any(
+            error.get('type') in {
+                'parameter-resolution-failed',
+                'parameter-document-conflict',
+                'parameter-consumption-failed',
+                'parameter-consumer-conflict',
+                'parameter-policy-invalid',
+            }
+            for error in plan['resolution']['errors']
+        )
+        require(plan['resolution']['status'] == 'invalid' and parameter_failure,
+                'frozen ParameterPolicy reconstruction failed '
+                f'({error}) without a retained planning refusal')
+        validate_frozen_parameter_inputs(plan)
+        require(not consumers,
+                'unresolved ParameterPolicy cannot retain materialized consumers')
+        _validate_requirement_facts(plan, controls, {})
+        _validate_technical_consumers(plan, controls, {}, technical_links)
+        return technical_links
+    _validate_requirement_facts(plan, controls, states)
+    _validate_technical_consumers(plan, controls, states, technical_links)
+    return technical_links

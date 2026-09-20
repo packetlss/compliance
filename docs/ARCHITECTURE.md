@@ -75,7 +75,7 @@ compliance” state or proof of continuous effectiveness.
 [ADR 0019](adr/0019-typed-identifier-namespaces-and-schema-uri-ownership.md)
 accepts typed lookup namespaces rather than a global or source-qualified semantic ID
 space. Semantic policy IDs use dot-separated kebab-case segments; revisions remain
-separate `id@revision` pins; requirement slots and technical properties remain
+separate `id@revision` pins; ParameterPolicy slots and technical properties remain
 owner-local snake_case; and evidence types retain dispatch-significant `/vN` wire
 versions. Authority-looking ID prefixes are ordinary authored segments and grant no
 trust, precedence or source ownership.
@@ -92,8 +92,8 @@ Assignments use a kindless `name@revision` reference. The technical-baseline and
 RequirementBaseline catalogs therefore share one assignment-reference collision
 admission namespace: a composition containing both kinds at the same reference must
 fail before planning without precedence or fallback. This is independent of policy-source, file, and traversal order.
-The accepted ADR 0024 successor adds a separate typed ParameterPolicy assignment
-surface/catalog; it does not extend the kindless baseline reference namespace.
+ADR 0024 implements a separate typed ParameterPolicy assignment surface/catalog;
+it does not extend the kindless baseline reference namespace.
 
 JSON Schema `$id` is a predictable absolute HTTPS schema-contract URI, separate
 from semantic resource lookup and exact schema content. Before explicit
@@ -213,8 +213,8 @@ artifacts. Its representation remains experimental and is not frozen.
 ## Explicit policy parameters and freshness
 
 This section describes the active experimental runtime contract. The accepted
-[ADR 0024 successor](#objective-assurance-and-governed-parameter-policy) below changes
-ownership and representation only through a later coordinated cutover.
+[ADR 0024 successor](#objective-assurance-and-governed-parameter-policy) below is
+implemented through Tranches A and B.
 
 [ADR 0012](adr/0012-explicit-policy-parameter-resolution.md) owns explicit parameter resolution. The [experimental parameter contract](../tooling/docs/policy-parameters.md) defines the coordinated schema/runtime/consumer representation. Its common model is declaration → explicit binding → optional explicit descendant tailoring → concrete effective value → explicit dependency consumption → resolved assessment plan. Required unresolved parameters and independently applicable divergent bindings prevent an assessable plan. Source/file order, ancestry, assignment scope or specificity, strictness and min/max never choose values; constraints and JSON Schema defaults cannot manufacture them.
 
@@ -222,7 +222,15 @@ Under [ADR 0020](adr/0020-governed-policy-composition-without-sealing.md), techn
 parameter sealing are absent: valid governed descendants tailor inherited policy
 through the existing exact pins, fingerprints and provenance facts.
 
-Requirement slots have stable technology-neutral identity with exact declaration/revision/type-schema pins. Realizations retain explicit typed links into required dependency inputs; plans materialize every linked value with immutable provenance, and evaluation does not resolve parameters again. Technical destinations belong to an exact resolved implementation/interface, including after substitution. Selected derivation permits explicit tailoring; independently assigning divergent ancestor and descendant policies is a conflict.
+ParameterPolicy slots have stable owner-local identity with exact
+declaration/revision/type-schema pins. PolicyAssignment selects ParameterPolicy on
+a separate explicit surface from baseline policy. Realizations retain explicit
+typed links for Objective-backed Checks; Baseline and BaselineOverlay retain them
+for direct technical Checks. Plans materialize every linked value with immutable
+provenance, and evaluation does not resolve parameters again. Technical
+destinations belong to an exact resolved implementation/interface, including after
+substitution. Selected derivation permits explicit tailoring; independently
+assigning divergent ancestor and descendant policies is a conflict.
 
 String-only additive-set composition is the bounded exception to atomic
 complete-value composition. It requires the explicit string-only opt-in, exactly one compatible declaration and
@@ -231,16 +239,22 @@ every compatible independently applicable contribution after valid base tailorin
 including for a fixed base. Ordinary arrays, objects, scalars, direct technical-
 baseline values, and declarations without the explicit opt-in remain atomic.
 
-Contributions target only stable `(ControlRequirement ID, slot name)` identity;
+Contributions target only stable `(ParameterPolicy ID, slot name)` identity;
 current resolution binds them to the exact supplied declaration and base. A
-contribution neither imports nor selects its requirement, does not mutate or tailor
+contribution neither imports nor selects its owner, does not mutate or tailor
 the base, and carries no exact-version or parent-state coupling. Source/file/
 assignment/traversal order grants no precedence. Removal, denial, suppression,
 override, subtraction, non-string members, generic merge/reducer behavior, and direct
 technical-Baseline composition remain outside the accepted model. The runtime fails
 closed on absent, ambiguous, incompatible, invalid or unconsumable resolution.
 
-Effective evidence `max_age` belongs to policy/baseline/requirement intent. Controls retain evidence dependency contracts and optional capability restrictions; realizations link semantic freshness slots where applicable. Maintained baselines bind effective ages explicitly; objective realizations consume pinned semantic freshness slots. Controls no longer provide effective-age defaults. ADR 0010 still owns assessment-time evidence semantics and ADR 0011 immutable historical selection attribution; the future-timestamp question is unchanged.
+Effective evidence `max_age` belongs to explicitly applicable ParameterPolicy.
+Controls retain evidence dependency contracts and optional capability restrictions;
+Check-authoring policies link semantic freshness slots where applicable. Maintained
+ParameterPolicies bind effective ages explicitly. Controls provide no effective-age
+defaults. ADR 0010 still owns assessment-time evidence semantics and ADR 0011
+immutable historical selection attribution; the future-timestamp question is
+unchanged.
 
 Policy resolution determines company intent; assessment tests evidence against that
 intent and never selects policy or a realization. Passing company policy does not
@@ -252,28 +266,29 @@ from unresolved parameters and missing evidence. Ordinary named private policy s
 need no new resource family or precedence. ADR 0012 extends the existing provenance-bearing
 plan, not the adapter or authorization artifact surface.
 
-The frozen plan must retain the exact resolved requirement/declaration/schema/base,
-all contributions and applicability paths, canonical effective set, member origins,
-and exact materialized realization consumers. This extends existing plan-owned
-parameter provenance without a new artifact, resource, cache, digest family or
-identity family. Coverage owns only an ephemeral deterministic projection of current
-effective values and derivation through the existing resolver; historical assessment
-explanation uses the exact retained plan/result pair and never current re-resolution.
+The frozen plan retains exact selected ParameterPolicy documents, explicit
+applicability and exact symbolic consumers. Admission reconstructs declarations,
+schemas, ancestry, authored operations, contributions, canonical effective values
+and complete attribution from those retained source facts, then validates the
+materialized destinations. It does not persist duplicate derived summaries.
+Coverage owns only an ephemeral deterministic projection of current effective
+values and derivation; historical explanation uses the exact validated plan/result
+pair and never current re-resolution.
 
 ## Objective assurance and governed parameter policy
 
 [ADR 0024](adr/0024-objective-assurance-and-parameter-policy.md), accepted under
-[#192](https://github.com/packetlss/compliance/issues/192), has **Tranche A implemented under #199; Tranche B pending**. It succeeds ADR 0012's parameter ownership/representation
+[#192](https://github.com/packetlss/compliance/issues/192), has **Tranche A implemented under #199 and Tranche B implemented under #201**. It succeeds ADR 0012's parameter ownership/representation
 and ADR 0016's implementation-absence reporting while preserving all ADR 0023
-frozen invariants. Current experimental runtime contracts remain documented in
+frozen invariants. Current experimental runtime contracts are documented in
 [realizations](../tooling/docs/control-realization.md) and
-[parameters](../tooling/docs/policy-parameters.md) until coordinated migration.
+[parameters](../tooling/docs/policy-parameters.md).
 
 `ControlRequirement` owns Objective meaning and mappings. `RequirementBaseline`
-groups exact Objective membership without a constant membership flag. At this
-Tranche A checkpoint, active parameter operations, contributions and derivation
-remain until Tranche B cuts over their consumers; contribution-only policy creates
-no assessment row. The accepted successor removes those parameter responsibilities. An implemented `ControlRealization` owns one complete non-empty set
+groups exact Objective membership without a constant membership flag or parameter
+ownership. `ParameterPolicy` now owns all active declarations, operations and
+contributions; contribution-only policy creates no assessment row. An implemented
+`ControlRealization` owns one complete non-empty set
 of unique Checks: every Check is required and evaluated. The runtime removes `satisfaction.allOf`
 and retains one resolved membership relation for materialization, validation and
 roll-up. Selection remains exactly zero/one/multiple with ambiguity failing closed;
@@ -299,13 +314,13 @@ exact consumers and bind/tailor operations retain revision/content/declaration/s
 pins. Contributions target the stable owner/slot without prior-state coupling.
 ParameterPolicy owns no Objective or Check and generates no assessment row.
 
-Project `PolicyAssignment` gains an explicit typed ParameterPolicy reference
+Project `PolicyAssignment` has an explicit typed `parameterPolicyRefs`
 collection using existing group targeting and subject applicability; baseline
 references retain their current kinds and collision rules. An assignment selects
 one or both collections, never neither. Only explicit assignment selects roots;
 exact ancestry supplies derivation input. Resource discovery, consumer links and
 contribution targets never activate policy or import an owner. This bounded
-relationship is accepted; field spellings remain experimental.
+relationship is implemented; field spellings remain experimental.
 
 The Check-authoring policy owns consumption: `ControlRealization` for Objective
 Checks, `Baseline` / `BaselineOverlay` for direct technical Checks. Each exact link

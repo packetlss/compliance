@@ -164,12 +164,13 @@ history.
 parameter schema, checks every `Baseline` and `BaselineOverlay` document against
 the schema selected by its `apiVersion` and `kind`, then resolves the complete
 baseline DAG. It also validates `ControlRequirement`, `RequirementBaseline`,
-and `ControlRealization` documents, their digest pins, complete `allOf`
-coverage, implementation applicability, and effective parameters. It catches
-cycles, duplicate instances, stale pins, invalid
-overlay semantics, unknown implementations, and effective parameters that do
-not satisfy their implementation contract. This includes overlay-generated and
-excluded instances. Human output reports baseline and control counts;
+`ControlRealization`, and `ParameterPolicy` documents; their digest pins,
+complete required Check membership, adoption/applicability, explicit parameter
+operations, contributions, and typed consumer links. It catches cycles, duplicate
+instances, stale pins, invalid overlay or parameter semantics, unknown
+implementations, and materialized parameters that do not satisfy their
+implementation contract. This includes overlay-generated and excluded instances.
+Human output reports baseline, ParameterPolicy, realization, Objective, and control counts;
 `--format json` provides the same counts and structured errors for CI.
 Every assignable policy root must provide its authored title, and every Control
 must provide its authored title and intrinsic purpose. Validation rejects missing
@@ -656,6 +657,6 @@ carry `implementation_gap` independently from nullable `status`; gap-only result
 have null `outcome`. Actual evidence outcomes remain unchanged. Complete accounting
 is not successful demonstration: `all_passed` also requires no implementation gaps.
 Coverage and historical explanation expose the appropriate current or frozen basis.
-Contribution-only parameter baselines create no assessment rows. Current admission
+Contribution-only ParameterPolicy resources create no assessment rows. Current admission
 rejects predecessor membership/satisfaction representations; historical artifacts
 retain their meaning with historical tooling. See [realizations](control-realization.md).

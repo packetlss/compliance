@@ -8,17 +8,18 @@ import tempfile
 from pathlib import Path
 
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
+from tools import policy_parameters as parameters
 
 AT = "2026-09-01T00:00:00Z"
 BASE = ["auditd", "curl"]
 UNION = ["auditd", "curl", "postgresql"]
 CONTRIBUTION = {
-    "baseline": "company.database-software@1", "id": "database-packages",
-    "requirement": "company.authorized-software", "slot": "allowed_software",
+    "policy": "company.database-software", "id": "database-packages",
+    "target_policy": "company.authorized-software", "slot": "allowed_software",
 }
 PATH = {
     "assignment": "database-software", "group": "database",
-    "baseline": "company.database-software@1",
+    "parameter_policy": "company.database-software@1",
 }
 APPLICATION = "host/authorized-base"
 DATABASE = "host/authorized-database"
@@ -71,13 +72,23 @@ def run(root):
             cli(noun, "validate")
         coverage = json.loads(cli("coverage", "explain", DATABASE, "--format", "json"))
         assert coverage["coverage_class"] == "result_required"
-        objective, = [objective for assignment in coverage["assignments"]
-                      for policy in assignment["policies"] for objective in policy["objectives"]]
-        parameter, = objective["parameters"]
+        parameter_policy, = [policy for assignment in coverage["assignments"]
+                             for policy in assignment["policies"]
+                             if policy["reference"] == "company.authorized-software-base@1"]
+        parameter, = parameter_policy["parameters"]
         assert parameter["slot"] == "allowed_software" and parameter["effective_value"] == UNION
         projected, = parameter["composition"]["contributions"]
-        assert projected == {"identity": CONTRIBUTION, "members": ["postgresql"], "applicability": [PATH]}
-        assert objective["checks"][0]["parameters"]["allowed"] == UNION
+        assert projected["identity"] == CONTRIBUTION
+        assert projected["members"] == ["postgresql"]
+        assert projected["applicability"] == [PATH]
+        projected_origin, = projected["origins"]
+        assert projected_origin["applicability"] == PATH
+        assert projected_origin["owner"]["reference"] == "company.database-software@1"
+        assert projected_origin["owner"]["policy_sources"][0]["policy_source"] == "verification-policy"
+        technical, = [policy for assignment in coverage["assignments"]
+                      for policy in assignment["policies"]
+                      if policy["policy_type"] == "technical"]
+        assert technical["checks"][0]["parameters"]["allowed"] == UNION
         assert not (project / "generated").exists(), "Coverage persisted generated state"
         application_coverage = json.loads(cli("coverage", "explain", APPLICATION, "--format", "json"))
 
@@ -106,11 +117,12 @@ def run(root):
             assert check["implementation"] == "linux.packages.only-allowed"
             assert check["parameters"] == {"ecosystem": "linux-native", "allowed": allowed}
             assert check["evidence"] == [{"id": "observation", "type": "linux.packages/v1", "max_age": "86400s"}]
-            requirement, = plan["requirements"]
-            assert len(report["requirement_assessments"]) == 1
-            assert [row["baseline"] for row in report["requirement_baseline_assessments"]] == ["company.authorized-software-base@1"]
-            assert not any(row["implementation_gap"] for row in report["requirement_assessments"])
-            state = requirement["parameter_facts"]["states"]["allowed_software"]
+            assert plan["requirements"] == []
+            assert report["requirement_assessments"] == []
+            assert report["requirement_baseline_assessments"] == []
+            state = parameters.reconstruct_frozen_parameters(plan)[0][
+                "company.authorized-software@1"
+            ]["allowed_software"]
             assert state["value"] == allowed
             assert state["composition"]["kind"] == "additive-set"
             assert state["composition"]["base_value"] == BASE
@@ -118,7 +130,6 @@ def run(root):
             assert result["status"] == expected_status
             assert result["expected"] == {"ecosystem": "linux-native", "allowed": allowed}
             assert result["observed"]["unexpected"] == unexpected
-            assert report["requirement_assessments"][0]["status"] == expected_status
             # The ordinary historical CLI validates the exact retained plan/result relation.
             explanation = cli(
                 "assessment", "explain", "host/authorized-" + name, "--plan", str(plan_path),
@@ -143,24 +154,28 @@ def run(root):
 
         base, base_result, _, _, _ = assess("base", "base", "pass", BASE, [])
         assert base_result["results"][0]["observed"]["installed"] == ["auditd"]
-        assert base["requirements"][0]["parameter_facts"]["states"]["allowed_software"]["composition"]["contributions"] == []
+        base_state = parameters.reconstruct_frozen_parameters(base)[0][
+            "company.authorized-software@1"
+        ]["allowed_software"]
+        assert base_state["composition"]["contributions"] == []
         happy, happy_result, historical, happy_path, happy_results = assess("database", "contribution", "pass", UNION, [])
         assert happy_result["results"][0]["observed"]["installed"] == ["auditd", "postgresql"]
-        facts = happy["requirements"][0]["parameter_facts"]
-        composition = facts["states"]["allowed_software"]["composition"]
+        composition = parameters.reconstruct_frozen_parameters(happy)[0][
+            "company.authorized-software@1"
+        ]["allowed_software"]["composition"]
         contribution, = composition["contributions"]
         assert contribution["identity"] == CONTRIBUTION
         assert contribution["applicability"] == [PATH]
         assert contribution["members"] == ["postgresql"]
-        assert contribution["owner"]["document"]["spec"]["parameter_contributions"][0]["target"] == {
-            "requirement": "company.authorized-software", "slot": "allowed_software",
+        contributor = next(item for item in happy["parameters"]["documents"]
+                           if item["reference"] == "company.database-software@1")
+        assert contributor["document"]["spec"]["parameter_contributions"][0]["target"] == {
+            "policy": "company.authorized-software", "slot": "allowed_software",
         }
         assert composition["member_origins"][-1] == {
             "member": "postgresql", "origins": [{"kind": "contribution", "identity": CONTRIBUTION}],
         }
-        feature, = [row for row in happy["resolved_requirement_baselines"]
-                    if row["reference"] == "company.database-software@1"]
-        assert feature["requirements"] == []
+        assert happy["requirements"] == []
 
         # #149: retain one exact two-member operation before current governed
         # inventory changes.  These plans/results are the historical assertion.
@@ -180,11 +195,15 @@ def run(root):
         assert {report["outcome"] for report in historical_reports.values()} == {"pass"}
         assert old_application["controls"][0]["parameters"]["allowed"] == BASE
         assert old_database["controls"][0]["parameters"]["allowed"] == UNION
-        old_database_contribution, = old_database["requirements"][0]["parameter_facts"]["states"]["allowed_software"]["composition"]["contributions"]
+        old_database_contribution, = parameters.reconstruct_frozen_parameters(old_database)[0][
+            "company.authorized-software@1"
+        ]["allowed_software"]["composition"]["contributions"]
         assert old_database_contribution["identity"] == CONTRIBUTION
         assert old_database_contribution["members"] == ["postgresql"]
         assert old_database_contribution["applicability"] == [PATH]
-        assert old_application["requirements"][0]["parameter_facts"]["states"]["allowed_software"]["composition"]["contributions"] == []
+        assert parameters.reconstruct_frozen_parameters(old_application)[0][
+            "company.authorized-software@1"
+        ]["allowed_software"]["composition"]["contributions"] == []
 
         # Make a separate current-input view.  It changes only the supplied
         # database classification, never the committed policy, evidence, or old pair.
@@ -213,12 +232,16 @@ def run(root):
         assert {assignment["assignment_id"] for assignment in current_database_coverage["assignments"]} == {
             "managed-linux-software",
         }
-        current_objective, = [objective for assignment in current_database_coverage["assignments"]
-                              for policy in assignment["policies"] for objective in policy["objectives"]]
-        current_parameter, = current_objective["parameters"]
+        current_parameter_policy, = [policy for assignment in current_database_coverage["assignments"]
+                                     for policy in assignment["policies"]
+                                     if policy["reference"] == "company.authorized-software-base@1"]
+        current_parameter, = current_parameter_policy["parameters"]
         assert current_parameter["effective_value"] == BASE
         assert current_parameter["composition"]["contributions"] == []
-        assert current_objective["checks"][0]["parameters"]["allowed"] == BASE
+        current_technical, = [policy for assignment in current_database_coverage["assignments"]
+                              for policy in assignment["policies"]
+                              if policy["policy_type"] == "technical"]
+        assert current_technical["checks"][0]["parameters"]["allowed"] == BASE
         assert json.loads(cli(
             "coverage", "explain", APPLICATION, "--format", "json", config_path=current_config,
         )) == application_coverage
@@ -293,7 +316,8 @@ def run(root):
         ]
         assert any(change["kind"] == "assignment" and change["identity"] == "database-software"
                    and change["change"] == "removed" for change in database_diff["scope_changes"])
-        assert database_diff["summary"]["requirements"]["modified"] == 1
+        assert database_diff["summary"]["parameters"]["modified"] == 1
+        assert database_diff["summary"]["requirements"]["modified"] == 0
         assert database_diff["summary"]["controls"]["modified"] == 1
 
         assignment = project / "assignments/database.json"
@@ -303,8 +327,24 @@ def run(root):
         without, without_result, _, _, _ = assess("database", "without-contribution", "fail", BASE, ["postgresql"])
         assert {path.name: path.read_bytes() for path in evidence.glob("*.json")} == evidence_bytes
         assert without_result["results"][0]["reason"] == "Unexpected Linux packages are installed: postgresql"
-        assert without["requirements"][0]["parameter_facts"]["states"]["allowed_software"]["composition"]["contributions"] == []
+        assert parameters.reconstruct_frozen_parameters(without)[0][
+            "company.authorized-software@1"
+        ]["allowed_software"]["composition"]["contributions"] == []
         assignment.write_bytes(assignment_bytes)
+
+        base_assignment = project / "assignments/managed-linux.json"
+        base_assignment_document = read(base_assignment)
+        base_assignment_bytes = base_assignment.read_bytes()
+        del base_assignment_document["spec"]["parameterPolicyRefs"]
+        write(base_assignment, base_assignment_document)
+        missing_base_results = work / "missing-base-results"
+        cli(
+            "assessment", "run", DATABASE, "--at", AT,
+            "--evidence", str(evidence), "--output", str(missing_base_results),
+            returncodes=(1,),
+        )
+        assert not (missing_base_results / "host__authorized-database.json").exists()
+        base_assignment.write_bytes(base_assignment_bytes)
 
         package = next(path for path in evidence.glob("*.json")
                        if read(path)["subject"]["id"] == "host/authorized-database")

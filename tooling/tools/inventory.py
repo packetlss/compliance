@@ -87,6 +87,9 @@ def _assignment_facts(assignment: JsonObject) -> JsonObject:
         "assignment_id": assignment["id"],
         "target_group": assignment["target"]["group"],
         "policy_references": sorted(assignment["baselines"]),
+        "parameter_policy_references": sorted(
+            assignment.get("parameter_policies", [])
+        ),
     }
 
 

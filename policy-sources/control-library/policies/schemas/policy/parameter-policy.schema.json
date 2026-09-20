@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://compliance.example/schemas/platform/policy/parameter-policy/v1alpha1.schema.json",
+  "title": "Governed parameter policy",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {"const": "compliance.example/v1alpha1"},
+    "kind": {"const": "ParameterPolicy"},
+    "metadata": {
+      "type": "object",
+      "required": ["id", "revision"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "revision": {"$ref": "#/$defs/revision"},
+        "origin": {"type": "object", "additionalProperties": true}
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "parameters": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {"$ref": "#/$defs/slot"},
+          "additionalProperties": {"$ref": "#/$defs/declaration"}
+        },
+        "extends": {"$ref": "#/$defs/parentPin"},
+        "parameter_operations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/operation"}
+        },
+        "parameter_contributions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/contribution"}
+        }
+      },
+      "anyOf": [
+        {"required": ["parameters"]},
+        {"required": ["extends"]},
+        {"required": ["parameter_contributions"]}
+      ]
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"
+    },
+    "revision": {
+      "oneOf": [
+        {"type": "integer", "minimum": 1},
+        {"type": "string", "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"}
+      ]
+    },
+    "reference": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"
+    },
+    "slot": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"
+    },
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "declaration": {
+      "type": "object",
+      "required": ["required", "binding_mode", "schema", "schema_digest"],
+      "additionalProperties": false,
+      "properties": {
+        "required": {"type": "boolean"},
+        "binding_mode": {"enum": ["open", "fixed"]},
+        "schema": {"type": "object"},
+        "schema_digest": {"$ref": "#/$defs/digest"},
+        "composition": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {"kind": {"const": "additive-set"}}
+        },
+        "binding_scope": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identifier"}
+        },
+        "value": {},
+        "representation": {"const": "duration"}
+      },
+      "oneOf": [
+        {
+          "properties": {"binding_mode": {"const": "fixed"}},
+          "required": ["value"]
+        },
+        {
+          "properties": {"binding_mode": {"const": "open"}},
+          "required": ["binding_scope"],
+          "not": {"required": ["value"]}
+        }
+      ],
+      "allOf": [
+        {
+          "if": {"required": ["composition"]},
+          "then": {
+            "not": {"required": ["representation"]},
+            "properties": {
+              "schema": {
+                "required": ["type", "items"],
+                "properties": {
+                  "type": {"const": "array"},
+                  "items": {
+                    "type": "object",
+                    "required": ["type"],
+                    "properties": {"type": {"const": "string"}}
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "parameterPin": {
+      "type": "object",
+      "required": ["policy", "digest", "slot", "declaration_digest", "schema_digest"],
+      "additionalProperties": false,
+      "properties": {
+        "policy": {"$ref": "#/$defs/reference"},
+        "digest": {"$ref": "#/$defs/digest"},
+        "slot": {"$ref": "#/$defs/slot"},
+        "declaration_digest": {"$ref": "#/$defs/digest"},
+        "schema_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "parentPin": {
+      "type": "object",
+      "required": ["policy", "digest"],
+      "additionalProperties": false,
+      "properties": {
+        "policy": {"$ref": "#/$defs/reference"},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "deviation": {
+      "type": "object",
+      "required": ["id", "classification", "rationale", "approval_ref", "review_after"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "classification": {"type": "string", "minLength": 1},
+        "rationale": {"type": "string", "minLength": 1},
+        "approval_ref": {"type": "string", "minLength": 1},
+        "review_after": {"type": "string", "format": "date"}
+      }
+    },
+    "operation": {
+      "type": "object",
+      "required": ["id", "op", "target", "expected_parent_fingerprint"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "op": {"enum": ["bind", "tailor"]},
+        "target": {"$ref": "#/$defs/parameterPin"},
+        "expected_parent_fingerprint": {"$ref": "#/$defs/digest"},
+        "from": {},
+        "to": {},
+        "deviation": {"$ref": "#/$defs/deviation"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"op": {"const": "bind"}}},
+          "then": {
+            "required": ["to"],
+            "not": {"anyOf": [{"required": ["from"]}, {"required": ["deviation"]}]}
+          }
+        },
+        {
+          "if": {"properties": {"op": {"const": "tailor"}}},
+          "then": {"required": ["from", "to", "deviation"]}
+        }
+      ]
+    },
+    "contribution": {
+      "type": "object",
+      "required": ["id", "target", "members"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "target": {
+          "type": "object",
+          "required": ["policy", "slot"],
+          "additionalProperties": false,
+          "properties": {
+            "policy": {"$ref": "#/$defs/identifier"},
+            "slot": {"$ref": "#/$defs/slot"}
+          }
+        },
+        "members": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}

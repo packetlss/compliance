@@ -1,0 +1,37 @@
+{
+  "apiVersion": "compliance.example/v1alpha1",
+  "kind": "ParameterPolicy",
+  "metadata": {
+    "id": "restricted.iam.role-based-access",
+    "revision": 1
+  },
+  "spec": {
+    "extends": {
+      "policy": "company.iam.role-based-access-defaults@1",
+      "digest": "sha256:a667b6e1ab598be050dcf34596d397992c6e055d948cbcdb81785808f9260ced"
+    },
+    "parameter_operations": [
+      {
+        "id": "tailor-privileged-evidence-age",
+        "op": "tailor",
+        "target": {
+          "policy": "company.iam.role-based-access@1",
+          "digest": "sha256:08dfa9ea5faff6bc1729a68f6d323e772468ead85207f0432080248a18934e62",
+          "slot": "privileged_evidence_max_age",
+          "declaration_digest": "sha256:c69b766977a57fcb2c7f890133ffd019ce848ea0ab5daed6866466a070ec2eb7",
+          "schema_digest": "sha256:df1833621754da9c010c07003bf8263267b0be0cec26073a552880a9cea1fcc5"
+        },
+        "expected_parent_fingerprint": "sha256:750befb6fff59f1cf1b9a8b13322144d588ed9da8665abf16b86424c1dd4506f",
+        "from": "24h",
+        "to": "1h",
+        "deviation": {
+          "id": "DEV-RESTRICTED-IAM-FRESHNESS",
+          "classification": "restricted-environment-tailoring",
+          "rationale": "Restricted administrative access evidence requires hourly freshness.",
+          "approval_ref": "synthetic-review/iam-private-boundary",
+          "review_after": "2027-09-01"
+        }
+      }
+    ]
+  }
+}

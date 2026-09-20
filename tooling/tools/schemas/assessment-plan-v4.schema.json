@@ -8,6 +8,7 @@
     "subject",
     "resolved_groups",
     "assignments",
+    "parameters",
     "resolved_baselines",
     "resolved_requirement_baselines",
     "requirements",
@@ -42,6 +43,75 @@
       "uniqueItems": true,
       "items": {
         "$ref": "#/$defs/assignment"
+      }
+    },
+    "parameters": {
+      "type": "object",
+      "required": ["documents", "applicability", "consumers"],
+      "additionalProperties": false,
+      "properties": {
+        "documents": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "required": ["reference", "digest", "document", "policy_sources"],
+            "additionalProperties": false,
+            "properties": {
+              "reference": {"$ref": "#/$defs/reference"},
+              "digest": {"$ref": "#/$defs/digest"},
+              "document": {"type": "object"},
+              "policy_sources": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {"$ref": "#/$defs/policyLocator"}
+              }
+            }
+          }
+        },
+        "applicability": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "required": ["group", "assignment", "parameter_policy"],
+            "additionalProperties": false,
+            "properties": {
+              "group": {"type": "string", "minLength": 1},
+              "assignment": {"type": "string", "minLength": 1},
+              "parameter_policy": {"$ref": "#/$defs/reference"}
+            }
+          }
+        },
+        "consumers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "required": ["kind", "reference", "digest", "policy_sources"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {"enum": ["ControlRealization", "Baseline", "BaselineOverlay"]},
+              "reference": {"$ref": "#/$defs/reference"},
+              "digest": {"$ref": "#/$defs/digest"},
+              "policy_sources": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {"$ref": "#/$defs/policyLocator"}
+              },
+              "document": {"type": "object"}
+            },
+            "allOf": [
+              {
+                "if": {"properties": {"kind": {"const": "ControlRealization"}}},
+                "then": {"not": {"required": ["document"]}},
+                "else": {"required": ["document"]}
+              }
+            ]
+          }
+        }
       }
     },
     "resolved_baselines": {
@@ -581,7 +651,8 @@
             "required": [
               "id",
               "target_group",
-              "baselines"
+              "baselines",
+              "parameter_policies"
             ],
             "properties": {
               "id": {
@@ -593,6 +664,13 @@
                 "minLength": 1
               },
               "baselines": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/reference"
+                },
+                "uniqueItems": true
+              },
+              "parameter_policies": {
                 "type": "array",
                 "items": {
                   "$ref": "#/$defs/reference"
@@ -985,7 +1063,8 @@
       "required": [
         "id",
         "group",
-        "baselines"
+        "baselines",
+        "parameter_policies"
       ],
       "additionalProperties": false,
       "properties": {
@@ -999,11 +1078,15 @@
         },
         "baselines": {
           "type": "array",
-          "minItems": 1,
           "uniqueItems": true,
           "items": {
             "$ref": "#/$defs/reference"
           }
+        },
+        "parameter_policies": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/reference"}
         }
       }
     },
@@ -1044,7 +1127,8 @@
       "type": "object",
       "required": [
         "reference",
-        "digest"
+        "digest",
+        "policy_sources"
       ],
       "additionalProperties": false,
       "properties": {
@@ -1053,6 +1137,12 @@
         },
         "digest": {
           "$ref": "#/$defs/digest"
+        },
+        "policy_sources": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/policyLocator"}
         }
       }
     },
@@ -1138,8 +1228,8 @@
         "title",
         "digest",
         "policy_sources",
-        "requirements",
-        "parameter_derivation"
+        "document",
+        "requirements"
       ],
       "additionalProperties": false,
       "properties": {
@@ -1171,15 +1261,16 @@
             "$ref": "#/$defs/policyLocator"
           }
         },
+        "document": {
+          "type": "object"
+        },
         "requirements": {
           "type": "array",
+          "minItems": 1,
           "uniqueItems": true,
           "items": {
             "$ref": "#/$defs/requirementPin"
           }
-        },
-        "parameter_derivation": {
-          "type": "object"
         }
       }
     },
@@ -1261,7 +1352,8 @@
       "required": [
         "reference",
         "digest",
-        "policy_sources"
+        "policy_sources",
+        "document"
       ],
       "additionalProperties": false,
       "properties": {
@@ -1279,6 +1371,7 @@
             "$ref": "#/$defs/policyLocator"
           }
         },
+        "document": {"type": "object"},
         "based_on": {
           "$ref": "#/$defs/realizationPin"
         }
@@ -1329,9 +1422,9 @@
         "statement",
         "external_refs",
         "policy_sources",
+        "document",
         "technical_instance_ids",
         "provenance",
-        "parameter_facts",
         "implementation_state"
       ],
       "additionalProperties": false,
@@ -1361,6 +1454,7 @@
             "$ref": "#/$defs/policyLocator"
           }
         },
+        "document": {"type": "object"},
         "adoption": {
           "$ref": "#/$defs/adoption"
         },
@@ -1382,9 +1476,6 @@
         },
         "realization": {
           "$ref": "#/$defs/realization"
-        },
-        "parameter_facts": {
-          "type": "object"
         },
         "implementation_state": {
           "enum": [

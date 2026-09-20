@@ -8,11 +8,11 @@
   "spec": {
     "based_on": {
       "realization": "company.linux.central-role-access@1",
-      "digest": "sha256:5d57cbc4381d9375637d6ccad89a3859fa98b178204f3185e0cedd8170f68505"
+      "digest": "sha256:daa7bd104599f841fcf4007db5c6248176f941c27ece2a48f925fa8e90a90638"
     },
     "requirement": {
       "requirement": "company.iam.role-based-access@1",
-      "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7"
+      "digest": "sha256:5c661573bc770c5eb2cb131a6a08b3b6bcc99a30d19ceabb1836ec5c68dd1a0e"
     },
     "applies_to": {
       "subject_types": [
@@ -94,11 +94,11 @@
       {
         "id": "restricted.linux.rbac.sssd-installed.freshness",
         "source": {
-          "requirement": "company.iam.role-based-access@1",
-          "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7",
+          "policy": "company.iam.role-based-access@1",
+          "digest": "sha256:08dfa9ea5faff6bc1729a68f6d323e772468ead85207f0432080248a18934e62",
           "slot": "privileged_evidence_max_age",
-          "declaration_digest": "sha256:35ed20fc37f7aa59c704626924711a1f156e6ce70dde22c93b507fb1b4df0115",
-          "schema_digest": "sha256:c4b547904c80c90e4d9ff5e335f672c55b77072a86049f1f748bd408baf49e5c"
+          "declaration_digest": "sha256:c69b766977a57fcb2c7f890133ffd019ce848ea0ab5daed6866466a070ec2eb7",
+          "schema_digest": "sha256:df1833621754da9c010c07003bf8263267b0be0cec26073a552880a9cea1fcc5"
         },
         "destination": {
           "instance_id": "restricted.linux.rbac.sssd-installed",
@@ -115,11 +115,11 @@
       {
         "id": "restricted.linux.rbac.sssd-domain-configured.freshness",
         "source": {
-          "requirement": "company.iam.role-based-access@1",
-          "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7",
+          "policy": "company.iam.role-based-access@1",
+          "digest": "sha256:08dfa9ea5faff6bc1729a68f6d323e772468ead85207f0432080248a18934e62",
           "slot": "privileged_evidence_max_age",
-          "declaration_digest": "sha256:35ed20fc37f7aa59c704626924711a1f156e6ce70dde22c93b507fb1b4df0115",
-          "schema_digest": "sha256:c4b547904c80c90e4d9ff5e335f672c55b77072a86049f1f748bd408baf49e5c"
+          "declaration_digest": "sha256:c69b766977a57fcb2c7f890133ffd019ce848ea0ab5daed6866466a070ec2eb7",
+          "schema_digest": "sha256:df1833621754da9c010c07003bf8263267b0be0cec26073a552880a9cea1fcc5"
         },
         "destination": {
           "instance_id": "restricted.linux.rbac.sssd-domain-configured",
@@ -136,11 +136,11 @@
       {
         "id": "restricted.linux.rbac.ssh-central-group-required.freshness",
         "source": {
-          "requirement": "company.iam.role-based-access@1",
-          "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7",
+          "policy": "company.iam.role-based-access@1",
+          "digest": "sha256:08dfa9ea5faff6bc1729a68f6d323e772468ead85207f0432080248a18934e62",
           "slot": "privileged_evidence_max_age",
-          "declaration_digest": "sha256:35ed20fc37f7aa59c704626924711a1f156e6ce70dde22c93b507fb1b4df0115",
-          "schema_digest": "sha256:c4b547904c80c90e4d9ff5e335f672c55b77072a86049f1f748bd408baf49e5c"
+          "declaration_digest": "sha256:c69b766977a57fcb2c7f890133ffd019ce848ea0ab5daed6866466a070ec2eb7",
+          "schema_digest": "sha256:df1833621754da9c010c07003bf8263267b0be0cec26073a552880a9cea1fcc5"
         },
         "destination": {
           "instance_id": "restricted.linux.rbac.ssh-central-group-required",
@@ -157,11 +157,11 @@
       {
         "id": "restricted.linux.rbac.unmanaged-local-login-absent.freshness",
         "source": {
-          "requirement": "company.iam.role-based-access@1",
-          "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7",
+          "policy": "company.iam.role-based-access@1",
+          "digest": "sha256:08dfa9ea5faff6bc1729a68f6d323e772468ead85207f0432080248a18934e62",
           "slot": "privileged_evidence_max_age",
-          "declaration_digest": "sha256:35ed20fc37f7aa59c704626924711a1f156e6ce70dde22c93b507fb1b4df0115",
-          "schema_digest": "sha256:c4b547904c80c90e4d9ff5e335f672c55b77072a86049f1f748bd408baf49e5c"
+          "declaration_digest": "sha256:c69b766977a57fcb2c7f890133ffd019ce848ea0ab5daed6866466a070ec2eb7",
+          "schema_digest": "sha256:df1833621754da9c010c07003bf8263267b0be0cec26073a552880a9cea1fcc5"
         },
         "destination": {
           "instance_id": "restricted.linux.rbac.unmanaged-local-login-absent",
@@ -178,11 +178,11 @@
       {
         "id": "restricted.linux.rbac.company-iam-relationship.freshness",
         "source": {
-          "requirement": "company.iam.role-based-access@1",
-          "digest": "sha256:ba6b5a6c53d1d5b53f4d55fdac510989b8e8bd0ff354d7956160f430d0a5b4b7",
+          "policy": "company.iam.role-based-access@1",
+          "digest": "sha256:08dfa9ea5faff6bc1729a68f6d323e772468ead85207f0432080248a18934e62",
           "slot": "privileged_evidence_max_age",
-          "declaration_digest": "sha256:35ed20fc37f7aa59c704626924711a1f156e6ce70dde22c93b507fb1b4df0115",
-          "schema_digest": "sha256:c4b547904c80c90e4d9ff5e335f672c55b77072a86049f1f748bd408baf49e5c"
+          "declaration_digest": "sha256:c69b766977a57fcb2c7f890133ffd019ce848ea0ab5daed6866466a070ec2eb7",
+          "schema_digest": "sha256:df1833621754da9c010c07003bf8263267b0be0cec26073a552880a9cea1fcc5"
         },
         "destination": {
           "instance_id": "restricted.linux.rbac.company-iam-integration",

@@ -100,7 +100,7 @@ adds no universal report model, public Python API, service or latest-state store
 | Concern | Local contract |
 | --- | --- |
 | Commands, projections and external read consumption | [CLI](cli.md) |
-| Policy, Controls, evidence and assessment | [Policy model](policy-model.md) |
+| Policy, Controls, evidence and assessment | [Artifact provenance](artifact-provenance.md), [policy parameters](policy-parameters.md), [control realization](control-realization.md) |
 | Inventory, assignments and current Coverage | [Inventory and assignments](inventory-and-assignments.md) |
 | Exact operation scope and accounting | [Operation accounting](operation-accounting.md) |
 | Plan/result ownership, validation and history | [Artifact provenance](artifact-provenance.md) |
@@ -530,6 +530,15 @@ fabricated adoption; authored non-implementation retains its declaration. Both
 are implementation gaps with no Assessment outcome. Plans retain exact complete
 Check membership; result rows retain the gap dimension separately from nullable
 outcomes. Gaps prevent successful demonstration without hiding real evidence-derived
-results. Contribution-only baselines create no assessment rows. Parameter ownership,
-assignment and frozen parameter mechanics remain pending Tranche B. Historical
+results. Contribution-only policy creates no assessment rows. Historical
 artifacts require historical tooling; identity architecture is unchanged.
+
+## ADR 0024 Tranche B implementation (#201)
+
+`ParameterPolicy` is the sole active governed parameter owner. Explicit
+`parameterPolicyRefs` select it independently of baseline policy. Exact symbolic
+consumer links remain owned by the Check-authoring ControlRealization, Baseline or
+BaselineOverlay. The plan retains exact ParameterPolicy source documents,
+applicability and consumers once; admission reconstructs effective state,
+composition and attribution before checking materialized execution inputs. The
+RequirementBaseline-owned representation has no current compatibility reader.

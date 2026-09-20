@@ -66,6 +66,7 @@ from .render_plan import (
     load_inventory_inputs,
     load_evidence_schema_catalog,
     load_json,
+    load_parameter_policy_catalogs,
     load_policy_catalogs,
     load_requirement_catalogs,
     render_plan,
@@ -332,6 +333,7 @@ def _run_policy_validate(args: argparse.Namespace) -> None:
         policy_sources,
         controls,
     )
+    parameter_policies, _ = load_parameter_policy_catalogs(policy_sources)
     try:
         revisions = policy_source_revisions(policy_sources)
     except ValueError:
@@ -356,6 +358,7 @@ def _run_policy_validate(args: argparse.Namespace) -> None:
         "evidence_schema_count": len(evidence_schemas),
         "requirement_count": len(requirements),
         "requirement_baseline_count": len(requirement_baselines),
+        "parameter_policy_count": len(parameter_policies),
         "realization_count": len(realizations),
         "errors": errors,
     }
@@ -372,6 +375,7 @@ def _run_policy_validate(args: argparse.Namespace) -> None:
             f"{len(evidence_schemas)} evidence schema(s), "
             f"{len(requirements)} requirement(s), "
             f"{len(requirement_baselines)} requirement baseline(s), "
+            f"{len(parameter_policies)} parameter policy document(s), "
             f"{len(realizations)} realization(s)"
         )
     if errors:

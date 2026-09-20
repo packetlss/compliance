@@ -25,7 +25,11 @@ def write(root, path, value):
 
 def resource(kind, identifier, spec, revision=1):
     return {
-        "apiVersion": "compliance.example/v1",
+        "apiVersion": (
+            "compliance.example/v1alpha1"
+            if kind in {"ControlRequirement", "RequirementBaseline", "ControlRealization"}
+            else "compliance.example/v1"
+        ),
         "kind": kind,
         "metadata": {"id": identifier, "revision": revision},
         "spec": spec,
@@ -486,6 +490,7 @@ def build_fixture(root):
                 "status": "implemented",
                 "method": "automated",
                 "owner": "test",
+                "implementation_ref": "test/central-role-access",
             },
             "checks": checks,
         },

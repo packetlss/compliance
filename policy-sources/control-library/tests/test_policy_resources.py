@@ -238,27 +238,63 @@ class PolicyResourceTests(unittest.TestCase):
                     ):
                         self.assertFalse(validator.is_valid(changed))
 
+    def test_objective_policy_origin_requires_existing_provenance_shape(self):
+        digest = "sha256:" + "0" * 64
+        cases = (
+            (
+                "control-requirement.schema.json",
+                {
+                    "apiVersion": "compliance.example/v1alpha1",
+                    "kind": "ControlRequirement",
+                    "metadata": {"id": "test.objective", "revision": 1},
+                    "spec": {"title": "Objective", "statement": "Required state"},
+                },
+            ),
+            (
+                "requirement-baseline.schema.json",
+                {
+                    "apiVersion": "compliance.example/v1alpha1",
+                    "kind": "RequirementBaseline",
+                    "metadata": {"id": "test.objectives", "revision": 1},
+                    "spec": {
+                        "title": "Objectives",
+                        "requirements": [{
+                            "requirement": "test.objective@1",
+                            "digest": digest,
+                        }],
+                    },
+                },
+            ),
+        )
+        for filename, document in cases:
+            validator = Draft202012Validator(
+                read_json(POLICIES / "schemas/policy" / filename)
+            )
+            valid = copy.deepcopy(document)
+            valid["metadata"]["origin"] = {"type": "test", "name": "source"}
+            self.assertTrue(validator.is_valid(valid), filename)
+            for origin in ({}, {"type": "test"}, {"name": "source"}):
+                changed = copy.deepcopy(document)
+                changed["metadata"]["origin"] = origin
+                with self.subTest(schema=filename, origin=origin):
+                    self.assertFalse(validator.is_valid(changed))
+
     def test_additive_set_authoring_contract_is_bounded_and_strict(self):
         schema_root = POLICIES / "schemas/policy"
-        requirement_validator = Draft202012Validator(
-            read_json(schema_root / "control-requirement.schema.json")
-        )
-        baseline_validator = Draft202012Validator(
-            read_json(schema_root / "requirement-baseline.schema.json")
+        parameter_validator = Draft202012Validator(
+            read_json(schema_root / "parameter-policy.schema.json")
         )
         value_schema = {
-            "$id": "https://compliance.example/schemas/requirements/company.authorized-software/parameters/allowed_software/v1.schema.json",
+            "$id": "https://compliance.example/schemas/parameter-policies/company.authorized-software/parameters/allowed_software/v1.schema.json",
             "type": "array",
             "items": {"type": "string"},
             "uniqueItems": True,
         }
         declaration = {
             "apiVersion": "compliance.example/v1alpha1",
-            "kind": "ControlRequirement",
+            "kind": "ParameterPolicy",
             "metadata": {"id": "company.authorized-software", "revision": 1},
             "spec": {
-                "title": "Authorized software",
-                "statement": "Only authorized software is installed.",
                 "parameters": {
                     "allowed_software": {
                         "required": True,
@@ -273,22 +309,21 @@ class PolicyResourceTests(unittest.TestCase):
         }
         contribution_only = {
             "apiVersion": "compliance.example/v1alpha1",
-            "kind": "RequirementBaseline",
+            "kind": "ParameterPolicy",
             "metadata": {"id": "company.database", "revision": 1},
             "spec": {
-                "title": "Database software",
                 "parameter_contributions": [{
                     "id": "database-software",
                     "target": {
-                        "requirement": "company.authorized-software",
+                        "policy": "company.authorized-software",
                         "slot": "allowed_software",
                     },
                     "members": ["postgresql", "pgbouncer"],
                 }],
             },
         }
-        self.assertTrue(requirement_validator.is_valid(declaration))
-        self.assertTrue(baseline_validator.is_valid(contribution_only))
+        self.assertTrue(parameter_validator.is_valid(declaration))
+        self.assertTrue(parameter_validator.is_valid(contribution_only))
 
         invalid_declarations = []
         for mutate in (
@@ -300,7 +335,7 @@ class PolicyResourceTests(unittest.TestCase):
             changed = copy.deepcopy(declaration)
             mutate(changed)
             invalid_declarations.append(changed)
-        self.assertTrue(all(not requirement_validator.is_valid(item) for item in invalid_declarations))
+        self.assertTrue(all(not parameter_validator.is_valid(item) for item in invalid_declarations))
 
         invalid_contributions = []
         for mutate in (
@@ -313,11 +348,76 @@ class PolicyResourceTests(unittest.TestCase):
             changed = copy.deepcopy(contribution_only)
             mutate(changed)
             invalid_contributions.append(changed)
-        self.assertTrue(all(not baseline_validator.is_valid(item) for item in invalid_contributions))
+        self.assertTrue(all(not parameter_validator.is_valid(item) for item in invalid_contributions))
 
         empty = copy.deepcopy(contribution_only)
         empty["spec"].pop("parameter_contributions")
-        self.assertFalse(baseline_validator.is_valid(empty))
+        self.assertFalse(parameter_validator.is_valid(empty))
+
+    def test_direct_technical_parameter_links_have_a_strict_typed_interface(self):
+        link = {
+            "id": "allowed-software",
+            "source": {
+                "policy": "company.authorized-software@1",
+                "digest": "sha256:" + "1" * 64,
+                "slot": "allowed_software",
+                "declaration_digest": "sha256:" + "2" * 64,
+                "schema_digest": "sha256:" + "3" * 64,
+            },
+            "destination": {
+                "instance_id": "company.software",
+                "implementation": {
+                    "id": "linux.packages.only-allowed",
+                    "version": 1,
+                    "fingerprint": "sha256:" + "4" * 64,
+                },
+                "kind": "parameters",
+                "path": "/allowed",
+            },
+        }
+        mutations = (
+            lambda item: item["source"].update(policy="ambient-name"),
+            lambda item: item["source"].update(slot="not/a/slot"),
+            lambda item: item["destination"].update(path=""),
+            lambda item: item["destination"].update(path="allowed"),
+            lambda item: item["destination"].pop("implementation"),
+            lambda item: item["destination"].update(dependency="not-allowed"),
+        )
+        for filename in ("baseline.schema.json", "baseline-overlay.schema.json"):
+            schema = read_json(POLICIES / "schemas/policy" / filename)
+            validator = Draft202012Validator(schema)
+            if filename == "baseline.schema.json":
+                document = {
+                    "apiVersion": "compliance.example/v1",
+                    "kind": "Baseline",
+                    "metadata": {"id": "test.baseline", "version": 1},
+                    "spec": {
+                        "title": "Test baseline",
+                        "controls": [],
+                        "parameter_links": [link],
+                    },
+                }
+            else:
+                document = {
+                    "apiVersion": "compliance.example/v1",
+                    "kind": "BaselineOverlay",
+                    "metadata": {"id": "test.overlay", "revision": 1},
+                    "spec": {
+                        "title": "Test overlay",
+                        "extends": [{
+                            "baseline": "test.baseline@1",
+                            "digest": "sha256:" + "5" * 64,
+                        }],
+                        "operations": [],
+                        "parameter_links": [link],
+                    },
+                }
+            self.assertTrue(validator.is_valid(document), filename)
+            for mutate in mutations:
+                changed = copy.deepcopy(document)
+                mutate(changed["spec"]["parameter_links"][0])
+                with self.subTest(schema=filename, mutation=mutate):
+                    self.assertFalse(validator.is_valid(changed))
 
     def test_reusable_catalog_and_rego_entrypoints(self):
         source = PolicySource("control-library", POLICIES)
@@ -620,6 +720,7 @@ class PolicyResourceTests(unittest.TestCase):
             "control-requirement.schema.json": "https://compliance.example/schemas/platform/policy/control-requirement/v1alpha1.schema.json",
             "control.schema.json": "https://compliance.example/schemas/platform/policy/control/v1.schema.json",
             "requirement-baseline.schema.json": "https://compliance.example/schemas/platform/policy/requirement-baseline/v1alpha1.schema.json",
+            "parameter-policy.schema.json": "https://compliance.example/schemas/platform/policy/parameter-policy/v1alpha1.schema.json",
         }
         for filename, expected in policy_schema_ids.items():
             self.assertEqual(
@@ -824,6 +925,7 @@ class PolicySourceBoundaryTests(unittest.TestCase):
             "control-realization.schema.json",
             "control-requirement.schema.json",
             "requirement-baseline.schema.json",
+            "parameter-policy.schema.json",
         ):
             with self.subTest(schema=name):
                 self.assertTrue((policy_schemas / name).is_file())

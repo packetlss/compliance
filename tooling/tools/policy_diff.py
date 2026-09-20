@@ -10,6 +10,7 @@ from typing import Any, Callable
 from jsonschema import Draft202012Validator
 
 from .artifact_validation import validate_assessment_plan
+from .policy_parameters import reconstruct_frozen_parameters
 
 
 JsonObject = dict[str, Any]
@@ -410,6 +411,42 @@ def _control_changes(before: JsonObject, after: JsonObject) -> list[JsonObject]:
     return changes
 
 
+def _effective_parameters(plan: JsonObject) -> list[JsonObject]:
+    states, _, _ = reconstruct_frozen_parameters(plan)
+    rows = []
+    for reference, slots in sorted(states.items()):
+        for slot, state in sorted(slots.items()):
+            if not state.get("bound"):
+                continue
+            row: JsonObject = {
+                "policy": state["identity"]["policy"],
+                "slot": slot,
+                "value": state["value"],
+            }
+            if "composition" in state:
+                composition = state["composition"]
+                row["composition"] = {
+                    "kind": composition["kind"],
+                    "base_value": composition["base_value"],
+                    "base_origins": composition["base_origins"],
+                    "contributions": [
+                        {
+                            "identity": item["identity"],
+                            "members": item["members"],
+                            "applicability": item["applicability"],
+                        }
+                        for item in composition["contributions"]
+                    ],
+                    "member_origins": composition["member_origins"],
+                }
+            rows.append(row)
+    return rows
+
+
+def _parameter_identity(item: JsonObject) -> str:
+    return f"{item['policy']}/{item['slot']}"
+
+
 def _counts(changes: list[JsonObject]) -> JsonObject:
     counter = Counter(item["change"] for item in changes)
     return {name: counter[name] for name in CHANGE_COUNTS}
@@ -477,14 +514,26 @@ def build_policy_diff(
         kind="requirement",
         identity=_requirement_identity,
     )
+    comparison = _comparison(before, after)
+    parameter_changes = (
+        _collection_changes(
+            _effective_parameters(before),
+            _effective_parameters(after),
+            kind="parameter",
+            identity=_parameter_identity,
+        )
+        if comparison["status"] == "complete"
+        else []
+    )
     control_changes = _control_changes(before, after)
     total_changes = (
-        len(scope_changes) + len(requirement_changes) + len(control_changes)
+        len(scope_changes) + len(requirement_changes)
+        + len(parameter_changes) + len(control_changes)
     )
     document: JsonObject = {
         "schema": POLICY_DIFF_SCHEMA,
         "subject_id": subject_id,
-        "comparison": _comparison(before, after),
+        "comparison": comparison,
         "context": {
             "changed": bool(context_fields),
             "changed_fields": context_fields,
@@ -496,10 +545,12 @@ def build_policy_diff(
             "total_changes": total_changes,
             "scope": _counts(scope_changes),
             "requirements": _counts(requirement_changes),
+            "parameters": _counts(parameter_changes),
             "controls": _counts(control_changes),
         },
         "scope_changes": scope_changes,
         "requirement_changes": requirement_changes,
+        "parameter_changes": parameter_changes,
         "control_changes": control_changes,
     }
     validate_policy_diff(document)
@@ -653,6 +704,7 @@ def _domain_name(change: JsonObject) -> tuple[str, str]:
         "baseline": "Applicable policy",
         "requirement_baseline": "Applicable objective policy",
         "requirement": "Objective",
+        "parameter": "Governed parameter",
         "control": "Check",
         "resolution": "Policy resolution",
     }.get(change["kind"], change["kind"].replace("_", " ").title())
@@ -733,12 +785,14 @@ def format_policy_diff(document: JsonObject) -> str:
         f"Changes: {summary['total_changes']}",
         _format_counts("Scope", summary["scope"]),
         _format_counts("Requirements", summary["requirements"]),
+        _format_counts("Parameters", summary["parameters"]),
         _format_counts("Controls", summary["controls"]),
     ])
 
     sections = (
         ("Scope changes", document["scope_changes"]),
         ("Requirement changes", document["requirement_changes"]),
+        ("Parameter changes", document["parameter_changes"]),
         ("Control changes", document["control_changes"]),
     )
     for title, changes in sections:

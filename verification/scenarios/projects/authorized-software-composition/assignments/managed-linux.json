@@ -11,6 +11,12 @@
     },
     "baselineRefs": [
       {
+        "name": "company.authorized-software-check",
+        "revision": "1"
+      }
+    ],
+    "parameterPolicyRefs": [
+      {
         "name": "company.authorized-software-base",
         "revision": "1"
       }

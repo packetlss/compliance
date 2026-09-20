@@ -1,0 +1,47 @@
+{
+  "apiVersion": "compliance.example/v1",
+  "kind": "Baseline",
+  "metadata": {
+    "id": "company.authorized-software-check",
+    "revision": 1
+  },
+  "spec": {
+    "title": "Authorized software technical policy",
+    "controls": [
+      {
+        "instance_id": "company.linux.authorized-software.only-allowed",
+        "implementation": "linux.packages.only-allowed",
+        "parameters": {
+          "ecosystem": "linux-native"
+        },
+        "evidence": {
+          "observation": {
+            "max_age": "24h"
+          }
+        }
+      }
+    ],
+    "parameter_links": [
+      {
+        "id": "allowed-software",
+        "source": {
+          "policy": "company.authorized-software@1",
+          "digest": "sha256:10b21485433955f07d91ead54705b4b55b555c214708a2df1ca93db709367fd3",
+          "slot": "allowed_software",
+          "declaration_digest": "sha256:07c4fe1ddefd89acb9eb6b0028020ae1e381239501119e607384a5acd97ac035",
+          "schema_digest": "sha256:ad415ae55b4c9207a24b924f43fac0ebee7e7f05dd427fb34b819326ae032394"
+        },
+        "destination": {
+          "instance_id": "company.linux.authorized-software.only-allowed",
+          "implementation": {
+            "id": "linux.packages.only-allowed",
+            "version": 1,
+            "fingerprint": "sha256:c6060f3edba379e20a3e6bdc9ea690215bedd408b985f64fa96fa2cab5531acb"
+          },
+          "kind": "parameters",
+          "path": "/allowed"
+        }
+      }
+    ]
+  }
+}

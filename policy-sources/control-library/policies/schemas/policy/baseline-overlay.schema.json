@@ -46,11 +46,68 @@
           "items": {
             "$ref": "#/$defs/operation"
           }
+        },
+        "parameter_links": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/parameterLink"}
         }
       }
     }
   },
   "$defs": {
+    "parameterLink": {
+      "type": "object",
+      "required": ["id", "source", "destination"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "source": {
+          "type": "object",
+          "required": ["policy", "digest", "slot", "declaration_digest", "schema_digest"],
+          "additionalProperties": false,
+          "properties": {
+            "policy": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*@[a-z0-9]+(?:[.-][a-z0-9]+)*$(?![\\s\\S])"},
+            "digest": {"$ref": "#/$defs/digest"},
+            "slot": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"},
+            "declaration_digest": {"$ref": "#/$defs/digest"},
+            "schema_digest": {"$ref": "#/$defs/digest"}
+          }
+        },
+        "destination": {
+          "type": "object",
+          "required": ["instance_id", "implementation", "kind", "path"],
+          "additionalProperties": false,
+          "properties": {
+            "instance_id": {"$ref": "#/$defs/target"},
+            "implementation": {
+              "type": "object",
+              "required": ["id", "version", "fingerprint"],
+              "additionalProperties": false,
+              "properties": {
+                "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)*$(?![\\s\\S])"},
+                "version": {"$ref": "#/$defs/revision"},
+                "fingerprint": {"$ref": "#/$defs/digest"}
+              }
+            },
+            "kind": {"enum": ["parameters", "evidence_inputs", "freshness"]},
+            "dependency": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$(?![\\s\\S])"},
+            "path": {"type": "string", "pattern": "^/[^/].*"}
+          },
+          "allOf": [
+            {
+              "if": {"properties": {"kind": {"const": "parameters"}}},
+              "then": {"not": {"required": ["dependency"]}},
+              "else": {"required": ["dependency"]}
+            },
+            {
+              "if": {"properties": {"kind": {"const": "freshness"}}},
+              "then": {"properties": {"path": {"const": "/max_age"}}}
+            }
+          ]
+        }
+      }
+    },
     "revision": {
       "oneOf": [
         {
@@ -313,6 +370,12 @@
         "equivalence_ref": {
           "type": "string",
           "minLength": 1
+        },
+        "parameter_links": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/parameterLink"}
         },
         "evidence": {
           "type": "object",

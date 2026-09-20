@@ -17,6 +17,7 @@ from tools.policy_sources import PolicySource, policy_source_revisions, source_t
 from tools.render_plan import (
     content_digest,
     load_policy_catalogs,
+    load_parameter_policy_catalogs,
     load_requirement_catalogs,
     render_plan,
     resolve_baseline,
@@ -30,6 +31,7 @@ check_source_boundary = runpy.run_path(str(ROOT / "scripts/check-source-boundary
 BASELINE = Path("baselines/company/company-linux-server-operations.json")
 REALIZATION = Path("realizations/company/company-linux-role-based-access.json")
 REQUIREMENT = Path("requirements/company/company-role-based-access.json")
+PARAMETER_POLICY = Path("parameter-policies/company/company-iam-role-based-access.json")
 AWS_BASELINE = Path("baselines/upstream/csa-ccm-aws-foundations-profile.json")
 SAAS_BASELINE = Path("baselines/upstream/csa-ccm-saas-foundations-profile.json")
 
@@ -65,6 +67,7 @@ class VerificationPolicySourceTests(unittest.TestCase):
             "benchmark.example.linux-server-hardening@2026.1",
             "benchmark.example.macos-hardening@2026.1",
             "company.aws-foundation@1",
+            "company.authorized-software-check@1",
             "company.aws-s3-public-access@1",
             "company.container-runtime-host@1",
             "company.developer-workstation@1",
@@ -80,22 +83,27 @@ class VerificationPolicySourceTests(unittest.TestCase):
         })
         self.assertEqual(set(requirements), {
             "company.administrative-access.identity-gated@1",
-            "company.authorized-software@1",
             "company.iam.role-based-access@1",
             "verification.operation.system.o1@1",
         })
         self.assertEqual(set(objectives), {
             "company.administrative-access-objectives@1",
-            "company.authorized-software-base@1",
-            "company.database-software@1",
             "company.identity-access-objectives@1",
             "verification.operation.system@1",
         })
         self.assertEqual(set(realizations), {
             "company.linux.administrative-access-identity-gated@1",
-            "company.linux.authorized-software@1",
             "company.linux.central-role-access@1",
             "company.saas.administrative-access-identity-gated@1",
+        })
+        parameter_policies, errors = load_parameter_policy_catalogs(sources(self.root))
+        self.assertEqual(errors, [])
+        self.assertEqual(set(parameter_policies), {
+            "company.authorized-software@1",
+            "company.authorized-software-base@1",
+            "company.database-software@1",
+            "company.iam.role-based-access@1",
+            "company.iam.role-based-access-defaults@1",
         })
         for catalog in (baselines, requirements, objectives, realizations):
             self.assertTrue(all(item["_source"].startswith("verification-policy:") for item in catalog.values()))
@@ -266,6 +274,7 @@ class VerificationPolicySourceTests(unittest.TestCase):
             "id": "iam-objectives",
             "target": {"group": "iam"},
             "baselines": ["company.identity-access-objectives@1"],
+            "parameter_policies": ["company.iam.role-based-access-defaults@1"],
         }]
         plan = render_plan(subject, groups, assignments, sources(self.root))
         requirement = plan["requirements"][0]
@@ -331,6 +340,7 @@ class VerificationPolicySourceTests(unittest.TestCase):
             "id": "iam-objectives",
             "target": {"group": "iam"},
             "baselines": ["company.identity-access-objectives@1"],
+            "parameter_policies": ["company.iam.role-based-access-defaults@1"],
         }]
 
         plan = render_plan(subject, groups, assignments, combined)
@@ -428,37 +438,37 @@ class VerificationPolicySourceTests(unittest.TestCase):
         self.mutate(REALIZATION, lambda item: item["spec"]["requirement"].update(digest="sha256:" + "0" * 64))
         self.assertIn("requirement-digest-mismatch", self.error_types())
 
-    def test_requirement_parameter_schema_identity_must_match_owner_and_slot(self) -> None:
+    def test_parameter_policy_schema_identity_must_match_owner_and_slot(self) -> None:
         def change(document):
             declaration = document["spec"]["parameters"][
                 "privileged_evidence_max_age"
             ]
             declaration["schema"]["$id"] = (
-                "https://compliance.example/schemas/requirements/company.other/"
+                "https://compliance.example/schemas/parameter-policies/company.other/"
                 "parameters/privileged_evidence_max_age/v1.schema.json"
             )
             declaration["schema_digest"] = content_digest(declaration["schema"])
 
-        self.mutate(REQUIREMENT, change)
+        self.mutate(PARAMETER_POLICY, change)
         _, _, errors = load_policy_catalogs(sources(self.root))
         error = next(
             item for item in errors
-            if item["type"] == "parameter-declaration-invalid"
+            if item["type"] == "parameter-policy-invalid"
         )
         self.assertIn("semantic owner", error["message"])
 
-    def test_requirement_parameter_schema_identities_remain_first_party(self) -> None:
+    def test_parameter_policy_schema_identities_remain_first_party(self) -> None:
         expected = {
             "company-authorized-software.json": {
                 "allowed_software": (
-                    "https://compliance.example/schemas/requirements/"
+                    "https://compliance.example/schemas/parameter-policies/"
                     "company.authorized-software/parameters/allowed_software/"
                     "v1.schema.json"
                 ),
             },
-            "company-role-based-access.json": {
+            "company-iam-role-based-access.json": {
                 "privileged_evidence_max_age": (
-                    "https://compliance.example/schemas/requirements/"
+                    "https://compliance.example/schemas/parameter-policies/"
                     "company.iam.role-based-access/parameters/"
                     "privileged_evidence_max_age/v1.schema.json"
                 ),
@@ -466,7 +476,7 @@ class VerificationPolicySourceTests(unittest.TestCase):
         }
         for filename, parameters in expected.items():
             document = json.loads(
-                (ROOT / "policies/requirements/company" / filename).read_text()
+                (ROOT / "policies/parameter-policies/company" / filename).read_text()
             )
             actual = {
                 slot: declaration["schema"]["$id"]

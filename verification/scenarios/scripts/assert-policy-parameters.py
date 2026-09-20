@@ -1,4 +1,4 @@
-"""Canonical ADR 0012 cutover through public CLI and separated synthetic roots."""
+"""Canonical ParameterPolicy tailoring through public CLI and private roots."""
 import argparse
 import copy
 import json
@@ -43,43 +43,39 @@ def run(root):
             validate_assessment_plan(plan)
             return plan
 
-        first = render('original')
-        assert plan_disposition(first) == 'result_required'
-        requirement = first['requirements'][0]
-        slot = requirement['parameter_facts']['states']['privileged_evidence_max_age']
-        assert slot['value'] == '86400s'
+        tailored = render('tailored')
+        assert plan_disposition(tailored) == 'result_required'
+        states, _, _ = p.reconstruct_frozen_parameters(tailored)
+        slot = states['company.iam.role-based-access@1']['privileged_evidence_max_age']
+        assert slot['value'] == '3600s'
         realization_path = sources['environment-private']/'realizations/restricted/restricted-linux-role-based-access.json'
         realization_bytes = realization_path.read_bytes()
-        baseline_record = first['resolved_requirement_baselines'][0]
-        parent = baseline_record['parameter_derivation']['ancestry'][-1]['document']
-        baseline_ref = baseline_record['reference']
-        child_ref = parent['metadata']['id']+'@2'
-        child = {'apiVersion': parent['apiVersion'], 'kind': parent['kind'],
-                 'metadata': {'id': parent['metadata']['id'], 'revision': 2},
-                 'spec': {'title': 'Restricted Linux enclave access policy',
-                          'requirements': copy.deepcopy(parent['spec']['requirements']),
-                          'extends': {'baseline': baseline_ref, 'digest': p.digest(parent)},
-                          'parameter_operations': [{'id': 'enclave-freshness', 'op': 'tailor', 'target': slot['pin'],
-                            'expected_parent_fingerprint': p.fingerprint(slot), 'from': '24h', 'to': '1h',
-                            'deviation': {'id': 'SYNTHETIC-AGE', 'classification': 'specialization',
-                                'rationale': 'Canonical explicit freshness change', 'approval_ref': 'synthetic/review', 'review_after': '2027-01-01'}}]}}
-        child_path = sources['environment-private']/'requirement-baselines/enclave.json'
-        child_path.parent.mkdir()
-        child_path.write_text(json.dumps(child))
+        assert any(
+            item['reference'] == 'restricted.iam.role-based-access@1'
+            and {source['policy_source'] for source in item['policy_sources']} == {
+                'environment-private'
+            }
+            for item in tailored['parameters']['documents']
+        )
         assignment = next((work/'assignments').glob('*.yaml'))
         original_assignment = yaml.safe_load(assignment.read_text())
-        selected = copy.deepcopy(original_assignment)
-        selected['spec']['baselineRefs'] = [{'name': parent['metadata']['id'], 'revision': '2'}]
-        assignment.write_text(yaml.safe_dump(selected))
-        second = render('tailored')
-        assert plan_disposition(second) == 'result_required'
+        base_selected = copy.deepcopy(original_assignment)
+        base_selected['spec']['parameterPolicyRefs'] = [{
+            'name': 'company.iam.role-based-access-defaults', 'revision': '1',
+        }]
+        assignment.write_text(yaml.safe_dump(base_selected))
+        base = render('base')
+        assert plan_disposition(base) == 'result_required'
         assert realization_path.read_bytes() == realization_bytes
-        assert all(c['evidence'][0]['max_age'] == '3600s' for c in second['controls'])
-        assert build_policy_diff(first, second)['summary']['changed']
-        selected['spec']['baselineRefs'] = [{'name': parent['metadata']['id'], 'revision': revision} for revision in ['1', '2']]
-        assignment.write_text(yaml.safe_dump(selected))
+        assert all(c['evidence'][0]['max_age'] == '86400s' for c in base['controls'])
+        assert build_policy_diff(base, tailored)['summary']['changed']
+        conflict = copy.deepcopy(original_assignment)
+        conflict['spec']['parameterPolicyRefs'].append({
+            'name': 'company.iam.role-based-access-defaults', 'revision': '1',
+        })
+        assignment.write_text(yaml.safe_dump(conflict))
         assert plan_disposition(render('conflict')) == 'invalid'
-        print('ADR 0012: private tailoring, immutable fan-out, and assignment conflict passed.')
+        print('ADR 0024: private ParameterPolicy tailoring, immutable fan-out, and assignment conflict passed.')
 
 
 if __name__ == '__main__':

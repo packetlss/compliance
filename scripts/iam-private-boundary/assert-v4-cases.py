@@ -86,7 +86,8 @@ def main() -> None:
     require(repeated_result["id"] == result["id"], "source reorder/relocation changed v4 result identity")
 
     # Unlocked evaluation must still refuse changed private content against an old plan.
-    private_document = next(private.rglob("*.json"))
+    private_document = private / "realizations/restricted/restricted-linux-role-based-access.json"
+    require(private_document.is_file(), "private realization fixture is missing")
     changed = load(private_document)
     changed["spec"]["checks"][0]["parameters"]["expected"] = False
     write(private_document, changed)

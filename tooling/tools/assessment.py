@@ -1144,6 +1144,22 @@ def _applicable_policies(plan: JsonObject) -> list[JsonObject]:
             path = {"group": item["group"], "assignment": item["assignment"]}
             if path not in policy["paths"]:
                 policy["paths"].append(path)
+    for item in plan.get("parameters", {}).get("applicability", []):
+        reference = item["parameter_policy"]
+        policy = policies.setdefault(
+            reference,
+            {
+                "title": "Governed parameter policy",
+                "reference": reference,
+                "kind": "parameter",
+                "paths": [],
+                "objective_references": [],
+                "check_instance_ids": [],
+            },
+        )
+        path = {"group": item["group"], "assignment": item["assignment"]}
+        if path not in policy["paths"]:
+            policy["paths"].append(path)
     for control in [*plan["controls"], *plan["excluded_controls"]]:
         for attribution in _policy_attribution(control):
             policy = policies.get(attribution["policy_reference"])

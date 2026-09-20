@@ -92,6 +92,26 @@ def _criteria_state(control: JsonObject) -> JsonObject:
     }
 
 
+def _authored_criteria_state(control: JsonObject, technical_links: list[JsonObject]) -> JsonObject:
+    """Project pre-consumption criteria when a direct Check has governed inputs."""
+    matching = [
+        link for link in technical_links
+        if link["destination"]["instance_id"] == control["instance_id"]
+    ]
+    if not matching:
+        return _criteria_state(control)
+    from .policy_parameters import dematerialize_links
+    instance = dematerialize_links(
+        [control["policy_inputs"]["instance"]], matching,
+    )[0]
+    return {
+        "evidence": instance.get("evidence", {}),
+        "implementation": instance["implementation"],
+        "parameters": instance.get("parameters", {}),
+        "disposition": instance["disposition"],
+    }
+
+
 def _frozen_meaning_errors(document: JsonObject) -> list[str]:
     """Validate plan-owned policy/check meaning against frozen source facts."""
     errors: list[str] = []
@@ -141,9 +161,7 @@ def _frozen_meaning_errors(document: JsonObject) -> list[str]:
             definitions[control["implementation"]] = definition
 
     for index, baseline in enumerate(document["resolved_requirement_baselines"]):
-        ancestry = baseline.get("parameter_derivation", {}).get("ancestry", [])
-        selected = ancestry[-1] if ancestry else None
-        selected_document = selected.get("document") if isinstance(selected, dict) else None
+        selected_document = baseline.get("document")
         if isinstance(selected_document, dict):
             frozen_title = selected_document.get("spec", {}).get("title")
             if frozen_title != baseline["title"]:
@@ -164,8 +182,9 @@ def validate_assessment_plan(
     _validate_schema(document, assessment_plan_schema_path(), "assessment plan", source)
     errors: list[str] = []
     from .policy_parameters import validate_frozen
+    technical_links = []
     try:
-        validate_frozen(document)
+        technical_links = validate_frozen(document)
     except (ValueError, KeyError) as error:
         errors.append("invalid frozen policy parameters: " + str(error))
     errors.extend(_frozen_meaning_errors(document))
@@ -229,7 +248,7 @@ def validate_assessment_plan(
                         "overlay operation is missing from control lineage"
                     )
             if derivations and not any(
-                derivation["after"] == _criteria_state(control)
+                derivation["after"] == _authored_criteria_state(control, technical_links)
                 for derivation in derivations
             ):
                 errors.append(

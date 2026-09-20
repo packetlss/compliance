@@ -136,11 +136,11 @@ component contracts below define local details without creating compatibility pr
 | --- | --- |
 | Configuration and provenance | `project-config/v1alpha3`, `composition-lock/v1alpha1`, `assessment-provenance/v1alpha1`, `assessment-plan/v4`, `assessment-results/v4`; provisional composition/lock/plan/result algorithms. [Composition](../tooling/docs/composition.md), [artifact provenance](../tooling/docs/artifact-provenance.md), ADR 0007. |
 | Exact history and current qualification | Exact retained bound plan/result pairs, intrinsic and mandatory relational validation, immutable outcomes, separate alignment/timeliness/waiver qualification. No retention obligation or latest-state store. ADR 0011 and [artifact provenance](../tooling/docs/artifact-provenance.md). |
-| Parameters and freshness | Explicit pinned declarations, bindings, descendant tailoring and typed realization consumption; policy-owned effective `max_age`. Atomic values by default; explicit string-only additive-set opt-in with one compatible declaration/base, canonical union and complete attribution. Fixed bases permit valid tailoring and independently applicable contributions; no sealing. ADRs 0012/0020 and [policy parameters](../tooling/docs/policy-parameters.md). |
+| Parameters and freshness | ParameterPolicy solely owns explicit pinned declarations, bindings, descendant tailoring and contributions, selected through separate `parameterPolicyRefs`; realization-owned and direct technical Checks own typed symbolic consumption links, including policy-owned effective `max_age`. Atomic values are the default; explicit string-only additive-set opt-in has one compatible declaration/base, canonical union and complete attribution. Fixed bases permit valid tailoring and independently applicable contributions; no sealing. ADRs 0012/0020/0024 and [policy parameters](../tooling/docs/policy-parameters.md). |
 | Typed namespaces and schema URIs | Typed resource lookup, dot-separated kebab-case policy IDs, owner-local snake_case slots/properties and Evidence `/vN` dispatch. Control lookup uses stable ID with exact version/fingerprint metadata. Technical and RequirementBaseline assignment pins share fail-closed collision admission. No alias, precedence, network lookup or implicit normalization. ADR 0019. |
 | Authored policy/check meaning | Required baseline titles and Control title/purpose are identity-bearing authored meaning, frozen into plans for offline interpretation and never executable inputs. ADR 0017. |
 | Assessment explanation | Result-owned unsuccessful dependency dispositions and safe criterion-error codes; exact dependency joins to plan-owned meaning. No copied policy/check prose or combined explanation identity. ADR 0018. |
-| Inventory and Evidence producers | Subject identity/labels supply governed facts; attributes remain adapter-specific. Typed Evidence uses the seven-field envelope and descriptive observation units. Schema-permitted extensions remain preserved and identity-bearing, but undeclared facts cannot become criterion inputs. [Producer interface](../tooling/docs/producer-interface.md), [policy model](../tooling/docs/policy-model.md). |
+| Inventory and Evidence producers | Subject identity/labels supply governed facts; attributes remain adapter-specific. Typed Evidence uses the seven-field envelope and descriptive observation units. Schema-permitted extensions remain preserved and identity-bearing, but undeclared facts cannot become criterion inputs. [Producer interface](../tooling/docs/producer-interface.md), [artifact provenance](../tooling/docs/artifact-provenance.md). |
 | Optional Requirement/Realization assurance | Exactly-one applicable realization, adoption, `based_on`, typed parameter links, complete required Check membership, distinct implementation gaps and evidence-derived roll-up remain experimental. No core realization classification enum; confidentiality is a source/acquisition/access/deployment boundary. [Control realization](../tooling/docs/control-realization.md). |
 | Frozen operation representation | Embedded plan operation, `member_plan_digest`, selector-sensitive `operation_id`, operation-bound plan IDs and exact slot accounting. Complete accounting is separate from success; results reference their exact plan. ADR 0016 and [operation accounting](../tooling/docs/operation-accounting.md). |
 | Framework declaration and satisfaction | Separate durable governance ledger with four basis categories and ephemeral `satisfied` / `not_satisfied` / `not_established` interpretation. Exact declaration, frozen scope anchor and required retained support; no declaration content in ordinary plans/results. ADRs 0021/0022 and [CLI](../tooling/docs/cli.md). |
@@ -163,8 +163,9 @@ names do not create aliases for retired vocabulary or compatibility commitments.
 
 [ADR 0024](adr/0024-objective-assurance-and-parameter-policy.md) under
 [#192](https://github.com/packetlss/compliance/issues/192) has **Tranche A implemented
-under #199; Tranche B pending**. The ADR 0012 parameter representation remains active
-until Tranche B; it is an experimental migration input, not successor authority.
+under #199 and Tranche B implemented under #201**. The ParameterPolicy ownership and
+frozen representation are current experimental contracts; predecessor artifacts
+require historical tooling.
 
 The successor retains optional Objective assurance, exact zero/one/multiple
 realization resolution and conservative implemented Check outcomes. It removes
@@ -188,10 +189,9 @@ identities. No schema/wire/algorithm freeze, alias, dual reader or historical
 conversion follows. Historical artifacts keep their original tooling and meaning.
 
 Follow-on A (assurance simplification) and B (parameter ownership/representation)
-require coordinated valid checkpoints. Tranche A now implements assurance
-simplification; Tranche B parameter ownership and representation remains pending. Exact assignment
-relationships and semantic rules are settled in ADR 0024; wire layout and field
-spellings remain experimental.
+were implemented as coordinated valid checkpoints. Exact assignment relationships
+and semantic rules are settled in ADR 0024; wire layout and field spellings remain
+experimental.
 
 ## Historical/removed representations
 

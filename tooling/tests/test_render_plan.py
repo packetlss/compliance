@@ -10,6 +10,7 @@ from jsonschema import Draft202012Validator
 
 from contract_fixtures import evidence_schema, fixture_root
 
+from tools import policy_parameters as pp
 from tools.artifact_validation import validate_assessment_plan
 from tools.render_plan import (
     BaselineResolutionError,
@@ -22,6 +23,7 @@ from tools.render_plan import (
     load_inventory_inputs,
     load_json,
     load_policy_catalogs,
+    load_parameter_policy_catalogs,
     load_requirement_catalogs,
     load_resource_documents,
     normalize_subject,
@@ -134,6 +136,78 @@ spec: {}
         errors = resource_validation_errors(document, self.schema)
 
         self.assertTrue(errors)
+
+    def assignment(self, **references):
+        return {
+            "apiVersion": "compliance.example/v1alpha1",
+            "kind": "PolicyAssignment",
+            "metadata": {"name": "test"},
+            "spec": {
+                "targetRef": {"kind": "InventoryGroup", "name": "test"},
+                **references,
+            },
+        }
+
+    def test_assignment_accepts_each_governed_reference_surface(self):
+        baseline = [{"name": "company.technical", "revision": "1"}]
+        parameter = [{"name": "company.parameters", "revision": "1"}]
+
+        for document in (
+            self.assignment(baselineRefs=baseline),
+            self.assignment(parameterPolicyRefs=parameter),
+            self.assignment(baselineRefs=baseline, parameterPolicyRefs=parameter),
+        ):
+            with self.subTest(spec=document["spec"]):
+                self.assertEqual(resource_validation_errors(document, self.schema), [])
+
+    def test_assignment_requires_at_least_one_governed_reference(self):
+        errors = resource_validation_errors(self.assignment(), self.schema)
+
+        self.assertTrue(errors)
+
+    def test_parameter_policy_reference_is_not_a_baseline_reference(self):
+        document = self.assignment(parameterPolicyRefs=[{
+            "name": "company.parameters",
+            "revision": "1",
+        }])
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            inventory = root / "inventory"
+            inventory.mkdir()
+            (root / "assignment.json").write_text(json.dumps(document), encoding="utf-8")
+            subject = inventory / "subject.json"
+            groups = inventory / "groups.json"
+            subject.write_text(json.dumps({
+                "apiVersion": "compliance.example/v1alpha1",
+                "kind": "Subject",
+                "metadata": {"name": "test"},
+                "spec": {
+                    "id": "host/test",
+                    "type": "host",
+                    "lifecycle": "active",
+                    "source": {
+                        "name": "test",
+                        "externalId": "test",
+                        "observedAt": "2026-09-20T00:00:00Z",
+                    },
+                },
+            }), encoding="utf-8")
+            groups.write_text(json.dumps({
+                "apiVersion": "compliance.example/v1alpha1",
+                "kind": "InventoryGroup",
+                "metadata": {"name": "test"},
+                "spec": {"subjectRefs": [{"id": "host/test"}]},
+            }), encoding="utf-8")
+            _, _, assignments = load_inventory_inputs(
+                inventory,
+                root / "assignment.json",
+                "host/test",
+                self.root / "schemas/inventory/resource.schema.json",
+            )
+
+        self.assertEqual(assignments[0]["baselines"], [])
+        self.assertEqual(assignments[0]["parameter_policies"], ["company.parameters@1"])
 
 
 class GroupResolutionTests(unittest.TestCase):
@@ -336,6 +410,234 @@ class BaselineOverlayTests(unittest.TestCase):
             "test.alternative-setting-equals",
         )
         self.assertEqual(derivation["equivalence_ref"], "test/equivalence-review")
+
+    def test_substitution_can_replace_inherited_parameter_links(self):
+        source = {
+            "policy": "test.parameters@1",
+            "digest": "sha256:" + "1" * 64,
+            "slot": "expected",
+            "declaration_digest": "sha256:" + "2" * 64,
+            "schema_digest": "sha256:" + "3" * 64,
+        }
+        self.base["spec"]["parameter_links"] = [{
+            "id": "old-link",
+            "source": source,
+            "destination": {
+                "instance_id": "benchmark.setting",
+                "implementation": {
+                    "id": "test.setting-equals",
+                    "version": 1,
+                    "fingerprint": "sha256:" + "4" * 64,
+                },
+                "kind": "parameters",
+                "path": "/expected",
+            },
+        }]
+        self.catalog[self.base_reference] = catalog_document(self.base)
+        self.setting_fingerprint = resolve_baseline(
+            self.base_reference,
+            self.catalog,
+        )["controls"]["benchmark.setting"]["definition_fingerprint"]
+        overlay = self.company_overlay()
+        overlay["metadata"]["id"] = "company.substitute"
+        overlay["spec"]["operations"] = [{
+            "op": "substitute",
+            "target": "benchmark.setting",
+            "expected_parent_fingerprint": self.setting_fingerprint,
+            "implementation": "test.alternative-setting-equals",
+            "parameters": {"expected": "strict"},
+            "equivalence_ref": "test/equivalence-review",
+            "parameter_links": [{
+                "id": "replacement-link",
+                "source": source,
+                "destination": {
+                    "instance_id": "benchmark.setting",
+                    "implementation": {
+                        "id": "test.alternative-setting-equals",
+                        "version": 1,
+                        "fingerprint": "sha256:" + "5" * 64,
+                    },
+                    "kind": "parameters",
+                    "path": "/expected",
+                },
+            }],
+        }]
+        self.catalog["company.substitute@1"] = catalog_document(overlay)
+
+        resolved = resolve_baseline("company.substitute@1", self.catalog)
+
+        self.assertEqual(
+            [item["id"] for item in resolved["parameter_links"]],
+            ["replacement-link"],
+        )
+        locator = [{"policy_source": "test", "path": "baselines/test.json"}]
+        consumers = [
+            {
+                "kind": self.catalog[reference]["kind"],
+                "reference": reference,
+                "digest": self.catalog[reference]["_digest"],
+                "policy_sources": locator,
+                "document": pp.document(self.catalog[reference]),
+            }
+            for reference in (self.base_reference, "company.substitute@1")
+        ]
+        frozen = {
+            "parameters": {"consumers": consumers},
+            "resolved_baselines": [{
+                "reference": "company.substitute@1",
+                "lineage": [
+                    {
+                        "reference": item["reference"],
+                        "digest": item["digest"],
+                        "policy_sources": locator,
+                    }
+                    for item in consumers
+                ],
+            }],
+        }
+        self.assertEqual(
+            [item["id"] for item in pp.frozen_technical_links(frozen)],
+            ["replacement-link"],
+        )
+        duplicate = copy.deepcopy(frozen)
+        overlay_record = duplicate["parameters"]["consumers"][1]
+        overlay_record["document"]["spec"]["parameter_links"] = [
+            copy.deepcopy(
+                duplicate["parameters"]["consumers"][0]["document"]["spec"][
+                    "parameter_links"
+                ][0]
+            )
+        ]
+        overlay_record["digest"] = baseline_semantic_digest(overlay_record["document"])
+        duplicate["resolved_baselines"][0]["lineage"][1]["digest"] = overlay_record[
+            "digest"
+        ]
+        with self.assertRaisesRegex(
+            pp.ParameterResolutionError,
+            "duplicate technical parameter link",
+        ):
+            pp.frozen_technical_links(duplicate)
+        frozen["parameters"]["consumers"].pop(0)
+        with self.assertRaisesRegex(
+            pp.ParameterResolutionError,
+            "missing frozen technical consumer ancestor document",
+        ):
+            pp.frozen_technical_links(frozen)
+
+    def test_frozen_replay_preserves_owner_local_parameter_link_ids(self):
+        source = {
+            "policy": "test.parameters@1",
+            "digest": "sha256:" + "1" * 64,
+            "slot": "expected",
+            "declaration_digest": "sha256:" + "2" * 64,
+            "schema_digest": "sha256:" + "3" * 64,
+        }
+        documents = []
+        for identifier, instance_id in (
+            ("test.first", "test.first-check"),
+            ("test.second", "test.second-check"),
+        ):
+            document = copy.deepcopy(self.base)
+            document["metadata"]["id"] = identifier
+            document["spec"]["controls"] = [
+                copy.deepcopy(document["spec"]["controls"][0])
+            ]
+            document["spec"]["controls"][0]["instance_id"] = instance_id
+            document["spec"]["parameter_links"] = [{
+                "id": "owner-local-link",
+                "source": copy.deepcopy(source),
+                "destination": {
+                    "instance_id": instance_id,
+                    "implementation": {
+                        "id": "test.setting-equals",
+                        "version": 1,
+                        "fingerprint": "sha256:" + "4" * 64,
+                    },
+                    "kind": "parameters",
+                    "path": "/expected",
+                },
+            }]
+            documents.append(document)
+        locator = [{"policy_source": "test", "path": "baselines/test.json"}]
+        consumers = [{
+            "kind": document["kind"],
+            "reference": f"{document['metadata']['id']}@1",
+            "digest": baseline_semantic_digest(document),
+            "policy_sources": locator,
+            "document": document,
+        } for document in documents]
+        frozen = {
+            "parameters": {"consumers": consumers},
+            "resolved_baselines": [{
+                "reference": consumer["reference"],
+                "lineage": [{
+                    "reference": consumer["reference"],
+                    "digest": consumer["digest"],
+                    "policy_sources": locator,
+                }],
+            } for consumer in consumers],
+        }
+
+        links = pp.frozen_technical_links(frozen)
+
+        self.assertEqual(len(links), 2)
+        self.assertEqual({item["id"] for item in links}, {"owner-local-link"})
+        self.assertEqual(
+            {item["destination"]["instance_id"] for item in links},
+            {"test.first-check", "test.second-check"},
+        )
+        duplicate = copy.deepcopy(consumers[0])
+        duplicate["document"]["metadata"]["id"] = "test.identical-third"
+        duplicate["reference"] = "test.identical-third@1"
+        duplicate["digest"] = baseline_semantic_digest(duplicate["document"])
+        frozen["parameters"]["consumers"].append(duplicate)
+        frozen["resolved_baselines"].append({
+            "reference": duplicate["reference"],
+            "lineage": [{
+                "reference": duplicate["reference"],
+                "digest": duplicate["digest"],
+                "policy_sources": locator,
+            }],
+        })
+        self.assertEqual(len(pp.frozen_technical_links(frozen)), 2)
+
+    def test_substitution_rejects_replacement_link_for_another_check(self):
+        overlay = self.company_overlay()
+        overlay["metadata"]["id"] = "company.substitute"
+        overlay["spec"]["operations"] = [{
+            "op": "substitute",
+            "target": "benchmark.setting",
+            "expected_parent_fingerprint": self.setting_fingerprint,
+            "implementation": "test.alternative-setting-equals",
+            "equivalence_ref": "test/equivalence-review",
+            "parameter_links": [{
+                "id": "wrong-target",
+                "source": {
+                    "policy": "test.parameters@1",
+                    "digest": "sha256:" + "1" * 64,
+                    "slot": "expected",
+                    "declaration_digest": "sha256:" + "2" * 64,
+                    "schema_digest": "sha256:" + "3" * 64,
+                },
+                "destination": {
+                    "instance_id": "benchmark.optional",
+                    "implementation": {
+                        "id": "test.alternative-setting-equals",
+                        "version": 1,
+                        "fingerprint": "sha256:" + "5" * 64,
+                    },
+                    "kind": "parameters",
+                    "path": "/expected",
+                },
+            }],
+        }]
+        self.catalog["company.substitute@1"] = catalog_document(overlay)
+
+        with self.assertRaisesRegex(
+            BaselineResolutionError,
+            "substitute-parameter-link-target-mismatch",
+        ):
+            resolve_baseline("company.substitute@1", self.catalog)
 
     def test_identical_multi_parent_controls_retain_each_derivation(self):
         first = self.company_overlay()
@@ -564,6 +866,105 @@ class PolicySchemaTests(unittest.TestCase):
 
         self.assertEqual(len(catalog), 10)
         self.assertEqual(errors, [])
+
+    def test_policy_validation_rejects_invalid_direct_parameter_consumers(self):
+        repository = Path(__file__).resolve().parents[2]
+        shared = repository / "policy-sources/control-library/policies"
+        verification = repository / "policy-sources/verification-policy/policies"
+        mutations = (
+            (
+                "dangling-check",
+                lambda baseline: baseline["spec"]["parameter_links"][0][
+                    "destination"
+                ].update(instance_id="company.missing-check"),
+                "parameter-consumer-invalid",
+            ),
+            (
+                "stale-source",
+                lambda baseline: baseline["spec"]["parameter_links"][0][
+                    "source"
+                ].update(digest="sha256:" + "0" * 64),
+                "parameter-consumer-invalid",
+            ),
+            (
+                "parameter-link-does-not-hide-evidence",
+                lambda baseline: baseline["spec"]["controls"][0].pop("evidence"),
+                "policy-freshness-invalid",
+            ),
+        )
+        for name, mutate, expected_type in mutations:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                copied = Path(directory) / "verification"
+                shutil.copytree(verification, copied)
+                baseline_path = (
+                    copied
+                    / "baselines/company/company-authorized-software.json"
+                )
+                baseline = load_json(baseline_path)
+                mutate(baseline)
+                baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+
+                _, _, errors = load_policy_catalogs((
+                    PolicySource("control-library", shared),
+                    PolicySource("verification-policy", copied),
+                ))
+
+                self.assertIn(expected_type, {error["type"] for error in errors})
+
+    def test_equivalent_additive_parameter_documents_coalesce_after_normalization(self):
+        repository = Path(__file__).resolve().parents[2]
+        verification = repository / "policy-sources/verification-policy/policies"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first = root / "first"
+            second = root / "second"
+            schema_target = first / "schemas/policy/parameter-policy.schema.json"
+            schema_target.parent.mkdir(parents=True)
+            shutil.copyfile(
+                repository
+                / "policy-sources/control-library/policies/schemas/policy/parameter-policy.schema.json",
+                schema_target,
+            )
+            for name in (
+                "company-authorized-software.json",
+                "company-authorized-software-base.json",
+            ):
+                source = verification / "parameter-policies/company" / name
+                target = first / "parameter-policies/company" / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+            copied = load_json(
+                verification
+                / "parameter-policies/company/company-authorized-software-base.json"
+            )
+            copied["spec"]["parameter_operations"][0]["to"].reverse()
+            target = (
+                second
+                / "parameter-policies/company/company-authorized-software-base.json"
+            )
+            target.parent.mkdir(parents=True)
+            target.write_text(json.dumps(copied), encoding="utf-8")
+
+            outcomes = []
+            sources = (
+                PolicySource("first", first),
+                PolicySource("second", second),
+            )
+            for ordered in (sources, tuple(reversed(sources))):
+                catalog, errors = load_parameter_policy_catalogs(ordered)
+                outcomes.append((catalog, errors))
+
+        for catalog, errors in outcomes:
+            self.assertEqual(errors, [])
+            policy = catalog["company.authorized-software-base@1"]
+            self.assertEqual(
+                policy["spec"]["parameter_operations"][0]["to"],
+                ["auditd", "curl"],
+            )
+            self.assertEqual(
+                [item["policy_source"] for item in policy["_sources"]],
+                ["first", "second"],
+            )
 
     def test_policy_schemas_reject_removed_seal_operations(self):
         overlay = {
@@ -1633,242 +2034,6 @@ class PlanRevisionTests(unittest.TestCase):
                 control["policy_inputs"]["definition"]["spec"]["purpose"],
             )
 
-    def test_planner_applies_contribution_only_policy_through_existing_consumption(self):
-        from tools import policy_parameters as parameters
-
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            shared = root / "shared"
-            selection = root / "selection"
-            shutil.copytree(self.root / "shared", shared)
-            shutil.copytree(self.root / "selection", selection)
-
-            baseline_schema_path = shared / "schemas/policy/requirement-baseline.schema.json"
-            baseline_schema = load_json(baseline_schema_path)
-            baseline_schema["properties"]["spec"]["required"] = ["title"]
-            baseline_schema_path.write_text(json.dumps(baseline_schema), encoding="utf-8")
-
-            value_schema = {
-                "$id": "https://compliance.example/schemas/requirements/test.allowed-packages/parameters/allowed/v1.schema.json",
-                "type": "array",
-                "items": {"type": "string"},
-                "uniqueItems": True,
-                "maxItems": 3,
-            }
-            requirement = {
-                "apiVersion": "compliance.example/v1",
-                "kind": "ControlRequirement",
-                "metadata": {"id": "test.allowed-packages", "revision": 1},
-                "spec": {
-                    "title": "Allowed packages",
-                    "statement": "Only the effective package set is allowed.",
-                    "parameters": {
-                        "allowed": {
-                            "required": True,
-                            "binding_mode": "open",
-                            "binding_scope": ["test.package-base"],
-                            "schema": value_schema,
-                            "schema_digest": parameters.digest(value_schema),
-                            "composition": {"kind": "additive-set"},
-                        }
-                    },
-                },
-            }
-            requirement_path = selection / "requirements/test/additive.json"
-            requirement_path.parent.mkdir(parents=True, exist_ok=True)
-            requirement_path.write_text(json.dumps(requirement), encoding="utf-8")
-            initial = parameters.declarations(requirement)["allowed"]
-            requirement_pin = {
-                "requirement": "test.allowed-packages@1",
-                "digest": parameters.digest(requirement),
-            }
-            base = {
-                "apiVersion": "compliance.example/v1",
-                "kind": "RequirementBaseline",
-                "metadata": {"id": "test.package-base", "revision": 1},
-                "spec": {
-                    "title": "Base package policy",
-                    "requirements": [requirement_pin],
-                    "parameter_operations": [{
-                        "id": "bind-packages",
-                        "op": "bind",
-                        "target": initial["pin"],
-                        "expected_parent_fingerprint": parameters.fingerprint(initial),
-                        "to": ["zsh", "curl"],
-                    }],
-                },
-            }
-            contributor = {
-                "apiVersion": "compliance.example/v1",
-                "kind": "RequirementBaseline",
-                "metadata": {"id": "test.database-feature", "revision": 1},
-                "spec": {
-                    "title": "Database package contribution",
-                    "parameter_contributions": [{
-                        "id": "database-packages",
-                        "target": {
-                            "requirement": "test.allowed-packages",
-                            "slot": "allowed",
-                        },
-                        "members": ["postgresql", "curl"],
-                    }],
-                },
-            }
-            for name, document in (("base.json", base), ("contributor.json", contributor)):
-                target = selection / "requirement-baselines/test" / name
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(json.dumps(document), encoding="utf-8")
-
-            controls, _, errors = load_policy_catalogs((
-                PolicySource("control-library", shared),
-                PolicySource("verification-policy", selection),
-            ))
-            self.assertEqual(errors, [])
-            realization = {
-                "apiVersion": "compliance.example/v1",
-                "kind": "ControlRealization",
-                "metadata": {"id": "test.allowed-packages.macos", "revision": 1},
-                "spec": {
-                    "requirement": {
-                        "requirement": requirement_pin["requirement"],
-                        "digest": requirement_pin["digest"],
-                    },
-                    "applies_to": {"subject_types": ["macos-workstation"]},
-                    "adoption": {
-                        "status": "implemented",
-                        "method": "automated",
-                        "owner": "test",
-                    },
-                    "checks": [{
-                        "instance_id": "test.allowed-packages",
-                        "implementation": "macos.packages.required",
-                        "parameters": {},
-                        "evidence": {"observation": {"max_age": "1d"}},
-                    }],
-                    "parameter_links": [{
-                        "id": "allowed-packages",
-                        "source": initial["pin"],
-                        "destination": {
-                            "instance_id": "test.allowed-packages",
-                            "implementation": parameters.implementation_pin(
-                                controls["macos.packages.required"]
-                            ),
-                            "kind": "parameters",
-                            "path": "/required",
-                        },
-                    }],
-                },
-            }
-            realization_path = selection / "realizations/test/additive.json"
-            realization_path.parent.mkdir(parents=True, exist_ok=True)
-            realization_path.write_text(json.dumps(realization), encoding="utf-8")
-            assignments = [
-                {
-                    "id": "base",
-                    "target": {"group": "managed-workstations"},
-                    "baselines": ["test.package-base@1"],
-                },
-                {
-                    "id": "feature-a",
-                    "target": {"group": "macos-devices"},
-                    "baselines": ["test.database-feature@1"],
-                },
-                {
-                    "id": "feature-b",
-                    "target": {"group": "macos-developer-machines"},
-                    "baselines": ["test.database-feature@1"],
-                },
-            ]
-            plan = render_plan(
-                self.subject,
-                self.groups,
-                assignments,
-                (
-                    PolicySource("control-library", shared),
-                    PolicySource("verification-policy", selection),
-                ),
-            )
-            reordered = render_plan(
-                self.subject,
-                list(reversed(self.groups)),
-                list(reversed(assignments)),
-                (
-                    PolicySource("verification-policy", selection),
-                    PolicySource("control-library", shared),
-                ),
-            )
-            base["spec"]["parameter_operations"][0]["to"].reverse()
-            contributor["spec"]["parameter_contributions"][0]["members"].reverse()
-            (selection / "requirement-baselines/test/base.json").write_text(
-                json.dumps(base), encoding="utf-8"
-            )
-            (selection / "requirement-baselines/test/contributor.json").write_text(
-                json.dumps(contributor), encoding="utf-8"
-            )
-            authored_reordered = render_plan(
-                self.subject,
-                self.groups,
-                assignments,
-                (
-                    PolicySource("control-library", shared),
-                    PolicySource("verification-policy", selection),
-                ),
-            )
-            contributor["spec"]["parameter_contributions"][0]["members"].append("extra")
-            (selection / "requirement-baselines/test/contributor.json").write_text(
-                json.dumps(contributor), encoding="utf-8"
-            )
-            invalid = render_plan(
-                self.subject,
-                self.groups,
-                assignments,
-                (
-                    PolicySource("control-library", shared),
-                    PolicySource("verification-policy", selection),
-                ),
-            )
-
-        self.assertEqual(plan["resolution"], {"status": "valid", "errors": []})
-        self.assertEqual(plan["id"], reordered["id"])
-        self.assertEqual(
-            plan["operation"]["members"][0]["member_plan_digest"],
-            authored_reordered["operation"]["members"][0]["member_plan_digest"],
-        )
-        self.assertEqual(
-            plan["resolved_requirement_baselines"],
-            authored_reordered["resolved_requirement_baselines"],
-        )
-        self.assertEqual(invalid["resolution"]["status"], "invalid")
-        self.assertEqual(
-            invalid["resolution"]["errors"][0]["type"],
-            "parameter-resolution-failed",
-        )
-        validate_assessment_plan(plan)
-        self.assertEqual(
-            plan["controls"][0]["parameters"]["required"],
-            ["curl", "postgresql", "zsh"],
-        )
-        state = plan["requirements"][0]["parameter_facts"]["states"]["allowed"]
-        self.assertEqual(len(state["composition"]["contributions"]), 1)
-        self.assertEqual(
-            len(state["composition"]["contributions"][0]["applicability"]),
-            2,
-        )
-        contributor = next(
-            item
-            for item in plan["resolved_requirement_baselines"]
-            if item["reference"] == "test.database-feature@1"
-        )
-        self.assertEqual(contributor["requirements"], [])
-        self.assertEqual(contributor["parameter_derivation"]["states"], {})
-        self.assertEqual(
-            plan["requirements"][0]["provenance"],
-            [{
-                "group": "managed-workstations",
-                "assignment": "base",
-                "baseline": "test.package-base@1",
-            }],
-        )
 
     def test_active_subject_without_assignment_is_unassigned(self):
         plan = render_plan(

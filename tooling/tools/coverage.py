@@ -7,6 +7,7 @@ import json
 from collections import Counter
 from typing import Any
 
+from . import policy_parameters as pp
 from .operation import plan_disposition
 from .render_plan import render_plan
 
@@ -156,6 +157,9 @@ def build_coverage_list(
                     "assignment_id": assignment_id,
                     "target_group": assignment["target"]["group"],
                     "policy_references": sorted(assignment["baselines"]),
+                    "parameter_policy_references": sorted(
+                        assignment.get("parameter_policies", [])
+                    ),
                     "current_asset_count": len(members),
                     "assessable_asset_count": sum(
                         _coverage_class(plan) == "result_required"
@@ -249,61 +253,87 @@ def _realization(requirement: JsonObject) -> JsonObject | None:
     }
 
 
-def _objective_parameters(requirement: JsonObject) -> list[JsonObject]:
+def _parameter_rows(states: dict[str, JsonObject]) -> list[JsonObject]:
     rows = []
-    states = requirement.get("parameter_facts", {}).get("states", {})
-    for slot, state in sorted(states.items()):
-        if not state.get("bound"):
-            continue
-        row: JsonObject = {
-            "slot": slot,
-            "effective_value": copy.deepcopy(state["value"]),
-            "binding_mode": state["declaration"]["binding_mode"],
-        }
-        composition = state.get("composition")
-        if composition is not None:
-            row["composition"] = {
-                "kind": composition["kind"],
-                "base_value": copy.deepcopy(composition["base_value"]),
-                "base_applicability": [
-                    {
-                        "baseline": origin["baseline"],
-                        "applicability": copy.deepcopy(origin["applicability"]),
-                    }
-                    for origin in composition["base_origins"]
-                ],
-                "contributions": [
-                    {
-                        "identity": copy.deepcopy(item["identity"]),
-                        "members": copy.deepcopy(item["members"]),
-                        "applicability": copy.deepcopy(item["applicability"]),
-                    }
-                    for item in composition["contributions"]
-                ],
-                "member_origins": [
-                    {
-                        "member": item["member"],
-                        "origins": [
-                            (
-                                {
-                                    "kind": "base",
-                                    "baseline": origin["baseline"],
-                                    "applicability": copy.deepcopy(origin["applicability"]),
-                                }
-                                if origin["kind"] == "base"
-                                else {
-                                    "kind": "contribution",
-                                    "identity": copy.deepcopy(origin["identity"]),
-                                }
-                            )
-                            for origin in item["origins"]
-                        ],
-                    }
-                    for item in composition["member_origins"]
-                ],
+    for reference, slots in sorted(states.items()):
+        for slot, state in sorted(slots.items()):
+            if not state.get("bound"):
+                continue
+            row: JsonObject = {
+                "source_policy": reference,
+                "slot": slot,
+                "effective_value": copy.deepcopy(state["value"]),
+                "binding_mode": state["declaration"]["binding_mode"],
             }
-        rows.append(row)
+            composition = state.get("composition")
+            if composition is not None:
+                row["composition"] = {
+                    "kind": composition["kind"],
+                    "base_value": copy.deepcopy(composition["base_value"]),
+                    "base_applicability": [
+                        {
+                            "policy": origin["policy"],
+                            "applicability": copy.deepcopy(origin["applicability"]),
+                        }
+                        for origin in composition["base_origins"]
+                    ],
+                    "contributions": [
+                        {
+                            "identity": copy.deepcopy(item["identity"]),
+                            "members": copy.deepcopy(item["members"]),
+                            "origins": [
+                                {
+                                    "owner": {
+                                        field: copy.deepcopy(origin["owner"][field])
+                                        for field in (
+                                            "reference", "digest", "policy_sources",
+                                        )
+                                    },
+                                    "applicability": copy.deepcopy(
+                                        origin["applicability"]
+                                    ),
+                                }
+                                for origin in item["origins"]
+                            ],
+                            "applicability": copy.deepcopy(item["applicability"]),
+                        }
+                        for item in composition["contributions"]
+                    ],
+                    "member_origins": copy.deepcopy(composition["member_origins"]),
+                }
+            rows.append(row)
     return rows
+
+
+def _parameter_policy_paths(plan: JsonObject) -> dict[tuple[str, str], JsonObject]:
+    if "parameters" not in plan:
+        return {}
+    states, resolutions, _ = pp.reconstruct_frozen_parameters(plan)
+    selected = {
+        (item["applicability"]["assignment"], item["reference"]): item
+        for item in resolutions
+    }
+    result = {}
+    for key, resolution in selected.items():
+        reference = resolution["reference"]
+        owned_contributions = []
+        for row in _parameter_rows(states):
+            for contribution in row.get("composition", {}).get("contributions", []):
+                if contribution["identity"]["policy"] == reference.rsplit("@", 1)[0]:
+                    owned_contributions.append(copy.deepcopy(contribution))
+        result[key] = {
+            "policy_type": "parameter",
+            "reference": reference,
+            "title": None,
+            "objectives": [],
+            "checks": [],
+            "parameters": _parameter_rows(resolution["states"]),
+            "contributions": sorted(
+                owned_contributions,
+                key=lambda item: (item["identity"]["policy"], item["identity"]["id"]),
+            ),
+        }
+    return result
 
 
 _FAILURE_CONTEXT_FIELDS = {
@@ -381,7 +411,10 @@ def _unresolved_policy_paths(plan: JsonObject) -> list[JsonObject]:
                     "objectives": [],
                     "checks": [],
                 }
-                for reference in sorted(assignment["baselines"])
+                for reference in sorted([
+                    *assignment["baselines"],
+                    *assignment.get("parameter_policies", []),
+                ])
             ],
         }
         for assignment in plan["assignments"]
@@ -402,6 +435,7 @@ def _policy_paths(plan: JsonObject) -> list[JsonObject]:
         (item["assignment"], item["reference"]): item
         for item in plan["resolved_requirement_baselines"]
     }
+    parameter = _parameter_policy_paths(plan)
     for assignment in plan["assignments"]:
         assignment_row = {
             "assignment_id": assignment["id"],
@@ -433,7 +467,6 @@ def _policy_paths(plan: JsonObject) -> list[JsonObject]:
                         "statement": requirement["statement"],
                         "implementation_state": requirement["implementation_state"],
                         "adoption": copy.deepcopy(requirement.get("adoption")),
-                        "parameters": _objective_parameters(requirement),
                         "checks": sorted(
                             checks, key=lambda item: item["instance_id"]
                         ),
@@ -479,6 +512,10 @@ def _policy_paths(plan: JsonObject) -> list[JsonObject]:
                         "checks": [],
                     }
                 )
+        for reference in sorted(assignment.get("parameter_policies", [])):
+            assignment_row["policies"].append(copy.deepcopy(parameter[
+                (assignment["id"], reference)
+            ]))
         paths.append(assignment_row)
     return paths
 
@@ -590,6 +627,37 @@ def format_coverage_explanation(document: JsonObject) -> str:
             title = policy["title"] or "unresolved policy"
             lines.append(f"    Applicable policy: {title}")
             lines.append(f'      Reference: {policy["reference"]}')
+            for parameter in policy.get("parameters", []):
+                lines.append(
+                    f'      Effective parameter {parameter["slot"]}: '
+                    + json.dumps(
+                        parameter["effective_value"],
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    )
+                )
+                composition = parameter.get("composition")
+                if composition is not None:
+                    lines.append(
+                        f'        Composition: {composition["kind"]}; base '
+                        + json.dumps(
+                            composition["base_value"],
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        )
+                    )
+                    for contribution in composition["contributions"]:
+                        identity = contribution["identity"]
+                        lines.append(
+                            f'        Contribution: {identity["policy"]} '
+                            f'#{identity["id"]} via '
+                            f'{len(contribution["applicability"])} path(s): '
+                            + json.dumps(
+                                contribution["members"],
+                                sort_keys=True,
+                                separators=(",", ":"),
+                            )
+                        )
             for objective in policy["objectives"]:
                 lines.extend(
                     [
@@ -599,7 +667,7 @@ def format_coverage_explanation(document: JsonObject) -> str:
                         f'        Implementation: {objective["implementation_state"]}',
                     ]
                 )
-                for parameter in objective["parameters"]:
+                for parameter in objective.get("parameters", []):
                     lines.append(
                         f'        Effective parameter {parameter["slot"]}: '
                         + json.dumps(

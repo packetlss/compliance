@@ -10,6 +10,7 @@
     "summary",
     "scope_changes",
     "requirement_changes",
+    "parameter_changes",
     "control_changes"
   ],
   "additionalProperties": false,
@@ -39,6 +40,13 @@
       }
     },
     "requirement_changes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/change"
+      }
+    },
+    "parameter_changes": {
       "type": "array",
       "uniqueItems": true,
       "items": {
@@ -211,6 +219,7 @@
         "total_changes",
         "scope",
         "requirements",
+        "parameters",
         "controls"
       ],
       "additionalProperties": false,
@@ -226,6 +235,9 @@
           "$ref": "#/$defs/counts"
         },
         "requirements": {
+          "$ref": "#/$defs/counts"
+        },
+        "parameters": {
           "$ref": "#/$defs/counts"
         },
         "controls": {
@@ -254,6 +266,7 @@
             "requirement_baseline",
             "resolution",
             "requirement",
+            "parameter",
             "control"
           ]
         },

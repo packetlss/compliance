@@ -9,7 +9,7 @@
       "kind": "InventoryGroup",
       "name": "database"
     },
-    "baselineRefs": [
+    "parameterPolicyRefs": [
       {
         "name": "company.database-software",
         "revision": "1"

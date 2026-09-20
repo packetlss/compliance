@@ -88,7 +88,7 @@ def main(root):
                     and row["realization"] == {"reference": realization}
                     and {check["instance_id"] for check in row["checks"]} == expected_checks,
                     "coverage did not retain selected platform realization")
-            require(not row["parameters"], "parameterless Objective gained state")
+            require("parameters" not in row, "Objective retained parameter ownership")
         linux_technical, = [policy for assignment in linux_coverage["assignments"]
                             for policy in assignment["policies"]
                             if policy["policy_type"] == "technical"]
