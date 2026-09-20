@@ -207,7 +207,9 @@ def resolve_frozen_technical_links(reference, catalog, stack=()):
             for ancestor in ancestry:
                 if ancestor not in visited:
                     visited.append(ancestor)
-    _merge_technical_links(links, resource['spec'].get('parameter_links', []))
+    for link in resource['spec'].get('parameter_links', []):
+        require(link['id'] not in links, 'duplicate technical parameter link')
+        links[link['id']] = copy.deepcopy(link)
     for operation in resource['spec'].get('operations', []):
         if operation.get('op') != 'substitute' or 'parameter_links' not in operation:
             continue

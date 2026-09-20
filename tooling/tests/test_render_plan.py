@@ -499,6 +499,24 @@ class BaselineOverlayTests(unittest.TestCase):
             [item["id"] for item in pp.frozen_technical_links(frozen)],
             ["replacement-link"],
         )
+        duplicate = copy.deepcopy(frozen)
+        overlay_record = duplicate["parameters"]["consumers"][1]
+        overlay_record["document"]["spec"]["parameter_links"] = [
+            copy.deepcopy(
+                duplicate["parameters"]["consumers"][0]["document"]["spec"][
+                    "parameter_links"
+                ][0]
+            )
+        ]
+        overlay_record["digest"] = baseline_semantic_digest(overlay_record["document"])
+        duplicate["resolved_baselines"][0]["lineage"][1]["digest"] = overlay_record[
+            "digest"
+        ]
+        with self.assertRaisesRegex(
+            pp.ParameterResolutionError,
+            "duplicate technical parameter link",
+        ):
+            pp.frozen_technical_links(duplicate)
         frozen["parameters"]["consumers"].pop(0)
         with self.assertRaisesRegex(
             pp.ParameterResolutionError,
