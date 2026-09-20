@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import copy
-import json
 from collections import defaultdict
 from typing import Any
 
@@ -53,17 +52,18 @@ def format_group_graph(groups: list[JsonObject]) -> str:
 
 
 def _asset_facts(subject: JsonObject) -> JsonObject:
-    facts: JsonObject = {
+    # The read surface intentionally exposes only the stable governed facts used
+    # by ordinary inventory/coverage navigation.  Adapter-specific attributes and
+    # arbitrary annotations remain in Inventory and may affect resolution through
+    # their existing owners; they are not blindly copied across this presentation
+    # boundary.
+    return {
         "asset_id": subject["id"],
         "asset_type": subject["type"],
         "lifecycle": subject["status"],
         "labels": dict(sorted(subject.get("labels", {}).items())),
         "source": copy.deepcopy(subject["inventory"]),
     }
-    for field in ("annotations", "attributes"):
-        if field in subject:
-            facts[field] = copy.deepcopy(subject[field])
-    return facts
 
 
 def _group_facts(group: JsonObject) -> JsonObject:
@@ -242,13 +242,6 @@ def format_inventory_explanation(document: JsonObject) -> str:
         lines.append("  none")
     for key, value in asset["labels"].items():
         lines.append(f"  {key}={value}")
-    if "attributes" in asset:
-        lines.append(
-            "Attributes: "
-            + json.dumps(
-                asset["attributes"], sort_keys=True, separators=(",", ":")
-            )
-        )
     lines.append("Resolved groups:")
     if not document["resolved_groups"]:
         lines.append("  none")

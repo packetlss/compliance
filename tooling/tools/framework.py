@@ -13,6 +13,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from .assessment_history import ValidatedHistoricalAssessmentContext
 from .assessment_provenance import digest
 from .operation import frozen_group_memberships
 from .render_plan import (
@@ -416,6 +417,34 @@ def build_explanation(declaration: dict, account: dict, plans: list[dict], repor
         "schema": EXPLANATION_SCHEMA,
         **_build_projection(declaration, account, plans, reports),
     }
+
+
+def project_status(
+    declaration: dict,
+    context: ValidatedHistoricalAssessmentContext,
+) -> dict:
+    """Project framework status over an admitted exact Assessment context."""
+
+    return build_status(
+        declaration,
+        context.account,
+        list(context.assessed_plans),
+        list(context.reports),
+    )
+
+
+def project_explanation(
+    declaration: dict,
+    context: ValidatedHistoricalAssessmentContext,
+) -> dict:
+    """Project framework explanation over an admitted exact Assessment context."""
+
+    return build_explanation(
+        declaration,
+        context.account,
+        list(context.assessed_plans),
+        list(context.reports),
+    )
 
 
 def render_status(document: dict) -> str:

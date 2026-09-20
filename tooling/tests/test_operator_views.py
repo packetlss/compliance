@@ -121,6 +121,9 @@ class InventoryOperatorViewTests(unittest.TestCase):
             set(assets["assets"][0]),
             {"asset_id", "asset_type", "lifecycle", "labels", "source"},
         )
+        host_b = next(item for item in assets["assets"] if item["asset_id"] == "host/B")
+        self.assertNotIn("attributes", host_b)
+        self.assertNotIn("annotations", host_b)
         self.assertEqual(
             [item["group_id"] for item in groups["groups"]], ["managed", "parent"]
         )

@@ -2,6 +2,7 @@ import argparse
 import copy
 import importlib
 import io
+import shutil
 import subprocess
 import sys
 import unittest
@@ -44,6 +45,71 @@ def leaf_commands(
 
 
 class ExampleCoverageTests(unittest.TestCase):
+    def test_read_browser_is_static_external_and_accepts_only_derived_responses(self):
+        browser = Path(__file__).resolve().parents[1] / "examples/read-browser"
+        javascript = (browser / "app.js").read_text(encoding="utf-8")
+        html = (browser / "index.html").read_text(encoding="utf-8")
+
+        for name in (
+            "README.md", "index.html", "styles.css", "app.js", "test-app.cjs"
+        ):
+            self.assertTrue((browser / name).is_file())
+        for schema in (
+            "inventory-assets-view/v1alpha1",
+            "coverage-assets-view/v1alpha1",
+            "coverage-asset-explanation/v1alpha1",
+            "assessment-status-view/v1alpha1",
+            "assessment-explanation-view/v1alpha1",
+            "assessment-mappings-view/v1alpha1",
+            "framework-satisfaction-status/v1alpha1",
+            "framework-satisfaction-explanation/v1alpha1",
+            "policy-diff/v1alpha1",
+        ):
+            self.assertIn(schema, javascript)
+        for forbidden in (
+            "fetch(",
+            "XMLHttpRequest",
+            "assessment-plan/v4",
+            "assessment-results/v4",
+            "localStorage",
+            "indexedDB",
+        ):
+            self.assertNotIn(forbidden, javascript)
+        self.assertIn('type="file"', html)
+
+        for visible_projection_fact in (
+            "evidence_id",
+            "evidence_digest",
+            "retained_evidence",
+            "collector.id",
+            'document.view === "groups"',
+            "Whole operation accounting",
+            "Exact declaration and bounded claim",
+            "document.declaration",
+            "document.framework",
+            "document.scope",
+            "document.statement",
+            "document.context",
+            "document.scope_changes",
+            "document.requirement_changes",
+            "document.control_changes",
+        ):
+            self.assertIn(visible_projection_fact, javascript)
+
+    def test_read_browser_rendering_behavior(self):
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("Node is unavailable for dependency-free browser logic exercise")
+        exercise = (
+            Path(__file__).resolve().parents[1]
+            / "examples/read-browser/test-app.cjs"
+        )
+        result = subprocess.run(
+            [node, str(exercise)], capture_output=True, text=True, check=False
+        )
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        self.assertIn("browser projection rendering passed", result.stdout)
+
     def test_every_feature_has_one_primary_scenario(self):
         document = validate_feature_coverage()
 

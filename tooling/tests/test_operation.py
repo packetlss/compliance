@@ -10,6 +10,7 @@ from unittest.mock import patch
 from assessment_fixture import evidence_document, evidence_plan, refresh_operation, waiver_resource
 from tools.artifact_validation import validate_assessment_plan, validate_assessment_results
 from tools.assessment_provenance import artifact_digest, digest, validate_result_against_plan
+from tools.assessment_history import build_historical_assessment_context
 from tools.evaluator import EvaluatorIdentity
 from tools.evaluate_plan import evaluate_plan_document, control_error_result
 from tools.operation import (
@@ -370,6 +371,52 @@ class OperationTests(unittest.TestCase):
         self.assertEqual([r['state'] for r in missing['members']], ['pass','pass','missing'])
         for report in reports[:2]:
             validate_assessment_results(report)
+
+    def test_validated_historical_context_admits_exact_history_and_rejects_competition(self):
+        plans = self.plans(("host/A", "host/B"))
+        reports = self.evaluate(plans)
+
+        context = build_historical_assessment_context(
+            plans[0],
+            plans,
+            reports,
+            assessment_instant=self.instant,
+            query_instant=self.instant,
+        )
+
+        self.assertTrue(context.account["accounting_complete"])
+        self.assertTrue(context.account["historical_interpretation_complete"])
+        competing = copy.deepcopy(reports[0])
+        competing["provenance"]["evaluationComposition"]["enforcement"] = {
+            "descriptive": "different nonsemantic enforcement bytes"
+        }
+        with self.assertRaisesRegex(
+            ValueError, "multiple distinct assessment result documents"
+        ):
+            build_historical_assessment_context(
+                plans[0],
+                plans,
+                [reports[0], competing],
+                assessment_instant=self.instant,
+                query_instant=self.instant,
+            )
+
+    def test_validated_historical_context_rejects_known_tampered_relation(self):
+        plans = self.plans(("host/A", "host/B"))
+        reports = self.evaluate(plans)
+        substituted = copy.deepcopy(reports[0])
+        substituted["plan_id"] = plans[1]["id"]
+        substituted["id"] = artifact_digest(substituted)
+        validate_assessment_results(substituted)
+
+        with self.assertRaises(ValueError):
+            build_historical_assessment_context(
+                plans[0],
+                plans,
+                [substituted],
+                assessment_instant=self.instant,
+                query_instant=self.instant,
+            )
 
     def test_other_operation_and_instant_cannot_fill_slot(self):
         plans = self.plans()
