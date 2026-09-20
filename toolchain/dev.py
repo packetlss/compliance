@@ -416,6 +416,21 @@ def commit_statuses(head: str) -> list[dict[str, object]]:
     return [status for status in statuses if isinstance(status, dict)] if isinstance(statuses, list) else []
 
 
+def locally_contains_base(head: str, base: str) -> bool:
+    """Return true only when local Git can prove that base is an ancestor of head.
+
+    ``base`` is deliberately resolved from the remote without updating local refs.
+    A stale PR checkout may not have that object, in which case ``merge-base``
+    exits nonzero. That is not an error for readiness: it simply means the fast
+    ancestry proof is unavailable and exact integration evidence is required.
+    """
+    try:
+        result = run(["git", "merge-base", "--is-ancestor", base, head], check=False, capture=True)
+    except OSError:
+        return False
+    return result.returncode == 0
+
+
 def readiness(_: argparse.Namespace) -> int:
     if not shutil.which("gh"):
         print("ERROR: gh is required", file=sys.stderr)
@@ -430,9 +445,8 @@ def readiness(_: argparse.Namespace) -> int:
     rollup = [status for status in pr.get("statusCheckRollup", []) if isinstance(status, dict)]
     checks = {status_name(status): status_result(status) for status in rollup if status_name(status)}
     reviewed = {line.split(":", 1)[0].strip(" -"): line.split(":", 1)[1].strip() for line in body.splitlines() if ":" in line}
-    merge_base = run(["git", "merge-base", head, base], capture=True).stdout.strip()
     errors = []
-    contains_base = merge_base == base
+    contains_base = locally_contains_base(head, base)
     integration = None
     if not contains_base:
         # Check-runs and commit-statuses use different field names. The legacy

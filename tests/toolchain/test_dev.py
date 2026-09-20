@@ -408,7 +408,7 @@ class ReadinessTests(unittest.TestCase):
             ],
         }
 
-    def run_readiness(self, *, pr, merge_base, statuses=None):
+    def run_readiness(self, *, pr, merge_base, statuses=None, merge_base_returncode=None):
         calls = []
 
         def fake_run(command, **kwargs):
@@ -418,7 +418,10 @@ class ReadinessTests(unittest.TestCase):
             if command[:3] == ["git", "ls-remote", "origin"]:
                 return SimpleNamespace(stdout=f"{self.base}\trefs/heads/main\n", returncode=0)
             if command[:2] == ["git", "merge-base"]:
-                return SimpleNamespace(stdout=f"{merge_base}\n", returncode=0)
+                return SimpleNamespace(
+                    stdout=f"{merge_base}\n",
+                    returncode=merge_base_returncode if merge_base_returncode is not None else (0 if merge_base == self.base else 1),
+                )
             if command[:2] == ["gh", "api"]:
                 return SimpleNamespace(stdout=json.dumps({"statuses": statuses or []}), returncode=0)
             raise AssertionError(f"unexpected command: {command}")
@@ -457,6 +460,24 @@ class ReadinessTests(unittest.TestCase):
         )
         self.assertEqual(result, 0, errors)
         self.assertIn(f"Integration base: {self.base}", output)
+
+    def test_absent_local_base_uses_matching_integration_evidence_without_mutating_git(self):
+        result, output, errors, calls = self.run_readiness(
+            pr=self.pr(), merge_base="", merge_base_returncode=128,
+            statuses=[self.integration_status()],
+        )
+        self.assertEqual(result, 0, errors)
+        self.assertIn("READY:", output)
+        merge_base_call = next(command for command in calls if command[:2] == ["git", "merge-base"])
+        self.assertEqual(merge_base_call, ["git", "merge-base", "--is-ancestor", self.base, self.head])
+        self.assertFalse(any(command[0] == "git" and command[1] in {"fetch", "merge", "rebase", "update-ref"} for command in calls))
+
+    def test_absent_local_base_without_integration_evidence_fails_closed(self):
+        result, _, errors, _ = self.run_readiness(
+            pr=self.pr(), merge_base="", merge_base_returncode=128,
+        )
+        self.assertEqual(result, 1)
+        self.assertIn("integration evidence is missing", errors)
 
     def test_old_or_malformed_integration_base_fails_closed(self):
         for description in (f"base={self.previous_base}", "base=not-a-sha", "base=" + self.base + " extra"):
