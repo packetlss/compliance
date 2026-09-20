@@ -281,6 +281,20 @@ def _parameter_rows(states: dict[str, JsonObject]) -> list[JsonObject]:
                         {
                             "identity": copy.deepcopy(item["identity"]),
                             "members": copy.deepcopy(item["members"]),
+                            "origins": [
+                                {
+                                    "owner": {
+                                        field: copy.deepcopy(origin["owner"][field])
+                                        for field in (
+                                            "reference", "digest", "policy_sources",
+                                        )
+                                    },
+                                    "applicability": copy.deepcopy(
+                                        origin["applicability"]
+                                    ),
+                                }
+                                for origin in item["origins"]
+                            ],
                             "applicability": copy.deepcopy(item["applicability"]),
                         }
                         for item in composition["contributions"]

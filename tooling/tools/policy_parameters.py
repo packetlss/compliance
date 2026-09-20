@@ -817,16 +817,18 @@ def compose_selected(resolutions, policies):
             if record is None:
                 record = {
                     'identity': identity,
-                    'owner': owner,
                     'members': canonical_members,
+                    'origins': [],
                     'applicability': [],
                 }
                 contributions[key] = record
             else:
-                require(equal(record['owner'], owner)
-                        and equal(record['members'], canonical_members),
+                require(equal(record['members'], canonical_members),
                         'divergent additive contribution identity')
             path = copy.deepcopy(resolved['applicability'])
+            origin = {'owner': copy.deepcopy(owner), 'applicability': path}
+            if origin not in record['origins']:
+                record['origins'].append(origin)
             if path not in record['applicability']:
                 record['applicability'].append(path)
 
@@ -838,6 +840,7 @@ def compose_selected(resolutions, policies):
         require(validate_composition(representative['declaration']) == 'additive-set',
                 'additive contribution targets an atomic or incompatible slot')
         require(representative['bound'], 'additive contribution has no applicable declaration or base')
+        record['origins'].sort(key=canonical_json_bytes)
         record['applicability'].sort(key=canonical_json_bytes)
         contributions_by_slot.setdefault(identity, []).append(record)
 
@@ -1804,7 +1807,20 @@ def reconstruct_frozen_parameters(plan):
 
 
 def _validate_requirement_facts(plan, controls, states):
+    actual_policy_sources = {
+        item['name']
+        for item in plan['provenance']['planningComposition']['actual']['policySources']
+    }
+
+    def validate_sources(record, resource_kind):
+        sources = record.get('policy_sources')
+        require(isinstance(sources, list) and bool(sources)
+                and all(locator.get('policy_source') in actual_policy_sources
+                        for locator in sources),
+                f'frozen {resource_kind} source is absent from planning composition')
+
     for baseline in plan['resolved_requirement_baselines']:
+        validate_sources(baseline, 'RequirementBaseline')
         resource = baseline.get('document')
         validate_requirement_baseline_document(resource)
         reference = f"{resource['metadata']['id']}@{resource['metadata']['revision']}"
@@ -1818,10 +1834,18 @@ def _validate_requirement_facts(plan, controls, states):
                      & set(resource['spec'])),
                 'RequirementBaseline cannot own parameter state')
     memberships = {
-        pin['requirement']: pin['digest']
+        (pin['requirement'], pin['digest'])
         for baseline in plan['resolved_requirement_baselines']
         for pin in baseline['requirements']
     }
+    requirement_memberships = [
+        (requirement['reference'], requirement['digest'])
+        for requirement in plan['requirements']
+    ]
+    if plan['resolution']['status'] == 'valid':
+        require(len(requirement_memberships) == len(set(requirement_memberships))
+                and set(requirement_memberships) == memberships,
+                'frozen Objective membership differs from selected baselines')
     planned = {item['instance_id']: item for item in plan['controls']}
     realization_consumers = {
         item['reference']: item
@@ -1829,14 +1853,13 @@ def _validate_requirement_facts(plan, controls, states):
         if item['kind'] == 'ControlRealization'
     }
     for requirement in plan['requirements']:
+        validate_sources(requirement, 'Objective')
         resource = requirement.get('document')
         validate_objective_document(resource)
         reference = f"{resource['metadata']['id']}@{resource['metadata']['revision']}"
         require(reference == requirement['reference']
                 and digest(resource) == requirement['digest'],
                 'frozen Objective content pin mismatch')
-        require(memberships.get(reference) == requirement['digest'],
-                'frozen Objective membership differs from selected baseline')
         for field in ('title', 'statement', 'external_refs'):
             require(equal(requirement.get(field), resource['spec'].get(field, [])),
                     'frozen Objective explanation mismatch')
@@ -1857,6 +1880,7 @@ def _validate_requirement_facts(plan, controls, states):
                     and requirement['technical_instance_ids'] == [],
                     'missing-realization record differs from frozen coverage')
             continue
+        validate_sources(realization_record, 'ControlRealization')
         realization = realization_record.get('document')
         validate_realization_reference_identity(realization)
         realization_reference = f"{realization['metadata']['id']}@{realization['metadata']['revision']}"

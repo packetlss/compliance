@@ -381,6 +381,62 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
         ):
             validate_assessment_plan(changed)
 
+        changed = copy.deepcopy(plan)
+        changed["requirements"] = []
+        changed["controls"] = []
+        changed["parameters"]["consumers"] = [
+            item for item in changed["parameters"]["consumers"]
+            if item["kind"] != "ControlRealization"
+        ]
+        self.resign(changed)
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "Objective membership differs from selected baselines",
+        ):
+            validate_assessment_plan(changed)
+
+    def test_objective_owner_sources_belong_to_planning_composition(self):
+        project = ROOT / "verification/fixtures/iam-private-boundary"
+        subject, groups, assignments = load_inventory_inputs(
+            project / "inventory",
+            project / "assignments",
+            "host/restricted-linux-01",
+            ROOT / "tooling/schemas/inventory/resource.schema.json",
+        )
+        plan = render_plan(
+            subject,
+            groups,
+            assignments,
+            (
+                self.sources[0],
+                self.sources[1],
+                PolicySource("environment-private", project / "policy"),
+            ),
+        )
+        records = (
+            (plan["resolved_requirement_baselines"][0], "RequirementBaseline"),
+            (plan["requirements"][0], "Objective"),
+            (plan["requirements"][0]["realization"], "ControlRealization"),
+        )
+        for record, kind in records:
+            changed = copy.deepcopy(plan)
+            if kind == "RequirementBaseline":
+                target = changed["resolved_requirement_baselines"][0]
+            elif kind == "Objective":
+                target = changed["requirements"][0]
+            else:
+                target = changed["requirements"][0]["realization"]
+            target["policy_sources"] = [{
+                "policy_source": "forged",
+                "path": "fake.json",
+            }]
+            self.resign(changed)
+            with self.subTest(kind=kind), self.assertRaisesRegex(
+                ArtifactValidationError,
+                f"frozen {kind} source is absent from planning composition",
+            ):
+                validate_assessment_plan(changed)
+
     def test_selected_nonconsuming_parent_can_be_retained_as_consumer_ancestry(self):
         source = self.plan["parameters"]["consumers"][0]
         parent = copy.deepcopy(source["document"])

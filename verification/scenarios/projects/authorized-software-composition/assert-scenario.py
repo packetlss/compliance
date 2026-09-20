@@ -78,7 +78,13 @@ def run(root):
         parameter, = parameter_policy["parameters"]
         assert parameter["slot"] == "allowed_software" and parameter["effective_value"] == UNION
         projected, = parameter["composition"]["contributions"]
-        assert projected == {"identity": CONTRIBUTION, "members": ["postgresql"], "applicability": [PATH]}
+        assert projected["identity"] == CONTRIBUTION
+        assert projected["members"] == ["postgresql"]
+        assert projected["applicability"] == [PATH]
+        projected_origin, = projected["origins"]
+        assert projected_origin["applicability"] == PATH
+        assert projected_origin["owner"]["reference"] == "company.database-software@1"
+        assert projected_origin["owner"]["policy_sources"][0]["policy_source"] == "verification-policy"
         technical, = [policy for assignment in coverage["assignments"]
                       for policy in assignment["policies"]
                       if policy["policy_type"] == "technical"]
