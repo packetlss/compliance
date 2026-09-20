@@ -1,0 +1,45 @@
+{
+  "schema": "compliance.example/evidence/v1",
+  "id": "evidence:external-example:001",
+  "subject": {
+    "id": "host/producer-example",
+    "type": "linux-host",
+    "source_ref": "synthetic-host-1"
+  },
+  "type": "linux.packages/v1",
+  "collected_at": "2000-01-01T00:00:00Z",
+  "collector": {
+    "id": "external-package-example",
+    "version": "1",
+    "mode": "synthetic"
+  },
+  "payload": {
+    "ecosystem": "linux-native",
+    "packages": [
+      {
+        "id": "auditd",
+        "version": "3.1",
+        "repository": "synthetic-main"
+      },
+      {
+        "id": "curl",
+        "version": "8.0",
+        "vendor_note": {
+          "text": "Example Å",
+          "flags": [
+            2,
+            1
+          ]
+        }
+      }
+    ],
+    "capture_details": {
+      "source": "synthetic",
+      "uninterpreted": null
+    }
+  },
+  "capture": {
+    "synthetic": true,
+    "note": "Ordinary construction; extensions retained."
+  }
+}

@@ -9,18 +9,9 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 from referencing import Registry
 
-from ._canonical_json import canonical_json_bytes
+from ._canonical_json import canonical_json_bytes, unique_object as _unique_object
 from .evidence_provenance import evidence_document_digest, evidence_set_provenance
 from .evaluate_plan import EVIDENCE_FORMAT_CHECKER, _json_pointer, parse_duration
-
-
-def _unique_object(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError('ambiguous duplicate JSON member')
-        result[key] = value
-    return result
 
 
 def snapshot_evidence(path: Path, subject_id: str):
@@ -53,7 +44,7 @@ def prepare_schemas(schemas, required_types):
     for evidence_type in sorted(required_types):
         if evidence_type not in schemas:
             raise ValueError('required evidence schema is unavailable: ' + evidence_type)
-        schema = {k: copy.deepcopy(v) for k,v in schemas[evidence_type].items() if not k.startswith('_')}
+        schema = copy.deepcopy(schemas[evidence_type]['_schema_document'])
         Draft202012Validator.check_schema(schema)
         # Catalog contracts use document-local refs. Resolve every reference before
         # attribution, even for empty snapshots; never retrieve mutable remote schemas.

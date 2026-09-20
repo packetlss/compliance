@@ -1,0 +1,8 @@
+{
+  "ecosystem": "linux-native",
+  "packages": [
+    {"id": "auditd", "version": "3.1", "repository": "synthetic-main"},
+    {"id": "curl", "version": "8.0", "vendor_note": {"text": "Example Å", "flags": [2, 1]}}
+  ],
+  "capture_details": {"source": "synthetic", "uninterpreted": null}
+}

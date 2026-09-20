@@ -17,7 +17,7 @@ import yaml
 from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import SchemaError
 
-from ._canonical_json import canonical_json_bytes
+from ._canonical_json import canonical_json_bytes, unique_object
 from .artifact_validation import validate_assessment_plan
 from .identifiers import (
     EVIDENCE_TYPE,
@@ -324,7 +324,12 @@ def _merge_policy_catalog(
         if existing is None:
             target[identity] = document
             continue
-        if _semantic_resource_digest(existing) == _semantic_resource_digest(document):
+        identical = (
+            content_digest(existing["_schema_document"]) == content_digest(document["_schema_document"])
+            if resource_kind == "EvidenceSchema"
+            else _semantic_resource_digest(existing) == _semantic_resource_digest(document)
+        )
+        if identical:
             for locator in document.get("_sources", []):
                 if locator not in existing.setdefault("_sources", []):
                     existing["_sources"].append(locator)
@@ -639,8 +644,9 @@ def _load_evidence_schema_catalog_root(
     for path in sorted(schemas_root.glob("*.json")):
         source = path.relative_to(policies_root).as_posix()
         try:
-            schema = load_json(path)
-        except (OSError, json.JSONDecodeError) as error:
+            schema = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object)
+            canonical_json_bytes(schema)
+        except (OSError, ValueError) as error:
             errors.append({
                 "type": "evidence-schema-unreadable",
                 "source": source,
@@ -703,6 +709,9 @@ def _load_evidence_schema_catalog_root(
                 "existing_source": catalog[evidence_type]["_source"],
             })
             continue
+        # Keep the complete authored contract separate from catalog locators.
+        # Export and validation must not strip schema annotation/extension keys.
+        schema["_schema_document"] = copy.deepcopy(schema)
         schema["_source"] = source
         catalog[evidence_type] = schema
     return catalog, errors

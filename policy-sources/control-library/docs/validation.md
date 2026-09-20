@@ -38,6 +38,8 @@ The gate retains:
 - Minimal valid producer documents for all 10 active evidence types, including
   macOS and organizational assertions, plus typed optional AWS security-contact
   and SaaS guest-access facts.
+- Package producer ordinary-construction and 11 conformance vectors, including
+  nested extensions and complete-document identity preservation.
 - Direct current-state source-boundary checks, exhaustive reusable-file coverage,
   unique identities, resolved references, and adoption-specific resource and
   external-mapping absence.

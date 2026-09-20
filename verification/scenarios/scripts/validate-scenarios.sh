@@ -191,6 +191,11 @@ tooling_run python "$SCENARIOS_ROOT/projects/hybrid-administrative-access/assert
 printf '\n== Feature ownership/completeness integration ==\n'
 tooling_run python "$TOOLING_ROOT"/examples/verify_examples.py --output "$RUN_ROOT/features"
 
+# Policy-side falsification is deliberately separate from producer validation.
+tooling_run python "$SCENARIOS_ROOT/scripts/assert-producer-criteria.py" \
+  --policy "$INTEGRATION_ROOT/policy-sources/control-library/policies" \
+  --evidence "$INTEGRATION_ROOT/policy-sources/control-library/examples/producer/linux-packages.json"
+
 printf '\n== Post-validation revisions and cleanliness ==\n'
 "${COMPLIANCE_PYTHON:-python3}" "$SOURCE_ROOT/scripts/integration.py" verify --root "$INTEGRATION_ROOT"
 assert_scenarios_clean

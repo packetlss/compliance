@@ -13,7 +13,7 @@ Repository layout is not semantic policy, release, or runtime identity. This doc
 | Verification policy | `policy-sources/verification-policy/` | Synthetic baselines, requirements/realizations, mappings, deliberate conflicts and verification-only resources; semantic source `verification-policy`; source-only lifecycle |
 | Ordinary projects | `projects/mock-fleet/`, `projects/server-personas/`, `projects/alder-forge-dcc-level3/` | Independent exploratory/reference project inventory, assignments, fixtures, waivers and generated-state paths |
 | IAM synthetic boundary | `verification/fixtures/iam-private-boundary/` | Synthetic proof of a separately materialized `environment-private` source; not a real private-data repository |
-| Canonical scenarios | `verification/scenarios/` | Deterministic complete integration, expected outcomes, all 24 public CLI leaves and 19 domain features |
+| Canonical scenarios | `verification/scenarios/` | Deterministic complete integration, expected outcomes, all 27 public CLI leaves and 19 domain features |
 | System architecture/workflow | `docs/`, root `AGENTS.md` | Current normative architecture, ADRs, workflow, repository/trust boundaries and migration provenance |
 | CI/toolchain | `.github/`, `toolchain/`, root scripts/tests | Stable component, scenario and installed-release gates |
 

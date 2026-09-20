@@ -937,6 +937,8 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
     )
     parser.set_defaults(project_config=config)
     commands = parser.add_subparsers(dest="command", required=True)
+    from .producer import add_commands
+    add_commands(commands)
 
     config_parser = commands.add_parser("config", help="inspect project configuration")
     config_commands = config_parser.add_subparsers(dest="config_command", required=True)
@@ -1203,7 +1205,9 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> None:
     arguments = list(argv if argv is not None else sys.argv[1:])
     try:
-        config = select_config(arguments)
+        # Producer documents have no project context and must work even beside
+        # an unrelated or invalid project configuration.
+        config = ProjectConfig() if arguments[:1] == ["producer"] else select_config(arguments)
     except ProjectConfigError as error:
         raise SystemExit(f"compliance: configuration error: {error}") from error
 

@@ -1,0 +1,13 @@
+[
+  {"name": "ordinary-extensions-and-old-timestamp", "valid": true, "changes": []},
+  {"name": "empty-package-inventory", "valid": true, "changes": [{"path": ["payload", "packages"], "value": []}]},
+  {"name": "caller-identity-required", "valid": false, "changes": [{"path": ["id"], "remove": true}]},
+  {"name": "wrong-envelope", "valid": false, "changes": [{"path": ["schema"], "value": "wrong"}]},
+  {"name": "wrong-type", "valid": false, "changes": [{"path": ["type"], "value": "linux.sysctl/v1"}]},
+  {"name": "wrong-subject-type", "valid": false, "changes": [{"path": ["subject", "type"], "value": "saas-tenant"}]},
+  {"name": "invalid-timestamp", "valid": false, "changes": [{"path": ["collected_at"], "value": "yesterday"}]},
+  {"name": "missing-collector-version", "valid": false, "changes": [{"path": ["collector", "version"], "remove": true}]},
+  {"name": "wrong-ecosystem", "valid": false, "changes": [{"path": ["payload", "ecosystem"], "value": "homebrew"}]},
+  {"name": "package-id-required", "valid": false, "changes": [{"path": ["payload", "packages", 0, "id"], "remove": true}]},
+  {"name": "package-version-is-string", "valid": false, "changes": [{"path": ["payload", "packages", 0, "version"], "value": 3}]}
+]

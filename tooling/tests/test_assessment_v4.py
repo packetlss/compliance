@@ -410,7 +410,7 @@ class AssessmentV4Tests(unittest.TestCase):
     def test_schema_catalog_and_validator_failures_are_shared_refusals(self):
         from tools.render_plan import load_evidence_schema_catalog
         original, _ = load_evidence_schema_catalog(self.sources)
-        for replacement in ({}, {'test.evidence/v1': {**original['test.evidence/v1'], '$ref':'#/missing'}}):
+        for replacement in ({}, {'test.evidence/v1': {**original['test.evidence/v1'], '_schema_document': {**original['test.evidence/v1']['_schema_document'], '$ref': '#/missing'}}}):
             with patch('tools.evaluate_plan.load_evidence_schema_catalog', return_value=(replacement, [])):
                 with self.assertRaises(Exception): self.run_assessment([])
         with patch('tools.evidence_selection.Draft202012Validator.iter_errors', side_effect=RuntimeError('validator bug')):
