@@ -1,6 +1,6 @@
 # System architecture
 
-This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 and 0016–0022 (ADRs 0013–0015 are superseded) in `docs/adr/`.
+This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 and 0016–0023 (ADRs 0013–0015 are superseded) in `docs/adr/`.
 
 Historical `packetlss-labs/compliance-workspace` architecture remains migration/design provenance. After this documentation-authority transfer, this repository owns current normative system architecture.
 
@@ -11,6 +11,13 @@ The product composition model is:
 ```text
 tooling + N named policy sources + project inputs
 ```
+
+[ADR 0023](adr/0023-foundational-semantic-responsibility-boundaries.md)
+freezes the foundational responsibility and meaning layer across Governed Inventory,
+Governed Policy, Coverage, descriptive Evidence and Assessment. The freeze is
+semantic only: current schemas, identifiers, identity algorithms, artifact and CLI
+JSON layouts, Requirement/Realization and framework-declaration representations,
+and assessment v4 wires remain experimental until separately reviewed.
 
 A policy source is an independently named/materialized semantic input. Repository names, Git revisions, checkout paths, source roles, acquisition URLs, and source/file order are not policy identity or precedence.
 
@@ -86,7 +93,7 @@ These jobs describe the intended product scope of the accepted core, not a claim
 - **Governance reviewer:** maintain a closed, versioned declaration of the framework/profile obligations accounted for under a declared project scope and one reviewed `governance-declared`, `evidence-assessed-objective`, `direct-technical-policy`, or `mixed-governance-assessed` basis for each. Governance owns issuance/review/adoption and reviewed external or other non-core determinations; its `subject` and review context preserve attribution without claiming that Compliance authenticated the external proposition. The resulting framework-satisfaction projection is bounded to that declaration and exact retained assessment history; it is not conformity, certification, legal applicability, or population completeness.
 - **Evidence operator:** understand evidence demand and health: required evidence types, the subjects and controls requiring them, freshness requirements, missing/stale/invalid/otherwise unusable evidence, and the assessment outcomes blocked by those problems. This is an intended product job even though the current CLI does not provide a complete evidence-operator workflow. It does not introduce a new evidence resource or collection-failure taxonomy.
 
-These jobs do not themselves settle evidence or temporal interpretation. [ADR 0022](adr/0022-criterion-ownership-and-external-judgment-retirement.md) makes company Compliance ownership of the complete criterion the first semantic admission gate: only Control-unaware descriptive observations can determine an `AssessmentResult`. [ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) then owns assessment-time evidence validity/status/refusal, and [ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) owns immutable history, exact plan alignment and derived operational evidence timeliness. Manual/procedural methodology, sampling inference, policy-gap discovery, evidence-operator CLI design, collector failure taxonomy and durable evidence retention require separately promoted work. Point-in-time assessments cannot establish continuous effectiveness.
+These jobs do not themselves settle evidence or temporal interpretation. [ADR 0022](adr/0022-criterion-ownership-and-external-judgment-retirement.md) makes Governed Policy ownership of the complete criterion the first semantic admission gate: only Control-unaware descriptive observations can determine an `AssessmentResult`. [ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) then owns assessment-time evidence validity/status/refusal, and [ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md) owns immutable history, exact plan alignment and derived operational evidence timeliness. Manual/procedural methodology, sampling inference, policy-gap discovery, evidence-operator CLI design, collector failure taxonomy and durable evidence retention require separately promoted work. Point-in-time assessments cannot establish continuous effectiveness.
 
 ### Assessment-plan meaning
 
@@ -134,7 +141,7 @@ subject / group assignment
       -> attributable framework/regulatory mapping and bounded company reporting
 ```
 
-Requirements are desired assurance objectives. Realizations are design-time mappings, not proof of implementation. Authored adoption/implementation labels cannot create pass. An `AssessmentResult` is admissible only for a complete criterion company Compliance policy owns and evaluates from Control-unaware descriptive observations; Governance records reviewed external or other non-core determinations. Missing, stale, invalid, or inconclusive required evidence is `unknown`. Realization selection is deterministic and fail-closed; source order is never precedence. Technical results remain independently attributable. Framework mappings are attributable policy/reporting content and do not establish external conformity or certification/legal compliance.
+Requirements are desired assurance objectives. Realizations are design-time mappings, not proof of implementation. Authored adoption/implementation labels cannot create pass. An `AssessmentResult` is admissible only for a complete criterion Governed Policy owns and Assessment evaluates from Control-unaware descriptive observations; Governance records reviewed external or other non-core determinations. Missing, stale, invalid, or inconclusive required evidence is `unknown`. Realization selection is deterministic and fail-closed; source order is never precedence. Technical results remain independently attributable. Framework mappings are attributable policy/reporting content and do not establish external conformity or certification/legal compliance.
 
 Issue [#37](https://github.com/packetlss/compliance/issues/37) is closed architecture history. ADR 0012 and bounded successor #73 own parameter/freshness resolution; ADR 0016 below supersedes ADRs 0013–0015 with closed-world assessment. Any residual methodology or renewed architecture work requires a new focused promotion rather than treating #37 as current authority.
 
@@ -612,7 +619,11 @@ Repository retirement and archival are complete. ADR 0007 foundation/cutover iss
 
 ## Compatibility/freeze model
 
-The project remains pre-freeze with no external compatibility consumers. A contract becomes compatibility-bound only through an explicit reviewed freeze. Version-like names and historical artifacts do not themselves create permanent current-reader obligations.
+ADR 0023 selectively freezes the foundational semantic responsibility and meaning
+layer. The project otherwise remains pre-wire and pre-identity-freeze with no external
+compatibility consumers. A representation becomes compatibility-bound only through
+its own explicit reviewed freeze. Version-like names and historical artifacts do not
+themselves create permanent current-reader obligations.
 
 Semantic JSON identity uses contract-specific normalization followed by RFC 8785/JCS where specified. Raw source-tree/artifact identities retain their exact-byte/path construction. Provisional algorithm identifiers remain alpha until explicitly frozen.
 

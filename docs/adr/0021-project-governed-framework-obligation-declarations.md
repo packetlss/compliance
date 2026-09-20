@@ -442,19 +442,18 @@ abstraction.
 ## Consequences, implementation boundary, and non-goals
 
 The architecture gains one durable governance input and one ephemeral interpretation
-responsibility without redesigning assessment. This is an **accepted design, not yet
-implemented**. It remains pre-freeze and creates no current resource, schema, path,
-runtime, CLI, view, digest, or artifact contract.
+responsibility without redesigning assessment. The design is **implemented
+experimentally** under [#161](https://github.com/packetlss/compliance/issues/161)
+and amended/cut over to ADR 0022 under
+[#169](https://github.com/packetlss/compliance/issues/169). Its current resource,
+schema, path, runtime, CLI, projection and digest representations remain pre-freeze.
+The implementation preserves the identity-isolation and exact-history boundaries
+above; no compatibility aliases or dual representations were introduced.
 
-A later bounded implementation requires separate promotion for declaration
-admission/identity, project configuration, projection semantics, Alder Forge
-migration, operator explanation, and focused conformance tests. It must preserve the
-identity isolation and exact-history boundaries above. No compatibility aliases or
-dual representations are required pre-freeze.
+This ADR and its bounded implementation do not authorize:
 
-This ADR does not implement or authorize:
-
-- resource/schema/runtime/CLI behavior or a new durable result artifact;
+- a durable framework result artifact or framework state embedded in ordinary
+  assessment results;
 - new Controls, evidence contracts, or remaining DEFSTAN programme work;
 - a generic framework, conformity, certification, GRC, workflow, process, or
   activity-history engine;
@@ -465,4 +464,5 @@ This ADR does not implement or authorize:
 - plan/result identity changes or declaration embedding in ordinary plans;
 - persistent `Coverage` or current/latest compliance state;
 - compatibility scaffolding; or
-- semantic, schema, wire, identifier, or identity-algorithm freeze.
+- a freeze of the declaration/projection representation, schema, wire, identifier
+  or identity algorithm.
