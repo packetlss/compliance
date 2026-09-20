@@ -123,6 +123,21 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
         self.assertEqual(len(plan["controls"]), 1)
         self.assertEqual(len(pp.frozen_technical_links(plan)), 1)
         validate_assessment_plan(plan)
+        for reference in (
+            "company.authorized-software-check@1",
+            "company.authorized-software-copy@1",
+        ):
+            changed = copy.deepcopy(plan)
+            changed["parameters"]["consumers"] = [
+                consumer for consumer in changed["parameters"]["consumers"]
+                if consumer["reference"] != reference
+            ]
+            self.resign(changed)
+            with self.subTest(reference=reference), self.assertRaisesRegex(
+                ArtifactValidationError,
+                "technical consumer owner is missing",
+            ):
+                validate_assessment_plan(changed)
 
     def test_old_current_representation_is_rejected(self):
         changed = copy.deepcopy(self.plan)

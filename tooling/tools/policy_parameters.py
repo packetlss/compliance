@@ -2109,12 +2109,10 @@ def _validate_technical_consumers(plan, controls, states):
         for reference, record in technical_records.items()
     }
     from .render_plan import resolve_baseline
+    linked_instance_ids = {
+        link['destination']['instance_id'] for link in links
+    }
     for baseline in plan['resolved_baselines']:
-        if baseline['reference'] not in technical_catalog:
-            continue
-        resolved = resolve_baseline(baseline['reference'], technical_catalog)
-        if not resolved['parameter_links']:
-            continue
         provenance = {
             'group': baseline['group'],
             'assignment': baseline['assignment'],
@@ -2124,6 +2122,13 @@ def _validate_technical_consumers(plan, controls, states):
             instance_id for instance_id, item in planned.items()
             if provenance in item['provenance']
         }
+        if not (planned_ids & linked_instance_ids):
+            continue
+        require(baseline['reference'] in technical_catalog,
+                'frozen technical consumer owner is missing')
+        resolved = resolve_baseline(baseline['reference'], technical_catalog)
+        require(resolved['parameter_links'],
+                'frozen technical consumer owner has no authored link')
         require(planned_ids == set(resolved['controls']),
                 'frozen technical consumer Check membership differs from retained owner')
         for instance_id, expected in resolved['controls'].items():
