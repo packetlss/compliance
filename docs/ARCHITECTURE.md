@@ -2,7 +2,11 @@
 
 This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 and 0016–0024 (ADRs 0013–0015 are superseded) in `docs/adr/`.
 
-Historical `packetlss-labs/compliance-workspace` architecture remains migration/design provenance. After this documentation-authority transfer, this repository owns current normative system architecture.
+[Contract maturity](CONTRACT_MATURITY.md) owns freeze/compatibility status;
+[Repositories](REPOSITORIES.md) owns component, release and private-input boundaries;
+[Development Workflow](DEVELOPMENT_WORKFLOW.md) owns engineering and validation.
+ADRs retain rationale and supersession history; component docs specify local contracts.
+GitHub issues own active scope and sequencing, not a second architecture layer.
 
 ## Semantic composition
 
@@ -23,28 +27,55 @@ A policy source is an independently named/materialized semantic input. Repositor
 
 Canonical runtime/generated-artifact provenance is content-addressed. Preserve the applicable tooling source/distribution identity, policy-source content digests, actual composition identity, evaluator executable identity, evidence snapshot identity, and artifact-specific semantic identities. Git metadata remains useful review/navigation provenance but is not required after runtime inputs are materialized.
 
-ADR 0007 accepts the successor line `project-config/v1alpha3`, `composition-lock/v1alpha1`, `assessment-provenance/v1alpha1`, and assessment plan/results v4. Destination issues #31–#36 completed its implementation and consumer cutover; #33 retired the predecessor config, release-lock, and assessment readers. Historical artifacts require historical tooling.
+The current experimental contracts are `project-config/v1alpha3`,
+`composition-lock/v1alpha1`, `assessment-provenance/v1alpha1`, and assessment
+plan/results v4. Superseded artifact representations require historical tooling.
 
-Before result identity freeze, [#90](https://github.com/packetlss/compliance/issues/90)
-replaces the duplicated self-contained result representation with an
-exact retained `{bound plan, result}` historical pair. The bound plan owns resolved
-intent, operation membership, planning composition/enforcement, parameters,
-dependencies, mappings, and plan semantics. The result owns the immutable conclusion
-and evaluation-stage provenance. This experimental implementation adds no core
+The exact retained `{bound plan, result}` pair supports historical interpretation.
+The bound plan owns resolved intent, operation membership, planning composition/
+enforcement, parameters, dependencies, mappings and plan semantics. The result owns
+the immutable conclusion and evaluation-stage provenance. Retention adds no core
 storage/history/run/discovery subsystem or compatibility reader.
 
-Actual composition provenance and expected enforcement are separate: every successor run records what actually executed; direct expected-source identities or a complete composition lock may additionally refuse mismatches. Expected identity never substitutes for missing actual identity.
+Actual composition provenance and expected enforcement are separate: every run records what actually executed; direct expected-source identities or a complete composition lock may additionally refuse mismatches. Expected identity never substitutes for missing actual identity.
 
 [ADR 0009](adr/0009-active-compliance-vocabulary.md) intentionally renames the maintained reusable semantic source from `shared-library` to `control-library`. The component path `policy-sources/control-library/`, semantic root `policy-sources/control-library/policies/`, and distribution `compliance-control-library` remain distinct namespaces; tooling receives source names explicitly. The name grants no precedence, trust, mandatory dependency, or reserved role. Policy-tree content identity is unchanged, while name-bearing composition/provenance identities change without a compatibility alias.
 
-ADR 0007 `composition-lock` is the sole forward complete expected-composition abstraction. The #57 `workspace-config` → `project-registry` cutover is implemented: the registry selects one project configuration by explicit name or default without composing policy or merging project state. Registry data/location and repository/workspace topology are nonsemantic; the retired discriminator is unsupported without an alias. The changed tooling source bytes affect only existing tooling provenance; technical control/assurance resource names remain unchanged unless separately reviewed.
+`composition-lock` is the complete expected-composition abstraction. A
+`project-registry` selects one project configuration by explicit name or default
+without composing policy or merging project state. Registry data/location and
+repository/workspace topology are nonsemantic.
+
+## Information authority and temporal meaning
+
+| Information | Authority and limits |
+| --- | --- |
+| Authored policy | Owns intent, complete criteria and policy/check meaning; realization/adoption state is not implementation evidence. |
+| Normalized Governed Inventory | Owns supplied subject identity/facts consumed by resolution; does not prove upstream truth or external population completeness. |
+| Evidence | Records descriptive observations and collector attribution; cannot select policy or supply another domain's normative conclusion. |
+| Exact bound plan | Owns resolved intent, operation selection/membership, dependency meaning and planning provenance. |
+| AssessmentResult | Owns immutable conclusions and evaluation facts under its exact plan. The validated retained pair is the exact historical assertion. |
+| Governance | Owns authored waivers and framework declarations, including reviewed external/non-core determinations. |
+| Derived responses | Coverage, current qualification, mappings, Policy Diff and framework satisfaction add no authoritative domain facts. |
+
+Generated execution material stays untracked and is not authored policy authority.
+That repository rule does not erase the historical authority of retained, validated
+plans/results. Retention belongs to the surrounding operating environment; a new
+assessment does not depend on prior results.
+
+Historical outcome is what Assessment concluded at its recorded instant. Current
+qualification separately interprets exact plan alignment, selected-evidence
+timeliness and recorded waiver validity at an explicit query instant. Governance
+determinations record what Governance reviewed; framework satisfaction interprets
+an exact declaration and its required support. None is a generic mutable “current
+compliance” state or proof of continuous effectiveness.
 
 ## Identifier namespaces and schema identity
 
 [ADR 0019](adr/0019-typed-identifier-namespaces-and-schema-uri-ownership.md)
 accepts typed lookup namespaces rather than a global or source-qualified semantic ID
 space. Semantic policy IDs use dot-separated kebab-case segments; revisions remain
-separate `id@revision` pins; parameter slots and technical properties remain
+separate `id@revision` pins; requirement slots and technical properties remain
 owner-local snake_case; and evidence types retain dispatch-significant `/vN` wire
 versions. Authority-looking ID prefixes are ordinary authored segments and grant no
 trust, precedence or source ownership.
@@ -60,8 +91,7 @@ subject plan across direct-baseline and realization paths.
 Assignments use a kindless `name@revision` reference. The technical-baseline and
 RequirementBaseline catalogs therefore share one assignment-reference collision
 admission namespace: a composition containing both kinds at the same reference must
-fail before planning without precedence or fallback. This rule is implemented under
-#136 and is independent of policy-source, file, and traversal order.
+fail before planning without precedence or fallback. This is independent of policy-source, file, and traversal order.
 The accepted ADR 0024 successor adds a separate typed ParameterPolicy assignment
 surface/catalog; it does not extend the kindless baseline reference namespace.
 
@@ -112,11 +142,12 @@ by [ADR 0021](adr/0021-project-governed-framework-obligation-declarations.md).
 Framework-accounting changes do not alter ordinary plan or result identity when
 resolved assessed policy is unchanged.
 
-This clarifies existing artifact meaning, not a new payload or readiness claim: #31 established the composition foundation, and #32 implemented v1alpha3 assessment generation through provenance-bearing v4 plans/results.
+The current v1alpha3 configuration produces provenance-bearing v4 plans/results;
+their representations remain experimental.
 
-## First-core policy and assurance model
+## Policy and assurance model
 
-The first core has two complementary paths.
+The core has two complementary paths.
 
 Technical assessment:
 
@@ -145,9 +176,9 @@ subject / group assignment
 
 Requirements are desired assurance objectives. Realizations are design-time mappings, not proof of implementation. Authored adoption/implementation labels cannot create pass. An `AssessmentResult` is admissible only for a complete criterion Governed Policy owns and Assessment evaluates from Control-unaware descriptive observations; Governance records reviewed external or other non-core determinations. Missing, stale, invalid, or inconclusive required evidence is `unknown`. Realization selection is deterministic and fail-closed; source order is never precedence. Technical results remain independently attributable. Framework mappings are attributable policy/reporting content and do not establish external conformity or certification/legal compliance.
 
-Issue [#37](https://github.com/packetlss/compliance/issues/37) is closed architecture history. ADR 0012 and bounded successor #73 own parameter/freshness resolution; ADR 0016 below supersedes ADRs 0013–0015 with closed-world assessment. Any residual methodology or renewed architecture work requires a new focused promotion rather than treating #37 as current authority.
-
-[ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns the common required-evidence `unknown`, attributable execution `error`, and assessment-wide refusal boundary. It clarifies ADRs 0006/0007; #32 implemented its schema-invalid-evidence and evidence selection ambiguity corrections as the only semantic preservation exceptions after #31. These corrections are implemented in the sole supported v4 path. #31 is complete; broader assurance design requires separate architecture review.
+[ADR 0010](adr/0010-required-evidence-status-and-assessment-refusal.md) owns
+required-evidence `unknown`, attributable execution `error`, and assessment-wide
+refusal. These meanings apply to the current v4 assessment path.
 
 The implemented evidence core supports required dependencies only: every
 declared dependency is required by definition and has no optionality
@@ -177,9 +208,57 @@ synthesize an Objective.
 ADR 0017 requires the plan artifact, when retained, to contain enough authored
 meaning for offline interpretation. It does not make the core a plan or result
 retention service: external users and orchestration decide whether to retain these
-artifacts. The coordinated schema/source/plan/reporter migration is implemented
-under [#100](https://github.com/packetlss/compliance/issues/100). The contract
-remains experimental and is not frozen.
+artifacts. Its representation remains experimental and is not frozen.
+
+## Explicit policy parameters and freshness
+
+This section describes the active experimental runtime contract. The accepted
+[ADR 0024 successor](#objective-assurance-and-governed-parameter-policy) below changes
+ownership and representation only through a later coordinated cutover.
+
+[ADR 0012](adr/0012-explicit-policy-parameter-resolution.md) owns explicit parameter resolution. The [experimental parameter contract](../tooling/docs/policy-parameters.md) defines the coordinated schema/runtime/consumer representation. Its common model is declaration → explicit binding → optional explicit descendant tailoring → concrete effective value → explicit dependency consumption → resolved assessment plan. Required unresolved parameters and independently applicable divergent bindings prevent an assessable plan. Source/file order, ancestry, assignment scope or specificity, strictness and min/max never choose values; constraints and JSON Schema defaults cannot manufacture them.
+
+Under [ADR 0020](adr/0020-governed-policy-composition-without-sealing.md), technical and
+parameter sealing are absent: valid governed descendants tailor inherited policy
+through the existing exact pins, fingerprints and provenance facts.
+
+Requirement slots have stable technology-neutral identity with exact declaration/revision/type-schema pins. Realizations retain explicit typed links into required dependency inputs; plans materialize every linked value with immutable provenance, and evaluation does not resolve parameters again. Technical destinations belong to an exact resolved implementation/interface, including after substitution. Selected derivation permits explicit tailoring; independently assigning divergent ancestor and descendant policies is a conflict.
+
+String-only additive-set composition is the bounded exception to atomic
+complete-value composition. It requires the explicit string-only opt-in, exactly one compatible declaration and
+base, deterministic canonical union, and complete attribution, while permitting
+every compatible independently applicable contribution after valid base tailoring,
+including for a fixed base. Ordinary arrays, objects, scalars, direct technical-
+baseline values, and declarations without the explicit opt-in remain atomic.
+
+Contributions target only stable `(ControlRequirement ID, slot name)` identity;
+current resolution binds them to the exact supplied declaration and base. A
+contribution neither imports nor selects its requirement, does not mutate or tailor
+the base, and carries no exact-version or parent-state coupling. Source/file/
+assignment/traversal order grants no precedence. Removal, denial, suppression,
+override, subtraction, non-string members, generic merge/reducer behavior, and direct
+technical-Baseline composition remain outside the accepted model. The runtime fails
+closed on absent, ambiguous, incompatible, invalid or unconsumable resolution.
+
+Effective evidence `max_age` belongs to policy/baseline/requirement intent. Controls retain evidence dependency contracts and optional capability restrictions; realizations link semantic freshness slots where applicable. Maintained baselines bind effective ages explicitly; objective realizations consume pinned semantic freshness slots. Controls no longer provide effective-age defaults. ADR 0010 still owns assessment-time evidence semantics and ADR 0011 immutable historical selection attribution; the future-timestamp question is unchanged.
+
+Policy resolution determines company intent; assessment tests evidence against that
+intent and never selects policy or a realization. Passing company policy does not
+establish external conformity. ADR 0016
+places external comparison outside the generic core unless a future explicit company
+policy dependency models a concrete condition. Fixed/open external binding restrictions
+do not authenticate issuer authority. Missing realization adoption remains distinct
+from unresolved parameters and missing evidence. Ordinary named private policy sources
+need no new resource family or precedence. ADR 0012 extends the existing provenance-bearing
+plan, not the adapter or authorization artifact surface.
+
+The frozen plan must retain the exact resolved requirement/declaration/schema/base,
+all contributions and applicability paths, canonical effective set, member origins,
+and exact materialized realization consumers. This extends existing plan-owned
+parameter provenance without a new artifact, resource, cache, digest family or
+identity family. Coverage owns only an ephemeral deterministic projection of current
+effective values and derivation through the existing resolver; historical assessment
+explanation uses the exact retained plan/result pair and never current re-resolution.
 
 ## Objective assurance and governed parameter policy
 
@@ -277,7 +356,7 @@ is added. Historical artifacts retain meaning under historical tooling.
 ## Closed-world policy assessment
 
 [ADR 0016](adr/0016-closed-world-policy-assessment.md) supersedes ADRs 0013–0015
-and is **experimental, implemented under #78**. The core evaluates explicitly
+with closed-world assessment. The core evaluates explicitly
 supplied company policy against attributable reality. Governance owns inventory
 exhaustiveness, external applicability and the legal/regulatory sufficiency of
 chosen policy and demonstration. Optional company objective assurance remains core
@@ -306,8 +385,8 @@ product. The core accounts for the exact expected assessment set of the
 supplied operation and detect omitted results. A/B passing supports exact A/B target
 success; unsupplied real-world C is outside that guarantee. Supplied A/B/C with C's
 result absent cannot produce aggregate success. No ClaimScope, PopulationSnapshot,
-external completeness artifact or parallel inventory hierarchy is introduced. #78
-selects only the embedded frozen operation projection.
+external completeness artifact or parallel inventory hierarchy is introduced.
+Exact operation accounting is embedded in the frozen plan.
 
 Policy determines requirements and accepted demonstration; governance owns why
 those choices are appropriate; evidence asserts facts about reality; the core tests
@@ -337,8 +416,7 @@ certification/legal conformity. ADR 0021 separately permits the narrower **Satis
 under declared coverage** projection only from an exact closed project-governance
 declaration plus exact retained assessment support.
 External conformity comparison is outside the generic core unless a future explicit
-company-policy dependency models a concrete condition. ADR 0012 parameter
-invariants survive with ADR 0024 successor ownership.
+company-policy dependency models a concrete condition. ADR 0012 remains unchanged.
 
 ### Preserved failure and N/A boundaries
 
@@ -347,23 +425,28 @@ unresolved required parameters, invalid dependency targets and integrity/tamperi
 fail closed. Required unresolved policy is non-assessable, not evidence `unknown`.
 After valid dependency resolution, missing/stale/invalid/inconclusive evidence is
 ADR 0010 `unknown`, attributable execution failures are `error`, and shared integrity
-preventing trustworthy publication requires refusal. Under the accepted ADR 0024
-successor, preserve complete required Check membership, conservative implemented
-roll-up, fail-only waivers and immutable result attribution. A subject with no
-applicable assignment has Coverage `unassigned` and no expected result. For an
-assigned Objective, zero applicable realizations is an implementation gap without
-fabricated adoption; one selected non-implemented realization retains its authored
-declaration and gap; one implemented realization evaluates every Check; multiple
-applicable realizations make planning invalid. Gaps prevent required-policy success
-without emitting Assessment FAIL or UNKNOWN. Evidence never chooses policy or
-realization alternatives. Current runtime absence-as-fail is pending migration,
-not the successor meaning of FAIL.
+preventing trustworthy publication requires refusal. The current experimental
+runtime retains design-time realizations, complete `satisfaction.allOf` recipes,
+conservative roll-up, fail-only waivers and immutable result attribution. A subject
+with no applicable assignment has Coverage `unassigned` and no expected result.
+For an assigned requirement, current zero-match handling synthesizes
+`not_implemented` adoption and a failing requirement; exactly one realization is
+selected and assessed completely; multiple applicable realizations make planning
+invalid. These representation contracts stay active until coordinated ADR 0024
+cutover; absence-as-fail is not the successor meaning of Assessment FAIL.
+
+ADR 0024 replaces fabricated adoption and absence-as-fail with separately
+accountable implementation gaps: zero matches retains the exact resolution basis;
+one selected non-implemented realization retains its authored declaration; one
+implemented realization evaluates every declared required Check. Gaps prevent
+required-policy success without emitting Assessment FAIL or UNKNOWN. Multiple
+matches remain invalid. Evidence never chooses policy or realization alternatives.
 
 No assignment is unassigned/outside supplied assessment scope, not automatic N/A.
 Existing explicit N/A remains distinct pending separate architecture review. Never
 infer external N/A from absent assignments, evidence or realizations.
 
-### Deliberate narrowing and implementation routing
+### Claim limits
 
 The core relinquishes external real-world inventory exhaustiveness, authoritative
 external obligation-universe completeness, external legal/applicability authority
@@ -374,15 +457,11 @@ dependencies for Compliance-owned criteria mitigate this narrowing.
 There is no separate runtime applicability/authority-acceptance/recognition engine
 or mandatory external completeness gate.
 
-[#78](https://github.com/packetlss/compliance/issues/78) implements embedded frozen
-operation accounting and the historical typed assertion contracts then in use; [ADR 0022](adr/0022-criterion-ownership-and-external-judgment-retirement.md)
-supersedes and removes the generic conclusion-producing assertion family;
-[#87](https://github.com/packetlss/compliance/issues/87) simplifies its pre-freeze
-selection, member commitment, operation identity and bound-plan representation.
 The [operation contract](../tooling/docs/operation-accounting.md) specifies exact
-selection, membership, plan identity, result matching and historical reporting.
-Any direct result graph, external conformity engine, certificate subsystem, or
-other residual assurance architecture requires a new focused exploration and promotion.
+selection, embedded frozen membership, plan identity, result matching and historical
+reporting. ADR 0022 excludes generic conclusion-producing assertion evidence.
+Direct result graphs, external conformity engines and certificate subsystems are
+outside the current core.
 
 ## Project-governed framework obligation accounting
 
@@ -443,9 +522,8 @@ new result artifact, declaration content in ordinary plan identity, persistent
 ## Historical assessment and operational interpretation
 
 [ADR 0011](adr/0011-historical-assessment-and-operational-evidence-timeliness.md)
-has its original factual v4 representation implemented under #32 and its derived
-historical operational view under #80. #90 makes the exact
-assessed bound plan plus its result the historical assertion: the plan owns planning
+defines immutable history and derived operational qualification. The exact
+assessed bound plan plus its result form the historical assertion: the plan owns planning
 composition/enforcement and resolved policy meaning; the result retains immutable
 outcomes, actual evaluation composition/enforcement, evaluator identity, complete
 evidence snapshot identity, exact successful selections, and exact applied-waiver
@@ -475,21 +553,18 @@ timeliness, waiver validity and frozen accounting disposition aggregate independ
 ADR 0011's state matrix. Neither plan alignment nor timely evidence establishes
 present-state certainty, absence of drift, or continuous effectiveness.
 
-#90 replaces the positional/copied dependency record with stable dependency
-identity while preserving validated evidence ID plus complete-document digest,
+Successful selections use stable dependency identity and retain validated evidence ID plus complete-document digest,
 selected `collected_at`, references into the independent complete snapshot, and the
 distinction between successful selections and nonselected candidates. Existing
 evidence identity and ADR 0010 assessment semantics are unchanged. Before publication
 and full interpretation, intrinsic result validation plus mandatory exact plan/result
-relational validation must succeed; otherwise publication fails closed. #80's
-query-time judgments remain derived without a new artifact family.
+relational validation must succeed; otherwise publication fails closed. Query-time judgments remain derived without a
+new artifact family.
 
 ## Durable assessment explanation facts
 
-[ADR 0018](adr/0018-durable-assessment-explanation-facts.md) is **Experimental,
-implemented** under [#102](https://github.com/packetlss/compliance/issues/102),
-from the design accepted under [#98](https://github.com/packetlss/compliance/issues/98).
-It retains a canonical result-level table only for unsuccessful required-dependency
+[ADR 0018](adr/0018-durable-assessment-explanation-facts.md) specifies the
+experimental durable explanation representation. The result retains a canonical result-level table only for unsuccessful required-dependency
 selection: `absent`, `stale`, `invalid` or `ambiguous`. Existing successful selection
 continues to be owned solely by `provenance.selectedEvidence`. The two structures
 must partition every active plan dependency under mandatory exact plan/result
@@ -549,21 +624,60 @@ assessments. Query-time views never reselect evidence or reconstruct refused att
 
 ### Assessment operator presentation
 
-[#105](https://github.com/packetlss/compliance/issues/105) implements the bounded
-Assessment operator projection on these owners. `assessment run` reports exact
+Assessment operator projections consume these owners. `assessment run` reports exact
 operation scope and slot accounting; `assessment status` and `status --by group`
 combine immutable outcomes with separately labeled current qualification;
 `assessment explain ASSET` joins exact plan meaning to exact result facts; and
 `assessment mappings` exposes attributable traceability without a conformity claim.
 
-The predecessor non-anchored current-plan/latest-result views and the separate
-`assessment groups` / `assessment frameworks` leaves are removed without aliases.
 Assessment never depends on `coverage.py`: Coverage remains the ephemeral current
 projection and `operation.py` remains the exact frozen-operation accounting owner.
 Missing slots, non-assessable disposition, historical outcome, accounting
 completeness, plan alignment, evidence timeliness, and waiver qualification remain
 separate dimensions. The views are experimental, non-persisted, non-identity-bearing
 query output and introduce no generic reporting framework or artifact family.
+
+## Producer interface
+
+The experimental [producer interface](../tooling/docs/producer-interface.md) discovers contracts
+from explicitly materialized policy sources, exports exact canonical schemas and
+validates one ordinary typed Evidence document. Tooling alone does not include
+policy-owned Evidence schemas. The analogous Subject check uses the installed
+tooling-owned inventory schema and validates only one normalized resource.
+
+Document validation covers supported representation, exact type/schema and envelope/
+payload validity. It does not establish observation truth, freshness, selection,
+policy applicability or criterion satisfaction. Caller-supplied identity and
+schema-permitted extensions remain intact; extensions do not become criterion
+inputs. There is no network registry, implicit source precedence or generated SDK.
+The isolated standard-library collector exercise demonstrates ordinary construction
+without private imports, project configuration, OPA or policy knowledge.
+
+## Derived-read interface
+
+The experimental [CLI/query boundary](../tooling/docs/cli.md#experimental-external-read-consumption)
+provides purpose-specific responses. Historical Assessment entry points share only
+a derived, non-persisted validated context: one exact operation-bearing anchor,
+explicit retained assessed plans/results, explicit relevant instants and an optional
+comparison anchor. Existing owners perform intrinsic validation, exact identity
+resolution, competing-result detection and mandatory available plan/result relations
+before full interpretation, accounting and qualification.
+
+Inventory/Coverage consume current inputs through their existing resolver.
+Framework retains declaration validation and satisfaction semantics; Policy Diff
+validates explicit before/after plans independently. No context contains every domain.
+Missing expected results leave unfilled slots, not inferred refusals. An orphaned
+result exposes only bounded result-owned facts. Invalid or contradictory supplied
+artifacts reject full interpretation.
+
+Explanations join plan-owned titles, dependency inputs and mappings to result facts
+through exact plan and dependency identities. Optional retained Evidence enriches
+collector presentation only after exact ID+digest matching; missing bytes do not
+erase retained historical facts. Caller-trusted external refusal context remains
+separate from core result history. Inventory views omit arbitrary annotations and
+attributes. The isolated browser consumes derived responses and only navigates,
+filters, sorts and formats them; it does not interpret raw artifacts. This boundary
+adds no universal report model, public Python API, service or latest-state store.
 
 ## External-adapter boundary
 
@@ -636,7 +750,10 @@ Runtime must not require:
 - GitHub access after inputs are acquired; or
 - the historical workspace layout.
 
-Generated evidence, plans, results, caches, credentials, adapter outputs, and backend state are runtime/generated state, not authoritative source.
+Generated evidence, plans, results, caches and adapter/backend output remain
+untracked execution material, distinct from authored source. Retained validated
+plans/results preserve the exact historical assertion they record. Credentials and
+real private operational data remain outside this repository.
 
 ## Release ownership
 
@@ -651,11 +768,15 @@ No new publisher, tag namespace, signing/attestation system, registry, or releas
 
 ## Validation architecture
 
-Validation has three stable owners:
+Three validation layers have stable owners; a fourth required context checks native
+macOS portability:
 
 1. **`component-validation`** — repository/tooling/policy/project/IAM focused gates.
 2. **`verification-scenarios`** — canonical non-Git composed integration and complete 27/19 feature coverage.
 3. **`installed-release-provenance`** — standalone installed package, locked artifacts, release preparation/tag behavior, and generic policy-source release conformance.
+4. **`macos-portability`** — repository setup/doctor, focused identity/tooling checks,
+   and representative package/release entrypoints on macOS arm64 with native Bash
+   and utilities. Linux CI remains the full automated validation authority.
 
 Normal validation uses one repository checkout. It does not use migration-era sibling repository App credentials, PAT fallback, sibling `repository:` checkouts, or repository-coordinate integration manifests.
 
@@ -665,7 +786,9 @@ Normal validation uses one repository checkout. It does not use migration-era si
 
 Historical `packetlss-labs` component repositories and `compliance-workspace` preserve prior commits, issues, PRs, tags, Releases, assets, architecture, and migration evidence. They are retirement/provenance surfaces, not runtime identity or future implementation authority.
 
-Repository retirement and archival are complete. ADR 0007 foundation/cutover issues #31–#36, assurance architecture issue #37, and product-DNA follow-up #38 are closed history. Current work is routed through focused promoted issues under [roadmap #85](https://github.com/packetlss/compliance/issues/85); #73 owns only ADR 0012 implementation.
+Active work is routed through promoted issues under
+[roadmap #85](https://github.com/packetlss/compliance/issues/85). Completed migrations
+and archived repository topology are historical provenance, not current scope.
 
 ## Compatibility/freeze model
 

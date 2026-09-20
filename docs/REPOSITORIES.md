@@ -1,6 +1,6 @@
 # Repository and logical ownership map
 
-Repository layout is not semantic policy, release, or runtime identity. This document defines current logical ownership after non-sensitive development consolidation.
+Repository layout is not semantic policy, release, or runtime identity. This document defines current logical ownership in the consolidated repository.
 
 ## Active repository
 
@@ -35,7 +35,9 @@ Do not duplicate reusable controls into verification policy. Do not move private
 
 Each ordinary `projects/<id>/` is logically independent. Co-location does not permit inventories, assignments, fixtures, waivers, evidence, results, or project catalogs to merge across project boundaries.
 
-Generated evidence/plans/results/caches/adapter outputs remain untracked runtime state.
+Generated evidence/plans/results/caches/adapter outputs remain untracked runtime
+state, not authored policy. Retained validated plans/results remain authoritative
+for their exact historical assertion; retention is externally owned.
 
 ### Private environments and synthetic IAM proof
 
@@ -51,9 +53,10 @@ Stable complete end-to-end behavior belongs to `verification/scenarios/`. Compon
 
 ### System architecture
 
-Current system architecture, repository/trust boundaries, workflow, and accepted ADRs belong to `packetlss/compliance/docs/` after documentation-authority transfer.
-
-Issues #31–#36 are completed ADR 0007 implementation/consumer-cutover history; #37 and #38 are closed architecture and product-alignment history. #78 implements bounded operation accounting and typed assertions. New architecture or escalation requires a new focused promotion; no historical issue authorizes firewall work.
+Current system architecture, repository/trust boundaries, workflow and accepted
+ADRs belong to `packetlss/compliance/docs/`. Component documents own detailed local
+contracts. Historical issues and repositories preserve rationale and delivery
+history; new scope requires a current implementation contract.
 
 ## Release units
 
@@ -72,6 +75,7 @@ Source repository and release unit are distinct concepts.
 | `component-validation` | Focused repository/tooling/policy/project/IAM validation |
 | `verification-scenarios` | Canonical complete composed integration/feature suite |
 | `installed-release-provenance` | Installed/no-Git, locked artifact, release preparation/tag and generic release provenance |
+| `macos-portability` | Native macOS arm64 setup/doctor, focused identity/tooling checks and representative package/release entrypoints; Linux remains the full automated validation authority |
 
 Normal validation uses the current destination revision and temporary non-Git materialization. No old sibling App/PAT acquisition is required.
 

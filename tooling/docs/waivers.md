@@ -171,8 +171,7 @@ The initial contract deliberately does not provide:
 - revocation events separate from a reviewed resource change;
 - cross-project waivers;
 - external approval verification or cryptographic signatures; or
-- finding suppression and workflow lifecycle, which belongs to the future
-  findings/reporting service.
+- finding suppression or workflow lifecycle.
 
 Those extensions should be driven by concrete operational cases without
 weakening the exact, attributable, expiring default.

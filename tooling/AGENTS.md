@@ -12,7 +12,8 @@ This root owns the unified `compliance` CLI, planner, evaluator, generic collect
 - Preserve stable IDs, resolved parameters, fingerprints, disposition, derivations, deviations, lineage, subject/plan identity, and named source digests.
 - The Python distribution remains `compliance-tooling`; the repository root must not become a Python project.
 
-ADR 0007 successor contracts remain bounded work. Do not redesign detailed requirement/realization assurance semantics while implementing them.
+Detailed requirement/realization assurance semantics remain separately routed; do
+not redesign them incidentally.
 
 ## Validation
 

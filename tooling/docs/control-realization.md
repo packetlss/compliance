@@ -308,7 +308,7 @@ assessed as the complete `satisfaction.allOf` recipe; multiple applicable
 realizations make policy resolution ambiguous and planning fails. Evidence never
 selects policy or a realization.
 
-The production planner and selection helper exercise these rules. The ordinary
+The production planner exercises these rules. The ordinary
 and restricted Linux example intentionally uses different values of the single
 `iam-profile` label so its two realization selectors are disjoint. That example
 does not require classifications or groups generally to form mutually exclusive
@@ -332,7 +332,7 @@ Private project inventory and assignments
               +
 Local typed evidence
               ↓
-Local compiler, planner, OPA evaluator, and result store
+Local planner and OPA evaluator -> exact plans/results
 ```
 
 Shared policy distribution is one-way. The central repository does not clone,
