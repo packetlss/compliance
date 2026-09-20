@@ -35,11 +35,11 @@ require_candidate_job() {
     || fail "$name must declare job permissions"
   printf '%s\n' "$block" | grep -qx '      contents: read' \
     || fail "$name must have only read repository contents"
-  writes="$(printf '%s\n' "$block" | grep -E '^[[:space:]]+[A-Za-z0-9_-]+:.*write' || true)"
+  writes="$(printf '%s\n' "$block" | grep -i 'write' || true)"
   [[ -z "$writes" ]] || fail "$name must not have write permissions"
   printf '%s\n' "$block" | grep -q 'persist-credentials: false' \
     || fail "$name must disable checkout credential persistence"
-  if printf '%s\n' "$block" | grep -nE 'GH_TOKEN|GITHUB_TOKEN|github\.token|secrets\.|GH_PAT|PERSONAL_ACCESS_TOKEN|APP_TOKEN|actions/create-github-app-token'; then
+  if printf '%s\n' "$block" | grep -nE 'GH_TOKEN|GITHUB_TOKEN|github\.token|github[[:space:]]*\[|secrets\.|GH_PAT|PERSONAL_ACCESS_TOKEN|APP_TOKEN|actions/create-github-app-token'; then
     fail "$name must not receive a credential"
   fi
 }
@@ -48,7 +48,7 @@ require_trusted_job() {
   local name="$1" block writes
   block="$(job_block "$name")"
   [[ -n "$block" ]] || fail "trusted job is missing: $name"
-  writes="$(printf '%s\n' "$block" | grep -E '^[[:space:]]+[A-Za-z0-9_-]+:.*write' || true)"
+  writes="$(printf '%s\n' "$block" | grep -i 'write' || true)"
   [[ "$writes" == '      statuses: write' ]] \
     || fail "$name must have only statuses: write permission"
   if printf '%s\n' "$block" | grep -nE 'actions/checkout|(^|[^A-Za-z])git[[:space:]]+(fetch|checkout|merge|rebase|push)|scripts/|toolchain/|GITHUB_WORKSPACE'; then
@@ -75,7 +75,7 @@ if printf '%s\n' "$publish" | grep -qx '      contents: read'; then
   fail 'publish must not receive repository contents permission'
 fi
 
-token_expression='GH_TOKEN|GITHUB_TOKEN|github\.token|GH_PAT|PERSONAL_ACCESS_TOKEN|APP_TOKEN|actions/create-github-app-token'
+token_expression='GH_TOKEN|GITHUB_TOKEN|github\.token|github[[:space:]]*\[|GH_PAT|PERSONAL_ACCESS_TOKEN|APP_TOKEN|actions/create-github-app-token'
 token_bindings="$(grep -nE "$token_expression" "$workflow" || true)"
 [[ "$(printf '%s\n' "$token_bindings" | sed '/^$/d' | wc -l | tr -d ' ')" == 3 ]] \
   || fail 'workflow credentials must be limited to the three trusted GH_TOKEN bindings'

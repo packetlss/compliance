@@ -596,6 +596,11 @@ class WorkflowContractTests(unittest.TestCase):
             candidate_job + "    env:\n      GH_TOKEN: ${{ github.token }}\n",
             1,
         )
+        indexed_token_candidate = workflow.replace(
+            candidate_job,
+            candidate_job + "    env:\n      credential_alias: ${{ github['token'] }}\n",
+            1,
+        )
         write_candidate = workflow.replace(
             candidate_job,
             candidate_job + "      statuses: write # candidate jobs must stay read-only\n",
@@ -606,7 +611,12 @@ class WorkflowContractTests(unittest.TestCase):
             candidate_job + '      statuses: "write"\n',
             1,
         )
-        for mutation in (token_candidate, write_candidate, quoted_write_candidate):
+        quoted_key_write_candidate = workflow.replace(
+            candidate_job,
+            candidate_job + '      "statuses": write\n',
+            1,
+        )
+        for mutation in (token_candidate, indexed_token_candidate, write_candidate, quoted_write_candidate, quoted_key_write_candidate):
             with self.subTest(mutation=mutation):
                 result = self.validate_integration_workflow(mutation)
                 self.assertNotEqual(result.returncode, 0)
@@ -619,16 +629,25 @@ class WorkflowContractTests(unittest.TestCase):
             "      statuses: write\n      issues: write # status publication must remain the only write\n    steps:\n      - name: Publish final status without checking out PR code\n",
             1,
         )
+        quoted_key_extra_write = workflow.replace(
+            "      statuses: write\n    steps:\n      - name: Publish final status without checking out PR code\n",
+            "      statuses: write\n      \"issues\": write\n    steps:\n      - name: Publish final status without checking out PR code\n",
+            1,
+        )
         relocated_token = workflow.replace(
             "jobs:\n",
             "env:\n  GH_TOKEN: ${{ github.token }}\n\njobs:\n",
             1,
         ).replace("          GH_TOKEN: ${{ github.token }}\n", "", 1)
-        for mutation in (extra_write, relocated_token):
+        for mutation, expected_error in (
+            (extra_write, "publish"),
+            (quoted_key_extra_write, "publish"),
+            (relocated_token, "resolve"),
+        ):
             with self.subTest(mutation=mutation):
                 result = self.validate_integration_workflow(mutation)
                 self.assertNotEqual(result.returncode, 0)
-                self.assertIn("publish" if mutation == extra_write else "resolve", result.stderr)
+                self.assertIn(expected_error, result.stderr)
 
 
 if __name__ == "__main__":
