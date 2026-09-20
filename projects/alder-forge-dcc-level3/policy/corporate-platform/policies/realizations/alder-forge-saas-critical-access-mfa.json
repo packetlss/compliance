@@ -8,7 +8,7 @@
   "spec": {
     "requirement": {
       "requirement": "alder-forge.critical-access.mfa@1",
-      "digest": "sha256:4ec573c59dde2183a4fa35650f71015d503bba4402cdcd38be1521a6440fc5ab"
+      "digest": "sha256:2b4513c682f2bf546d27e37f9177905a7126615c86019c25c4231648eaaa3788"
     },
     "applies_to": {
       "subject_types": [
