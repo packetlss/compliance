@@ -532,6 +532,27 @@ and [`waivers.md`](waivers.md).
 
 ## 11. Decision log
 
+### 2026-09-20 — Validated derived-read projections and browser falsification (#187)
+
+Assessment and Framework historical CLI entry points share one derived,
+non-persisted validation context containing only an exact operation-bearing anchor,
+explicit retained assessed plans/results, explicit assessment/query instants and an
+optional comparison anchor. It consolidates intrinsic validation, exact identity
+admission, competing-result detection and all available mandatory plan/result
+relations before delegating accounting and qualification to `operation.py`.
+Inventory/Coverage, Framework declaration interpretation and policy diff remain
+independent owners.
+
+Purpose-specific JSON projections retain plan-owned dependency inputs and authored
+titles without copying them into results. Optional retained Evidence enriches only
+collector presentation after exact ID+digest matching; missing bytes leave history
+usable. Separately caller-trusted refusal context qualifies a missing expected slot
+without becoming a result or core attempt artifact. Inventory presentation now
+intentionally omits arbitrary annotations/attributes. The isolated static browser
+accepts only those derived response schemas through local files and performs only
+navigation, filtering, sorting and formatting. This creates no universal report,
+service, query language, store, public Python API or wire freeze.
+
 ### 2026-09-20 — Experimental producer surface (#186)
 
 The [producer interface](producer-interface.md) exposes existing explicit-source

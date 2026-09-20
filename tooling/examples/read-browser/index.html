@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Compliance derived-read browser</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header>
+      <p class="eyebrow">Experimental external consumer</p>
+      <h1>Compliance derived-read browser</h1>
+      <p class="boundary">
+        This isolated page reads purpose-specific CLI JSON responses. It never reads
+        plans, results, Evidence, Inventory resources, or policy source documents.
+      </p>
+      <label class="load">
+        Load derived JSON responses
+        <input id="response-files" type="file" accept="application/json,.json" multiple>
+      </label>
+      <p id="load-status" role="status">No responses loaded.</p>
+    </header>
+    <main>
+      <aside aria-label="Loaded responses">
+        <h2>Views</h2>
+        <nav id="views"></nav>
+      </aside>
+      <section class="workspace" aria-live="polite">
+        <div class="toolbar">
+          <label>Filter rows <input id="filter" type="search" placeholder="Exact response text"></label>
+          <label>Sort <select id="sort"><option value="source">Source order</option><option value="label">Label</option></select></label>
+        </div>
+        <article id="content" class="empty">
+          <h2>No derived response selected</h2>
+          <p>Generate JSON with the documented CLI commands, then select the files above.</p>
+        </article>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

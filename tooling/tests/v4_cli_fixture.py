@@ -123,6 +123,7 @@ evaluate := {
             'assessment','explain',first_subject,'--plan',str(plan_path),
             '--assessed-plans',str(project/'generated/plans'),
             '--results',str(project/'generated/results'),
+            '--retained-evidence',str(evidence),
             '--at','2026-08-23T12:00:00Z','--as-of','2026-08-23T12:00:00Z',
             '--format','json'
         ))
@@ -130,6 +131,16 @@ evaluate := {
         assert historical_explanation['operation']['plan_id'] == multi_plan['id']
         assert historical_explanation['checks'][0]['check']['title']
         assert historical_explanation['checks'][0]['check']['purpose']
+        selected_evidence = next(
+            dependency['selected_evidence']
+            for check in historical_explanation['checks']
+            for dependency in check['required_evidence']
+            if dependency.get('selected_evidence')
+        )
+        retained = selected_evidence['retained_evidence']
+        assert retained['match'] == 'exact_evidence_id_and_digest'
+        assert retained['collector'] == {
+            'id':'test-collector', 'version':'1'}
         orphan_mappings = json.loads(run(
             'assessment','mappings','--plan',str(plan_path),
             '--at','2026-08-23T12:00:00Z','--as-of','2026-08-23T12:00:00Z',
@@ -146,6 +157,29 @@ evaluate := {
         missing_asset = next(row for row in historical['assets'] if row['asset_id'] == second_subject)
         assert missing_asset['historical_outcome'] is None
         assert not missing_asset['expected_result_slot']['present']
+        refusal_path = project/'external-refusals.json'
+        refusal_path.write_text(json.dumps({
+            'operation_id': historical['operation']['operation_id'],
+            'assessment_instant': '2026-08-23T12:00:00Z',
+            'refusals': [{
+                'asset_id': second_subject,
+                'authority': 'synthetic-orchestrator',
+                'reference': 'run/installed-second',
+                'reason': 'Execution was explicitly refused by the external orchestrator',
+            }],
+        }))
+        with_refusal = json.loads(run(
+            'assessment','status','--plan',str(plan_path),
+            '--assessed-plans',str(project/'generated/plans'),
+            '--external-refusals',str(refusal_path),
+            '--at','2026-08-23T12:00:00Z','--as-of','2026-08-23T12:00:00Z',
+            '--format','json'
+        ))
+        refused_asset = next(row for row in with_refusal['assets']
+                             if row['asset_id'] == second_subject)
+        assert refused_asset['historical_outcome'] is None
+        assert not refused_asset['expected_result_slot']['present']
+        assert refused_asset['external_refusal']['authority'] == 'synthetic-orchestrator'
         filtered_groups = json.loads(run(
             'assessment','status','--by','group','--plan',str(plan_path),'--assessed-plans',str(project/'generated/plans'),'--at','2026-08-23T12:00:00Z',
             '--as-of','2026-08-23T12:00:00Z','--format','json'

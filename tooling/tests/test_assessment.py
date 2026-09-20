@@ -11,11 +11,15 @@ from tools.assessment import (
     build_mappings_view,
     build_run_view,
     build_status_view,
+    project_explanation_view,
+    project_status_view,
     render_explanation_view,
     render_mappings_view,
     render_run_view,
     render_status_view,
 )
+from tools.assessment_history import build_historical_assessment_context
+from tools.evidence_provenance import evidence_document_digest
 from tools.operation import account_operation, qualify_operation
 from tools.waivers import parse_timestamp
 
@@ -568,6 +572,131 @@ class AssessmentOperatorViewTests(unittest.TestCase):
         rendered = render_mappings_view(view)
         self.assertIn("Assessment mappings", rendered)
         self.assertNotIn("framework mappings", rendered.lower())
+
+    def test_mapping_projection_adds_only_exact_plan_owned_titles(self):
+        plan = copy.deepcopy(self.plan)
+        plan["controls"][0]["external_refs"] = ["EXAMPLE:1"]
+        plan["operation"]["members"][0]["policy"]["controls"][0][
+            "external_refs"
+        ] = ["EXAMPLE:1"]
+        report = self.result(status="pass")
+        account = self.account_with_result(report)
+        account["members"][0]["policy"]["controls"][0]["external_refs"] = [
+            "EXAMPLE:1"
+        ]
+
+        row = build_mappings_view(account, [report], [plan])["mappings"][0]
+
+        self.assertEqual(row["policy_object_title"], "Synthetic test check")
+        self.assertEqual(
+            row["applicable_policies"],
+            [{"reference": "test.baseline@1", "title": "Synthetic technical policy"}],
+        )
+
+    def test_dependency_inputs_and_exact_retained_evidence_enrichment(self):
+        plan = copy.deepcopy(self.plan)
+        plan["controls"][0]["evidence"][0]["inputs"] = {
+            "required_service": "company-iam"
+        }
+        evidence = {
+            "schema": "compliance.example/evidence/v1",
+            "id": "evidence:selected",
+            "subject": {"id": "host/test", "type": "linux-host"},
+            "type": "test.evidence/v1",
+            "collected_at": "2026-08-23T11:00:00Z",
+            "collector": {"id": "retained-collector", "version": "7"},
+            "payload": {"value": "retained"},
+        }
+        report = self.result(status="pass")
+        report["provenance"]["selectedEvidence"][0]["evidence_digest"] = (
+            evidence_document_digest(evidence)
+        )
+        account = self.account_with_result(report)
+        retained = {(evidence["id"], evidence_document_digest(evidence)): evidence}
+
+        view = build_explanation_view(
+            account,
+            account["members"][0],
+            plan,
+            report,
+            retained_evidence=retained,
+        )
+        dependency = view["checks"][0]["required_evidence"][0]
+
+        self.assertEqual(
+            dependency["inputs"], {"required_service": "company-iam"}
+        )
+        self.assertEqual(
+            dependency["selected_evidence"]["retained_evidence"],
+            {
+                "match": "exact_evidence_id_and_digest",
+                "collector": {"id": "retained-collector", "version": "7"},
+            },
+        )
+        mismatched = copy.deepcopy(evidence)
+        mismatched["payload"] = {"value": "different"}
+        mismatch_view = build_explanation_view(
+            account,
+            account["members"][0],
+            plan,
+            report,
+            retained_evidence={
+                (mismatched["id"], evidence_document_digest(mismatched)): mismatched
+            },
+        )
+        self.assertNotIn(
+            "retained_evidence",
+            mismatch_view["checks"][0]["required_evidence"][0][
+                "selected_evidence"
+            ],
+        )
+
+    def test_validated_context_keeps_missing_slot_separate_from_external_refusal(self):
+        context = build_historical_assessment_context(
+            self.plan,
+            [self.plan],
+            [],
+            assessment_instant=self.instant,
+            query_instant=self.query,
+        )
+        information = {
+            "operation_id": context.account["operation"]["operation_id"],
+            "assessment_instant": self.instant,
+            "refusals": [{
+                "asset_id": "host/test",
+                "authority": "trusted-test-orchestrator",
+                "reference": "attempt/test-1",
+                "reason": "Shared snapshot routing could not be established.",
+            }],
+        }
+
+        status = project_status_view(
+            context, external_refusal_information=information
+        )
+        explanation = project_explanation_view(
+            context,
+            "host/test",
+            external_refusal_information=information,
+        )
+
+        self.assertIsNone(status["assets"][0]["historical_outcome"])
+        self.assertFalse(status["assets"][0]["expected_result_slot"]["present"])
+        self.assertEqual(
+            status["assets"][0]["external_refusal"]["reference"],
+            "attempt/test-1",
+        )
+        self.assertEqual(explanation["interpretation"], "exact_result_slot_missing")
+        self.assertEqual(explanation["external_refusal"]["authority"], "trusted-test-orchestrator")
+        self.assertIn("does not create an AssessmentResult", render_explanation_view(explanation))
+
+        wrong = copy.deepcopy(information)
+        wrong["operation_id"] = "sha256:" + "0" * 64
+        with self.assertRaisesRegex(ValueError, "different operation"):
+            project_status_view(context, external_refusal_information=wrong)
+        malformed = copy.deepcopy(information)
+        malformed["refusals"][0]["unexpected"] = "not admitted"
+        with self.assertRaisesRegex(ValueError, "each external refusal requires"):
+            project_status_view(context, external_refusal_information=malformed)
 
     def test_mapping_order_is_independent_of_external_reference_order(self):
         plan = copy.deepcopy(self.plan)

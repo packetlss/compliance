@@ -15,17 +15,18 @@ from .artifact_validation import validate_assessment_plan
 from .assessment import (
     HISTORICAL_OUTCOMES,
     PLAN_ALIGNMENTS,
-    build_explanation_view,
-    build_mappings_view,
     build_run_view,
-    build_status_view,
-    load_assessment_plans,
-    load_result_reports,
+    load_external_refusal_information,
+    load_retained_evidence,
+    project_explanation_view,
+    project_mappings_view,
+    project_status_view,
     render_explanation_view,
     render_mappings_view,
     render_run_view,
     render_status_view,
 )
+from .assessment_history import load_historical_assessment_context
 from .evaluate_plan import evaluate_plan_document, write_json
 from .coverage import (
     build_coverage_explanation,
@@ -76,9 +77,9 @@ from .waivers import (
     waiver_catalog_document,
 )
 from .framework import (
-    build_explanation as build_framework_explanation,
-    build_status as build_framework_status,
     load_declarations,
+    project_explanation as project_framework_explanation,
+    project_status as project_framework_status,
     render_status as render_framework_status,
     render_explanation as render_framework_explanation,
     select_declaration,
@@ -688,22 +689,21 @@ def _run_assessment_view(args: argparse.Namespace) -> None:
     _run_historical_operation_view(args)
 
 
-def _framework_history(args: argparse.Namespace) -> tuple[dict, list[dict], list[dict]]:
-    """Use the ordinary exact-history loader; declarations never reopen policy."""
-    from .operation import account_operation, qualify_operation
+def _historical_context(args: argparse.Namespace):
+    """Use one exact-history admission boundary for Assessment and Framework."""
     if not args.plan or not args.at or not args.as_of:
-        raise ValueError('framework historical reporting requires --plan, --at, and --as-of')
-    anchor = load_json(args.plan)
-    validate_assessment_plan(anchor, source=args.plan)
-    instant = parse_timestamp(args.at, field='--at').isoformat().replace('+00:00', 'Z')
-    assessed = load_assessment_plans([args.plan, *args.assessed_plans])
-    reports = load_result_reports(args.results) if args.results and args.results.exists() else []
-    account = qualify_operation(
-        account_operation(anchor, reports, instant, assessed), reports,
-        parse_timestamp(args.as_of, field='--as-of'),
-        load_json(args.comparison_plan) if args.comparison_plan else None, assessed,
+        raise ValueError(
+            'historical reporting requires --plan, --at, and --as-of'
+        )
+    results = args.results if args.results and args.results.exists() else None
+    return load_historical_assessment_context(
+        args.plan,
+        args.assessed_plans,
+        results,
+        assessment_instant=args.at,
+        query_instant=args.as_of,
+        comparison_anchor_path=args.comparison_plan,
     )
-    return account, assessed, reports
 
 
 def _run_framework(args: argparse.Namespace) -> None:
@@ -720,8 +720,12 @@ def _run_framework(args: argparse.Namespace) -> None:
         print(f'valid framework declaration catalog: {len(declarations)} declaration(s)')
         return
     declaration = select_declaration(declarations, args.declaration, args.revision)
-    account, plans, reports = _framework_history(args)
-    document = (build_framework_explanation if args.framework_command == 'explain' else build_framework_status)(declaration, account, plans, reports)
+    context = _historical_context(args)
+    document = (
+        project_framework_explanation
+        if args.framework_command == 'explain'
+        else project_framework_status
+    )(declaration, context)
     if args.format == 'json':
         print(json.dumps(document, indent=2, sort_keys=True))
     else:
@@ -772,45 +776,16 @@ def _run_assessment(args: argparse.Namespace) -> None:
 
 
 def _run_historical_operation_view(args):
-    from .operation import (
-        account_operation,
-        frozen_group_memberships,
-        qualify_operation,
+    context = _historical_context(args)
+    refusal_information = load_external_refusal_information(
+        getattr(args, 'external_refusals', None)
     )
-    if not args.plan or not args.at or not args.as_of:
-        raise ValueError(
-            'assessment reporting requires --plan, --at, and --as-of for one exact frozen operation'
-        )
-    anchor = load_json(args.plan)
-    validate_assessment_plan(anchor, source=args.plan)
-    instant = parse_timestamp(args.at, field='--at').isoformat().replace('+00:00', 'Z')
-    query_instant = parse_timestamp(args.as_of, field='--as-of')
-    comparison_anchor = load_json(args.comparison_plan) if args.comparison_plan else None
-    assessed_plans = load_assessment_plans([args.plan, *args.assessed_plans])
-    reports = load_result_reports(args.results) if args.results and args.results.exists() else []
-    account = qualify_operation(
-        account_operation(anchor, reports, instant, assessed_plans),
-        reports,
-        query_instant,
-        comparison_anchor,
-        assessed_plans,
-    )
-    by_id = {r['id']: r for r in reports}
-    plan_by_id = {plan['id']: plan for plan in assessed_plans}
-    known_groups = set(frozen_group_memberships(account['operation']))
-    unknown_groups = sorted(set(args.group) - known_groups)
-    if unknown_groups:
-        raise ValueError('unknown frozen operation group(s): ' + ', '.join(unknown_groups))
     if args.assessment_command == 'explain':
-        selected = [r for r in account['members'] if r['subject_id'] == args.asset_id]
-        if not selected:
-            raise ValueError('asset is absent from frozen operation selection')
-        member = selected[0]
-        explanation = build_explanation_view(
-            account,
-            member,
-            plan_by_id.get(member['plan_id']),
-            by_id.get(member['result_id']),
+        explanation = project_explanation_view(
+            context,
+            args.asset_id,
+            retained_evidence=load_retained_evidence(args.retained_evidence),
+            external_refusal_information=refusal_information,
         )
         if args.format == 'json':
             print(json.dumps(explanation, indent=2, sort_keys=True))
@@ -818,10 +793,8 @@ def _run_historical_operation_view(args):
             print(render_explanation_view(explanation))
         return
     if args.assessment_command == 'mappings':
-        view = build_mappings_view(
-            account,
-            reports,
-            assessed_plans,
+        view = project_mappings_view(
+            context,
             group_ids=args.group,
             outcomes=args.outcome,
             plan_alignments=args.plan_alignment,
@@ -833,12 +806,13 @@ def _run_historical_operation_view(args):
         else:
             print(render_mappings_view(view))
         return
-    view = build_status_view(
-        account,
+    view = project_status_view(
+        context,
         group_ids=args.group,
         outcomes=args.outcome,
         plan_alignments=args.plan_alignment,
         by_group=args.by == 'group',
+        external_refusal_information=refusal_information,
     )
     if args.format == 'json':
         print(json.dumps(view, indent=2, sort_keys=True))
@@ -1154,6 +1128,14 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
         choices=("group",),
         help="aggregate the exact operation by group",
     )
+    assessment_status.add_argument(
+        "--external-refusals",
+        type=Path,
+        help=(
+            "caller-trusted external orchestration refusal information, exact-bound "
+            "to this operation and assessment instant"
+        ),
+    )
     _set_handler(assessment_status, _run_assessment_view)
     assessment_mappings = assessment_commands.add_parser(
         "mappings",
@@ -1180,6 +1162,22 @@ def build_parser(config: ProjectConfig) -> argparse.ArgumentParser:
     )
     assessment_explain.add_argument("asset_id", metavar="ASSET")
     _add_assessment_view_options(assessment_explain, config, allow_filters=False)
+    assessment_explain.add_argument(
+        "--retained-evidence",
+        type=Path,
+        help=(
+            "optional retained Evidence file or directory; only exact ID+digest "
+            "matches enrich collector presentation"
+        ),
+    )
+    assessment_explain.add_argument(
+        "--external-refusals",
+        type=Path,
+        help=(
+            "caller-trusted external orchestration refusal information, exact-bound "
+            "to this operation and assessment instant"
+        ),
+    )
     _set_handler(assessment_explain, _run_assessment_view)
 
     framework_parser = commands.add_parser(

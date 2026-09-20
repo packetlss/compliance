@@ -66,6 +66,10 @@ source attribution; group parents/selectors/explicit members; or assignment
 targets and exact policy references. `inventory explain ASSET` joins only those
 supplied asset facts to direct and inherited group-membership attribution. It
 does not claim external discovery completeness and does not resolve policy.
+Arbitrary Inventory annotations and adapter-specific `attributes` are intentionally
+not forwarded through this ordinary presentation boundary. They remain governed
+Inventory facts and retain their existing resolution semantics where consumed; the
+read view does not create a second governed-fact model.
 
 `coverage list assets`, `groups`, and `assignments` derives current assessment
 expectation through the existing planner. The asset view uses exactly
@@ -194,6 +198,17 @@ The default per-asset table likewise keeps current waiver qualification distinct
 from the immutable historical outcome. A dependency-free check makes no positive
 evidence-timeliness claim.
 
+Assessment and Framework historical commands share one narrow, non-persisted
+validated historical Assessment context. It admits one exact operation-bearing
+anchor, explicitly supplied assessed plans/results, the explicit assessment/query
+instants, and an optional comparison anchor. It performs intrinsic artifact
+validation, exact identity admission, competing-result detection, every available
+mandatory plan/result relational check, and delegates exact accounting and
+qualification to `operation.py`. It contains no Inventory, Coverage, Governance,
+Framework or policy-diff state. A missing assessed plan still permits only the
+existing bounded result-owned fallback; it never causes policy meaning to be
+reconstructed.
+
 `assessment explain ASSET` leads with applicable-policy titles, optional Objective
 title/statement, Control-owned Check title/purpose, effective parameters, required
 evidence, immutable historical outcome, and separately labeled current
@@ -203,6 +218,21 @@ has no synthetic Objective. Objective output keeps frozen adoption distinct from
 immutable requirement outcome and reason. Its JSON is a
 bounded projection and never embeds a whole plan or result. Stable operation, plan,
 result, asset, check, and dependency identities remain available for drill-down.
+Required-evidence rows include exact plan-owned dependency `inputs` when present.
+`--retained-evidence FILE_OR_DIRECTORY` is optional presentation enrichment: a
+document contributes only after its complete-document digest and Evidence ID match
+the exact retained result reference (and its recorded collection instant where
+available). Only collector ID/version are exposed; payload bytes are never needed
+for historical interpretation. Missing or same-ID/different-digest content provides
+no enrichment and does not remove independently retained historical facts.
+
+`assessment status` and `assessment explain` optionally accept
+`--external-refusals FILE`. This is caller-trusted external orchestration query
+context, not a core resource, result, history, or attempt artifact. The input must
+name the exact operation and assessment instant and may qualify only a missing
+required result slot. Projection output keeps it in a separate
+`external_orchestration` / `external_refusal` field; a missing result alone remains
+only a missing slot and never implies refusal.
 
 `framework validate` validates project-governed declarations at the configured
 `paths.frameworkDeclarations` path. `framework status DECLARATION --revision REVISION`
@@ -575,6 +605,17 @@ Evidence paths are directories and may contain documents for several subjects.
 Before type and freshness selection, the input builder scopes documents to the
 exact `subject.id` in the rendered plan. Evidence for another subject is never
 passed to OPA for the current assessment.
+
+## Experimental external read consumption
+
+The isolated browser exercise at
+[`tooling/examples/read-browser/`](../examples/read-browser/) consumes the same
+purpose-specific JSON documents emitted by Inventory, Coverage, Assessment,
+mappings, Framework and policy-diff commands. Its file-input boundary adds no HTTP
+service, persistent state, latest-state selection, browser-specific report object or
+public Python API. The page rejects raw plan/result/Evidence/resource documents and
+may only navigate, filter, sort and format already-derived response facts. These
+response wires remain experimental.
 
 ## YAML editor schemas
 

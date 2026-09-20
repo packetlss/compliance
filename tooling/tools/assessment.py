@@ -13,8 +13,14 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from .artifact_validation import validate_assessment_plan, validate_assessment_results
+from .assessment_history import (
+    ValidatedHistoricalAssessmentContext,
+    load_assessment_plans,
+    load_result_reports,
+)
+from .evidence_provenance import evidence_document_digest
 from .render_plan import load_json
+from .waivers import parse_timestamp
 
 
 JsonObject = dict[str, Any]
@@ -34,49 +40,79 @@ ACCOUNTING_DISPOSITIONS = (
 )
 
 
-def load_result_reports(path: Path | None) -> list[JsonObject]:
-    """Load intrinsically valid result envelopes from one bounded input."""
+def load_retained_evidence(path: Path | None) -> dict[tuple[str, str], JsonObject]:
+    """Index optional retained Evidence only by exact ID and document digest.
+
+    Historical interpretation never depends on this input.  No current evidence
+    schema is applied: an assessment-time-invalid document may still be the exact
+    retained content named by a result-owned disposition.
+    """
+
     if path is None:
-        return []
+        return {}
     if not path.exists():
-        raise ValueError(f"results path does not exist: {path}")
-    paths = [path] if path.is_file() else sorted(path.rglob("*.json"))
-    reports: list[JsonObject] = []
-    for candidate in paths:
+        raise ValueError(f"retained evidence path does not exist: {path}")
+    candidates = [path] if path.is_file() else sorted(path.rglob("*.json"))
+    indexed: dict[tuple[str, str], JsonObject] = {}
+    for candidate in candidates:
         document = load_json(candidate)
-        if isinstance(document, dict) and str(document.get("schema", "")).startswith(
-            "compliance.example/assessment-results/"
+        if not isinstance(document, dict) or document.get("schema") != (
+            "compliance.example/evidence/v1"
         ):
-            validate_assessment_results(document, source=candidate)
-            reports.append(document)
-    return reports
+            if path.is_file():
+                raise ValueError(f"retained evidence input is not Evidence: {path}")
+            continue
+        evidence_id = document.get("id")
+        collector = document.get("collector")
+        if (
+            not isinstance(evidence_id, str)
+            or not evidence_id
+            or not isinstance(collector, dict)
+            or not isinstance(collector.get("id"), str)
+            or not collector["id"]
+            or not isinstance(collector.get("version"), str)
+            or not collector["version"]
+        ):
+            raise ValueError(f"retained Evidence lacks bounded collector facts: {candidate}")
+        key = (evidence_id, evidence_document_digest(document))
+        indexed[key] = document
+    return indexed
 
 
-def load_assessment_plans(paths: list[Path]) -> list[JsonObject]:
-    """Load a bounded plan set indexed only by exact semantic plan ID."""
-    plans: dict[str, JsonObject] = {}
-    for path in paths:
-        if not path.exists():
-            raise ValueError(f"assessment plan input does not exist: {path}")
-        candidates = [path] if path.is_file() else sorted(path.rglob("*.json"))
-        found = False
-        for candidate in candidates:
-            document = load_json(candidate)
-            if not isinstance(document, dict) or document.get("schema") != (
-                "compliance.example/assessment-plan/v4"
-            ):
-                if path.is_file():
-                    raise ValueError(f"assessment plan input is not a v4 plan: {path}")
-                continue
-            found = True
-            validate_assessment_plan(document, source=candidate)
-            existing = plans.get(document["id"])
-            if existing is not None and existing != document:
-                raise ValueError("multiple distinct plans have the same exact plan identity")
-            plans[document["id"]] = document
-        if path.is_dir() and not found:
-            raise ValueError(f"assessment plan directory contains no v4 plans: {path}")
-    return [plans[identity] for identity in sorted(plans)]
+def _validate_external_refusal_information(document: JsonObject) -> JsonObject:
+    """Validate the bounded query shape before binding it to exact history."""
+
+    if not isinstance(document, dict):
+        raise ValueError("external refusal information must be a JSON object")
+    if set(document) != {"operation_id", "assessment_instant", "refusals"}:
+        raise ValueError(
+            "external refusal information requires operation_id, "
+            "assessment_instant, and refusals only"
+        )
+    if not isinstance(document["refusals"], list):
+        raise ValueError("external refusal information refusals must be a list")
+    seen: set[str] = set()
+    for item in document["refusals"]:
+        if not isinstance(item, dict) or set(item) != {
+            "asset_id", "authority", "reference", "reason"
+        }:
+            raise ValueError(
+                "each external refusal requires asset_id, authority, reference, and reason"
+            )
+        if any(not isinstance(item[field], str) or not item[field].strip() for field in item):
+            raise ValueError("external refusal fields must be non-empty strings")
+        if item["asset_id"] in seen:
+            raise ValueError("duplicate external refusal asset identity")
+        seen.add(item["asset_id"])
+    return copy.deepcopy(document)
+
+
+def load_external_refusal_information(path: Path | None) -> JsonObject | None:
+    """Load caller-trusted external orchestration facts used only by a query."""
+
+    if path is None:
+        return None
+    return _validate_external_refusal_information(load_json(path))
 
 
 def _result_index(reports: list[JsonObject]) -> dict[str, JsonObject]:
@@ -148,6 +184,7 @@ def _asset_status(
     member: JsonObject,
     query_instant: str | None,
     groups: list[str],
+    external_refusal: JsonObject | None = None,
 ) -> JsonObject:
     return {
         "asset_id": member["subject_id"],
@@ -157,7 +194,39 @@ def _asset_status(
         "historical_outcome": member.get("historical_outcome"),
         "historical_interpretation": member["historical_interpretation"],
         "current_qualification": _qualification(member, query_instant),
+        "external_refusal": copy.deepcopy(external_refusal),
     }
+
+
+def _validated_external_refusals(
+    context: ValidatedHistoricalAssessmentContext,
+    information: JsonObject | None,
+) -> list[JsonObject]:
+    if information is None:
+        return []
+    information = _validate_external_refusal_information(information)
+    if information["operation_id"] != context.account["operation"]["operation_id"]:
+        raise ValueError("external refusal information names a different operation")
+    instant = parse_timestamp(
+        information["assessment_instant"], field="external refusal assessment instant"
+    ).isoformat().replace("+00:00", "Z")
+    if instant != context.assessment_instant:
+        raise ValueError("external refusal information names a different assessment instant")
+    members = {member["subject_id"]: member for member in context.account["members"]}
+    rows = []
+    for item in information["refusals"]:
+        member = members.get(item["asset_id"])
+        if member is None:
+            raise ValueError("external refusal asset is outside the exact frozen operation")
+        if (
+            member["accounting_disposition"] != "result_required"
+            or member["result_present"]
+        ):
+            raise ValueError(
+                "external refusal information may qualify only a missing expected result slot"
+            )
+        rows.append(copy.deepcopy(item))
+    return sorted(rows, key=lambda item: item["asset_id"])
 
 
 def _operation_summary(account: JsonObject) -> JsonObject:
@@ -358,11 +427,15 @@ def build_status_view(
     outcomes: list[str] | None = None,
     plan_alignments: list[str] | None = None,
     by_group: bool = False,
+    external_refusals: list[JsonObject] | None = None,
 ) -> JsonObject:
     """Build status from exact accounting and separately derived qualification."""
     selected_groups = set(group_ids or [])
     selected_outcomes = set(outcomes or [])
     selected_alignments = set(plan_alignments or [])
+    refusals_by_asset = {
+        item["asset_id"]: item for item in (external_refusals or [])
+    }
     from .operation import frozen_group_memberships
 
     memberships = frozen_group_memberships(account["operation"])
@@ -394,6 +467,13 @@ def build_status_view(
         "filtered": bool(any(filters.values())),
         "whole_operation": _operation_summary(account),
         "view": "groups" if by_group else "assets",
+        "external_orchestration": {
+            "refusals": copy.deepcopy(external_refusals or []),
+            "note": (
+                "Expected result absence is not refusal evidence. Entries here are "
+                "separately supplied caller-trusted external orchestration facts."
+            ),
+        },
     }
     if by_group:
         known_groups = sorted(memberships)
@@ -418,6 +498,7 @@ def build_status_view(
                     for group_id, member_ids in memberships.items()
                     if member["subject_id"] in member_ids
                 ],
+                refusals_by_asset.get(member["subject_id"]),
             )
             for member in visible
         ]
@@ -483,10 +564,16 @@ def render_status_view(view: JsonObject) -> str:
                 f'{_counts_text(current["selected_evidence"])}  '
                 f'{_counts_text(current["recorded_waivers"])}'
             )
+        for refusal in view["external_orchestration"]["refusals"]:
+            lines.append(
+                f'External refusal for {refusal["asset_id"]}: '
+                f'{refusal["reason"]} ({refusal["authority"]}; '
+                f'{refusal["reference"]})'
+            )
         return "\n".join(lines)
     lines.append(
         "ASSET  ACCOUNTING DISPOSITION  RESULT SLOT  HISTORICAL OUTCOME  PLAN ALIGNMENT  "
-        "CURRENT EVIDENCE  CURRENT WAIVERS"
+        "CURRENT EVIDENCE  CURRENT WAIVERS  EXTERNAL REFUSAL"
     )
     for asset in view["assets"]:
         slot = asset["expected_result_slot"]
@@ -501,7 +588,8 @@ def render_status_view(view: JsonObject) -> str:
             f'{presence}  {outcome}  '
             f'{current["plan_alignment"].replace("_", " ").upper()}  '
             f'{current["selected_evidence"]["status"].replace("_", " ").upper()}  '
-            f'{_asset_waivers_text(current)}'
+            f'{_asset_waivers_text(current)}  '
+            f'{"RECORDED SEPARATELY" if asset["external_refusal"] else "-"}'
         )
     return "\n".join(lines)
 
@@ -520,6 +608,28 @@ def _specific_outcome(
         None,
     )
     return match.get("status") if match else None
+
+
+def _mapping_policy_titles(
+    plan: JsonObject | None,
+    item: JsonObject | None,
+) -> list[JsonObject]:
+    if plan is None or item is None:
+        return []
+    titles = {
+        row["reference"]: row["title"]
+        for field in ("resolved_baselines", "resolved_requirement_baselines")
+        for row in plan.get(field, [])
+    }
+    references = {
+        provenance["baseline"]
+        for provenance in item.get("provenance", [])
+        if provenance.get("baseline") in titles
+    }
+    return [
+        {"reference": reference, "title": titles[reference]}
+        for reference in sorted(references)
+    ]
 
 
 def build_mappings_view(
@@ -590,6 +700,12 @@ def build_mappings_view(
                         "mapping_level": level,
                         "asset_id": member["subject_id"],
                         "policy_object": identity,
+                        "policy_object_title": (
+                            exact_item.get("title") if exact_item else None
+                        ),
+                        "applicable_policies": _mapping_policy_titles(
+                            plan, exact_item
+                        ),
                         "policy_disposition": item.get("disposition", "active"),
                         "policy_alignment": policy_alignment,
                         "expected_result_slot": _slot(member),
@@ -653,13 +769,14 @@ def render_mappings_view(view: JsonObject) -> str:
         lines.append(filter_line)
     lines.extend([
         "",
-        "MAPPING  LEVEL  ASSET  POLICY OBJECT  HISTORICAL OUTCOME  PLAN ALIGNMENT  POLICY ALIGNMENT",
+        "MAPPING  LEVEL  ASSET  POLICY OBJECT  POLICY TITLE  HISTORICAL OUTCOME  PLAN ALIGNMENT  POLICY ALIGNMENT",
     ])
     for mapping in view["mappings"]:
         outcome = (mapping["historical_outcome"] or "-").replace("_", " ").upper()
         lines.append(
             f'{mapping["external_ref"]}  {mapping["mapping_level"].upper()}  '
-            f'{mapping["asset_id"]}  {mapping["policy_object"]}  {outcome}  '
+            f'{mapping["asset_id"]}  {mapping["policy_object"]}  '
+            f'{mapping["policy_object_title"] or "-"}  {outcome}  '
             f'{mapping["current_qualification"]["plan_alignment"].replace("_", " ").upper()}  '
             f'{mapping["policy_alignment"].replace("_", " ").upper()}'
         )
@@ -703,12 +820,37 @@ def _error_explanation(error: JsonObject) -> str:
     }[error["code"]]
 
 
+def _retained_evidence_enrichment(
+    reference: JsonObject,
+    retained_evidence: dict[tuple[str, str], JsonObject],
+) -> JsonObject | None:
+    document = retained_evidence.get(
+        (reference["evidence_id"], reference["evidence_digest"])
+    )
+    if document is None:
+        return None
+    if (
+        "collected_at" in reference
+        and document.get("collected_at") != reference["collected_at"]
+    ):
+        return None
+    collector = document["collector"]
+    return {
+        "match": "exact_evidence_id_and_digest",
+        "collector": {
+            "id": collector["id"],
+            "version": collector["version"],
+        },
+    }
+
+
 def _dependency_fact(
     control: JsonObject,
     dependency: JsonObject,
     disposition: JsonObject | None,
     selection: JsonObject | None,
     timeliness: JsonObject | None,
+    retained_evidence: dict[tuple[str, str], JsonObject],
 ) -> JsonObject:
     del control
     fact: JsonObject = {
@@ -719,11 +861,16 @@ def _dependency_fact(
             "selected" if selection else disposition["disposition"] if disposition else "unavailable"
         ),
     }
+    if dependency.get("inputs"):
+        fact["inputs"] = copy.deepcopy(dependency["inputs"])
     if selection:
         fact["selected_evidence"] = {
             key: selection[key]
             for key in ("evidence_id", "evidence_digest", "collected_at")
         }
+        enrichment = _retained_evidence_enrichment(selection, retained_evidence)
+        if enrichment is not None:
+            fact["selected_evidence"]["retained_evidence"] = enrichment
     elif disposition is not None:
         kind = disposition["disposition"]
         fact["assessment_explanation"] = {
@@ -747,7 +894,14 @@ def _dependency_fact(
         }[kind]
         for key in ("latest_candidates", "candidates", "diagnostics"):
             if key in disposition:
-                fact[key] = copy.deepcopy(disposition[key])
+                facts = copy.deepcopy(disposition[key])
+                for reference in facts:
+                    enrichment = _retained_evidence_enrichment(
+                        reference, retained_evidence
+                    )
+                    if enrichment is not None:
+                        reference["retained_evidence"] = enrichment
+                fact[key] = facts
     if timeliness is not None:
         fact["current_timeliness"] = timeliness["qualification"]
     return fact
@@ -771,6 +925,7 @@ def _check_explanation(
     selections: dict[tuple[str, str], JsonObject],
     timeliness: dict[tuple[str, str], JsonObject],
     waiver_qualification: dict[str, JsonObject],
+    retained_evidence: dict[tuple[str, str], JsonObject],
 ) -> JsonObject:
     instance_id = control["instance_id"]
     dependencies = [
@@ -780,6 +935,7 @@ def _check_explanation(
             dispositions.get((instance_id, dependency["id"])),
             selections.get((instance_id, dependency["id"])),
             timeliness.get((instance_id, dependency["id"])),
+            retained_evidence,
         )
         for dependency in control["evidence"]
     ]
@@ -846,6 +1002,9 @@ def build_explanation_view(
     member: JsonObject,
     plan: JsonObject | None,
     result: JsonObject | None,
+    *,
+    retained_evidence: dict[tuple[str, str], JsonObject] | None = None,
+    external_refusal: JsonObject | None = None,
 ) -> JsonObject:
     """Explain one exact slot, with a bounded result-only orphan fallback."""
     slot = _slot(member)
@@ -861,6 +1020,7 @@ def build_explanation_view(
         "expected_result_slot": slot,
         "historical_outcome": result["outcome"] if result else None,
         "current_qualification": _qualification(member, account["query_instant"]),
+        "external_refusal": copy.deepcopy(external_refusal),
     }
     if result is None:
         base["interpretation"] = (
@@ -880,7 +1040,9 @@ def build_explanation_view(
             base["applicable_policies"] = _applicable_policies(plan)
             base["objectives"] = _objectives(plan, None)
             base["checks"] = [
-                _check_explanation(control, None, {}, {}, {}, {})
+                _check_explanation(
+                    control, None, {}, {}, {}, {}, retained_evidence or {}
+                )
                 for control in plan["controls"]
             ]
             base["excluded_checks"] = _excluded_checks(plan)
@@ -941,6 +1103,7 @@ def build_explanation_view(
                 selections,
                 timeliness,
                 waiver_qualification,
+                retained_evidence or {},
             )
             for control in plan["controls"]
         ],
@@ -1069,6 +1232,15 @@ def render_explanation_view(view: JsonObject) -> str:
     ]
     if "explanation" in view:
         lines.extend(["", view["explanation"]])
+    if refusal := view.get("external_refusal"):
+        lines.extend([
+            "",
+            "Separately supplied external orchestration refusal:",
+            f'  Authority: {refusal["authority"]}',
+            f'  Reference: {refusal["reference"]}',
+            f'  Reason: {refusal["reason"]}',
+            "  This does not create an AssessmentResult or fill the expected slot.",
+        ])
     if view["interpretation"] == "limited_without_exact_plan":
         waiver_qualification = {
             item["instance_id"]: item
@@ -1176,6 +1348,22 @@ def render_explanation_view(view: JsonObject) -> str:
                     f'(dependency {dependency["dependency_id"]}, '
                     f'max age {dependency["assessed_max_age"]})'
                 )
+                if dependency.get("inputs"):
+                    lines.append(
+                        "      Governed dependency inputs: "
+                        + json.dumps(
+                            dependency["inputs"],
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        )
+                    )
+                selected = dependency.get("selected_evidence", {})
+                if enrichment := selected.get("retained_evidence"):
+                    collector = enrichment["collector"]
+                    lines.append(
+                        "      Retained Evidence collector (exact ID+digest match): "
+                        f'{collector["id"]}@{collector["version"]}'
+                    )
                 if dependency.get("assessment_explanation"):
                     lines.append(f'      {dependency["assessment_explanation"]}')
                 if dependency["selection"] == "invalid":
@@ -1190,6 +1378,12 @@ def render_explanation_view(view: JsonObject) -> str:
                             f'{diagnostic["schema_path"]}; '
                             f'code {diagnostic["code"]}'
                         )
+                        if enrichment := diagnostic.get("retained_evidence"):
+                            collector = enrichment["collector"]
+                            lines.append(
+                                "        Retained Evidence collector (exact ID+digest match): "
+                                f'{collector["id"]}@{collector["version"]}'
+                            )
                 elif dependency["selection"] == "ambiguous":
                     lines.append("      Selected evidence: none")
                     for candidate in dependency["candidates"]:
@@ -1198,6 +1392,12 @@ def render_explanation_view(view: JsonObject) -> str:
                             f'digest {candidate["evidence_digest"]}; '
                             f'collected at {candidate["collected_at"]}'
                         )
+                        if enrichment := candidate.get("retained_evidence"):
+                            collector = enrichment["collector"]
+                            lines.append(
+                                "        Retained Evidence collector (exact ID+digest match): "
+                                f'{collector["id"]}@{collector["version"]}'
+                            )
             if historical and historical.get("current_waiver_qualification"):
                 waiver = historical["current_waiver_qualification"]
                 lines.append(
@@ -1241,3 +1441,97 @@ def render_explanation_view(view: JsonObject) -> str:
                     f'review after {deviation["review_after"]}'
                 )
     return "\n".join(lines)
+
+
+def _validate_context_groups(
+    context: ValidatedHistoricalAssessmentContext,
+    group_ids: list[str] | None,
+) -> None:
+    from .operation import frozen_group_memberships
+
+    known = set(frozen_group_memberships(context.account["operation"]))
+    unknown = sorted(set(group_ids or []) - known)
+    if unknown:
+        raise ValueError("unknown frozen operation group(s): " + ", ".join(unknown))
+
+
+def project_status_view(
+    context: ValidatedHistoricalAssessmentContext,
+    *,
+    group_ids: list[str] | None = None,
+    outcomes: list[str] | None = None,
+    plan_alignments: list[str] | None = None,
+    by_group: bool = False,
+    external_refusal_information: JsonObject | None = None,
+) -> JsonObject:
+    """Supported Assessment status projection from validated exact history."""
+
+    _validate_context_groups(context, group_ids)
+    refusals = _validated_external_refusals(
+        context, external_refusal_information
+    )
+    return build_status_view(
+        context.account,
+        group_ids=group_ids,
+        outcomes=outcomes,
+        plan_alignments=plan_alignments,
+        by_group=by_group,
+        external_refusals=refusals,
+    )
+
+
+def project_mappings_view(
+    context: ValidatedHistoricalAssessmentContext,
+    *,
+    group_ids: list[str] | None = None,
+    outcomes: list[str] | None = None,
+    plan_alignments: list[str] | None = None,
+    external_refs: list[str] | None = None,
+    levels: list[str] | None = None,
+) -> JsonObject:
+    """Supported attributable mappings projection from validated exact history."""
+
+    _validate_context_groups(context, group_ids)
+    return build_mappings_view(
+        context.account,
+        list(context.reports),
+        list(context.assessed_plans),
+        group_ids=group_ids,
+        outcomes=outcomes,
+        plan_alignments=plan_alignments,
+        external_refs=external_refs,
+        levels=levels,
+    )
+
+
+def project_explanation_view(
+    context: ValidatedHistoricalAssessmentContext,
+    asset_id: str,
+    *,
+    retained_evidence: dict[tuple[str, str], JsonObject] | None = None,
+    external_refusal_information: JsonObject | None = None,
+) -> JsonObject:
+    """Supported one-asset explanation projection from validated exact history."""
+
+    selected = [
+        member
+        for member in context.account["members"]
+        if member["subject_id"] == asset_id
+    ]
+    if not selected:
+        raise ValueError("asset is absent from frozen operation selection")
+    member = selected[0]
+    refusals = {
+        item["asset_id"]: item
+        for item in _validated_external_refusals(
+            context, external_refusal_information
+        )
+    }
+    return build_explanation_view(
+        context.account,
+        member,
+        context.plans_by_id.get(member["plan_id"]),
+        context.reports_by_id.get(member["result_id"]),
+        retained_evidence=retained_evidence,
+        external_refusal=refusals.get(asset_id),
+    )

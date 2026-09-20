@@ -26,6 +26,11 @@ def statuses(report):
     return [row["status"] for row in report.get("results", [])]
 
 
+def capture(output, name, document):
+    if output is not None:
+        (output / name).write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
+
+
 class Scenario:
     def __init__(self, root, name, private_source=None):
         self.work = Path(tempfile.mkdtemp(prefix=f"{name}-"))
@@ -62,7 +67,10 @@ class Scenario:
         command = ["compliance", "--no-config"] if historical else self.command
         result = subprocess.run([*command, *args], capture_output=True, text=True)
         if success:
-            require(result.returncode == 0, result.stderr)
+            require(
+                result.returncode == 0,
+                f'{" ".join([*command, *args])}\n{result.stderr}{result.stdout}',
+            )
         else:
             require(result.returncode != 0, result.stdout)
         return result.stdout
@@ -89,7 +97,7 @@ class Scenario:
         return (json.loads(output) if output else None), plans, results
 
 
-def technical(root):
+def technical(root, browser_output=None):
     s = Scenario(root, "technical-only-packages")
     try:
         def write_resource(path, document):
@@ -136,6 +144,12 @@ def technical(root):
 
         require(not (s.project / "generated").exists(), "coverage fixture started with generated state")
         coverage = json.loads(s.cli("coverage", "list", "assets", "--format", "json"))
+        capture(browser_output, "01-current-coverage.json", coverage)
+        capture(
+            browser_output,
+            "00-inventory-assets.json",
+            json.loads(s.cli("inventory", "list", "assets", "--format", "json")),
+        )
         require(
             {row["coverage_class"] for row in coverage["assets"]}
             == {"result_required", "inactive", "unassigned", "no_assessable_policy", "invalid_resolution"},
@@ -190,15 +204,48 @@ def technical(root):
         ):
             require(expected in explanation, f"technical explanation lost {expected!r}")
         require("Objectives:" not in explanation, "technical explanation synthesized an Objective")
+        direct_explanation = json.loads(s.cli(
+            "assessment", "explain", "host/technical-A",
+            "--plan", str(plans / "host__technical-A.json"),
+            "--results", str(results), "--retained-evidence", str(evidence),
+            "--at", AT, "--as-of", AT, "--format", "json",
+            historical=True,
+        ))
+        require(not direct_explanation["objectives"],
+                "technical browser projection synthesized an Objective")
+        require(
+            direct_explanation["checks"][0]["required_evidence"][0]
+            ["selected_evidence"]["retained_evidence"]["match"]
+            == "exact_evidence_id_and_digest",
+            "technical browser projection did not exact-match retained Evidence",
+        )
+        capture(browser_output, "02-direct-technical-explanation.json", direct_explanation)
+        if browser_output is not None:
+            capture(browser_output, "02a-direct-without-evidence-bytes.json", json.loads(s.cli(
+                "assessment", "explain", "host/technical-A",
+                "--plan", str(plans / "host__technical-A.json"),
+                "--results", str(results), "--at", AT, "--as-of", AT,
+                "--format", "json", historical=True,
+            )))
 
         package = next(evidence.glob("*.json")); original = package.read_text()
         doc = json.loads(original); doc["payload"]["packages"] = []; package.write_text(json.dumps(doc))
-        _, _, failed_results = s.assess("host/technical-A", evidence=evidence, tag="absent-package")
+        _, failed_plans, failed_results = s.assess(
+            "host/technical-A", evidence=evidence, tag="absent-package"
+        )
         require(statuses(json.loads((failed_results / "host__technical-A.json").read_text())) == ["fail"],
                 "valid negative package evidence did not fail")
+        if browser_output is not None:
+            capture(browser_output, "03a-fail-status.json", json.loads(s.cli(
+                "assessment", "status", "--plan", str(failed_plans / "host__technical-A.json"),
+                "--results", str(failed_results), "--at", AT, "--as-of", AT,
+                "--format", "json", historical=True,
+            )))
 
         package.unlink()
-        _, _, missing_results = s.assess("host/technical-A", evidence=evidence, tag="missing")
+        _, missing_plans, missing_results = s.assess(
+            "host/technical-A", evidence=evidence, tag="missing"
+        )
         missing = json.loads((missing_results / "host__technical-A.json").read_text())
         require(statuses(missing) == ["unknown"]
                 and missing["dependency_dispositions"] == [{
@@ -216,6 +263,13 @@ def technical(root):
         )
         require("No matching routed linux.packages/v1 observation" in missing_explanation,
                 "missing evidence disposition was not explainable")
+        if browser_output is not None:
+            capture(browser_output, "03b-selection-unknown-explanation.json", json.loads(s.cli(
+                "assessment", "explain", "host/technical-A",
+                "--plan", str(missing_plans / "host__technical-A.json"),
+                "--results", str(missing_results), "--at", AT, "--as-of", AT,
+                "--format", "json", historical=True,
+            )))
 
         stale_doc = json.loads(original)
         stale_doc["collected_at"] = "2026-08-30T00:00:00Z"
@@ -325,7 +379,7 @@ def technical(root):
         )
         for index, (source, code, reason) in enumerate(error_cases):
             policy.write_text(source)
-            _, _, error_results = s.assess(
+            _, error_plans, error_results = s.assess(
                 "host/technical-A", evidence=evidence, tag=f"error-{index}"
             )
             error_report = json.loads(
@@ -340,6 +394,13 @@ def technical(root):
                     f"criterion error classification {code} was not durable and safe")
             require("private evaluator output" not in json.dumps(error_report),
                     "raw evaluator output was retained")
+            if browser_output is not None and index == 0:
+                capture(browser_output, "03c-error-status.json", json.loads(s.cli(
+                    "assessment", "status", "--plan",
+                    str(error_plans / "host__technical-A.json"),
+                    "--results", str(error_results), "--at", AT, "--as-of", AT,
+                    "--format", "json", historical=True,
+                )))
         policy.write_text(original_policy)
 
         assignment = s.project / "assignments/base.yaml"
@@ -362,13 +423,39 @@ def technical(root):
                                    "--comparison-plan", str(plans / "host__technical-A.json"), "--format", "json",
                                    historical=True))
         require(history["whole_operation"]["all_passed"], "technical historical happy outcome changed")
+        capture(browser_output, "03-technical-status.json", history)
+        capture(
+            browser_output,
+            "11-policy-diff.json",
+            json.loads(s.cli(
+                "policy", "diff", str(plans / "host__technical-A.json"),
+                str(overlay_plans / "host__technical-A.json"), "--format", "json",
+                historical=True, success=False,
+            )),
+        )
     finally:
         s.close()
 
 
-def iam(root, private_source):
+def iam(root, private_source, browser_output=None):
     s = Scenario(root, "company-iam-policy-assessment", private_source)
     try:
+        (s.project / "inventory/overlap.yaml").write_text("""\
+apiVersion: compliance.example/v1alpha1
+kind: InventoryGroup
+metadata: {name: company-iam-overlap}
+spec:
+  selector: {matchLabels: {iam-profile: company-iam-assessment}}
+""")
+        (s.project / "assignments/overlap.yaml").write_text("""\
+apiVersion: compliance.example/v1alpha1
+kind: PolicyAssignment
+metadata: {name: company-iam-overlap}
+spec:
+  targetRef: {kind: InventoryGroup, name: company-iam-overlap}
+  baselineRefs:
+    - {name: company.identity-access-objectives, revision: "1"}
+""")
         evidence = s.collect(); original = documents(evidence)
         happy, plans, results = s.assess("host/A", "host/B", evidence=evidence, tag="happy")
         require(happy["summary"]["accounting_complete"] and happy["summary"]["all_passed"], "IAM happy operation")
@@ -403,7 +490,25 @@ def iam(root, private_source):
             "Checks:\n  Access is granted through centrally governed roles" not in explanation,
             "IAM explanation reused Objective title as Check meaning",
         )
+        objective_explanation = json.loads(s.cli(
+            "assessment", "explain", "host/A",
+            "--plan", str(plans / "host__A.json"),
+            "--assessed-plans", str(plans), "--results", str(results),
+            "--retained-evidence", str(evidence), "--at", AT, "--as-of", AT,
+            "--format", "json", historical=True,
+        ))
         iam_control = next(row for row in plan_a["controls"] if row["implementation"] == "iam.integration.required")
+        iam_check = next(
+            row for row in objective_explanation["checks"]
+            if row["check"]["implementation"] == "iam.integration.required"
+        )
+        iam_dependency = iam_check["required_evidence"][0]
+        require(iam_dependency["inputs"].get("service") == "service/company-iam",
+                "IAM explanation lost exact plan-owned dependency input")
+        require(iam_dependency["selected_evidence"]["retained_evidence"]["match"]
+                == "exact_evidence_id_and_digest",
+                "IAM explanation did not exact-match retained Evidence")
+        capture(browser_output, "04-objective-assessment-explanation.json", objective_explanation)
         iam_ages = {d["max_age"] for d in iam_control["evidence"]}
         all_ages = {d["max_age"] for row in plan_a["controls"] for d in row["evidence"]}
         require(iam_ages == {"86400s"}, f"24h did not reach IAM dependencies: {iam_ages}")
@@ -416,8 +521,15 @@ def iam(root, private_source):
             restore(); path = next(evidence.glob(pattern)); doc = json.loads(path.read_text())
             if remove: path.unlink()
             else: change(doc); path.write_text(json.dumps(doc))
-            _, _, out = s.assess("host/A", evidence=evidence, tag=tag)
-            return json.loads((out / "host__A.json").read_text())
+            _, mutation_plans, out = s.assess("host/A", evidence=evidence, tag=tag)
+            report = json.loads((out / "host__A.json").read_text())
+            if browser_output is not None and tag == "unknown-relationship":
+                capture(browser_output, "04a-criterion-unknown-explanation.json", json.loads(s.cli(
+                    "assessment", "explain", "host/A", "--plan",
+                    str(mutation_plans / "host__A.json"), "--results", str(out),
+                    "--at", AT, "--as-of", AT, "--format", "json", historical=True,
+                )))
+            return report
         def iam_result(report):
             return next(row for row in report["results"]
                         if row["instance_id"] == "restricted.linux.rbac.company-iam-integration")
@@ -484,6 +596,7 @@ def iam(root, private_source):
         require(waived_asset["historical_outcome"]=="waived" and
                 waived_asset["current_qualification"]["recorded_waivers"][0]["qualification"] == "expired",
                 "expired waiver rewrote history")
+        capture(browser_output, "05-expired-waiver-status.json", waived_history)
 
         restore()
         for path in list(evidence.glob("host-A-iam-*.json")): path.unlink()
@@ -509,6 +622,8 @@ def iam(root, private_source):
                 any(row["current_qualification"]["selected_evidence"]["status"] == "reassessment_due"
                     for row in aged["assets"]),
                 "historical outcome/timeliness separation")
+        capture(browser_output, "06-current-qualification.json", current)
+        capture(browser_output, "07-aged-qualification.json", aged)
         mappings = json.loads(s.cli("assessment", "mappings", "--reference", "example-regulatory-framework:IAM-01",
                                       "--plan", str(plans / "host__A.json"), "--assessed-plans", str(plans),
                                       "--results", str(results), "--at", AT,
@@ -518,6 +633,7 @@ def iam(root, private_source):
                 and {row["historical_outcome"] for row in mappings["mappings"]} == {"pass"}
                 and "do not establish" in mappings["note"],
                 "company IAM mapping view exceeded traceability semantics")
+        capture(browser_output, "08-mappings-traceability.json", mappings)
         _, comparison_plans, _ = s.assess("host/A", evidence=evidence, tag="comparison-singleton")
         different = json.loads(s.cli(*history_args, "--as-of", AT, "--comparison-plan", str(comparison_plans / "host__A.json"), "--format", "json", historical=True))
         require(next(m for m in different["assets"] if m["asset_id"] == "host/A")["current_qualification"]["plan_alignment"] == "different_plan"
@@ -526,6 +642,42 @@ def iam(root, private_source):
         (results / "host__B.json").unlink()
         missing = json.loads(s.cli(*history_args, "--as-of", AT, "--format", "json", historical=True))
         require(not missing["whole_operation"]["accounting_complete"] and not missing["whole_operation"]["all_passed"], "missing exact operation result")
+        refusal_input = s.work / "external-refusals.json"
+        refusal_input.write_text(json.dumps({
+            "operation_id": missing["operation"]["operation_id"],
+            "assessment_instant": AT,
+            "refusals": [{
+                "asset_id": "host/B",
+                "authority": "synthetic-orchestrator",
+                "reference": "attempt/host-B",
+                "reason": "Synthetic external execution explicitly refused.",
+            }],
+        }))
+        refused = json.loads(s.cli(
+            *history_args, "--as-of", AT, "--external-refusals", str(refusal_input),
+            "--format", "json", historical=True,
+        ))
+        missing_b = next(row for row in refused["assets"] if row["asset_id"] == "host/B")
+        require(missing_b["historical_outcome"] is None
+                and not missing_b["expected_result_slot"]["present"]
+                and missing_b["external_refusal"]["authority"] == "synthetic-orchestrator",
+                "missing result and external refusal were not kept separate")
+        capture(browser_output, "09-missing-with-external-refusal.json", refused)
+        grouped = json.loads(s.cli(
+            *history_args, "--as-of", AT, "--by", "group", "--format", "json",
+            historical=True,
+        ))
+        require(grouped["whole_operation"]["selected_assets"] == 2,
+                "group projection inflated the frozen operation denominator")
+        overlap_groups = {
+            row["group_id"]: row["frozen_accounting"]["selected_assets"]
+            for row in grouped["groups"]
+            if row["group_id"] in {"company-iam-hosts", "company-iam-overlap"}
+        }
+        require(overlap_groups == {
+            "company-iam-hosts": 2, "company-iam-overlap": 2,
+        }, "overlapping group rows lost exact frozen membership")
+        capture(browser_output, "10-group-accounting.json", grouped)
         _, _, singleton_results = s.assess("host/B", evidence=evidence, tag="singleton")
         (results / "host__B.json").write_bytes((singleton_results / "host__B.json").read_bytes())
         require(not json.loads(s.cli(*history_args, "--as-of", AT, "--format", "json", historical=True))["whole_operation"]["accounting_complete"],
@@ -554,8 +706,18 @@ def iam(root, private_source):
 
 def main():
     parser = argparse.ArgumentParser(); parser.add_argument("--integration-root", type=Path, required=True); parser.add_argument("--private-source", type=Path)
+    parser.add_argument("--browser-output", type=Path)
     args = parser.parse_args(); root=args.integration_root
-    technical(root); iam(root, args.private_source or root / "external-sources/environment-private")
+    browser_output = args.browser_output.resolve() if args.browser_output else None
+    if browser_output is not None:
+        root = root.resolve()
+        require(root != browser_output and root not in browser_output.parents,
+                "browser response captures must remain outside the repository")
+        browser_output.mkdir(parents=True, exist_ok=True)
+    technical(root, browser_output); iam(
+        root, args.private_source or root / "external-sources/environment-private",
+        browser_output,
+    )
     print("IAM and technical-only semantic conformance anchors passed.")
 
 

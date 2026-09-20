@@ -73,3 +73,11 @@ uv run --project tooling python tooling/examples/prepare_policy_diff_set.py
 ```
 
 Pass `--output /tmp/compliance-policy-diff-demo` to retain the snapshots.
+
+## External derived-read browser
+
+[`read-browser/`](read-browser/) is an isolated dependency-free browser exercise.
+It loads only purpose-specific `compliance --format json` responses through a local
+file picker and rejects raw domain artifacts. Its walkthrough records the supported
+response families, acceptance distinctions and remaining product friction without
+adding a hosted service or browser-specific semantic model.
