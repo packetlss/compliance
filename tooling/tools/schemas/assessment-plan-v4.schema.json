@@ -101,22 +101,13 @@
                 "uniqueItems": true,
                 "items": {"$ref": "#/$defs/policyLocator"}
               },
-              "document": {"type": "object"},
-              "link_ids": {
-                "type": "array",
-                "minItems": 1,
-                "uniqueItems": true,
-                "items": {"type": "string", "minLength": 1}
-              }
+              "document": {"type": "object"}
             },
             "allOf": [
               {
                 "if": {"properties": {"kind": {"const": "ControlRealization"}}},
-                "then": {"not": {"anyOf": [
-                  {"required": ["document"]},
-                  {"required": ["link_ids"]}
-                ]}},
-                "else": {"required": ["document", "link_ids"]}
+                "then": {"not": {"required": ["document"]}},
+                "else": {"required": ["document"]}
               }
             ]
           }

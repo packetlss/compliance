@@ -72,7 +72,7 @@ The v4 plan retains one `parameters` object with:
 - exact selected ParameterPolicy documents, content digests and policy-source
   attribution;
 - every explicit group/assignment/ParameterPolicy applicability path; and
-- each exact consumer owner document and the effective authored link identities.
+- each exact direct-consumer ancestry document and its authored symbolic links.
 
 Declarations, schema documents, ancestry, bind/tailor operations, authored
 expectations, contributions and origins are retained inside those exact source

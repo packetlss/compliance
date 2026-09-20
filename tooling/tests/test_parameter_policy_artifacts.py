@@ -154,6 +154,73 @@ class ParameterPolicyArtifactTests(unittest.TestCase):
                 with self.assertRaises(ArtifactValidationError):
                     validate_assessment_plan(changed)
 
+    def test_additive_operation_content_pin_uses_catalog_normalization(self):
+        changed = copy.deepcopy(self.plan)
+        record = next(
+            item for item in changed["parameters"]["documents"]
+            if item["reference"] == "company.authorized-software-base@1"
+        )
+        record["document"]["spec"]["parameter_operations"][0]["to"].reverse()
+        record["digest"] = pp.resource_digest(record["document"])
+        self.resign(changed)
+
+        with self.assertRaisesRegex(ArtifactValidationError, "content pin mismatch"):
+            validate_assessment_plan(changed)
+
+    def test_parameter_policy_source_must_belong_to_recorded_composition(self):
+        changed = copy.deepcopy(self.plan)
+        changed["parameters"]["documents"][0]["policy_sources"][0][
+            "policy_source"
+        ] = "forged-unexecuted-source"
+        self.resign(changed)
+
+        with self.assertRaisesRegex(ArtifactValidationError, "absent from planning composition"):
+            validate_assessment_plan(changed)
+
+    def test_technical_consumer_replays_every_authored_effective_link(self):
+        changed = copy.deepcopy(self.plan)
+        consumer = changed["parameters"]["consumers"][0]
+        duplicate = copy.deepcopy(
+            consumer["document"]["spec"]["parameter_links"][0]
+        )
+        duplicate["id"] = "second-allowed-software-link"
+        consumer["document"]["spec"]["parameter_links"].append(duplicate)
+        old_digest = consumer["digest"]
+        consumer["digest"] = pp.digest(consumer["document"])
+        for baseline in changed["resolved_baselines"]:
+            if baseline["reference"] == consumer["reference"]:
+                baseline["digest"] = consumer["digest"]
+            for ancestor in baseline["lineage"]:
+                if ancestor["reference"] == consumer["reference"] and ancestor["digest"] == old_digest:
+                    ancestor["digest"] = consumer["digest"]
+        self.resign(changed)
+
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "ambiguous consumption destination",
+        ):
+            validate_assessment_plan(changed)
+
+    def test_technical_consumer_document_rejects_unrecognized_wire_fields(self):
+        changed = copy.deepcopy(self.plan)
+        consumer = changed["parameters"]["consumers"][0]
+        consumer["document"]["unrecognized"] = True
+        old_digest = consumer["digest"]
+        consumer["digest"] = pp.digest(consumer["document"])
+        for baseline in changed["resolved_baselines"]:
+            if baseline["reference"] == consumer["reference"]:
+                baseline["digest"] = consumer["digest"]
+            for ancestor in baseline["lineage"]:
+                if ancestor["reference"] == consumer["reference"] and ancestor["digest"] == old_digest:
+                    ancestor["digest"] = consumer["digest"]
+        self.resign(changed)
+
+        with self.assertRaisesRegex(
+            ArtifactValidationError,
+            "unsupported frozen technical consumer document syntax",
+        ):
+            validate_assessment_plan(changed)
+
     def test_policy_diff_treats_parameter_resolution_refusal_as_incomplete(self):
         assignments = copy.deepcopy(self.assignments)
         managed = next(item for item in assignments if item["id"] == "managed-linux-software")

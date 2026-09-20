@@ -2475,46 +2475,23 @@ def render_plan(
                 baseline["controls"] = {
                     item["instance_id"]: item for item in materialized
                 }
-                effective_link_ids = {
-                    link["id"] for link in baseline["parameter_links"]
-                }
                 for lineage_entry in baseline["lineage"]:
                     owner_reference = lineage_entry["reference"]
                     owner_document = baselines[owner_reference]
-                    links = [
-                        copy.deepcopy(link)
-                        for link in pp.authored_parameter_links(owner_document)
-                        if link["id"] in effective_link_ids
-                    ]
-                    if not links:
-                        continue
                     consumer = {
                         "kind": owner_document["kind"],
                         "reference": owner_reference,
                         "digest": owner_document["_digest"],
                         "policy_sources": copy.deepcopy(owner_document.get("_sources", [])),
                         "document": pp.document(owner_document),
-                        "link_ids": sorted(link["id"] for link in links),
                     }
                     key = (owner_document["kind"], owner_reference)
                     existing_consumer = parameter_consumers.get(key)
-                    if existing_consumer is not None:
-                        existing_owner = {
-                            field: value for field, value in existing_consumer.items()
-                            if field != "link_ids"
-                        }
-                        incoming_owner = {
-                            field: value for field, value in consumer.items()
-                            if field != "link_ids"
-                        }
-                        if existing_owner != incoming_owner:
-                            resolution_errors.append({
-                                "type": "parameter-consumer-conflict",
-                                "reference": owner_reference,
-                            })
-                        consumer["link_ids"] = sorted(set(
-                            existing_consumer["link_ids"] + consumer["link_ids"]
-                        ))
+                    if existing_consumer is not None and existing_consumer != consumer:
+                        resolution_errors.append({
+                            "type": "parameter-consumer-conflict",
+                            "reference": owner_reference,
+                        })
                     parameter_consumers[key] = consumer
 
             resolved_baselines.append({

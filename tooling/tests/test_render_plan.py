@@ -10,6 +10,7 @@ from jsonschema import Draft202012Validator
 
 from contract_fixtures import evidence_schema, fixture_root
 
+from tools import policy_parameters as pp
 from tools.artifact_validation import validate_assessment_plan
 from tools.render_plan import (
     BaselineResolutionError,
@@ -469,6 +470,41 @@ class BaselineOverlayTests(unittest.TestCase):
             [item["id"] for item in resolved["parameter_links"]],
             ["replacement-link"],
         )
+        locator = [{"policy_source": "test", "path": "baselines/test.json"}]
+        consumers = [
+            {
+                "kind": self.catalog[reference]["kind"],
+                "reference": reference,
+                "digest": self.catalog[reference]["_digest"],
+                "policy_sources": locator,
+                "document": pp.document(self.catalog[reference]),
+            }
+            for reference in (self.base_reference, "company.substitute@1")
+        ]
+        frozen = {
+            "parameters": {"consumers": consumers},
+            "resolved_baselines": [{
+                "reference": "company.substitute@1",
+                "lineage": [
+                    {
+                        "reference": item["reference"],
+                        "digest": item["digest"],
+                        "policy_sources": locator,
+                    }
+                    for item in consumers
+                ],
+            }],
+        }
+        self.assertEqual(
+            [item["id"] for item in pp.frozen_technical_links(frozen)],
+            ["replacement-link"],
+        )
+        frozen["parameters"]["consumers"].pop(0)
+        with self.assertRaisesRegex(
+            pp.ParameterResolutionError,
+            "missing frozen technical consumer ancestor document",
+        ):
+            pp.frozen_technical_links(frozen)
 
     def test_substitution_rejects_replacement_link_for_another_check(self):
         overlay = self.company_overlay()
