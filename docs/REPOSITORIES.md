@@ -1,6 +1,33 @@
 # Repository and logical ownership map
 
-Repository layout is not semantic policy, release, or runtime identity. This document defines current logical ownership in the consolidated repository.
+Repository layout is not semantic policy, release, or runtime identity. This
+document owns repository strategy and current logical ownership. Existing roots,
+release units and implementation-specific validation responsibilities below describe
+the **implemented legacy** tree. [ADR 0025](adr/0025-trusted-snapshot-successor.md)
+accepts a successor, whose platform and packaging remain undecided; no successor
+code tree exists by virtue of that decision.
+
+## Successor repository strategy
+
+Keep this repository as the sole authority for non-sensitive successor source and
+documentation. Preserve the legacy baseline in Git history and plan a separately
+authorized durable legacy reference before cutover. #206 creates no repository,
+tag or release, rewrites no history and deletes no legacy code.
+
+Plan an isolated blank successor tree; `successor/` is a candidate temporary path,
+not a frozen public contract or an instruction to create it now. New implementation
+must not import legacy runtime modules, invoke the legacy CLI, depend on legacy test
+helpers or use legacy generated schemas as authority. Existing authored intent and
+edge cases may inform fresh examples; code and fixtures do not survive by default.
+No staging directory is an access-control boundary: real private inputs remain in
+their separate authorized environments.
+
+At explicit cutover there is one current implementation, under
+[ADR 0025's compatibility decision and gates](adr/0025-trusted-snapshot-successor.md#repository-and-compatibility-decision).
+The current `tooling/` Python root, `compliance-tooling` distribution, policy-source
+release construction and CI responsibilities remain in force for legacy work until
+their owning bounded migrations are reviewed. They do not prescribe the successor's
+source layout, release units or platform.
 
 ## Active repository
 
@@ -14,7 +41,7 @@ Repository layout is not semantic policy, release, or runtime identity. This doc
 | Ordinary projects | `projects/mock-fleet/`, `projects/server-personas/`, `projects/alder-forge-dcc-level3/` | Independent exploratory/reference project inventory, assignments, fixtures, waivers and generated-state paths |
 | IAM synthetic boundary | `verification/fixtures/iam-private-boundary/` | Synthetic proof of a separately materialized `environment-private` source; not a real private-data repository |
 | Canonical scenarios | `verification/scenarios/` | Deterministic complete integration, expected outcomes, all 27 public CLI leaves and 19 domain features |
-| System architecture/workflow | `docs/`, root `AGENTS.md` | Current normative architecture, ADRs, workflow, repository/trust boundaries and migration provenance |
+| System architecture/workflow | `docs/`, root `AGENTS.md` | Routed implemented legacy and accepted successor architecture, ADRs, workflow, repository/trust boundaries and migration provenance |
 | CI/toolchain | `.github/`, `toolchain/`, root scripts/tests | Stable component, scenario and installed-release gates |
 
 ## Logical ownership rules

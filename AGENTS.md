@@ -16,6 +16,7 @@ Read only the material applicable to the task. If instructions conflict, stop an
 | Change area | Required routing |
 | --- | --- |
 | Architecture, semantics, trust, release, or compatibility | `docs/ARCHITECTURE.md`, `docs/CONTRACT_MATURITY.md`, applicable ADRs |
+| Accepted successor direction, acceptance stories, or platform-experiment specification | `docs/adr/0025-trusted-snapshot-successor.md`, `docs/SUCCESSOR_ARCHITECTURE.md`; no executable successor work without its separately promoted contract |
 | Repository ownership or development workflow | `docs/REPOSITORIES.md`, `docs/DEVELOPMENT_WORKFLOW.md` |
 | Tooling, CLI, schemas, provenance, packaging | `tooling/AGENTS.md`, then its linked detailed contract |
 | Reusable policy and controls | `policy-sources/control-library/AGENTS.md` |
@@ -25,6 +26,13 @@ Read only the material applicable to the task. If instructions conflict, stop an
 | IAM private-boundary fixture | `verification/fixtures/iam-private-boundary/AGENTS.md` |
 
 Historical `packetlss-labs` repositories are archived provenance only. Never treat their topology, workflow, or historical copies of current documents as active authority.
+
+ADR 0025 and the successor architecture describe **accepted direction, not an
+implemented replacement**. Existing component instructions and contracts govern
+the implemented legacy tree. Do not carry its content identity, schemas, Python
+packaging or artifact mechanisms into the successor by default. Do not apply target
+retirements to legacy runtime or validation without an explicitly reviewed migration.
+Roadmap #85 owns sequencing, not a second architecture specification.
 
 ## T3 Code task lifecycle
 
@@ -41,15 +49,15 @@ Implementation-local questions may be resolved only when they do not change sema
 
 ## Global invariants
 
-- Runtime and semantic identity is content-addressed; Git repository, owner, commit, checkout path, URL, and source order are acquisition/review metadata unless a contract explicitly consumes those bytes.
-- `tooling/` is the sole Python source/build root and the distribution remains `compliance-tooling` unless separately reviewed.
+- **Implemented legacy only:** runtime and semantic identity is content-addressed; Git repository, owner, commit, checkout path, URL, and source order are acquisition/review metadata unless a contract explicitly consumes those bytes. ADR 0025 owns the successor trust reduction.
+- **Implemented legacy only:** `tooling/` is the sole Python source/build root and the distribution remains `compliance-tooling`. These remain enforced until an explicitly reviewed migration; they do not select the successor platform or packaging.
 - Policy inputs are independently named and materialized semantic roots. Co-location must not create a merged tree or precedence.
 - Source/file order is nonsemantic. Exact-identical same-identity definitions may coalesce; divergent definitions fail closed.
 - Technical assessment and optional requirement/realization assurance remain complementary paths.
 - Missing, stale, invalid, or inconclusive required evidence produces `unknown`, never `pass`; authored realization/adoption state is not implementation evidence.
-- The provenance-bearing assessment plan is the external-adapter handoff. Backend compilation, credentials/state, apply authority, and executable adapter/plugin runtime remain outside the core.
+- The resolved assessment plan is the external-adapter handoff (provenance-bearing under the legacy contract). Backend compilation, credentials/state, apply authority, and executable adapter/plugin runtime remain outside the core.
 - Real private inventory, evidence, realizations, credentials, secrets, provider state, and results stay outside this repository.
-- Generated evidence, plans, results, caches, and adapter/backend output are untracked execution material, not authored policy. Retained validated plans/results preserve their exact historical assertion.
+- Generated evidence, plans, results, caches, and adapter/backend output are untracked execution material, not authored policy. Retained plans/results preserve their exact historical assertion; legacy validation/identity rules remain enforced, while successor record representation/admission remains an open decision.
 - Verification policy remains source-only with no independent hosted release lane.
 - Firewall and network-policy work is out of scope unless explicitly reopened.
 
@@ -60,7 +68,7 @@ not redesign them incidentally.
 
 Use applicable fast tests against the working tree during implementation. Select full canonical local gates by change impact or reproduction need; they are not an unconditional pre-PR requirement. Canonical gates that export committed inputs require a clean, committed candidate revision; create a checkpoint commit before running them. Local evidence never substitutes for exact-head CI.
 
-Every PR must record its contract, change and behavioral impact, validation actually performed, architecture/provenance/compatibility/trust impact, material findings, and exact-head independent review outcome. Preserve these stable CI contexts on every PR:
+Every PR must record its contract, change and behavioral impact, validation actually performed, architecture/provenance/compatibility/trust impact, material findings, and exact-head independent review outcome. Preserve these stable CI contexts on every PR, including successor documentation. Their implementation-specific responsibilities validate the legacy tree until a bounded successor migration replaces them; target retirement is not permission to bypass them:
 
 - `component-validation`
 - `verification-scenarios`

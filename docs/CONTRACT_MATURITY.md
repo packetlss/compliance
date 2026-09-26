@@ -1,8 +1,25 @@
 # Contract maturity and compatibility
 
-Status: **Current selective-freeze development policy**
+Status: **Accepted successor direction alongside implemented experimental legacy**
 
 Historical detailed audits remain in `packetlss-labs/compliance-workspace`; this file owns the active compatibility/freeze rules in this repository.
+
+## Successor and legacy status
+
+| Surface | Maturity and authority |
+| --- | --- |
+| Foundational responsibilities and outcome meanings | Frozen by [ADR 0023](adr/0023-foundational-semantic-responsibility-boundaries.md), retained by the successor. |
+| Trusted-snapshot successor direction | Accepted design, not implemented. [Target architecture](SUCCESSOR_ARCHITECTURE.md) owns behavior and stories; [ADR 0025](adr/0025-trusted-snapshot-successor.md) owns trust reduction, retired guarantees and supersession. |
+| Production platform and operating/value/retention contracts | Unresolved; the [four decision questions](SUCCESSOR_ARCHITECTURE.md#unresolved-decision-questions) require explicit promotion before production depends on answers. Go/embedded OPA is a hypothesis only. |
+| Platform experiment | Specification only. Separate authorization is required under ADR 0025's gates; prototypes do not imply production acceptance. |
+| Existing Python tooling, schemas, identifiers, artifacts and interfaces | Implemented experimental legacy. Their detailed contracts below remain valid for that implementation, without automatic successor compatibility. |
+| Guarantees retired from the successor | Still implemented where the legacy contracts require them; “retired from target” does not mean “removed from current runtime.” ADR 0025 enumerates them. |
+
+The latest [#85 sequencing decision](https://github.com/packetlss/compliance/issues/85#issuecomment-5844706143)
+supersedes the post-ADR-0024 consolidation/freeze sequence. No further identity/wire
+freeze, completion of paused cleanup issues or comprehensive exploration is an
+automatic prerequisite. Future compatibility commitments still require explicit
+review; neither documentation acceptance nor a successful experiment creates one.
 
 ## Compatibility is explicit
 
@@ -53,7 +70,7 @@ different representations. Reassigning an owner, weakening a boundary or changin
 frozen meaning requires explicit successor architecture and a deliberate
 compatibility/migration decision.
 
-Everything below remains classified at its own representational maturity. In
+The legacy contracts below remain classified at their own representational maturity. In
 particular, current schemas, identifiers, schema URIs, identity algorithms, CLI and
 machine-readable views, assessment v4 wires, Requirement/Realization and framework-
 declaration representations, evidence organization, and their aggregation/wire
@@ -61,7 +78,7 @@ details remain experimental unless separately frozen. A coordinated pre-wire
 migration may replace those representations without a compatibility reader while
 preserving ADR 0023 semantics and historical meaning under historical tooling.
 
-## Implemented experimental interfaces
+## Implemented legacy experimental interfaces
 
 The producer and derived-read interfaces are implemented and remain experimental.
 The producer surface provides explicit-source discovery, canonical schema export,
@@ -77,12 +94,15 @@ are not a visualization API; plan-owned meaning is not copied into authoritative
 results. See the [read interface](../tooling/docs/cli.md#experimental-external-read-consumption).
 
 The producer/read exercises and their joint reassessment are complete. They create
-no additional freeze or compatibility commitment. Active consolidation scope and
-sequencing belong to [roadmap #85](https://github.com/packetlss/compliance/issues/85)
-and its latest superseding comments; further freeze requires separate explicit
-promotion after the accepted consolidation gate.
+no additional freeze or compatibility commitment. Active scope and sequencing
+belong to [roadmap #85](https://github.com/packetlss/compliance/issues/85) and its
+latest superseding comments, as routed above. The former consolidation gate is no
+longer the forward roadmap.
 
-## Identity-algorithm freeze lifecycle
+## Legacy identity-algorithm freeze lifecycle
+
+These rules describe the legacy cryptographic contracts; they are not a successor
+identity roadmap. ADR 0025 retires the application-level provenance chains.
 
 For cryptographic identity algorithms:
 
@@ -104,7 +124,7 @@ source-tree identity.
 
 Raw source-tree, executable, wheel/archive and other byte/path digest algorithms retain their own exact construction and do not use JCS merely because they are content-addressed.
 
-## Current accepted core
+## Implemented legacy core
 
 The current core consists of:
 
@@ -126,7 +146,7 @@ algorithms provide assessment snapshot identity.
 
 In-core configuration intents/compiler/renderers/configuration artifact families/backend apply authority are removed and have no ADR 0007 successor.
 
-## Current experimental contracts
+## Implemented legacy experimental contracts
 
 These contracts are implemented, but their representations are not frozen. The
 [system architecture](ARCHITECTURE.md) states their current responsibilities;
@@ -159,7 +179,7 @@ selects projects without composing policy; its data/location is nonsemantic.
 `composition-lock` is the complete expected-composition abstraction. These current
 names do not create aliases for retired vocabulary or compatibility commitments.
 
-## Objective assurance and ParameterPolicy successor
+## Implemented ADR 0024 legacy migration
 
 [ADR 0024](adr/0024-objective-assurance-and-parameter-policy.md) under
 [#192](https://github.com/packetlss/compliance/issues/192) has **Tranche A implemented
@@ -167,7 +187,7 @@ under #199 and Tranche B implemented under #201**. The ParameterPolicy ownership
 frozen representation are current experimental contracts; predecessor artifacts
 require historical tooling.
 
-The successor retains optional Objective assurance, exact zero/one/multiple
+That migration retains optional Objective assurance, exact zero/one/multiple
 realization resolution and conservative implemented Check outcomes. It removes
 `satisfaction.allOf`, constant RequirementBaseline membership `required: true`,
 fabricated adoption and absence-as-Assessment-FAIL. Implementation gaps remain
@@ -183,9 +203,9 @@ policy-owned freshness and order independence remain unchanged.
 
 Retain source facts once in exact plans and independently reconstruct derived
 parameter summaries; preserve authored expectations and validate materialized
-inputs. Existing identity architecture remains, but the later coordinated migration
-intentionally changes member-plan digests, operation IDs, bound plan IDs and result
-identities. No schema/wire/algorithm freeze, alias, dual reader or historical
+inputs. Legacy identity architecture remains; the coordinated migration changed
+member-plan digests, operation IDs, bound plan IDs and result identities. No
+schema/wire/algorithm freeze, alias, dual reader or historical
 conversion follows. Historical artifacts keep their original tooling and meaning.
 
 Follow-on A (assurance simplification) and B (parameter ownership/representation)
@@ -206,9 +226,13 @@ assertion and the framework `external-judgment` category remain historical. Curr
 ADRs and contracts do not reinterpret their old artifacts. Git/releases and ADR
 supersession records preserve their provenance.
 
-## Current maturity guidance
+## Legacy maturity guidance
 
-### Compatibility candidates / likely stable direction
+### Former candidates, not successor commitments
+
+These were legacy compatibility candidates/likely stable directions. They are not
+an active freeze queue or a successor acceptance list; use ADR 0025's supersession
+map to distinguish retained responsibilities from retired mechanisms.
 
 - named policy-source composition by stable name + actual content digest;
 - no source-order precedence and identical-only coalescing;
