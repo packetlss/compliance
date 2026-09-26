@@ -136,12 +136,17 @@ type Attribution struct {
 	Source   string
 	Revision string
 }
+type AppliedChange struct {
+	Change Change
+	Policy Selection
+	Parent Guard
+}
 type ResolvedCheck struct {
 	Definition   Check
 	Desired      any
 	FreshSeconds int64
 	Attribution  []Attribution
-	Changes      []Change
+	Changes      []AppliedChange
 }
 type ResolvedObjective struct {
 	Definition  Objective

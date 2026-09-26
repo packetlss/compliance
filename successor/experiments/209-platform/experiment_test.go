@@ -106,7 +106,7 @@ func TestStories1And2PersonaTrust(t *testing.T) {
 	found := false
 	for _, c := range sp.Checks {
 		if c.Definition.ID == "forward" {
-			found = len(c.Changes) == 1 && c.Changes[0].Expected == json.Number("0") && c.Changes[0].Value == json.Number("1") && c.Changes[0].Approval != ""
+			found = len(c.Changes) == 1 && c.Changes[0].Change.Expected == json.Number("0") && c.Changes[0].Change.Value == json.Number("1") && c.Changes[0].Change.Approval != ""
 		}
 	}
 	if !found {
@@ -640,5 +640,100 @@ func TestUnicodeValueBoundary(t *testing.T) {
 		if e := Decode([]byte(s), &x); e != nil {
 			t.Fatal(e)
 		}
+	}
+}
+
+func TestReviewDeterministicTailoringAndWaiverIdentity(t *testing.T) {
+	s := fixture(t)
+	other := s.Sources[0].Policies[1]
+	other.ID = "another-container"
+	other.Changes = append([]Change{}, other.Changes...)
+	other.Changes[0].Reason = "independent approved routing"
+	other.Changes[0].Approval = "review-alternative"
+	s.Sources[0].Policies = append(s.Sources[0].Policies, other)
+	s.Sources[0].Assignments[1].Policies = append(s.Sources[0].Assignments[1].Policies, other.ID)
+	var expected []AppliedChange
+	for i := 0; i < 100; i++ {
+		p, e := Resolve(s)
+		if e != nil {
+			t.Fatal(e)
+		}
+		for _, c := range subject(t, p, "C").Checks {
+			if c.Definition.ID == "forward" {
+				if len(c.Changes) != 2 {
+					t.Fatal("lost tailoring path")
+				}
+				for _, change := range c.Changes {
+					if change.Policy.ID == "" || change.Policy.Revision == "" || len(change.Policy.Sources) != 1 || change.Parent.Parent != "standard" {
+						t.Fatal("missing change attribution", change)
+					}
+				}
+				if i == 0 {
+					expected = c.Changes
+				} else if !equal(expected, c.Changes) {
+					t.Fatal("nondeterministic deviation explanation")
+				}
+			}
+		}
+	}
+	s = fixture(t)
+	w := s.Sources[0].Waivers[0]
+	s.Sources[0].Waivers = append(s.Sources[0].Waivers, w)
+	_, r, _ := assess(t, s)
+	if outcome(t, r, "C", "audit").Status != "WAIVED" {
+		t.Fatal("exact duplicate did not coalesce")
+	}
+	s.Sources[0].Waivers[1].Start = "2026-10-01T00:00:00Z"
+	s.Sources[0].Waivers[1].End = "2026-10-02T00:00:00Z"
+	wantRefusal(t, s)
+}
+func TestReviewRetainedObservationAndObjectiveReferences(t *testing.T) {
+	_, r, _ := assess(t, fixture(t))
+	for i := range r.Results {
+		if r.Results[i].Subject == "C" {
+			for j := range r.Results[i].Outcomes {
+				o := &r.Results[i].Outcomes[j]
+				if o.Check == "forward" {
+					o.Selected[0].ID = "S-forward"
+					uses := []Use{}
+					for _, u := range o.Candidates {
+						if u.Candidate == "C-forward" {
+							continue
+						}
+						if u.Candidate == "S-forward" {
+							u.Reason = "qualified"
+						}
+						uses = append(uses, u)
+					}
+					o.Candidates = uses
+				}
+			}
+		}
+	}
+	if ValidateRecord(r) == nil {
+		t.Fatal("conflicting complete observation IDs admitted across results")
+	}
+	for _, mode := range []string{"foreign-objective", "missing-realization-id", "invalid-state", "contradictory-gap", "missing-determination-basis"} {
+		t.Run(mode, func(t *testing.T) {
+			_, r, _ := assess(t, fixture(t))
+			o := &r.Plan.Subjects[0].Objectives[0]
+			switch mode {
+			case "foreign-objective":
+				o.Realization.Objective = "foreign"
+			case "missing-realization-id":
+				o.Realization.ID = ""
+			case "invalid-state":
+				o.Realization.State = "invented"
+				o.Gap = true
+			case "contradictory-gap":
+				o.Gap = true
+			case "missing-determination-basis":
+				o.Realization.State = "not-applicable"
+				o.Realization.Checks = nil
+			}
+			if ValidateRecord(r) == nil {
+				t.Fatal("invalid realization relationship accepted")
+			}
+		})
 	}
 }

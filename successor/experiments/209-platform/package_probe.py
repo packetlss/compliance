@@ -81,7 +81,7 @@ def main():
         assert json.loads(invoke("explain", record + "0")[0]) == summary
         subprocess.run(["go", "version", "-m", str(binary)], check=True)
         print(json.dumps({"os": platform.system(), "architecture": platform.machine(),
-                          "platform": platform.platform(), "isolation": isolation,
+                          "platform": platform.platform(), "python_harness": platform.python_version(), "isolation": isolation,
                           "binary_bytes": binary.stat().st_size,
                           "gzip_package_bytes": (stage / "package.tar.gz").stat().st_size,
                           "record_bytes": (stage / "record.json0").stat().st_size,

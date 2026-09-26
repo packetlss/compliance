@@ -25,12 +25,13 @@ func insert[T any](m map[string]T, id string, v T) error {
 }
 
 type catalog struct {
-	checks       map[string]Check
-	policies     map[string]Policy
-	parameters   map[string]Parameter
-	objectives   map[string]Objective
-	realizations map[string]Realization
-	origins      map[string][]Attribution
+	checks        map[string]Check
+	policies      map[string]Policy
+	parameters    map[string]Parameter
+	objectives    map[string]Objective
+	realizations  map[string]Realization
+	origins       map[string][]Attribution
+	policyOrigins map[string][]Attribution
 }
 
 func Resolve(s Snapshot) (Plan, error) {
@@ -42,7 +43,8 @@ func Resolve(s Snapshot) (Plan, error) {
 		return p, fail("invalid selected subjects")
 	}
 	sort.Strings(p.Slots)
-	c := catalog{map[string]Check{}, map[string]Policy{}, map[string]Parameter{}, map[string]Objective{}, map[string]Realization{}, map[string][]Attribution{}}
+	c := catalog{map[string]Check{}, map[string]Policy{}, map[string]Parameter{}, map[string]Objective{}, map[string]Realization{}, map[string][]Attribution{}, map[string][]Attribution{}}
+	waivers := map[string]Waiver{}
 	sources := map[string]Source{}
 	for _, src := range s.Sources {
 		if src.Revision == "" {
@@ -60,6 +62,11 @@ func Resolve(s Snapshot) (Plan, error) {
 	sort.Strings(names)
 	for _, name := range names {
 		src := sources[name]
+		for _, w := range src.Waivers {
+			if e := insert(waivers, w.ID, w); e != nil {
+				return p, e
+			}
+		}
 		for _, x := range src.Checks {
 			if x.Revision == "" || x.Meaning == "" || x.Module == "" || len(x.Module) > 16384 || len(x.Schema) == 0 || !validType(x.ValueType) {
 				return p, fail("invalid check %s", x.ID)
@@ -81,6 +88,7 @@ func Resolve(s Snapshot) (Plan, error) {
 			if e := insert(c.policies, x.ID, x); e != nil {
 				return p, e
 			}
+			c.policyOrigins[x.ID] = append(c.policyOrigins[x.ID], Attribution{src.Name, src.Revision})
 		}
 		for _, x := range src.Parameters {
 			if x.Revision == "" {
@@ -178,21 +186,24 @@ func Resolve(s Snapshot) (Plan, error) {
 					}
 				}
 			}
-			for _, w := range src.Waivers {
-				if w.Subject == id {
-					start, e := stamp(w.Start)
-					if e != nil {
-						return p, e
-					}
-					end, e := stamp(w.End)
-					if e != nil || !end.After(start) || w.ID == "" || w.Reason == "" || w.Approval == "" {
-						return p, fail("invalid waiver")
-					}
-					if _, ok := c.checks[w.Check]; !ok {
-						return p, fail("waiver check missing")
-					}
-					sp.Waivers = append(sp.Waivers, w)
-				}
+		}
+		for _, w := range waivers {
+			start, e := stamp(w.Start)
+			if e != nil {
+				return p, e
+			}
+			end, e := stamp(w.End)
+			if e != nil || !end.After(start) || w.Reason == "" || w.Approval == "" {
+				return p, fail("invalid waiver")
+			}
+			if _, ok := subjects[w.Subject]; !ok {
+				return p, fail("waiver subject missing")
+			}
+			if _, ok := c.checks[w.Check]; !ok {
+				return p, fail("waiver check missing")
+			}
+			if w.Subject == id {
+				sp.Waivers = append(sp.Waivers, w)
 			}
 		}
 		vals := map[string]map[string]any{}
@@ -231,6 +242,18 @@ func Resolve(s Snapshot) (Plan, error) {
 				if !equal(old.Definition, rc.Definition) || !equal(old.Desired, rc.Desired) || old.FreshSeconds != rc.FreshSeconds {
 					return fail("contradictory check %s", cid)
 				}
+				changes := map[string]AppliedChange{}
+				for _, change := range append(append([]AppliedChange{}, old.Changes...), rc.Changes...) {
+					if e := insert(changes, change.Policy.ID, change); e != nil {
+						return e
+					}
+				}
+				old.Changes = nil
+				for _, change := range changes {
+					old.Changes = append(old.Changes, change)
+				}
+				sort.Slice(old.Changes, func(i, j int) bool { return old.Changes[i].Policy.ID < old.Changes[j].Policy.ID })
+				resolved[cid] = old
 				return nil
 			}
 			resolved[cid] = rc
@@ -307,6 +330,7 @@ func Resolve(s Snapshot) (Plan, error) {
 			sp.Objectives = append(sp.Objectives, ro)
 		}
 		for _, rc := range resolved {
+			sort.Slice(rc.Changes, func(i, j int) bool { return rc.Changes[i].Policy.ID < rc.Changes[j].Policy.ID })
 			sp.Checks = append(sp.Checks, rc)
 		}
 		for _, ex := range excluded {
@@ -451,7 +475,7 @@ func (c catalog) policy(id string, vals map[string]map[string]any, seen map[stri
 		}
 		changed[ch.Check] = true
 		rc.Desired = ch.Value
-		rc.Changes = append(rc.Changes, ch)
+		rc.Changes = append(rc.Changes, AppliedChange{ch, Selection{p.ID, p.Revision, c.policyOrigins[p.ID]}, p.Parent})
 		checks[ch.Check] = rc
 	}
 	for _, x := range p.Exclusions {

@@ -12,6 +12,10 @@ func validatePlan(p Plan) error {
 		return fail("invalid plan membership")
 	}
 	seen := map[string]bool{}
+	definitions := map[string]Check{}
+	objectives := map[string]Objective{}
+	realizations := map[string]Realization{}
+	waivers := map[string]Waiver{}
 	for _, sp := range p.Subjects {
 		if !contains(p.Slots, sp.Subject) || seen[sp.Subject] {
 			return fail("plan subject membership")
@@ -22,6 +26,23 @@ func validatePlan(p Plan) error {
 			if checks[c.Definition.ID] || c.Definition.ID == "" || !typed(c.Desired, c.Definition.ValueType) || c.FreshSeconds <= 0 || c.Definition.Meaning == "" || len(c.Attribution) == 0 {
 				return fail("invalid retained check")
 			}
+			if e := insert(definitions, c.Definition.ID, c.Definition); e != nil {
+				return e
+			}
+			for _, a := range c.Attribution {
+				if a.Source == "" || a.Revision == "" {
+					return fail("invalid check attribution")
+				}
+			}
+			changes := map[string]AppliedChange{}
+			for _, change := range c.Changes {
+				if change.Change.Check != c.Definition.ID || change.Policy.Revision == "" || len(change.Policy.Sources) == 0 || change.Change.Reason == "" || change.Change.Approval == "" {
+					return fail("invalid tailoring attribution")
+				}
+				if e := insert(changes, change.Policy.ID, change); e != nil {
+					return e
+				}
+			}
 			checks[c.Definition.ID] = true
 		}
 		objs := map[string]bool{}
@@ -30,6 +51,24 @@ func validatePlan(p Plan) error {
 				return fail("Objective membership")
 			}
 			objs[o.Definition.ID] = true
+			if o.Definition.Meaning == "" || o.Definition.Baseline == "" {
+				return fail("missing Objective meaning/group")
+			}
+			if e := insert(objectives, o.Definition.ID, o.Definition); e != nil {
+				return e
+			}
+			if o.Realization.ID == "" {
+				if !o.Gap || !equal(o.Realization, Realization{}) {
+					return fail("invalid missing realization")
+				}
+				continue
+			}
+			if o.Realization.Objective != o.Definition.ID {
+				return fail("realization Objective reference")
+			}
+			if e := insert(realizations, o.Realization.ID, o.Realization); e != nil {
+				return e
+			}
 			if o.Realization.State == "implemented" {
 				if o.Gap || len(o.Realization.Checks) == 0 || !unique(o.Realization.Checks) {
 					return fail("invalid retained realization")
@@ -39,8 +78,23 @@ func validatePlan(p Plan) error {
 						return fail("missing realization check")
 					}
 				}
-			} else if !o.Gap && o.Realization.State != "not-applicable" {
-				return fail("invalid gap")
+			} else {
+				if !contains([]string{"not-implemented", "not-applicable"}, o.Realization.State) || o.Gap != (o.Realization.State == "not-implemented") || len(o.Realization.Checks) != 0 || o.Realization.Reason == "" || o.Realization.Approval == "" {
+					return fail("invalid retained determination")
+				}
+			}
+		}
+		for _, w := range sp.Waivers {
+			start, e := stamp(w.Start)
+			if e != nil {
+				return e
+			}
+			end, e := stamp(w.End)
+			if e != nil || !end.After(start) || w.Subject != sp.Subject || w.Check == "" || w.Reason == "" || w.Approval == "" {
+				return fail("invalid retained waiver")
+			}
+			if e := insert(waivers, w.ID, w); e != nil {
+				return e
 			}
 		}
 		for _, x := range sp.Exclusions {
@@ -64,6 +118,7 @@ func ValidateRecord(r Record) error {
 	}
 	ids := map[string]Result{}
 	slots := map[string]Result{}
+	selected := map[string]Observation{}
 	for _, result := range r.Results {
 		if result.Operation != r.Operation || result.Plan != r.Plan.ID {
 			return fail("foreign result reference")
@@ -121,7 +176,6 @@ func ValidateRecord(r Record) error {
 			if out.Status != "UNKNOWN" && len(out.Selected) == 0 {
 				return fail("missing retained observation")
 			}
-			selected := map[string]Observation{}
 			uses := map[string]string{}
 			for _, u := range out.Candidates {
 				if u.Candidate == "" || u.Reason == "" {

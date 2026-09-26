@@ -153,10 +153,20 @@ integration evidence are recorded in the PR. Before merge, the administrator mus
 require all three real experiment contexts from their observed GitHub Actions source,
 preserving `successor-foundation`. No ruleset is changed by this experiment.
 
-Local measured run (2026-09-26): executable **23,359,648 bytes**; gzip package
-**7,276,142 bytes**; representative retained document **39,207 bytes**. Five-sample
-medians: startup/usage **4.48 ms**, assessment **8.41 ms**, explanation **6.37 ms**.
+Local measured run (2026-09-26): executable **23,380,128 bytes**; gzip package
+**7,279,579 bytes**; representative retained document **39,676 bytes**. Five-sample
+medians: startup/usage **4.77 ms**, assessment **8.00 ms**, explanation **6.54 ms**.
 The cancellation test interrupted its expensive cross product at approximately
 100 ms (the configured cooperative deadline). Gzip container timestamps can change
 archive bytes/size between runs; no reproducible-binary or content-identity claim
 is made. Exact timings and platform details print on each run.
+
+
+Independent first-review findings were implementation-local: nondeterministic loss
+of coalesced change attribution, inconsistent duplicate waiver handling, observation
+ID conflicts escaping across outcomes, and mismatched retained Objective references.
+`TestReviewDeterministicTailoringAndWaiverIdentity` and
+`TestReviewRetainedObservationAndObjectiveReferences` reproduce these cases and now
+assert deterministic complete attribution, same-ID coalescence/conflict refusal,
+record-wide observation identity and exact realization/Objective relationships.
+The PR records re-review on the final head; the first review is not final-head evidence.
