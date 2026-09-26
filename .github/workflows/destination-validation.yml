@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Admit target and changed scope
@@ -35,10 +35,22 @@ jobs:
           TARGET: ${{ github.base_ref || github.ref_name }}
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
-          if [[ "$BASE" == 0000000000000000000000000000000000000000 ]]; then BASE="$HEAD_SHA"; fi
-          scripts/dev route --target "$TARGET" --base "$BASE" --head "$HEAD_SHA" >> "$GITHUB_OUTPUT"
+          if [[ "$TARGET" == main ]]; then
+            printf 'target=main\nlegacy=true\n' >> "$GITHUB_OUTPUT"
+          elif [[ "$TARGET" == successor ]]; then
+            if [[ -n "$PR_NUMBER" ]]; then
+              git fetch --no-tags origin "refs/pull/$PR_NUMBER/head:refs/remotes/routing/head"
+              [[ "$(git rev-parse refs/remotes/routing/head)" == "$HEAD_SHA" ]]
+            fi
+            if [[ "$BASE" == 0000000000000000000000000000000000000000 ]]; then BASE="$HEAD_SHA"; fi
+            # Checkout is trusted B for PRs; never load a classifier from proposed H.
+            scripts/dev route --target "$TARGET" --base "$BASE" --head "$HEAD_SHA" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::unsupported target"; exit 1
+          fi
 
   component-validation:
     name: component-validation

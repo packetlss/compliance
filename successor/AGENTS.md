@@ -24,7 +24,10 @@ allowed. Use `scripts/dev foundation` for bootstrap infrastructure; it installs 
 legacy application stack and claims no application/acceptance/packaging coverage.
 The bounded scope guard currently admits only these two successor files and listed
 shared owners. A separately accepted executable contract must extend it together
-with real head and current-target integration checks. Legacy application changes
+with real head and current-target integration checks. Duty selection comes from
+trusted target B, so #209 first lands a reviewed scope expansion within already
+admitted shared paths; genuine application jobs accompany its executable PR and
+become enforced before that merge. Legacy application changes
 require separately reviewed cross-boundary authorization and affected validation.
 
 No direct implementation pushes to the integration branch. Exact-head independent

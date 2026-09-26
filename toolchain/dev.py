@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import contextlib
 import fcntl
 import hashlib
@@ -478,6 +479,21 @@ def current_base(pr: dict[str, object]) -> str:
     return output[0]
 
 
+def trusted_legacy_required(target_ref: str, base: str, paths: list[str]) -> bool:
+    """Use the reviewed target's classifier, never the proposed checkout's policy."""
+    if integration_target(target_ref) == "main":
+        return True
+    payload = json.loads(run([
+        "gh", "api", f"repos/{{owner}}/{{repo}}/contents/toolchain/dev.py?ref={base}",
+    ], capture=True).stdout)
+    source = base64.b64decode(payload["content"]).decode("utf-8")
+    # Only the fixed file at exact trusted B is loaded. __main__ is not invoked;
+    # the stdlib-only classifier consumes filenames, not proposed file contents.
+    namespace = {"__name__": "trusted_target_scope", "__file__": str(ROOT / "toolchain/dev.py")}
+    exec(compile(source, f"{base}:toolchain/dev.py", "exec"), namespace)
+    return namespace["legacy_required"](target_ref, paths)
+
+
 def commit_statuses(head: str) -> list[dict[str, object]]:
     """Read legacy commit statuses, whose descriptions bind integration to a base."""
     payload = json.loads(run(["gh", "api", f"repos/{{owner}}/{{repo}}/commits/{head}/status"], capture=True).stdout)
@@ -516,13 +532,13 @@ def readiness(args: argparse.Namespace) -> int:
     if len(pr.get("files", [])) != pr.get("changedFiles"):
         print("NOT READY: incomplete changed-file metadata; cannot establish affected responsibilities", file=sys.stderr)
         return 1
-    required = set(REQUIRED_HEAD_CONTEXTS) if legacy_required(
-        target_ref, [entry["path"] for entry in pr.get("files", [])]
+    base = current_base(pr)
+    required = set(REQUIRED_HEAD_CONTEXTS) if trusted_legacy_required(
+        target_ref, base, [entry["path"] for entry in pr.get("files", [])]
     ) else set()
     if target_ref == "successor":
         required.add("successor-foundation")
     context = f"integration-current-{target_ref}"
-    base = current_base(pr)
     body = pr.get("body") or ""
     rollup = [status for status in pr.get("statusCheckRollup", []) if isinstance(status, dict)]
     # Reject ambiguous duplicate contexts instead of accepting whichever comes last.

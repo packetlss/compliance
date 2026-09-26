@@ -185,7 +185,7 @@ Historical pre-freeze readability is not a default required gate unless an expli
 | `successor`, legacy application/build/fixture or unlisted files | Refuse with paths and contract guidance | Refuse; no successful integration proof |
 | Separately promoted executable experiment | **Pending #209:** foundation plus real semantics, end-to-end acceptance, Linux and native macOS packaged execution | Every adopted experiment responsibility; never foundation alone |
 
-`toolchain/dev.py` owns the small explicit bootstrap path sets: successor instructions
+The reviewed target B's `toolchain/dev.py` owns the small explicit bootstrap path sets: successor instructions
 and its architecture/ADR are successor-only; root coordination docs, task templates,
 T3 configuration and the named workflow/development/infrastructure-test files are
 shared. Other paths fail closed on successor, including application files until
@@ -194,9 +194,20 @@ configurable impact framework or implicit authorization from a target branch.
 A separately reviewed cross-boundary contract must amend admission and cover every
 affected responsibility before legacy application changes may target successor.
 
+Both scope jobs check out trusted B and classify before any proposed code is
+merged/executed; main unconditionally requires all four legacy responsibilities.
+Readiness loads the fixed classifier file from the same exact target B through
+GitHub, rather than letting the local proposed classifier waive duties. This is
+read-only and requires no local fetch of B. A classifier change cannot waive its
+own validation. #209 must first land scope expansion through a reviewed PR within
+already-admitted shared paths, with foundation and all four legacy responsibilities.
+Its executable PR then adds genuine application checks and their integration
+wiring, with required-check enforcement before that first executable merge. No
+placeholder application check is added by the preliminary routing change.
+
 `destination-validation.yml` receives every PR targeting main/successor, including
 retarget edits, and pushes to those branches. It checks out exact authored H for
-PR validation. No required context is path-filtered away. `validation-routing`
+PR validation; only duty selection uses trusted B. No required context is path-filtered away. `validation-routing`
 admits scope; `successor-foundation` always reports, verifies required dependencies
 and executes real routing/readiness/workflow/isolation tests. It also runs on main
 as supplemental infrastructure evidence. Only explicitly unaffected legacy jobs

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import base64
 import importlib.util
 import json
 import os
@@ -74,6 +75,9 @@ class ReadinessTests(unittest.TestCase):
                     returncode=merge_base_returncode if merge_base_returncode is not None else (0 if merge_base == self.base else 1),
                 )
             if command[:2] == ["gh", "api"]:
+                if "/contents/toolchain/dev.py?ref=" in command[2]:
+                    self.assertTrue(command[2].endswith(self.base))
+                    return SimpleNamespace(stdout=json.dumps({"content": base64.b64encode(SOURCE.read_bytes()).decode()}), returncode=0)
                 return SimpleNamespace(stdout=json.dumps({"statuses": statuses or []}), returncode=0)
             raise AssertionError(f"unexpected command: {command}")
 
@@ -221,6 +225,15 @@ class ReadinessTests(unittest.TestCase):
                     self.assertEqual(result, 1)
                     self.assertIn("component-validation", errors)
 
+    def test_proposed_classifier_cannot_remove_legacy_readiness_obligations(self):
+        pr = self.successor_pr(shared=True)
+        pr["statusCheckRollup"] = pr["statusCheckRollup"][-1:]
+        with mock.patch.object(dev, "SHARED_FILES", dev.SHARED_FILES - {"scripts/dev"}), \
+             mock.patch.object(dev, "SUCCESSOR_FILES", dev.SUCCESSOR_FILES | {"scripts/dev"}):
+            result, _, errors, _ = self.run_readiness(pr=pr, merge_base=self.base)
+        self.assertEqual(result, 1)
+        self.assertIn("required check component-validation", errors)
+
     def test_successor_cannot_reuse_main_integration_or_review(self):
         pr = self.successor_pr()
         result, _, errors, _ = self.run_readiness(
@@ -286,13 +299,13 @@ class WorkflowContractTests(unittest.TestCase):
         workflow = (REPOSITORY_ROOT / ".github/workflows/destination-validation.yml").read_text()
         for context in dev.REQUIRED_HEAD_CONTEXTS:
             self.assertIn(f"name: {context}", workflow)
-        self.assertEqual(workflow.count("github.event.pull_request.head.sha || github.sha"), 15)
+        self.assertEqual(workflow.count("github.event.pull_request.head.sha || github.sha"), 14)
 
     def test_integration_workflow_uses_disposable_combined_candidates_and_isolates_status_writes(self):
         workflow = INTEGRATION_WORKFLOW.read_text()
         self.assertNotIn("pull_request_target", workflow)
         self.assertNotIn("git push", workflow)
-        self.assertEqual(workflow.count("git merge --no-ff --no-edit refs/remotes/integration/head"), 6)
+        self.assertEqual(workflow.count("git merge --no-ff --no-edit refs/remotes/integration/head"), 5)
         self.assertEqual(workflow.count("persist-credentials: false"), 6)
         self.assertIn("statuses: write", workflow)
         self.assertIn("Publish final status without checking out PR code", workflow)
@@ -514,6 +527,47 @@ else:
             self.assertEqual(git(remote, "rev-parse", "refs/heads/main"), base)
             self.assertEqual(git(remote, "rev-parse", "refs/pull/211/head"), clean_head)
 
+    def test_proposed_classifier_cannot_waive_its_own_validation(self):
+        destination = (REPOSITORY_ROOT / ".github/workflows/destination-validation.yml").read_text()
+        scripts = [workflow_script(destination, "Admit target and changed scope"),
+                   workflow_script(INTEGRATION_WORKFLOW.read_text(), "Admit target and changed scope from trusted base")]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            remote, source, checkout = (root / name for name in ("remote.git", "source", "checkout"))
+            def git(cwd, *args):
+                return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=True).stdout.strip()
+            git(root, "init", "--bare", str(remote))
+            git(root, "init", "-b", "successor", str(source))
+            git(source, "config", "user.name", "test"); git(source, "config", "user.email", "test@example.invalid")
+            (source / "scripts").mkdir(); (source / "toolchain").mkdir()
+            (source / "scripts/dev").write_bytes(DEV_SCRIPT.read_bytes()); (source / "scripts/dev").chmod(0o755)
+            (source / "toolchain/dev.py").write_bytes(SOURCE.read_bytes())
+            git(source, "add", "."); git(source, "commit", "-m", "trusted classifier")
+            base = git(source, "rev-parse", "HEAD")
+            git(source, "checkout", "-b", "proposal")
+            content = SOURCE.read_text().replace('"scripts/dev", "toolchain/dev.py",', '"scripts/dev",')
+            content = content.replace('SUCCESSOR_FILES = {', 'SUCCESSOR_FILES = {"toolchain/dev.py",')
+            self.assertNotEqual(content, SOURCE.read_text())
+            (source / "toolchain/dev.py").write_text(content)
+            git(source, "commit", "-am", "try to waive own checks")
+            head = git(source, "rev-parse", "HEAD")
+            git(source, "push", str(remote), "successor", "HEAD:refs/pull/210/head")
+            git(root, "clone", "-b", "successor", str(remote), str(checkout))
+            output = root / "outputs"
+            for script in scripts:
+                output.write_text("")
+                env = dict(os.environ, TARGET="successor", BASE=base, HEAD_SHA=head, PR_NUMBER="210", GITHUB_OUTPUT=str(output))
+                result = subprocess.run(["bash", "-c", script], cwd=checkout, env=env, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("legacy=true", output.read_text())
+                self.assertEqual(git(checkout, "rev-parse", "HEAD"), base)
+                # Main requires all four without needing a new classifier in pre-bootstrap B.
+                output.write_text("")
+                env["TARGET"] = "main"
+                result = subprocess.run(["bash", "-c", script], cwd=root, env=env, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("legacy=true", output.read_text())
+
     def test_workflow_routing_and_credential_execution_separation(self):
         destination = (REPOSITORY_ROOT / ".github/workflows/destination-validation.yml").read_text()
         integration = INTEGRATION_WORKFLOW.read_text()
@@ -541,6 +595,11 @@ else:
             self.assertIn("persist-credentials: false", block)
         self.assertIn("if: ${{ always() }}", workflow_job(destination, "successor-foundation"))
         self.assertIn("scripts/dev foundation", workflow_job(integration, "successor-foundation"))
+        for workflow in (destination, integration):
+            route = workflow_job(workflow, "route")
+            self.assertNotIn("git merge", route)
+            self.assertNotIn("ref: ${{ github.event.pull_request.head.sha", route)
+            self.assertRegex(route, r"ref: .*base")
 
 
 if __name__ == "__main__":
