@@ -1,3 +1,4 @@
+# Unmerged #208 activation probe: shared infrastructure must execute all four legacy jobs.
 name: Destination validation
 
 on:
