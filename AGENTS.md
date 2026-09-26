@@ -17,7 +17,7 @@ Read only the material applicable to the task. If instructions conflict, stop an
 | --- | --- |
 | Architecture, semantics, trust, release, or compatibility | `docs/ARCHITECTURE.md`, `docs/CONTRACT_MATURITY.md`, applicable ADRs |
 | Successor source/workflow | `successor/AGENTS.md`, `docs/DEVELOPMENT_WORKFLOW.md`, `docs/REPOSITORIES.md`; explicit target branch and recorded activation |
-| Accepted successor direction, acceptance stories, or platform-experiment specification | `docs/adr/0025-trusted-snapshot-successor.md`, `docs/SUCCESSOR_ARCHITECTURE.md`; no executable successor work without its separately promoted contract |
+| Accepted successor direction, acceptance stories, or production operating contracts | `docs/adr/0025-trusted-snapshot-successor.md`, `docs/adr/0026-minimal-successor-production-architecture.md`, `docs/SUCCESSOR_ARCHITECTURE.md`; no executable successor work without its separately promoted contract |
 | Repository ownership or development workflow | `docs/REPOSITORIES.md`, `docs/DEVELOPMENT_WORKFLOW.md` |
 | Tooling, CLI, schemas, provenance, packaging | `tooling/AGENTS.md`, then its linked detailed contract |
 | Reusable policy and controls | `policy-sources/control-library/AGENTS.md` |
@@ -28,7 +28,7 @@ Read only the material applicable to the task. If instructions conflict, stop an
 
 Historical `packetlss-labs` repositories are archived provenance only. Never treat their topology, workflow, or historical copies of current documents as active authority.
 
-ADR 0025 and the successor architecture describe **accepted direction, not an
+ADRs 0025/0026 and the successor architecture describe **accepted direction, not an
 implemented replacement**. Existing component instructions and contracts govern
 the implemented legacy tree. Do not carry its content identity, schemas, Python
 packaging or artifact mechanisms into the successor by default. Do not apply target
@@ -63,7 +63,7 @@ Implementation-local questions may be resolved only when they do not change sema
 - Missing, stale, invalid, or inconclusive required evidence produces `unknown`, never `pass`; authored realization/adoption state is not implementation evidence.
 - The resolved assessment plan is the external-adapter handoff (provenance-bearing under the legacy contract). Backend compilation, credentials/state, apply authority, and executable adapter/plugin runtime remain outside the core.
 - Real private inventory, evidence, realizations, credentials, secrets, provider state, and results stay outside this repository.
-- Generated evidence, plans, results, caches, and adapter/backend output are untracked execution material, not authored policy. Retained plans/results preserve their exact historical assertion; legacy validation/identity rules remain enforced, while successor record representation/admission remains an open decision.
+- Generated evidence, plans, results, caches, and adapter/backend output are untracked execution material, not authored policy. Retained plans/results preserve their exact historical assertion; legacy validation/identity rules remain enforced, while ADR 0026 owns successor ordinary-record admission and retained explanation; exact layouts remain unfrozen.
 - Verification policy remains source-only with no independent hosted release lane.
 - Firewall and network-policy work is out of scope unless explicitly reopened.
 
@@ -90,6 +90,10 @@ validate every affected responsibility. #209 Phase A admits only
 `successor-package-linux`, and `successor-package-macos`; Phase B adds their real
 head/integration execution after Phase A human merge. Admission alone cannot report
 application success. Scope and duties come from reviewed target B, never proposed H.
+These are current experiment duties, not durable production requirements. ADR 0026
+promotes Linux-only production; the first production slice owns the bounded CI
+migration in the workflow owner. #217 changes no workflows or rulesets and shared
+documentation still receives existing legacy checks.
 See the exact matrix and administrator activation checklist in `docs/DEVELOPMENT_WORKFLOW.md`.
 
 Normal validation uses one destination checkout. Do not restore historical sibling acquisition, `COMPLIANCE_CI_*` credentials, PAT fallback, repository-coordinate manifests, or mutable branch resolution. A PR is complete only when its contract is satisfied, applicable local and exact-head CI evidence is green, findings are resolved, and generated state is clean.

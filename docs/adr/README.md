@@ -10,6 +10,8 @@ not supply active scope; use current GitHub implementation contracts for that.
 
 ## Accepted decisions
 
+- [ADR 0026 — Minimal successor production architecture](0026-minimal-successor-production-architecture.md) — #217 promotes Go, embedded OPA for trusted criteria, the four operating/value contracts and Linux production packaging. Supersedes ADR 0025's unresolved platform/operating questions and the native macOS product requirement, while preserving its trust reduction. Fresh implementation and bounded CI migration require separate contracts; no production code is delivered here.
+
 - [ADR 0025 — Build a trusted-snapshot successor](0025-trusted-snapshot-successor.md) — accepted direction under [#206](https://github.com/packetlss/compliance/issues/206), documentation/specification only. Owns the compact partial-supersession map, trust reduction and promotion gates. Earlier ADR mechanisms remain authoritative for implemented legacy behavior; ADR 0023's ten semantic invariants survive. No platform or executable experiment is authorized here.
 
 The entries below record the legacy decisions and retained semantic foundation;

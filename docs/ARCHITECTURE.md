@@ -6,9 +6,10 @@ not implemented by its documentation promotion.
 
 | State / question | Authoritative owner |
 | --- | --- |
-| Accepted successor behavior, persona/Objective safeguards, acceptance stories and unresolved decisions | [Successor architecture](SUCCESSOR_ARCHITECTURE.md) |
+| Accepted successor behavior, persona/Objective safeguards, acceptance stories | [Successor architecture](SUCCESSOR_ARCHITECTURE.md) |
 | Replacement rationale, retired guarantees, trust reduction, supersession map and promotion gates | [ADR 0025](adr/0025-trusted-snapshot-successor.md) |
-| Successor task/branch authority and activation | [Development workflow](DEVELOPMENT_WORKFLOW.md#successor-lane-activation); #208 bootstraps infrastructure, #209 remains blocked until recorded activation |
+| Successor production platform and operating contracts | [ADR 0026](adr/0026-minimal-successor-production-architecture.md); promoted direction, not implemented production |
+| Successor task/branch authority and activation | [Development workflow](DEVELOPMENT_WORKFLOW.md#successor-lane-activation); #208 activated, #209 experiment merged, #217 promotes production direction |
 | Still-implemented legacy behavior | The remainder of this document and its routed component contracts; ADRs 0005–0012 and 0016–0024 (0013–0015 are superseded) |
 | Foundational responsibility and outcome meanings retained by both | [ADR 0023](adr/0023-foundational-semantic-responsibility-boundaries.md) |
 

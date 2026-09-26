@@ -4,8 +4,9 @@ Status: **Accepted target, not implemented.** [ADR 0025](adr/0025-trusted-snapsh
 owns the replacement rationale, trust reduction, retired guarantees and promotion
 gates. [System architecture](ARCHITECTURE.md) routes implemented legacy contracts;
 [contract maturity](CONTRACT_MATURITY.md) owns compatibility status. This document
-owns target behavior, acceptance stories and the experiment specification, not
-successor schemas, platform selection or permission to execute the experiment.
+owns target behavior and acceptance stories. [ADR 0026](adr/0026-minimal-successor-production-architecture.md)
+owns the promoted Go/embedded-OPA direction, operating/value contracts, Linux
+platform and production test/sequence decisions. Production is not yet implemented.
 
 > Resolve governed inventory and reviewed policy into explicit subject-scoped
 > intent; assess descriptive observations against that intent; explain the recorded
@@ -44,12 +45,13 @@ layout or adding an alternate resolver:
 | Retained explanation and derived views | Join supplied matching operation/plan/result records without current catalogs or re-resolution. Policy Diff compares explicit resolved snapshots. Framework mappings supply descriptive traceability only. External retention owns keeping the required records faithfully. |
 | Governance | Reviewed policy choices, Objective-demonstration sufficiency, approvals, waivers and external/non-core determinations. These are not evidence of implementation or proof of external conformity. |
 
-Assessment uses one controlled operation-local policy/module/schema/evidence set;
-how that set is admitted before loading remains open. Missing, stale, schema-invalid,
+Assessment consumes one coherent operation-owned input snapshot under
+[ADR 0026 admission](adr/0026-minimal-successor-production-architecture.md#coherent-input-admission).
+Coherence before resolution is an environmental/admission precondition. Missing, stale, schema-invalid,
 ambiguous or inconclusive required observations cannot establish PASS. Evidence
 filename, source order, collector identity or a convenient fallback must not choose
 between conflicting observations. Valid complete duplicates introduce no ordering
-precedence; their precise typed equality/admission contract is still to be promoted.
+precedence; typed equality/admission follows ADR 0026.
 Attributable criterion-execution or decision failures are ERROR; inability to
 establish shared prerequisites for a trustworthy result is refusal, with no new
 result published. Result absence alone is not proof that a refused attempt occurred.
@@ -58,8 +60,8 @@ Record the selected subjects and required result slots before interpreting aggre
 success. Missing required members remain in the denominator, and another operation,
 plan or subject's result cannot fill their slots. Accounting completeness is
 necessary but not sufficient for success. Mismatched or conflicting supplied record
-references fail admission; the minimum structural/relational checks and publication
-protocol remain open. Ordinary IDs do not make records immutable.
+references fail admission under [ADR 0026 records](adr/0026-minimal-successor-production-architecture.md#retained-explanation-and-ordinary-records).
+Ordinary IDs do not make records immutable; publication mechanics remain local choices.
 
 Retained results keep the meaning of their original operation, resolved plan and
 assessment instant after policy, inventory, evidence or the clock changes. Retained
@@ -67,7 +69,7 @@ explanation must not compute current plan alignment, current evidence timeliness
 current waiver qualification. A fresh operational conclusion requires a fresh
 assessment; future assessment does not depend on prior results. Missing retained
 material cannot be repaired with current mutable inputs or a fabricated history.
-The exact retained evidence minimum and unavailable-record behavior remain open.
+ADR 0026 defines the retained evidence minimum and unavailable-record behavior.
 
 ## Persona tailoring and parameters
 
@@ -104,7 +106,8 @@ parameter-only assignment does not manufacture an Objective or passing assessmen
 
 Retain authoring safeguards for parent revision, target existence, expected inherited
 state and final-interface/type validity. Stale authoring fails rather than silently
-rebasing. The no-JCS representation of these guards and typed equality is unresolved.
+rebasing. [ADR 0026](adr/0026-minimal-successor-production-architecture.md#narrow-typed-authoring-contract)
+defines the narrow JSON/value boundary; field layouts remain implementation contracts.
 Explicit expected values do not offer exact-content-pin guarantees; reviewed
 immutable revision practices belong to governance.
 
@@ -161,46 +164,33 @@ success criteria.
 | **6. Evidence and execution.** A Check needs a fresh subject-qualified observation. Supply absent, stale, schema-invalid or conflicting admissible candidates; separately reorder complete duplicates, supply a conclusive negative observation, trigger an attributable criterion error, or lose a shared execution prerequisite. | Missing/stale/invalid/ambiguous evidence is UNKNOWN, never PASS. Duplicates create no order winner. Valid negative evidence yields FAIL; an attributable execution/decision failure yields ERROR. Shared-prerequisite refusal publishes no new result. | Required-evidence qualification, deterministic selection, outcome/refusal boundary. | Complete evidence digest-set identity or evaluator/tooling byte attestation. |
 | **7. Recorded A/B/C.** An operation selects A/B/C with required result slots. Only A/B results are supplied, plus a result for C from another operation or plan. | Denominator stays A/B/C; C remains missing, and the foreign result cannot fill it. A wrong-subject or conflicting record fails admission. Existing outcomes are not rewritten, and incomplete accounting cannot establish whole-operation success. | Exact recorded membership and slot association; bounded supplied scope. | Historical selector/candidate replay or content-derived operation/member IDs. |
 | **8. Retained explanation.** Retain the needed operation, plan, result and chosen evidence facts for a tailored, waived assessment. Remove or change current catalogs, inventory and evidence, and advance the clock. Also supply mismatched or conflicting record references. | Original intent, outcomes, evidence use, deviation and waiver remain explainable without re-resolution or current qualification. Mismatched/conflicting references fail admission. IDs cannot prove original authorship or tamper resistance; missing retained material cannot be replaced by current facts. | Original operation/plan meaning, single fact ownership and honest integrity limits. | Derivation replay, current catalog alignment or cryptographic provenance verification. |
-| **9. Packaged and separate sources.** Materialize two independent policy sources plus a separately supplied synthetic private realization. Execute representative assessment and retained explanation outside the source checkout on Linux and native macOS. | Normal execution needs no network or legacy runtime; source order grants no precedence. The private source stays separate and real private data stays outside this repository. | Offline operability, independent sources and actual access/deployment boundaries. | Legacy wheel receipt, installed-file attestation or equality with legacy packaging/output. |
+| **9. Packaged and separate sources.** Materialize two independent policy sources plus a separately supplied synthetic private realization. Execute representative assessment and retained explanation outside the source checkout on the supported production platform, initially Linux. | Normal execution needs no network or legacy runtime; source order grants no precedence. The private source stays separate and real private data stays outside this repository. | Offline operability, independent sources and actual access/deployment boundaries. | Legacy wheel receipt, installed-file attestation or equality with legacy packaging/output. |
 
-## Unresolved decision questions
+<a id="unresolved-decision-questions"></a>
 
-These are required decision questions, not implementation-local choices. A disposable
-experiment may investigate alternatives only after separate authorization. Any
-choice consumed as production semantics needs explicit promotion first; documentation
-completion does not imply acceptance.
+## Promoted operating decisions
 
-| Question | Constraints and evidence needed before promotion |
-| --- | --- |
-| **Input admission:** How is a stable input set obtained before loading? | Reading a concurrently modified directory is not an atomic snapshot. Investigate controlled acquisition/admission across policy, modules, schemas and evidence; demonstrate mutation behavior. Do not recreate a provenance-lock subsystem. |
-| **Retained evidence:** Which minimum exact observation, selection and diagnostic facts are retained, inline or through explicitly supplied frozen evidence records? | A collector ID cannot identify an observation. Compare explanation sufficiency, privacy exposure, and behavior when records are unavailable. No mandatory retention database or automatic replay service. |
-| **Record identity/admission/publication:** Who owns ordinary references and their layout, duplicate-ID conflicts, operation/member association and partial publication? | Identify the smallest structural/relational checks supporting faithful explanation and required-slot accounting without derivation replay. Exercise mismatches, conflicting duplicates and interrupted publication. IDs must not be called immutable or tamper proof. |
-| **Authoring/value boundary:** How are parent revisions, expected-state guards and typed consumer interfaces represented without JCS? | Decide JSON/YAML duplicate-member admission, typed equality, numeric precision, array semantics and timestamps explicitly. Show stale/invalid cases. Host-language equality is not domain policy; expected values are not exact content pins. |
+[ADR 0026](adr/0026-minimal-successor-production-architecture.md) resolves the four
+experiment questions: coherent operation-owned admission, minimum retained consumed
+observation facts, ordinary relationally admitted records with trusted retention,
+and narrow strict JSON authoring/value semantics. Go is the production host;
+embedded OPA evaluates trusted authored criteria only. No hostile-policy sandbox,
+replay service, mandatory evidence database or universal publication/lock protocol
+is promoted. Its production sequence requires separate bounded implementation
+contracts after human architecture merge.
 
 ## Bounded platform-experiment specification
 
-**Specification only; no executable experiment is authorized by #206.**
-[ADR 0025's promotion gates](adr/0025-trusted-snapshot-successor.md#staged-promotion-gates)
-require human architecture review and merge of this documentation, followed by a
-separately accepted bounded experiment contract. #209 is queued behind #208
-bootstrap merge and [recorded lane activation](DEVELOPMENT_WORKFLOW.md#successor-lane-activation);
-its existence does not establish readiness to execute.
+**Historical experiment specification; #209 completed through human-merged #216.**
+The original comparison was Go/embedded OPA versus a clean Python/process design.
+The merged [REPORT](../successor/experiments/209-platform/REPORT.md) and
+[NOTES](../successor/experiments/209-platform/NOTES.md) preserve assumptions,
+observations and limitations. ADR 0026 promotes only the minimal production
+contracts, not prototype code, representations or its test suite. No executable
+Python comparator is required by that evidence.
 
-Leading hypothesis: **Go with embedded OPA/Rego** can provide the local application
-and a narrow criterion evaluator at acceptable deployment and dependency cost.
-Comparator: **a clean Python design**, ordinarily with an explicit evaluator process
-boundary. Host-language and criterion-engine choices are separate. Compare designs
-first, then prototype the leading candidate; a second executable comparator is
-justified only by a documented material uncertainty. Neither option is production
-architecture, and there is no version/library freeze or measured performance claim.
-
-The future experiment's bounded vertical slice is authored inputs -> validation ->
-persona resolution -> real criterion evaluation -> persisted lightweight records ->
-retained explanation. Exercise the nine stories with small synthetic examples,
-including one Objective with several required Checks and representative negative
-cases, without porting the catalog or depending on legacy modules, CLI, test helpers
-or generated schemas. Use one controlled operation-local policy/module/schema/
-evidence set and investigate the four open questions explicitly.
+The table below records the experiment's acceptance requirements, including its
+native macOS investigation; it does not add macOS to the Linux production contract.
 
 | Hypothesis or risk | Required acceptance evidence |
 | --- | --- |

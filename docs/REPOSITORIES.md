@@ -4,9 +4,9 @@ Repository layout is not semantic policy, release, or runtime identity. This
 document owns repository strategy and current logical ownership. Existing roots,
 release units and implementation-specific validation responsibilities below describe
 the **implemented legacy** tree. [ADR 0025](adr/0025-trusted-snapshot-successor.md)
-accepts a successor, whose platform and packaging remain undecided; no successor
-application exists by virtue of that decision. #208 adds only a temporary instruction
-area and development-lane infrastructure.
+accepts a successor. [ADR 0026](adr/0026-minimal-successor-production-architecture.md)
+promotes Go and initially Linux packaged/offline production. #208 activated its
+development lane; #209 is disposable experiment evidence, not production code.
 
 ## Successor repository strategy
 
@@ -16,8 +16,8 @@ authorized durable legacy reference before cutover. #206 creates no repository,
 tag or release, rewrites no history and deletes no legacy code.
 
 Use `successor/` as the explicitly temporary isolated source area under #208. Its
-bootstrap contains instructions/README only; no application skeleton or platform
-selection. `main` remains the working legacy/default branch. After the
+bootstrap began with instructions/README only; the merged #209 experiment now
+lives in its own subtree. Production must be fresh and must not import that subtree. `main` remains the working legacy/default branch. After the
 [recorded activation checkpoint](DEVELOPMENT_WORKFLOW.md#successor-lane-activation),
 `successor` is a temporary integration branch receiving small reviewed PRs.
 Successor-specific authority is read at that target, using these existing document
@@ -49,7 +49,7 @@ source layout, release units or platform.
 | IAM synthetic boundary | `verification/fixtures/iam-private-boundary/` | Synthetic proof of a separately materialized `environment-private` source; not a real private-data repository |
 | Canonical scenarios | `verification/scenarios/` | Deterministic complete integration, expected outcomes, all 27 public CLI leaves and 19 domain features |
 | System architecture/workflow | `docs/`, root `AGENTS.md` | Routed implemented legacy and accepted successor architecture, ADRs, workflow, repository/trust boundaries and migration provenance |
-| Successor bootstrap | `successor/` | Temporary instructions only; separately accepted executable tasks after lane activation |
+| Successor staging | `successor/` | Temporary isolated area with disposable #209 experiment; production paths require separately reviewed admission and implementation contracts |
 | CI/toolchain | `.github/`, `toolchain/`, root scripts/tests | Stable component, scenario and installed-release gates |
 
 ## Logical ownership rules
@@ -108,7 +108,9 @@ Source repository and release unit are distinct concepts.
 The four contexts below remain mandatory for main and affected shared
 infrastructure. Successor-only bootstrap uses `successor-foundation`; the
 [workflow matrix](DEVELOPMENT_WORKFLOW.md#two-lane-validation-matrix) owns exact
-routing and future experiment responsibilities.
+routing, current experiment duties and future production CI migration. Ordinary
+successor work stops running legacy application gates only after that migration;
+genuinely shared repository-global infrastructure retains both affected lanes.
 
 | Stable context | Owner |
 | --- | --- |
@@ -160,7 +162,9 @@ retirement require:
 
 - all required successor stories with executable owners and resolved operating contracts;
 - an operator walkthrough of personas, Objectives, failures and retained history;
-- Linux and native macOS packaged execution outside the source checkout;
+- real packaged assessment and retained explanation outside the checkout on the
+  supported production platform, initially Linux, without legacy runtime or a
+  normal-runtime network dependency; native macOS is not a product gate;
 - build/test/runtime independence with legacy unavailable;
 - recorded historical source and tooling access; and
 - coherent final instruction, release and required-check routing.
