@@ -23,6 +23,8 @@ jobs:
     outputs:
       target: ${{ steps.route.outputs.target }}
       legacy: ${{ steps.route.outputs.legacy }}
+      # Pre-Phase-A B has no experiment output and refuses every application path.
+      experiment: ${{ steps.route.outputs.experiment || 'false' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -39,7 +41,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$TARGET" == main ]]; then
-            printf 'target=main\nlegacy=true\n' >> "$GITHUB_OUTPUT"
+            printf 'target=main\nlegacy=true\nexperiment=false\n' >> "$GITHUB_OUTPUT"
           elif [[ "$TARGET" == successor ]]; then
             if [[ -n "$PR_NUMBER" ]]; then
               git fetch --no-tags origin "refs/pull/$PR_NUMBER/head:refs/remotes/routing/head"
@@ -298,6 +300,7 @@ jobs:
           ROUTE: ${{ needs.route.result }}
           TARGET: ${{ needs.route.outputs.target }}
           LEGACY: ${{ needs.route.outputs.legacy }}
+          EXPERIMENT: ${{ needs.route.outputs.experiment }}
           COMPONENT: ${{ needs.component-validation.result }}
           SCENARIOS: ${{ needs.verification-scenarios.result }}
           RELEASE: ${{ needs.installed-release-provenance.result }}
@@ -305,6 +308,10 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$ROUTE" == success ]] || { echo "::error::scope/routing did not succeed"; exit 1; }
+          # Phase A admits scope, not application success. Phase B replaces this
+          # refusal with actual needs/results for successor-experiment,
+          # successor-package-linux and successor-package-macos.
+          [[ "$EXPERIMENT" == false ]] || { echo "::error::#209 real experiment jobs are not installed"; exit 1; }
           case "$TARGET:$LEGACY" in
             main:true|successor:true) expected=success ;;
             successor:false) expected=skipped ;;

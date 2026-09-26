@@ -54,7 +54,7 @@ class ReadinessTests(unittest.TestCase):
         }
 
     def run_readiness(self, *, pr, merge_base, statuses=None, merge_base_returncode=None,
-                      final_pr=None, final_base=None, target=None):
+                      final_pr=None, final_base=None, target=None, trusted_source=None):
         calls = []
         pr_reads = 0
         base_reads = 0
@@ -77,7 +77,7 @@ class ReadinessTests(unittest.TestCase):
             if command[:2] == ["gh", "api"]:
                 if "/contents/toolchain/dev.py?ref=" in command[2]:
                     self.assertTrue(command[2].endswith(self.base))
-                    return SimpleNamespace(stdout=json.dumps({"content": base64.b64encode(SOURCE.read_bytes()).decode()}), returncode=0)
+                    return SimpleNamespace(stdout=json.dumps({"content": base64.b64encode(trusted_source if trusted_source is not None else SOURCE.read_bytes()).decode()}), returncode=0)
                 return SimpleNamespace(stdout=json.dumps({"statuses": statuses or []}), returncode=0)
             raise AssertionError(f"unexpected command: {command}")
 
@@ -234,6 +234,42 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertIn("required check component-validation", errors)
 
+    def test_experiment_readiness_requires_each_real_check_from_trusted_base(self):
+        for shared in (False, True):
+            pr = self.successor_pr(shared=shared)
+            pr["files"].append({"path": "successor/experiments/209-platform/go.mod"})
+            pr["changedFiles"] += 1
+            for name in dev.SUCCESSOR_EXPERIMENT_CONTEXTS:
+                pr["statusCheckRollup"].append({"name": name, "conclusion": "SUCCESS"})
+            result, _, errors, _ = self.run_readiness(pr=pr, merge_base=self.base)
+            self.assertEqual(result, 0, errors)
+            for name in dev.SUCCESSOR_EXPERIMENT_CONTEXTS:
+                for state in (None, "FAILURE", "CANCELLED", "SKIPPED", "NEUTRAL", ""):
+                    candidate = dict(pr, statusCheckRollup=[dict(check, conclusion=state)
+                        if check["name"] == name else check for check in pr["statusCheckRollup"]])
+                    if state is None:
+                        candidate["statusCheckRollup"] = [check for check in candidate["statusCheckRollup"] if check["name"] != name]
+                    with mock.patch.object(dev, "SUCCESSOR_EXPERIMENT_CONTEXTS", set()):
+                        result, _, errors, _ = self.run_readiness(pr=candidate, merge_base=self.base)
+                    self.assertEqual(result, 1, (name, state))
+                    self.assertIn(f"required check {name}", errors)
+
+    def test_pre_admission_base_cannot_be_overruled_by_proposed_classifier(self):
+        # The exact pre-Phase-A API shape: only B's legacy classifier is available.
+        trusted = b'''REQUIRED_HEAD_CONTEXTS = {"component-validation", "verification-scenarios", "installed-release-provenance", "macos-portability"}
+def legacy_required(target_ref, paths):
+    if any(path.startswith("successor/experiments/") for path in paths):
+        raise SystemExit("unadmitted by reviewed B")
+    return "scripts/dev" in paths
+'''
+        pr = self.successor_pr(shared=True)
+        result, _, errors, _ = self.run_readiness(pr=pr, merge_base=self.base, trusted_source=trusted)
+        self.assertEqual(result, 0, errors)
+        pr["files"].append({"path": "successor/experiments/209-platform/go.mod"})
+        pr["changedFiles"] += 1
+        with self.assertRaisesRegex(SystemExit, "unadmitted by reviewed B"):
+            self.run_readiness(pr=pr, merge_base=self.base, trusted_source=trusted)
+
     def test_successor_cannot_reuse_main_integration_or_review(self):
         pr = self.successor_pr()
         result, _, errors, _ = self.run_readiness(
@@ -367,6 +403,27 @@ class LaneRoutingTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "unsupported integration target"):
             dev.legacy_required("experiment", [])
 
+    def test_only_named_disposable_experiment_is_admitted_with_real_duties(self):
+        paths = ["successor/experiments/209-platform/go.mod",
+                 "successor/experiments/209-platform/fixtures/synthetic.json"]
+        expected = {"successor-foundation", "successor-experiment",
+                    "successor-package-linux", "successor-package-macos"}
+        self.assertEqual(dev.required_head_contexts("successor", paths), expected)
+        self.assertEqual(dev.required_head_contexts("successor", paths + ["toolchain/dev.py"]),
+                         expected | dev.REQUIRED_HEAD_CONTEXTS)
+        self.assertEqual(dev.required_head_contexts("main", paths), dev.REQUIRED_HEAD_CONTEXTS)
+        with mock.patch.object(dev, "changed_paths", return_value=paths), contextlib.redirect_stdout(StringIO()) as output:
+            self.assertEqual(dev.route(SimpleNamespace(target="successor", base="a" * 40, head="b" * 40)), 0)
+        self.assertEqual(output.getvalue(), "target=successor\nlegacy=false\nexperiment=true\n")
+        for path in ("successor/experiments/210-platform/main.go",
+                     "successor/experiments/209-platform-extra/main.go",
+                     "successor/experiments/209-platform", "successor/runtime/main.go",
+                     "successor/experiments/209-platform/../production/main.go",
+                     "successor/experiments/209-platform//main.go",
+                     "successor/experiments/209-platform/./main.go"):
+            with self.subTest(path=path), self.assertRaisesRegex(SystemExit, "successor scope refuses"):
+                dev.required_head_contexts("successor", [path])
+
     def test_route_rejects_malformed_revisions(self):
         for revision in ("main", "HEAD", "a" * 39, "--output=file"):
             with self.assertRaisesRegex(SystemExit, "exact 40-hex"):
@@ -450,7 +507,7 @@ else:
                 GITHUB_OUTPUT=str(output), PUBLISHED=str(published),
                 GITHUB_REPOSITORY="packetlss/compliance", GITHUB_SERVER_URL="https://github.com",
                 GITHUB_RUN_ID="123", GITHUB_REF="refs/heads/main", WORKFLOW_SHA=self.base,
-                PR_NUMBER="210", HEAD=self.head, BASE=self.base, TARGET="main", LEGACY="true",
+                PR_NUMBER="210", HEAD=self.head, BASE=self.base, TARGET="main", LEGACY="true", EXPERIMENT="false",
                 ROUTE="success", FOUNDATION="success", COMPONENT="success", SCENARIOS="success",
                 RELEASE="success", MACOS="success", CURRENT_BASE=self.base,
                 PR_JSON=json.dumps({"state": "open", "head": {"sha": self.head}, "base": {"ref": "main"}}))
@@ -473,6 +530,26 @@ else:
         for target, legacy in (("main", "false"), ("other", "true"), ("successor", "")):
             result, _, _ = self.run_script(script, TARGET=target, LEGACY=legacy)
             self.assertNotEqual(result.returncode, 0)
+
+    def test_phase_a_never_claims_application_or_integration_success(self):
+        destination = (REPOSITORY_ROOT / ".github/workflows/destination-validation.yml").read_text()
+        head_script = workflow_script(destination, "Require every affected responsibility")
+        integration = INTEGRATION_WORKFLOW.read_text()
+        publish_script = workflow_script(integration, "Publish final status without checking out PR code")
+        pr = json.dumps({"state": "open", "head": {"sha": self.head}, "base": {"ref": "successor"}})
+        for legacy in ("true", "false"):
+            expected = "success" if legacy == "true" else "skipped"
+            for experiment in ("true", "", "invalid"):
+                values = dict(TARGET="successor", LEGACY=legacy, EXPERIMENT=experiment, PR_JSON=pr,
+                              COMPONENT=expected, SCENARIOS=expected, RELEASE=expected, MACOS=expected)
+                result, _, _ = self.run_script(head_script, **values)
+                self.assertNotEqual(result.returncode, 0)
+                result, _, status = self.run_script(publish_script, **values)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("state=failure", status)
+        for workflow in (destination, integration):
+            for name in dev.SUCCESSOR_EXPERIMENT_CONTEXTS:
+                self.assertNotRegex(workflow, rf"^  {name}:", name)
 
     def test_trusted_resolver_rejects_wrong_dispatch_ref_stale_workflow_and_bad_metadata(self):
         script = workflow_script(INTEGRATION_WORKFLOW.read_text(), "Resolve the open PR and current base")
