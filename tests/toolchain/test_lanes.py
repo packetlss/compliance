@@ -278,6 +278,31 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(result, 1)
         self.assertIn("ambiguous duplicate", errors)
 
+    def test_newest_retry_supersedes_cancelled_run_but_never_falls_back_to_green(self):
+        for state in ("SUCCESS", "FAILURE", "CANCELLED", "SKIPPED", ""):
+            old = {"__typename": "CheckRun", "workflowName": "Destination validation",
+                   "name": "successor-foundation", "startedAt": "2026-09-26T12:01:52Z",
+                   "conclusion": "CANCELLED" if state == "SUCCESS" else "SUCCESS"}
+            new = dict(old, startedAt="2026-09-26T12:03:02Z", conclusion=state)
+            for attempts in ([old, new], [new, old]):
+                pr = self.successor_pr()
+                pr["statusCheckRollup"] = attempts
+                result, _, errors, _ = self.run_readiness(pr=pr, merge_base=self.base)
+                self.assertEqual(result, 0 if state == "SUCCESS" else 1, (state, errors))
+
+    def test_unordered_or_different_producer_retries_fail_closed(self):
+        success = {"__typename": "CheckRun", "workflowName": "Destination validation",
+                   "name": "successor-foundation", "startedAt": "2026-09-26T12:01:52Z",
+                   "conclusion": "SUCCESS"}
+        variants = [{"startedAt": value} for value in (None, "", "invalid", "0001-01-01T00:00:00Z", "2026-09-26T12:01:52Z")]
+        variants += [{"workflowName": "other workflow"}, {"workflowName": None}, {"__typename": "StatusContext"}]
+        for variant in variants:
+            pr = self.successor_pr()
+            pr["statusCheckRollup"] = [success, dict(success, conclusion="", **variant)]
+            result, _, errors, _ = self.run_readiness(pr=pr, merge_base=self.base)
+            self.assertEqual(result, 1, variant)
+            self.assertIn("ambiguous duplicate", errors)
+
     def test_successor_dispatch_uses_actual_target_not_default_or_head(self):
         commands = []
         def fake_run(command, **kwargs):

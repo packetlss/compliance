@@ -276,7 +276,10 @@ readiness` is read-only and only reports whether the review, head contexts, and
 when needed the exact head/base integration status are current. Both commands
 accept `--target main|successor` to assert the expected target and refuse a mismatch.
 Readiness resolves trusted PR metadata, rejects unsupported targets and rechecks
-open state, H, target and its current B at the end; earlier successful integration
+open state, H, target and its current B at the end. Repeated same-workflow check
+names use only the uniquely newest known start; a newer pending/failed execution
+never falls back to older success. Mixed workflows or unknown/tied timestamps
+remain not ready. Earlier successful integration
 is insufficient after B changes.
 
 The existing `current-main-integration.yml` filename remains the dispatch entrypoint

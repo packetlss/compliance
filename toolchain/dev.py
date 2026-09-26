@@ -18,6 +18,7 @@ import sys
 import tarfile
 import tempfile
 import urllib.request
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -471,6 +472,38 @@ def latest_named_status(statuses: list[dict[str, object]], name: str) -> dict[st
     return next((status for status in statuses if status_name(status) == name), None)
 
 
+def head_check_results(statuses: list[dict[str, object]]) -> dict[str, str | None]:
+    """Select the unique newest retry within one workflow, never an older green."""
+    grouped = {}
+    for status in statuses:
+        if name := status_name(status):
+            grouped.setdefault(name, []).append(status)
+    results = {}
+    for name, attempts in grouped.items():
+        if len(attempts) == 1:
+            results[name] = status_result(attempts[0])
+            continue
+        results[name] = "ambiguous duplicate"
+        workflows = {attempt.get("workflowName") for attempt in attempts}
+        if len(workflows) != 1 or not all(workflows) or any(
+            attempt.get("__typename") != "CheckRun" for attempt in attempts
+        ):
+            continue
+        try:
+            starts = [datetime.fromisoformat(attempt["startedAt"].replace("Z", "+00:00"))
+                      for attempt in attempts]
+        except (KeyError, TypeError, ValueError, AttributeError):
+            continue
+        # Queued runs may lack a start or use GitHub's zero timestamp. Do not
+        # mistake that unknown order for an older run and reuse previous success.
+        if any(start.tzinfo is None or start.year < 2000 for start in starts):
+            continue
+        newest = max(starts)
+        if starts.count(newest) == 1:
+            results[name] = status_result(attempts[starts.index(newest)])
+    return results
+
+
 def current_base(pr: dict[str, object]) -> str:
     base_ref = integration_target(pr.get("baseRefName"))
     output = run(["git", "ls-remote", "origin", f"refs/heads/{base_ref}"], capture=True).stdout.split()
@@ -541,12 +574,7 @@ def readiness(args: argparse.Namespace) -> int:
     context = f"integration-current-{target_ref}"
     body = pr.get("body") or ""
     rollup = [status for status in pr.get("statusCheckRollup", []) if isinstance(status, dict)]
-    # Reject ambiguous duplicate contexts instead of accepting whichever comes last.
-    checks = {}
-    for status in rollup:
-        name = status_name(status)
-        if name:
-            checks[name] = status_result(status) if name not in checks else "ambiguous duplicate"
+    checks = head_check_results(rollup)
     reviewed = {line.split(":", 1)[0].strip(" -"): line.split(":", 1)[1].strip() for line in body.splitlines() if ":" in line}
     errors = []
     if pr.get("state") != "OPEN":
