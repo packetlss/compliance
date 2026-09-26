@@ -11,9 +11,10 @@ bounded successor infrastructure lane and routing described here; it replaces no
 legacy behavior or required main responsibility. [ADR 0025](adr/0025-trusted-snapshot-successor.md#staged-promotion-gates)
 owns successor promotion gates; its target retirements do not change workflows or
 relax any existing required context. The
-[experiment specification](SUCCESSOR_ARCHITECTURE.md#bounded-platform-experiment-specification)
-requires separate authorization before execution. No successor platform is selected
-by the existing Python development setup.
+[experiment](SUCCESSOR_ARCHITECTURE.md#bounded-platform-experiment-specification)
+completed under #209 / #216. [ADR 0026](adr/0026-minimal-successor-production-architecture.md)
+promotes production direction, not executable work or a workflow/ruleset change.
+The existing Python development setup does not prescribe successor implementation.
 
 ## Repository authority and handoff
 
@@ -177,6 +178,9 @@ Historical pre-freeze readability is not a default required gate unless an expli
 
 ## Two-lane validation matrix
 
+This is the currently implemented trusted-base routing, not the durable production
+target below. #217 shared documentation still runs its existing legacy duties.
+
 | Actual PR target / changed scope | Required head execution | Combined H/B execution when H lacks current B |
 | --- | --- | --- |
 | `main`, including #208 bootstrap | `component-validation`, `verification-scenarios`, `installed-release-provenance`, `macos-portability` | Same four responsibilities plus infrastructure validation; status `integration-current-main` |
@@ -293,6 +297,43 @@ settings, exact head/base, head/integration matrix, platform evidence and fresh
 review. Agents do not merge or enable auto-merge. Green experiment CI does not
 select a production platform or promote the four open operating contracts.
 
+## Durable production successor CI
+
+ADR 0026 promotes only these durable successor responsibilities:
+
+| Context | Production responsibility |
+| --- | --- |
+| `successor-foundation` | Trusted routing, readiness and CI infrastructure |
+| `successor-validation` | Small focused/unit/contract/E2E semantic portfolio selected under ADR 0026 |
+| `successor-package-linux` | Real packaged/offline assessment and retained explanation outside checkout, without legacy runtime |
+
+The first production slice owns a bounded migration, not #217:
+
+1. Add real production validation and Linux package jobs with corresponding trusted
+   head/integration execution and routing.
+2. Obtain exact-head evidence from those real jobs; absent/placeholder checks cannot
+   establish readiness.
+3. Update required-check enforcement only after the real contexts report, preserving
+   trusted source binding and exact-head/current-target-base rules.
+4. Retire `successor-experiment` and experiment-only packaging wiring.
+5. Remove `successor-package-macos` and its requirement.
+6. Stop running legacy application gates on ordinary successor work.
+
+After migration, `main` retains legacy CI while legacy remains current there;
+`successor` uses successor CI. Only genuinely shared repository-global infrastructure
+changes require affected responsibilities from both lanes. No generic impact-analysis
+framework or separate context per story/component is justified without an independent
+trust or ownership reason. Keep test organization inside `successor-validation`.
+
+The [latest #217 branch-rule clarification](https://github.com/packetlss/compliance/issues/217#issuecomment-5847706425)
+allows an administrator to remove the macOS experiment requirement early; it does
+not assert that removal occurred or authorize #217 to change settings. Preserve
+currently real foundation/experiment/Linux enforcement until replacement evidence;
+do not add `successor-validation` before it exists. Current workflow/classifier duties
+remain as documented above until migrated, including macOS execution for experiment
+scope. Native macOS is historical experiment evidence and optional developer
+convenience, not a production package/release promise.
+
 ## Branches and PRs
 
 Use short-lived branches and isolated worktrees from the verified current task target (`main` or activated `successor`). T3-generated branch names are accepted; branch names are operational metadata rather than durable task identity. Identify the task through its linked issue or PR and a clear T3 thread title. Do not implement directly on `main` or `successor`.
@@ -375,7 +416,8 @@ merge, the old trusted main workflow still owns actual integration for this PR;
 local tests exercise the proposed successor path but cannot activate it. After
 merge, demonstrate dispatch from both supported target refs. Future executable
 contracts must extend **both** exact-head and current-target integration execution
-with every new application responsibility, including native macOS. A foundation
+with every adopted application responsibility (native macOS belongs only to the
+current experiment, not production). A foundation
 pass cannot stand in for these. If the target's trusted workflow does not yet run
 newly proposed responsibilities, do not claim combined evidence: update/review the
 candidate to contain current B, or first land separately reviewed real wiring on

@@ -3,15 +3,16 @@
 Read root `AGENTS.md`, the accepted task contract, and the existing owners:
 
 - [ADR 0025](../docs/adr/0025-trusted-snapshot-successor.md) for trust, supersession and promotion gates;
-- [Successor architecture](../docs/SUCCESSOR_ARCHITECTURE.md) for behavior and open decisions;
+- [ADR 0026](../docs/adr/0026-minimal-successor-production-architecture.md) for production platform, operating/value contracts, test selection and sequence;
+- [Successor architecture](../docs/SUCCESSOR_ARCHITECTURE.md) for behavior and acceptance stories;
 - [Development workflow](../docs/DEVELOPMENT_WORKFLOW.md#successor-lane-activation) for target routing, checks and activation;
 - [Repositories](../docs/REPOSITORIES.md#successor-repository-strategy) for isolation and cutover.
 
-This is a temporary isolated source area, currently instruction/README files only.
-#208 bootstrap and lane activation are complete (see #208 and latest #85 comments).
-#209's accepted execution sequence has two PRs: Phase A admits scope/CI duties;
-only after its human merge may Phase B add the disposable executable experiment.
-Neither phase selects a production platform or authorizes production implementation.
+This temporary isolated area contains the merged disposable #209 experiment.
+#208 activation and #209 Phase A/B are complete. ADR 0026 promotes fresh Go
+production with trusted embedded OPA and initially Linux packaging; the experiment
+is not seed code or a test suite to port. Production requires separately promoted
+bounded contracts and trusted-base path admission after #217 human merge.
 
 After activation, start successor tasks in a new T3 worktree from verified current
 `successor`, and target PRs at `successor`. Record the exact target/base/head. Read
@@ -24,10 +25,14 @@ CLI, generated schemas and fixture builders. Commodity infrastructure tools are
 allowed. Use `scripts/dev foundation` for bootstrap infrastructure; it installs no
 legacy application stack and claims no application/acceptance/packaging coverage.
 The bounded scope guard admits these two successor files, the listed documentation
-and shared owners, and only `successor/experiments/209-platform/` for #209's future
+and shared owners, and only `successor/experiments/209-platform/` for #209's disposable
 experiment. Other application paths fail closed. Exact experiment responsibilities
 are `successor-experiment`, `successor-package-linux`, `successor-package-macos`
 alongside `successor-foundation`; shared scope also requires all four legacy jobs.
+These current duties are not the production target: use the workflow owner's
+[bounded CI migration](../docs/DEVELOPMENT_WORKFLOW.md#durable-production-successor-ci),
+which retires experiment wiring and native macOS production gating. No workflow or
+ruleset change is authorized by #217.
 
 Scope and duty selection come from reviewed target B, never proposed H. Phase A
 adds no application or placeholder job and refuses experiment success until real

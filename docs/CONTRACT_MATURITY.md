@@ -10,13 +10,13 @@ Historical detailed audits remain in `packetlss-labs/compliance-workspace`; this
 | --- | --- |
 | Foundational responsibilities and outcome meanings | Frozen by [ADR 0023](adr/0023-foundational-semantic-responsibility-boundaries.md), retained by the successor. |
 | Trusted-snapshot successor direction | Accepted design, not implemented. [Target architecture](SUCCESSOR_ARCHITECTURE.md) owns behavior and stories; [ADR 0025](adr/0025-trusted-snapshot-successor.md) owns trust reduction, retired guarantees and supersession. |
-| Production platform and operating/value/retention contracts | Unresolved; the [four decision questions](SUCCESSOR_ARCHITECTURE.md#unresolved-decision-questions) require explicit promotion before production depends on answers. Go/embedded OPA is a hypothesis only. |
-| Development lane | #208 supplies bounded workflow infrastructure only; activation requires bootstrap merge and recorded administrator evidence. No application coverage is claimed. |
-| Platform experiment | #209 is queued and blocked on bootstrap merge AND [lane activation](DEVELOPMENT_WORKFLOW.md#successor-lane-activation). Prototypes do not imply production acceptance. |
+| Production platform and operating/value/retention contracts | [ADR 0026](adr/0026-minimal-successor-production-architecture.md) promotes Go, embedded OPA for trusted criteria, strict JSON/typed values, coherent admitted snapshots, minimal retained facts and ordinary records. Linux is the initial supported packaged platform. Accepted design, not production implementation or a wire/version freeze. |
+| Development lane | #208 activation is recorded; foundation proves infrastructure only. [Workflow](DEVELOPMENT_WORKFLOW.md) separates current experiment/shared duties from the future production migration. |
+| Platform experiment | #209 / #216 is merged disposable evidence, including Linux and native macOS. It is not production seed code or a test-port backlog; ADR 0026 owns reviewed carry-forward limits. |
 | Existing Python tooling, schemas, identifiers, artifacts and interfaces | Implemented experimental legacy. Their detailed contracts below remain valid for that implementation, without automatic successor compatibility. |
 | Guarantees retired from the successor | Still implemented where the legacy contracts require them; “retired from target” does not mean “removed from current runtime.” ADR 0025 enumerates them. |
 
-The latest [#85 sequencing decision](https://github.com/packetlss/compliance/issues/85#issuecomment-5845758682)
+The latest [#85 sequencing decision](https://github.com/packetlss/compliance/issues/85#issuecomment-5847393168)
 supersedes the post-ADR-0024 consolidation/freeze sequence. No further identity/wire
 freeze, completion of paused cleanup issues or comprehensive exploration is an
 automatic prerequisite. Future compatibility commitments still require explicit
