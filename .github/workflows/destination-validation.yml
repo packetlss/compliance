@@ -2,9 +2,12 @@ name: Destination validation
 
 on:
   pull_request:
+    branches: [main, successor]
+    types: [opened, synchronize, reopened, edited]
   push:
     branches:
       - main
+      - successor
 
 permissions:
   contents: read
@@ -14,8 +17,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  route:
+    name: validation-routing
+    runs-on: ubuntu-24.04
+    outputs:
+      target: ${{ steps.route.outputs.target }}
+      legacy: ${{ steps.route.outputs.legacy }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Admit target and changed scope
+        id: route
+        env:
+          TARGET: ${{ github.base_ref || github.ref_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          if [[ "$TARGET" == main ]]; then
+            printf 'target=main\nlegacy=true\n' >> "$GITHUB_OUTPUT"
+          elif [[ "$TARGET" == successor ]]; then
+            if [[ -n "$PR_NUMBER" ]]; then
+              git fetch --no-tags origin "refs/pull/$PR_NUMBER/head:refs/remotes/routing/head"
+              [[ "$(git rev-parse refs/remotes/routing/head)" == "$HEAD_SHA" ]]
+            fi
+            if [[ "$BASE" == 0000000000000000000000000000000000000000 ]]; then BASE="$HEAD_SHA"; fi
+            # Checkout is trusted B for PRs; never load a classifier from proposed H.
+            scripts/dev route --target "$TARGET" --base "$BASE" --head "$HEAD_SHA" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::unsupported target"; exit 1
+          fi
+
   component-validation:
     name: component-validation
+    needs: route
+    if: ${{ needs.route.outputs.legacy == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -92,6 +132,8 @@ jobs:
 
   verification-scenarios:
     name: verification-scenarios
+    needs: route
+    if: ${{ needs.route.outputs.legacy == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -145,6 +187,8 @@ jobs:
 
   installed-release-provenance:
     name: installed-release-provenance
+    needs: route
+    if: ${{ needs.route.outputs.legacy == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -216,6 +260,8 @@ jobs:
 
   macos-portability:
     name: macos-portability
+    needs: route
+    if: ${{ needs.route.outputs.legacy == 'true' }}
     runs-on: macos-15
     timeout-minutes: 20
     steps:
@@ -239,3 +285,38 @@ jobs:
         run: |
           /bin/bash scripts/dev gate package
           /bin/bash scripts/dev gate release-preparation
+
+  successor-foundation:
+    name: successor-foundation
+    needs: [route, component-validation, verification-scenarios, installed-release-provenance, macos-portability]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Require every affected responsibility
+        env:
+          ROUTE: ${{ needs.route.result }}
+          TARGET: ${{ needs.route.outputs.target }}
+          LEGACY: ${{ needs.route.outputs.legacy }}
+          COMPONENT: ${{ needs.component-validation.result }}
+          SCENARIOS: ${{ needs.verification-scenarios.result }}
+          RELEASE: ${{ needs.installed-release-provenance.result }}
+          MACOS: ${{ needs.macos-portability.result }}
+        run: |
+          set -euo pipefail
+          [[ "$ROUTE" == success ]] || { echo "::error::scope/routing did not succeed"; exit 1; }
+          case "$TARGET:$LEGACY" in
+            main:true|successor:true) expected=success ;;
+            successor:false) expected=skipped ;;
+            *) echo "::error::invalid lane responsibilities"; exit 1 ;;
+          esac
+          for result in "$COMPONENT" "$SCENARIOS" "$RELEASE" "$MACOS"; do
+            [[ "$result" == "$expected" ]] || { echo "::error::affected legacy validation did not succeed"; exit 1; }
+          done
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test real bootstrap infrastructure
+        run: scripts/dev foundation

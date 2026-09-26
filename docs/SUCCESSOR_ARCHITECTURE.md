@@ -182,7 +182,9 @@ completion does not imply acceptance.
 **Specification only; no executable experiment is authorized by #206.**
 [ADR 0025's promotion gates](adr/0025-trusted-snapshot-successor.md#staged-promotion-gates)
 require human architecture review and merge of this documentation, followed by a
-separately accepted bounded experiment contract.
+separately accepted bounded experiment contract. #209 is queued behind #208
+bootstrap merge and [recorded lane activation](DEVELOPMENT_WORKFLOW.md#successor-lane-activation);
+its existence does not establish readiness to execute.
 
 Leading hypothesis: **Go with embedded OPA/Rego** can provide the local application
 and a narrow criterion evaluator at acceptable deployment and dependency cost.
@@ -216,7 +218,9 @@ by default. No benchmark claim may be inferred without measurements.
 
 Exclusions include production scaffolding, full catalog/schema/test ports, services
 or persistent stores, legacy compatibility, actual adapter/apply integration,
-framework satisfaction, release/tag publication, workflow changes and legacy deletion.
+framework satisfaction, release/tag publication and legacy deletion. #208 permits
+only the real test/packaging wiring owned by the separately promoted #209 contract;
+unrelated workflow redesign remains excluded.
 Any proposed expansion, changed semantic owner, weakened retained boundary or new
 shared abstraction returns to architecture under ADR 0025; it is not resolved as a
 local experiment convenience.

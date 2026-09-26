@@ -31,6 +31,9 @@ require_file scripts/dev
 require_file toolchain/dev.py
 require_file toolchain/bin/sha256sum
 require_file tests/toolchain/test_dev.py
+require_file tests/toolchain/test_lanes.py
+require_file successor/AGENTS.md
+require_file successor/README.md
 require_file tooling/scripts/validate-tooling.sh
 require_file tooling/scripts/validate-package.sh
 require_file tooling/scripts/validate-locked-artifacts-package.sh
@@ -242,6 +245,8 @@ for context in component-validation verification-scenarios installed-release-pro
   grep -q "name: $context" .github/workflows/destination-validation.yml \
     || fail "required PR-head CI context is missing: $context"
 done
+grep -q 'name: successor-foundation' .github/workflows/destination-validation.yml \
+  || fail "successor infrastructure context is missing"
 for responsibility in 'scripts/dev gate repository' 'scripts/dev gate scenarios' 'scripts/dev gate package' '/bin/bash scripts/dev gate package'; do
   grep -qF "$responsibility" "$integration_workflow" \
     || fail "current-base integration is missing a required validation responsibility: $responsibility"

@@ -3,10 +3,14 @@
   "defaultThreadEnvMode": "worktree",
   "scripts": [
     {
-      "name": "Setup worktree",
-      "command": "scripts/dev setup",
-      "icon": "configure",
-      "runOnWorktreeCreate": true
+      "name": "Setup legacy worktree",
+      "command": "scripts/dev setup --target main",
+      "icon": "configure"
+    },
+    {
+      "name": "Successor foundation",
+      "command": "scripts/dev foundation",
+      "icon": "test"
     },
     {
       "name": "Toolchain doctor",

@@ -38,7 +38,7 @@ The IAM fixture is synthetic. Its `environment-private` source is physically mat
 
 ## Validation
 
-Stable destination CI contexts are:
+Required legacy CI contexts for main (and affected shared infrastructure) are:
 
 - `component-validation`
 - `verification-scenarios`
@@ -47,7 +47,7 @@ Stable destination CI contexts are:
 
 `verification-scenarios` is the real canonical composed gate and owns all 27 retained public CLI leaves and 19 retained domain features. Normal validation uses one repository checkout and no historical sibling-repository App/PAT acquisition path.
 
-From the repository root, `scripts/dev setup` creates this worktree's isolated environment and installs the repository-pinned Python, uv, and OPA without sudo or global package-manager changes. Downloads are cached outside semantic roots. T3 currently requires the checked-in **Setup worktree** action to be imported into the project before its `runOnWorktreeCreate` setting can run it. Repository-managed `check`, `gate`, and `cli` commands wait for that setup if it is in progress, or safely repair a missing or stale environment themselves. Use `scripts/dev doctor` for read-only diagnosis; it never repairs state.
+From the repository root, `scripts/dev setup` creates this worktree's isolated environment and installs the repository-pinned Python, uv, and OPA without sudo or global package-manager changes. Downloads are cached outside semantic roots. T3 offers explicit **Setup legacy worktree** and **Successor foundation** actions; automatic legacy setup on worktree creation is disabled so successor infrastructure does not install the legacy application stack. Repository-managed `check`, `gate`, and `cli` commands wait for that setup if it is in progress, or safely repair a missing or stale environment themselves. Use `scripts/dev doctor` for read-only diagnosis; it never repairs state.
 
 Repository development and manual testing use the managed CLI adapter, which
 runs the installed product entry point from the repository root with the pinned
@@ -74,6 +74,13 @@ scripts/dev check scenarios
 ```
 
 Optional tooling test names may follow `scripts/dev check tooling`. Fast checks show a compact summary by default; use `scripts/dev check --verbose <area>` to show every test while debugging (for example, `scripts/dev check --verbose tooling test_canonical_json.py`). Canonical committed-input gates also use compact native runner output; rerun an underlying `unittest` command with `-v` or an OPA test with `--verbose` for detailed progress while debugging. Canonical committed-input gates are explicit, for example `scripts/dev gate tooling`, `scripts/dev gate policy`, and `scripts/dev gate scenarios`. They refuse a dirty checkout and are selected by change impact or reproduction need. `scripts/dev readiness` is read-only and reports exact-head review/head-CI plus current-base integration evidence; use `scripts/dev integration` to explicitly request the trusted synthetic current-base validation when an unchanged PR head no longer contains its base.
+
+Successor-only bootstrap uses the real `successor-foundation` check; application,
+acceptance and packaged-platform checks remain pending #209. Resolve each task's
+actual target with `scripts/dev task --target main|successor`; after activation,
+successor work branches from and targets successor. `scripts/dev foundation` uses
+only infrastructure tools. See the [check matrix and activation checklist](docs/DEVELOPMENT_WORKFLOW.md#two-lane-validation-matrix).
+Bootstrap merge alone does not activate the lane or unblock #209.
 
 ## Architecture and workflow
 

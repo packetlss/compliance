@@ -3,7 +3,7 @@
 - **Status:** Accepted successor direction; documentation/specification only, not implemented
 - **Date:** 2026-09-26
 - **Contract:** [#206](https://github.com/packetlss/compliance/issues/206), including its [execution and interpretation note](https://github.com/packetlss/compliance/issues/206#issuecomment-5844713229)
-- **Sequencing:** [Latest successor decision on #85](https://github.com/packetlss/compliance/issues/85#issuecomment-5844706143)
+- **Sequencing:** [Latest successor decision on #85](https://github.com/packetlss/compliance/issues/85#issuecomment-5845758682)
 - **Baseline:** Implemented legacy at `8c4eae2459fffad57b771c7eec9984bbba37fc96` (PR #202)
 - **Preserves:** All ten foundational responsibility/meaning invariants of [ADR 0023](0023-foundational-semantic-responsibility-boundaries.md)
 
@@ -115,7 +115,7 @@ successor representations.
 
 ## Staged promotion gates
 
-[Roadmap #85](https://github.com/packetlss/compliance/issues/85#issuecomment-5844706143)
+[Roadmap #85](https://github.com/packetlss/compliance/issues/85#issuecomment-5845758682)
 owns active sequencing and backlog disposition. Its prior consolidation/freeze
 sequence is superseded; #203/#204/#205 are paused, and #154/#182 are deferred
 legacy-only work. Neither pause nor deferral means completion, transfer of scope
@@ -125,6 +125,10 @@ or permission to discard unmerged work.
    experiment specification and authority/maturity routing. Complete repository and
    documentation validation, exact-head CI and fresh-context review. Human
    architecture review and merge precede the next stage.
+   The subsequent #208 workflow contract inserts bootstrap to main and recorded
+   successor-lane activation before experiment execution. See the existing
+   [workflow owner](../DEVELOPMENT_WORKFLOW.md#successor-lane-activation); this does
+   not reopen successor semantics or promote a platform.
 2. **Separately promoted bounded experiment:** a durable contract authorizes only
    the [specified investigation](../SUCCESSOR_ARCHITECTURE.md#bounded-platform-experiment-specification).
    Compare designs first, then prototype the leading candidate. Report exact

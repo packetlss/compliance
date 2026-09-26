@@ -5,7 +5,8 @@ document owns repository strategy and current logical ownership. Existing roots,
 release units and implementation-specific validation responsibilities below describe
 the **implemented legacy** tree. [ADR 0025](adr/0025-trusted-snapshot-successor.md)
 accepts a successor, whose platform and packaging remain undecided; no successor
-code tree exists by virtue of that decision.
+application exists by virtue of that decision. #208 adds only a temporary instruction
+area and development-lane infrastructure.
 
 ## Successor repository strategy
 
@@ -14,8 +15,14 @@ documentation. Preserve the legacy baseline in Git history and plan a separately
 authorized durable legacy reference before cutover. #206 creates no repository,
 tag or release, rewrites no history and deletes no legacy code.
 
-Plan an isolated blank successor tree; `successor/` is a candidate temporary path,
-not a frozen public contract or an instruction to create it now. New implementation
+Use `successor/` as the explicitly temporary isolated source area under #208. Its
+bootstrap contains instructions/README only; no application skeleton or platform
+selection. `main` remains the working legacy/default branch. After the
+[recorded activation checkpoint](DEVELOPMENT_WORKFLOW.md#successor-lane-activation),
+`successor` is a temporary integration branch receiving small reviewed PRs.
+Successor-specific authority is read at that target, using these existing document
+owners; reconcile material shared decisions explicitly. No automatic main merge,
+mechanical legacy-feature cherry-pick or competing successor specification. New implementation
 must not import legacy runtime modules, invoke the legacy CLI, depend on legacy test
 helpers or use legacy generated schemas as authority. Existing authored intent and
 edge cases may inform fresh examples; code and fixtures do not survive by default.
@@ -42,6 +49,7 @@ source layout, release units or platform.
 | IAM synthetic boundary | `verification/fixtures/iam-private-boundary/` | Synthetic proof of a separately materialized `environment-private` source; not a real private-data repository |
 | Canonical scenarios | `verification/scenarios/` | Deterministic complete integration, expected outcomes, all 27 public CLI leaves and 19 domain features |
 | System architecture/workflow | `docs/`, root `AGENTS.md` | Routed implemented legacy and accepted successor architecture, ADRs, workflow, repository/trust boundaries and migration provenance |
+| Successor bootstrap | `successor/` | Temporary instructions only; separately accepted executable tasks after lane activation |
 | CI/toolchain | `.github/`, `toolchain/`, root scripts/tests | Stable component, scenario and installed-release gates |
 
 ## Logical ownership rules
@@ -97,6 +105,11 @@ Source repository and release unit are distinct concepts.
 
 ## Validation ownership
 
+The four contexts below remain mandatory for main and affected shared
+infrastructure. Successor-only bootstrap uses `successor-foundation`; the
+[workflow matrix](DEVELOPMENT_WORKFLOW.md#two-lane-validation-matrix) owns exact
+routing and future experiment responsibilities.
+
 | Stable context | Owner |
 | --- | --- |
 | `component-validation` | Focused repository/tooling/policy/project/IAM validation |
@@ -132,3 +145,30 @@ Use a separate repository/execution boundary when there is a material real reaso
 - a downstream/private consumer whose acquisition boundary is itself meaningful.
 
 Do not create one solely to simulate semantic source isolation or internal development topology.
+
+## Exact-tree successor cutover
+
+Cutover is a separately accepted migration, not part of #208 or an automatic
+consequence of a successful experiment. Preserve legacy source/tooling access at
+recorded immutable revisions through an authorized historical reference before
+removal; do not create tags/releases as part of this bootstrap.
+
+Map each legacy assertion to retained behavior with a fresh executable owner, a
+deliberately retired guarantee from ADR 0025, or an implementation detail not
+ported. Output equality and old test counts are not acceptance criteria. Before
+retirement require:
+
+- all required successor stories with executable owners and resolved operating contracts;
+- an operator walkthrough of personas, Objectives, failures and retained history;
+- Linux and native macOS packaged execution outside the source checkout;
+- build/test/runtime independence with legacy unavailable;
+- recorded historical source and tooling access; and
+- coherent final instruction, release and required-check routing.
+
+Prepare and validate the **exact removal candidate**: remove obsolete runtime,
+build/test helpers, packaging, active docs and CI jobs in that candidate, then run
+all adopted successor responsibilities on it. A green successor build alongside
+legacy is insufficient. Record exact head/base, independent review, current-base
+integration where needed, operator evidence and human cutover authority. There is
+no permanent legacy mode, compatibility reader, branch rename/force-push shortcut
+or deletion of main. Legacy stays usable until this explicit cutover.
