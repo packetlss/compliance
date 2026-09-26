@@ -549,7 +549,7 @@ else:
                 self.assertIn("state=failure", status)
         for workflow in (destination, integration):
             for name in dev.SUCCESSOR_EXPERIMENT_CONTEXTS:
-                self.assertNotRegex(workflow, rf"^  {name}:", name)
+                self.assertNotRegex(workflow, rf"(?m)^  {re.escape(name)}:", name)
 
     def test_trusted_resolver_rejects_wrong_dispatch_ref_stale_workflow_and_bad_metadata(self):
         script = workflow_script(INTEGRATION_WORKFLOW.read_text(), "Resolve the open PR and current base")
