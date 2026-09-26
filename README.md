@@ -114,3 +114,5 @@ read-only exploration
 ```
 
 Narrow nonsemantic work may use its PR body as the implementation contract. All merges require human final authority.
+
+<!-- Unmerged #208 activation probe: verify preserved main checks and trusted integration dispatch. -->
