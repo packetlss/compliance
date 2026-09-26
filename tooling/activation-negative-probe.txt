@@ -1,0 +1,2 @@
+Unmerged #208 activation probe: this legacy tooling path must be refused on successor.
+No runtime or packaging behavior is proposed. Do not merge.
