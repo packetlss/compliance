@@ -34,8 +34,9 @@ the implemented legacy tree. Do not carry its content identity, schemas, Python
 packaging or artifact mechanisms into the successor by default. Do not apply target
 retirements to legacy runtime or validation without an explicitly reviewed migration.
 Roadmap #85 owns sequencing, not a second architecture specification. #208 owns
-bounded two-lane bootstrap; #209 is blocked on bootstrap merge and recorded lane
-activation. After activation, read successor authority on the successor target,
+bounded two-lane bootstrap; #209 follows recorded lane activation with Phase A
+trusted-base admission, then Phase B executable experiment after Phase A human
+merge. After activation, read successor authority on the successor target,
 while main retains legacy authority and this route. Reconcile material shared
 decisions explicitly; do not maintain competing successor specifications.
 
@@ -84,9 +85,12 @@ Successor-only bootstrap PRs require real `successor-foundation` infrastructure
 execution. The workflow checks every PR to either target without path filters.
 Bounded scope admission refuses legacy application/build/fixture changes on
 successor; separately reviewed cross-boundary contracts must amend routing and
-validate every affected responsibility. Application/acceptance/Linux/native macOS
-packaging checks are pending #209, not placeholder jobs. See the exact matrix and
-administrator activation checklist in `docs/DEVELOPMENT_WORKFLOW.md`.
+validate every affected responsibility. #209 Phase A admits only
+`successor/experiments/209-platform/` and names `successor-experiment`,
+`successor-package-linux`, and `successor-package-macos`; Phase B adds their real
+head/integration execution after Phase A human merge. Admission alone cannot report
+application success. Scope and duties come from reviewed target B, never proposed H.
+See the exact matrix and administrator activation checklist in `docs/DEVELOPMENT_WORKFLOW.md`.
 
 Normal validation uses one destination checkout. Do not restore historical sibling acquisition, `COMPLIANCE_CI_*` credentials, PAT fallback, repository-coordinate manifests, or mutable branch resolution. A PR is complete only when its contract is satisfied, applicable local and exact-head CI evidence is green, findings are resolved, and generated state is clean.
 

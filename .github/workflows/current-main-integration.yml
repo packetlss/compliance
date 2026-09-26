@@ -79,6 +79,8 @@ jobs:
       contents: read
     outputs:
       legacy: ${{ steps.route.outputs.legacy }}
+      # Pre-Phase-A B has no experiment output and refuses every application path.
+      experiment: ${{ steps.route.outputs.experiment || 'false' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -96,7 +98,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$TARGET" == main ]]; then
-            echo 'legacy=true' >> "$GITHUB_OUTPUT"
+            printf 'legacy=true\nexperiment=false\n' >> "$GITHUB_OUTPUT"
           elif [[ "$TARGET" == successor ]]; then
             git fetch --no-tags origin "refs/pull/$PR_NUMBER/head:refs/remotes/routing/head"
             [[ "$(git rev-parse refs/remotes/routing/head)" == "$HEAD_SHA" ]]
@@ -407,6 +409,7 @@ jobs:
           PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
           ROUTE: ${{ needs.route.result }}
           LEGACY: ${{ needs.route.outputs.legacy }}
+          EXPERIMENT: ${{ needs.route.outputs.experiment }}
           FOUNDATION: ${{ needs.successor-foundation.result }}
           COMPONENT: ${{ needs.component-validation.result }}
           SCENARIOS: ${{ needs.verification-scenarios.result }}
@@ -426,6 +429,11 @@ jobs:
               [[ "$result" == "$expected" ]] || state=failure
             done
           fi
+          # Phase A must never publish foundation-only experiment success.
+          # Phase B must execute and aggregate successor-experiment,
+          # successor-package-linux and successor-package-macos before replacing
+          # this refusal, on trusted B with unprivileged combined-candidate jobs.
+          [[ "$EXPERIMENT" == false ]] || state=failure
           # Only trusted workflow text executes here; never check out proposed code.
           pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
           [[ "$(printf '%s' "$pr" | jq -r '.state')" == open ]] || state=failure

@@ -183,13 +183,18 @@ Historical pre-freeze readability is not a default required gate unless an expli
 | `successor`, bootstrap-only files | `successor-foundation` | Real foundation tests and scope admission; status `integration-current-successor` |
 | `successor`, listed shared infrastructure/coordination owners | `successor-foundation` **and all four legacy contexts** | Foundation and all four legacy responsibilities; status `integration-current-successor` |
 | `successor`, legacy application/build/fixture or unlisted files | Refuse with paths and contract guidance | Refuse; no successful integration proof |
-| Separately promoted executable experiment | **Pending #209:** foundation plus real semantics, end-to-end acceptance, Linux and native macOS packaged execution | Every adopted experiment responsibility; never foundation alone |
+| `successor`, `successor/experiments/209-platform/` descendants | `successor-foundation`, `successor-experiment`, `successor-package-linux`, `successor-package-macos`; also all four legacy contexts when shared owners change | Every adopted experiment responsibility plus affected legacy duties; Phase A refuses success until Phase B installs real execution |
 
-The reviewed target B's `toolchain/dev.py` owns the small explicit bootstrap path sets: successor instructions
+The reviewed target B's `toolchain/dev.py` owns the small explicit path sets: successor instructions
 and its architecture/ADR are successor-only; root coordination docs, task templates,
 T3 configuration and the named workflow/development/infrastructure-test files are
-shared. Other paths fail closed on successor, including application files until
-#209 extends scope and real checks together. There is no per-PR bypass label,
+shared. The sole admitted application subtree is
+`successor/experiments/209-platform/` (all descendants, not sibling experiments or
+production paths). It holds only #209's disposable code, pinned dependencies,
+fresh synthetic fixtures, tests and experiment notes when Phase B is authorized.
+All other application paths fail closed. Admission is not evidence of application
+success; generated outputs and real private data remain untracked/outside the repo.
+There is no per-PR bypass label,
 configurable impact framework or implicit authorization from a target branch.
 A separately reviewed cross-boundary contract must amend admission and cover every
 affected responsibility before legacy application changes may target successor.
@@ -213,7 +218,63 @@ and executes real routing/readiness/workflow/isolation tests. It also runs on ma
 as supplemental infrastructure evidence. Only explicitly unaffected legacy jobs
 may be skipped for successor-only changes; their names are never used as proof of
 legacy execution. Foundation proves infrastructure only, not application stories,
-acceptance or packaging. Those future jobs do not exist yet.
+acceptance or packaging. Phase A adds no application job. Its aggregation explicitly
+refuses `experiment=true` and invalid aggregate duty values. The route output
+defaults an absent experiment flag to false to support the pre-Phase-A trusted
+classifier, which rejects all application paths before returning success. Phase A
+and later classifiers must emit the experiment flag explicitly.
+
+### #209 two-phase execution contract
+
+The [execution-sequencing comment](https://github.com/packetlss/compliance/issues/209#issuecomment-5846798947)
+owns this bounded sequence. #208 activation is recorded in
+[#85](https://github.com/packetlss/compliance/issues/85);
+verify current target and activation evidence rather than reusing its initial SHA.
+
+1. **Phase A: trusted-base admission.** Change only already-admitted coordination
+   and infrastructure owners. Admit exactly `successor/experiments/209-platform/`
+   and select the duties below from B. Validate foundation and all four legacy
+   responsibilities. No application source, fixtures, module, artifact or empty
+   application job is added. Human review and merge establishes the next trusted B.
+2. **Phase B: executable experiment.** Create a fresh T3 worktree from actual current
+   successor containing Phase A. Add the disposable slice and real jobs in the two
+   existing workflow files; update the bootstrap-only tree assertion with actual
+   experiment isolation checks. Replace Phase A's explicit experiment refusal only
+   with real dependency/result aggregation. Preserve trusted-B path/duty selection
+   and the four legacy jobs for mixed shared scope. Missing, failed, cancelled or
+   skipped required experiment execution must fail foundation and integration.
+
+| Adopted context | Real Phase B responsibility on exact H and combined H/B |
+| --- | --- |
+| `successor-foundation` | Infrastructure, scope/routing/readiness and required-job aggregation; no application coverage claim |
+| `successor-experiment` | Focused/core and real end-to-end evidence for the accepted experiment contract |
+| `successor-package-linux` | Packaged Linux assessment and retained explanation outside checkout, offline and legacy-independent |
+| `successor-package-macos` | Genuine native macOS packaged assessment/history and isolation, without duplicating exhaustive Linux semantic permutations |
+
+Readiness obtains the entire required context set from exact reviewed B, including
+these names for experiment paths. Proposed H cannot waive or self-authorize scope
+or duties. The pre-Phase-A API fallback invokes only B's old classifier and thus
+still refuses experiment paths. Pure coordination/bootstrap changes retain their
+existing duties; experiment changes plus shared paths require both sets.
+
+The trusted current-successor dispatcher in Phase A deliberately publishes failure
+for experiment scope even if foundation and legacy execution succeed. Phase B must
+add unprivileged combined-candidate execution of **all three** experiment duties,
+with the trusted publisher checking their actual results. A dispatcher from Phase A
+cannot prove that integration. If Phase B lacks current B while B still has only
+Phase A wiring, update/re-review the candidate to contain current B and rerun exact
+head CI, or first land separately reviewed real wiring. Never dispatch proposed H
+with status-write credentials or report foundation-only integration as sufficient.
+No default-main glue change is currently needed: the registered dispatch entrypoint
+already accepts `--ref successor`. Any later necessary glue needs separate review.
+
+Before Phase B starts, Phase A must be human-merged; no new required-check setting
+is needed for Phase A. Before **Phase B merges**, after its real names have reported
+on exact H, an administrator must enforce all three contexts above alongside
+`successor-foundation`, bound to their observed GitHub Actions source. Record
+settings, exact head/base, head/integration matrix, platform evidence and fresh
+review. Agents do not merge or enable auto-merge. Green experiment CI does not
+select a production platform or promote the four open operating contracts.
 
 ## Branches and PRs
 
@@ -333,10 +394,10 @@ Firewall/network-policy work is out of scope unless explicitly reopened by the p
 
 ## Successor lane activation
 
-**Pending until separately recorded after human bootstrap merge.** #208's PR may
-be reviewed and merged before activation; issue closure alone does not unblock
-#209. No bootstrap action creates successor, changes protection/rulesets/default
-branch, publishes tags/releases, or resets another branch/worktree.
+**Activation is recorded in #208 and the latest #85 activation comment.** The
+checklist below remains the evidence contract; issue closure alone never establishes
+activation. #209 now follows the two-phase execution contract above. No bootstrap
+action creates successor, changes protection/rulesets/default branch, publishes tags/releases, or resets another branch/worktree.
 
 Administrator/human follow-through must record this precise checkpoint in #208 and
 link it from #85 before starting #209:
@@ -381,8 +442,8 @@ link it from #85 before starting #209:
    and current successor SHA. Record activated/pending explicitly with evidence and
    any unmet administrator actions. #209 may start only when this checkpoint is
    complete. Stage its new required application checks with real jobs; register and
-   enforce them before its first merge, once jobs actually report. Record their
-   head/integration matrix and workflow availability at that time.
+   enforce them before its first executable (Phase B) merge, once jobs actually
+   report. Record their head/integration matrix and workflow availability at that time.
 
 Observed pre-bootstrap configuration (2026-09-26): main was
 `d3e014dd7dd40910fa4a669525227e8ae8ba7176`; default branch main; squash-only merges.

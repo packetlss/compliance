@@ -372,9 +372,12 @@ INTEGRATION_CONTEXT = "integration-current-main"
 SUCCESS_STATES = {"SUCCESS", "success"}
 BASE_DESCRIPTION = re.compile(r"base=([0-9a-f]{40})")
 
-# Deliberately bounded bootstrap routing, not a configurable impact framework.
-# A separately reviewed executable contract must extend the successor scope and
-# both head/integration responsibilities together before application work lands.
+# Bounded #209 admission, not a configurable impact framework. Duty selection
+# must use reviewed target B; proposed H cannot authorize its own experiment.
+SUCCESSOR_EXPERIMENT_PREFIX = "successor/experiments/209-platform/"
+SUCCESSOR_EXPERIMENT_CONTEXTS = {
+    "successor-experiment", "successor-package-linux", "successor-package-macos",
+}
 SUCCESSOR_FILES = {
     "successor/AGENTS.md", "successor/README.md",
     "docs/SUCCESSOR_ARCHITECTURE.md", "docs/adr/0025-trusted-snapshot-successor.md",
@@ -397,18 +400,33 @@ def integration_target(value: object) -> str:
     return str(value)
 
 
+def experiment_path(path: str) -> bool:
+    return (path.startswith(SUCCESSOR_EXPERIMENT_PREFIX)
+            and all(part not in ("", ".", "..") for part in path.split("/")))
+
+
 def legacy_required(target_ref: str, paths: list[str]) -> bool:
     integration_target(target_ref)
     if target_ref == "main":
         return True
-    refused = sorted(set(paths) - SUCCESSOR_FILES - SHARED_FILES)
+    refused = sorted(path for path in set(paths) - SUCCESSOR_FILES - SHARED_FILES
+                     if not experiment_path(path))
     if refused:
         raise SystemExit(
-            "ERROR: successor bootstrap scope refuses: " + ", ".join(refused)
+            "ERROR: successor scope refuses: " + ", ".join(refused)
             + ". Legacy application/build/fixture changes require a separately reviewed "
-            "cross-boundary contract; executable successor scope and real checks belong to #209."
+            "cross-boundary contract; #209 admits only successor/experiments/209-platform/."
         )
     return bool(set(paths) & SHARED_FILES)
+
+
+def required_head_contexts(target_ref: str, paths: list[str]) -> set[str]:
+    required = set(REQUIRED_HEAD_CONTEXTS) if legacy_required(target_ref, paths) else set()
+    if target_ref == "successor":
+        required.add("successor-foundation")
+        if any(experiment_path(path) for path in paths):
+            required.update(SUCCESSOR_EXPERIMENT_CONTEXTS)
+    return required
 
 
 def changed_paths(base: str, head: str) -> list[str]:
@@ -421,8 +439,11 @@ def changed_paths(base: str, head: str) -> list[str]:
 
 
 def route(args: argparse.Namespace) -> int:
-    required = legacy_required(args.target, changed_paths(args.base, args.head))
-    print(f"target={args.target}\nlegacy={str(required).lower()}")
+    paths = changed_paths(args.base, args.head)
+    required = required_head_contexts(args.target, paths)
+    legacy = bool(required & REQUIRED_HEAD_CONTEXTS)
+    experiment = bool(required & SUCCESSOR_EXPERIMENT_CONTEXTS)
+    print(f"target={args.target}\nlegacy={str(legacy).lower()}\nexperiment={str(experiment).lower()}")
     return 0
 
 
@@ -512,10 +533,10 @@ def current_base(pr: dict[str, object]) -> str:
     return output[0]
 
 
-def trusted_legacy_required(target_ref: str, base: str, paths: list[str]) -> bool:
+def trusted_head_contexts(target_ref: str, base: str, paths: list[str]) -> set[str]:
     """Use the reviewed target's classifier, never the proposed checkout's policy."""
     if integration_target(target_ref) == "main":
-        return True
+        return set(REQUIRED_HEAD_CONTEXTS)
     payload = json.loads(run([
         "gh", "api", f"repos/{{owner}}/{{repo}}/contents/toolchain/dev.py?ref={base}",
     ], capture=True).stdout)
@@ -524,7 +545,12 @@ def trusted_legacy_required(target_ref: str, base: str, paths: list[str]) -> boo
     # the stdlib-only classifier consumes filenames, not proposed file contents.
     namespace = {"__name__": "trusted_target_scope", "__file__": str(ROOT / "toolchain/dev.py")}
     exec(compile(source, f"{base}:toolchain/dev.py", "exec"), namespace)
-    return namespace["legacy_required"](target_ref, paths)
+    if "required_head_contexts" in namespace:
+        return namespace["required_head_contexts"](target_ref, paths)
+    # Phase A itself targets the pre-admission classifier. That reviewed B still
+    # refuses all application paths and selects its original legacy obligations.
+    required = set(namespace["REQUIRED_HEAD_CONTEXTS"]) if namespace["legacy_required"](target_ref, paths) else set()
+    return required | {"successor-foundation"}
 
 
 def commit_statuses(head: str) -> list[dict[str, object]]:
@@ -566,11 +592,9 @@ def readiness(args: argparse.Namespace) -> int:
         print("NOT READY: incomplete changed-file metadata; cannot establish affected responsibilities", file=sys.stderr)
         return 1
     base = current_base(pr)
-    required = set(REQUIRED_HEAD_CONTEXTS) if trusted_legacy_required(
+    required = trusted_head_contexts(
         target_ref, base, [entry["path"] for entry in pr.get("files", [])]
-    ) else set()
-    if target_ref == "successor":
-        required.add("successor-foundation")
+    )
     context = f"integration-current-{target_ref}"
     body = pr.get("body") or ""
     rollup = [status for status in pr.get("statusCheckRollup", []) if isinstance(status, dict)]
