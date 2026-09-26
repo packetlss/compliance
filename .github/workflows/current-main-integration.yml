@@ -1,4 +1,4 @@
-name: Current-main integration
+name: Current-target integration
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: current-main-integration-${{ inputs.pr_number }}
+  group: current-target-integration-${{ inputs.pr_number }}
   cancel-in-progress: true
 
 jobs:
@@ -22,10 +22,12 @@ jobs:
     permissions:
       contents: read
       statuses: write
+      pull-requests: read
     outputs:
       pr_number: ${{ steps.resolve.outputs.pr_number }}
       head: ${{ steps.resolve.outputs.head }}
       base: ${{ steps.resolve.outputs.base }}
+      target: ${{ steps.resolve.outputs.target }}
     steps:
       - name: Resolve the open PR and current base
         id: resolve
@@ -33,6 +35,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ inputs.pr_number }}
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
         run: |
           set -euo pipefail
           [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]] || { echo "::error::invalid PR number"; exit 1; }
@@ -42,13 +45,16 @@ jobs:
           base_ref="$(printf '%s' "$pr" | jq -r '.base.ref')"
           [[ "$state" == "open" ]] || { echo "::error::PR #$PR_NUMBER is not open"; exit 1; }
           [[ "$head" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::invalid PR head"; exit 1; }
-          [[ "$base_ref" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo "::error::invalid base ref"; exit 1; }
+          case "$base_ref" in main|successor) ;; *) echo "::error::unsupported target"; exit 1 ;; esac
+          [[ "$GITHUB_REF" == "refs/heads/$base_ref" ]] || { echo "::error::dispatch must use the actual trusted target"; exit 1; }
           base="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$base_ref" --jq '.object.sha')"
           [[ "$base" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::invalid base SHA"; exit 1; }
+          [[ "$WORKFLOW_SHA" == "$base" ]] || { echo "::error::workflow source is stale; redispatch on current target"; exit 1; }
           {
             echo "pr_number=$PR_NUMBER"
             echo "head=$head"
             echo "base=$base"
+            echo "target=$base_ref"
           } >> "$GITHUB_OUTPUT"
       - name: Publish pending integration status
         shell: bash
@@ -56,17 +62,55 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           HEAD: ${{ steps.resolve.outputs.head }}
           BASE: ${{ steps.resolve.outputs.base }}
+          TARGET: ${{ steps.resolve.outputs.target }}
         run: |
           set -euo pipefail
           gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$HEAD" \
             -f state=pending \
-            -f context=integration-current-main \
+            -f context="integration-current-$TARGET" \
             -f description="base=$BASE" \
             -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >/dev/null
 
+  route:
+    name: integration routing
+    needs: resolve
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      legacy: ${{ steps.route.outputs.legacy }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.base }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build disposable combined candidate
+        id: candidate
+        shell: bash
+        env:
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+          HEAD: ${{ needs.resolve.outputs.head }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "refs/pull/$PR_NUMBER/head:refs/remotes/integration/head"
+          [[ "$(git rev-parse refs/remotes/integration/head)" == "$HEAD" ]]
+          git config user.name integration-validation
+          git config user.email integration-validation@example.invalid
+          git merge --no-ff --no-edit refs/remotes/integration/head
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Admit target and changed scope
+        id: route
+        env:
+          TARGET: ${{ needs.resolve.outputs.target }}
+          BASE: ${{ needs.resolve.outputs.base }}
+          HEAD_SHA: ${{ needs.resolve.outputs.head }}
+        run: scripts/dev route --target "$TARGET" --base "$BASE" --head "$HEAD_SHA" >> "$GITHUB_OUTPUT"
+
   component-validation:
     name: integration component-validation
-    needs: resolve
+    needs: [resolve, route]
+    if: ${{ needs.route.outputs.legacy == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -140,7 +184,8 @@ jobs:
 
   verification-scenarios:
     name: integration verification-scenarios
-    needs: resolve
+    needs: [resolve, route]
+    if: ${{ needs.route.outputs.legacy == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -201,7 +246,8 @@ jobs:
 
   installed-release-provenance:
     name: integration installed-release-provenance
-    needs: resolve
+    needs: [resolve, route]
+    if: ${{ needs.route.outputs.legacy == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -264,7 +310,8 @@ jobs:
 
   macos-portability:
     name: integration macos-portability
-    needs: resolve
+    needs: [resolve, route]
+    if: ${{ needs.route.outputs.legacy == 'true' }}
     runs-on: macos-15
     timeout-minutes: 20
     permissions:
@@ -304,10 +351,42 @@ jobs:
           /bin/bash scripts/dev gate package
           /bin/bash scripts/dev gate release-preparation
 
+  successor-foundation:
+    name: integration successor-foundation
+    needs: [resolve, route]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.base }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build disposable combined candidate
+        id: candidate
+        shell: bash
+        env:
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+          HEAD: ${{ needs.resolve.outputs.head }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "refs/pull/$PR_NUMBER/head:refs/remotes/integration/head"
+          [[ "$(git rev-parse refs/remotes/integration/head)" == "$HEAD" ]]
+          git config user.name integration-validation
+          git config user.email integration-validation@example.invalid
+          git merge --no-ff --no-edit refs/remotes/integration/head
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Test real bootstrap infrastructure
+        run: scripts/dev foundation
+
   publish:
     name: Publish integration status
     needs:
       - resolve
+      - route
+      - successor-foundation
       - component-validation
       - verification-scenarios
       - installed-release-provenance
@@ -315,7 +394,9 @@ jobs:
     if: ${{ always() && needs.resolve.result == 'success' }}
     runs-on: ubuntu-24.04
     permissions:
+      contents: read
       statuses: write
+      pull-requests: read
     steps:
       - name: Publish final status without checking out PR code
         shell: bash
@@ -323,18 +404,38 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           HEAD: ${{ needs.resolve.outputs.head }}
           BASE: ${{ needs.resolve.outputs.base }}
+          TARGET: ${{ needs.resolve.outputs.target }}
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+          ROUTE: ${{ needs.route.result }}
+          LEGACY: ${{ needs.route.outputs.legacy }}
+          FOUNDATION: ${{ needs.successor-foundation.result }}
           COMPONENT: ${{ needs.component-validation.result }}
           SCENARIOS: ${{ needs.verification-scenarios.result }}
           RELEASE: ${{ needs.installed-release-provenance.result }}
           MACOS: ${{ needs.macos-portability.result }}
         run: |
           set -euo pipefail
-          state=success
-          for result in "$COMPONENT" "$SCENARIOS" "$RELEASE" "$MACOS"; do
-            [[ "$result" == success ]] || state=failure
-          done
+          state=failure
+          expected=invalid
+          case "$TARGET:$LEGACY" in
+            main:true|successor:true) expected=success ;;
+            successor:false) expected=skipped ;;
+          esac
+          if [[ "$ROUTE" == success && "$FOUNDATION" == success && "$expected" != invalid ]]; then
+            state=success
+            for result in "$COMPONENT" "$SCENARIOS" "$RELEASE" "$MACOS"; do
+              [[ "$result" == "$expected" ]] || state=failure
+            done
+          fi
+          # Only trusted workflow text executes here; never check out proposed code.
+          pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
+          [[ "$(printf '%s' "$pr" | jq -r '.state')" == open ]] || state=failure
+          [[ "$(printf '%s' "$pr" | jq -r '.head.sha')" == "$HEAD" ]] || state=failure
+          [[ "$(printf '%s' "$pr" | jq -r '.base.ref')" == "$TARGET" ]] || state=failure
+          current_base="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$TARGET" --jq '.object.sha')"
+          [[ "$current_base" == "$BASE" ]] || state=failure
           gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$HEAD" \
             -f state="$state" \
-            -f context=integration-current-main \
+            -f context="integration-current-$TARGET" \
             -f description="base=$BASE" \
             -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >/dev/null

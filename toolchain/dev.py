@@ -250,8 +250,11 @@ def setup_under_lock() -> int:
     return 0
 
 
-def setup(_: argparse.Namespace) -> int:
+def setup(args: argparse.Namespace) -> int:
     """Prepare this worktree's environment, serializing all mutable setup work."""
+    if getattr(args, "target", "main") == "successor":
+        print("Successor foundation uses Python 3 standard library and Git; run scripts/dev foundation.")
+        return 0
     with setup_lock():
         return setup_under_lock()
 
@@ -367,6 +370,74 @@ INTEGRATION_CONTEXT = "integration-current-main"
 SUCCESS_STATES = {"SUCCESS", "success"}
 BASE_DESCRIPTION = re.compile(r"base=([0-9a-f]{40})")
 
+# Deliberately bounded bootstrap routing, not a configurable impact framework.
+# A separately reviewed executable contract must extend the successor scope and
+# both head/integration responsibilities together before application work lands.
+SUCCESSOR_FILES = {
+    "successor/AGENTS.md", "successor/README.md",
+    "docs/SUCCESSOR_ARCHITECTURE.md", "docs/adr/0025-trusted-snapshot-successor.md",
+}
+SHARED_FILES = {
+    "AGENTS.md", "README.md", "t3.json", "scripts/dev", "toolchain/dev.py",
+    "scripts/validate-repository.sh", "docs/ARCHITECTURE.md",
+    "docs/CONTRACT_MATURITY.md", "docs/DEVELOPMENT_WORKFLOW.md", "docs/REPOSITORIES.md",
+    ".github/ISSUE_TEMPLATE/implementation.md", ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/workflows/destination-validation.yml",
+    ".github/workflows/current-main-integration.yml",
+    "tests/toolchain/test_dev.py", "tests/toolchain/test_lanes.py",
+    "tests/toolchain/test_canonical_validation_output.py",
+}
+
+
+def integration_target(value: object) -> str:
+    if value not in ("main", "successor"):
+        raise SystemExit(f"ERROR: unsupported integration target {value!r}; expected main or successor")
+    return str(value)
+
+
+def legacy_required(target_ref: str, paths: list[str]) -> bool:
+    integration_target(target_ref)
+    if target_ref == "main":
+        return True
+    refused = sorted(set(paths) - SUCCESSOR_FILES - SHARED_FILES)
+    if refused:
+        raise SystemExit(
+            "ERROR: successor bootstrap scope refuses: " + ", ".join(refused)
+            + ". Legacy application/build/fixture changes require a separately reviewed "
+            "cross-boundary contract; executable successor scope and real checks belong to #209."
+        )
+    return bool(set(paths) & SHARED_FILES)
+
+
+def changed_paths(base: str, head: str) -> list[str]:
+    for sha in (base, head):
+        if not re.fullmatch(r"[0-9a-f]{40}", sha):
+            raise SystemExit("ERROR: scope requires exact 40-hex base and head SHAs")
+    # No rename detection: both sides of a move must pass scope admission.
+    output = run(["git", "diff", "--name-only", "--no-renames", "-z", f"{base}...{head}"], capture=True).stdout
+    return [path for path in output.split("\0") if path]
+
+
+def route(args: argparse.Namespace) -> int:
+    required = legacy_required(args.target, changed_paths(args.base, args.head))
+    print(f"target={args.target}\nlegacy={str(required).lower()}")
+    return 0
+
+
+def foundation(_: argparse.Namespace) -> int:
+    """Real bootstrap infrastructure tests, without installing the legacy stack."""
+    return run([sys.executable, "-m", "unittest", "discover", "-s", "tests/toolchain",
+                "-p", "test_lanes.py"], check=False).returncode
+
+
+def task(args: argparse.Namespace) -> int:
+    base = current_base({"baseRefName": args.target})
+    print(f"Integration target: {args.target}\nCurrent integration base: {base}")
+    print(f"Create a new T3 worktree from this verified {args.target} revision; target its PR at {args.target}.")
+    if args.target == "successor":
+        print("Requires recorded post-merge #208 activation. Read successor/AGENTS.md at that revision.")
+    return 0
+
 
 def status_name(status: dict[str, object]) -> str | None:
     """Return the shared name from a check-run or legacy commit-status shape."""
@@ -400,9 +471,7 @@ def latest_named_status(statuses: list[dict[str, object]], name: str) -> dict[st
 
 
 def current_base(pr: dict[str, object]) -> str:
-    base_ref = pr["baseRefName"]
-    if not isinstance(base_ref, str) or not base_ref:
-        raise SystemExit("ERROR: PR base ref is missing")
+    base_ref = integration_target(pr.get("baseRefName"))
     output = run(["git", "ls-remote", "origin", f"refs/heads/{base_ref}"], capture=True).stdout.split()
     if not output or not re.fullmatch(r"[0-9a-f]{40}", output[0]):
         raise SystemExit(f"ERROR: could not resolve current base ref {base_ref}")
@@ -431,27 +500,49 @@ def locally_contains_base(head: str, base: str) -> bool:
     return result.returncode == 0
 
 
-def readiness(_: argparse.Namespace) -> int:
+def readiness(args: argparse.Namespace) -> int:
     if not shutil.which("gh"):
         print("ERROR: gh is required", file=sys.stderr)
         return 1
-    pr = json.loads(run(["gh", "pr", "view", "--json", "headRefOid,baseRefName,body,reviews,statusCheckRollup"], capture=True).stdout)
+    pr = json.loads(run(["gh", "pr", "view", "--json", "number,state,headRefOid,baseRefName,body,reviews,statusCheckRollup,files,changedFiles"], capture=True).stdout)
     head = pr.get("headRefOid")
     if not isinstance(head, str) or not re.fullmatch(r"[0-9a-f]{40}", head):
         print("ERROR: PR head is missing or invalid", file=sys.stderr)
         return 1
+    target_ref = integration_target(pr.get("baseRefName"))
+    if getattr(args, "target", None) not in (None, target_ref):
+        print("NOT READY: requested target differs from the PR target", file=sys.stderr)
+        return 1
+    if len(pr.get("files", [])) != pr.get("changedFiles"):
+        print("NOT READY: incomplete changed-file metadata; cannot establish affected responsibilities", file=sys.stderr)
+        return 1
+    required = set(REQUIRED_HEAD_CONTEXTS) if legacy_required(
+        target_ref, [entry["path"] for entry in pr.get("files", [])]
+    ) else set()
+    if target_ref == "successor":
+        required.add("successor-foundation")
+    context = f"integration-current-{target_ref}"
     base = current_base(pr)
     body = pr.get("body") or ""
     rollup = [status for status in pr.get("statusCheckRollup", []) if isinstance(status, dict)]
-    checks = {status_name(status): status_result(status) for status in rollup if status_name(status)}
+    # Reject ambiguous duplicate contexts instead of accepting whichever comes last.
+    checks = {}
+    for status in rollup:
+        name = status_name(status)
+        if name:
+            checks[name] = status_result(status) if name not in checks else "ambiguous duplicate"
     reviewed = {line.split(":", 1)[0].strip(" -"): line.split(":", 1)[1].strip() for line in body.splitlines() if ":" in line}
     errors = []
+    if pr.get("state") != "OPEN":
+        errors.append("PR is not open")
+    if reviewed.get("Reviewed target") != target_ref:
+        errors.append("independent review target is missing or stale after retargeting")
     contains_base = locally_contains_base(head, base)
     integration = None
     if not contains_base:
         # Check-runs and commit-statuses use different field names. The legacy
         # status endpoint is authoritative for the status description we bind.
-        integration = latest_named_status(commit_statuses(head), INTEGRATION_CONTEXT)
+        integration = latest_named_status(commit_statuses(head), context)
         if integration is None:
             errors.append(f"current-base integration evidence is missing for {base}")
         elif status_result(integration) not in SUCCESS_STATES:
@@ -462,15 +553,22 @@ def readiness(_: argparse.Namespace) -> int:
         errors.append("independent review is missing or stale")
     if not reviewed.get("Reviewer/provider") or reviewed.get("Outcome and finding disposition", "").lower() not in {"pass", "approved", "no findings"}:
         errors.append("independent review outcome is not accepted")
-    for name in sorted(REQUIRED_HEAD_CONTEXTS):
+    for name in sorted(required):
         if checks.get(name) not in SUCCESS_STATES:
             errors.append(f"required check {name}: {checks.get(name, 'missing')}")
-    print(f"PR head: {head}\nBase head: {base}\nReviewed head: {reviewed.get('Reviewed head', 'missing')}")
-    for name in sorted(REQUIRED_HEAD_CONTEXTS):
+    print(f"Integration target: {target_ref}\nPR head: {head}\nBase head: {base}\nReviewed head: {reviewed.get('Reviewed head', 'missing')}")
+    for name in sorted(required):
         print(f"{name}: {checks.get(name, 'missing')}")
     if not contains_base:
-        print(f"{INTEGRATION_CONTEXT}: {status_result(integration) if integration else 'missing'}")
+        print(f"{context}: {status_result(integration) if integration else 'missing'}")
         print(f"Integration base: {integration_base(integration) if integration else 'missing'}")
+    # A read-only readiness observation must end at the same open H/target/B.
+    final = json.loads(run(["gh", "pr", "view", str(pr["number"]), "--json",
+                           "state,headRefOid,baseRefName"], capture=True).stdout)
+    if (final.get("state"), final.get("headRefOid"), final.get("baseRefName")) != ("OPEN", head, target_ref):
+        errors.append("PR closed, head changed or target changed during readiness; retry")
+    elif current_base(final) != base:
+        errors.append("target base advanced during readiness; refresh integration evidence")
     for error in errors:
         print(f"NOT READY: {error}", file=sys.stderr)
     if not errors:
@@ -478,7 +576,7 @@ def readiness(_: argparse.Namespace) -> int:
     return 1 if errors else 0
 
 
-def integration(_: argparse.Namespace) -> int:
+def integration(args: argparse.Namespace) -> int:
     """Explicitly request trusted current-base integration; never alter the branch."""
     if not shutil.which("gh"):
         print("ERROR: gh is required", file=sys.stderr)
@@ -489,13 +587,15 @@ def integration(_: argparse.Namespace) -> int:
         print("ERROR: current PR number or head is missing or invalid", file=sys.stderr)
         return 1
     base = current_base(pr)
-    default_branch = json.loads(run(["gh", "repo", "view", "--json", "defaultBranchRef"], capture=True).stdout).get("defaultBranchRef", {}).get("name")
-    if not isinstance(default_branch, str) or not default_branch:
-        print("ERROR: repository default branch is missing", file=sys.stderr)
+    target_ref = integration_target(pr.get("baseRefName"))
+    if getattr(args, "target", None) not in (None, target_ref):
+        print("ERROR: requested target differs from the PR target", file=sys.stderr)
         return 1
-    print(f"Requesting {INTEGRATION_CONTEXT} for PR #{number}: head={head} base={base}")
+    print(f"Requesting integration-current-{target_ref} for PR #{number}: head={head} base={base}")
+    # The file must be registered on default main, but execution comes from the
+    # actual trusted target, so successor-owned checks can evolve on successor.
     result = run([
-        "gh", "workflow", "run", "current-main-integration.yml", "--ref", default_branch,
+        "gh", "workflow", "run", "current-main-integration.yml", "--ref", target_ref,
         "-f", f"pr_number={number}",
     ], check=False)
     if result.returncode:
@@ -509,7 +609,14 @@ def main() -> int:
     if len(sys.argv) > 1 and sys.argv[1] == "cli":
         return cli(sys.argv[2:])
     parser = argparse.ArgumentParser(); sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("setup").set_defaults(func=setup); sub.add_parser("doctor").set_defaults(func=doctor); sub.add_parser("readiness").set_defaults(func=readiness); sub.add_parser("integration", help="request trusted current-base integration for the current PR").set_defaults(func=integration); sub.add_parser("cli", help="run the managed compliance CLI from the repository root")
+    p = sub.add_parser("setup"); p.add_argument("--target", choices=("main", "successor"), default="main"); p.set_defaults(func=setup)
+    sub.add_parser("doctor").set_defaults(func=doctor)
+    sub.add_parser("foundation", help="test bootstrap infrastructure without the legacy stack").set_defaults(func=foundation)
+    p = sub.add_parser("task", help="resolve the explicit task target without changing refs"); p.add_argument("--target", choices=("main", "successor"), required=True); p.set_defaults(func=task)
+    p = sub.add_parser("route", help="check bounded PR scope at exact revisions"); p.add_argument("--target", choices=("main", "successor"), required=True); p.add_argument("--base", required=True); p.add_argument("--head", required=True); p.set_defaults(func=route)
+    for command, function in (("readiness", readiness), ("integration", integration)):
+        p = sub.add_parser(command); p.add_argument("--target", choices=("main", "successor")); p.set_defaults(func=function)
+    sub.add_parser("cli", help="run the managed compliance CLI from the repository root")
     p = sub.add_parser("check"); p.add_argument("--verbose", action="store_true", help="show every test while it runs"); p.add_argument("area", choices=COMMANDS); p.add_argument("selection", nargs=argparse.REMAINDER); p.set_defaults(func=check)
     p = sub.add_parser("gate"); p.add_argument("area", choices=GATES); p.set_defaults(func=gate)
     args = parser.parse_args()

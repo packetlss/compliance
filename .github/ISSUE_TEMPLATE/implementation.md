@@ -10,6 +10,10 @@ assignees: ""
 
 <!-- State the outcome, not the proposed patch. -->
 
+## Integration target
+
+<!-- main for legacy/shared bootstrap; successor only after recorded activation. Record verified target SHA and authority route. -->
+
 ## Write scope
 
 <!-- List the logical roots or files this issue may change. -->

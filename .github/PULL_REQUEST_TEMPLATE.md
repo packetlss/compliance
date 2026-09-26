@@ -30,11 +30,13 @@ None.
 ## Independent review
 
 - Reviewed head:
+- Reviewed target:
 - Reviewer/provider:
 - Outcome and finding disposition: <!-- Pass, Approved, or No findings when accepted -->
 
 ## Integration or migration impact
 
+- Integration target:
 - Current integration base:
-- Evidence: <!-- Head contains base, or integration-current-main status on this exact head/base -->
+- Evidence: <!-- Head contains base, or integration-current-main or integration-current-successor status on this exact head/base -->
 - Base-delta interaction finding: <!-- None, or describe return to implementation/architecture -->
