@@ -153,9 +153,9 @@ integration evidence are recorded in the PR. Before merge, the administrator mus
 require all three real experiment contexts from their observed GitHub Actions source,
 preserving `successor-foundation`. No ruleset is changed by this experiment.
 
-Local measured run (2026-09-26): executable **23,380,128 bytes**; gzip package
-**7,279,579 bytes**; representative retained document **39,676 bytes**. Five-sample
-medians: startup/usage **4.77 ms**, assessment **8.00 ms**, explanation **6.54 ms**.
+Local measured run (2026-09-26): executable **23,388,320 bytes**; gzip package
+**7,282,281 bytes**; representative retained document **39,888 bytes**. Five-sample
+medians: startup/usage **4.52 ms**, assessment **8.00 ms**, explanation **5.92 ms**.
 The cancellation test interrupted its expensive cross product at approximately
 100 ms (the configured cooperative deadline). Gzip container timestamps can change
 archive bytes/size between runs; no reproducible-binary or content-identity claim
@@ -170,3 +170,10 @@ ID conflicts escaping across outcomes, and mismatched retained Objective referen
 assert deterministic complete attribution, same-ID coalescence/conflict refusal,
 record-wide observation identity and exact realization/Objective relationships.
 The PR records re-review on the final head; the first review is not final-head evidence.
+
+A final implementation audit also added explicit ParameterPolicy-owned declarations
+(the initial candidate checked types only at consumers). `TestParameterOwnsDeclarations`
+now covers missing declarations/values, invalid declared and unconsumed values,
+forbidden child type redefinition, incompatible consumer interfaces and missing
+retained declarations. This preserves the accepted owner; it does not promote the
+experimental JSON representation.

@@ -89,6 +89,9 @@
       "Revision": "1",
       "Values": {
         "seconds": 3600
+      },
+      "Types": {
+        "seconds": "integer"
       }
     },
     {
@@ -98,6 +101,9 @@
         "allowed": [
           "audit-agent"
         ]
+      },
+      "Types": {
+        "allowed": "strings"
       }
     },
     {

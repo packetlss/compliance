@@ -65,8 +65,8 @@ The JSON subset rejects unknown/duplicate fields, null, fractions/exponents, `-0
 out-of-range integers, malformed UTF-8 and lone escaped surrogates. Member spelling
 is case-sensitive. Integers are in [-9007199254740991, 9007199254740991]. Boolean and
 integer values differ; arrays are ordered; string equality does no Unicode
-normalization. Supported consumer types are integer, boolean, string and string
-array. Observation interfaces are authored closed field/type maps, not a JSON Schema
+normalization. ParameterPolicy owns explicit declarations; consumers must match them. Supported
+types are integer, boolean, string and string array. Observation interfaces are authored closed field/type maps, not a JSON Schema
 implementation. Timestamps are UTC RFC3339 whole seconds ending in `Z`. YAML is
 unsupported. Root and parent revision/expected-state checks do not pin exact content.
 

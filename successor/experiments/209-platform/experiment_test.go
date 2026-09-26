@@ -737,3 +737,34 @@ func TestReviewRetainedObservationAndObjectiveReferences(t *testing.T) {
 		})
 	}
 }
+
+func TestParameterOwnsDeclarations(t *testing.T) {
+	for _, mode := range []string{"missing-declaration", "missing-value", "declaration-type", "unconsumed-type", "child-declaration", "consumer-type"} {
+		t.Run(mode, func(t *testing.T) {
+			s := fixture(t)
+			p := &s.Sources[0].Parameters[0]
+			switch mode {
+			case "missing-declaration":
+				p.Types = nil
+			case "missing-value":
+				p.Types["unbound"] = "integer"
+			case "declaration-type":
+				p.Types["seconds"] = "string"
+			case "unconsumed-type":
+				p.Types["unused"] = "boolean"
+				p.Values["unused"] = json.Number("1")
+			case "child-declaration":
+				s.Sources[0].Parameters[2].Types = map[string]string{"allowed": "string"}
+				s.Sources[0].Assignments[0].Parameters = append(s.Sources[0].Assignments[0].Parameters, "software-container")
+			case "consumer-type":
+				s.Sources[0].Checks[0].Freshness.Type = "string"
+			}
+			wantRefusal(t, s)
+		})
+	}
+	_, r, _ := assess(t, fixture(t))
+	delete(r.Plan.Subjects[0].ParameterTypes, "timing")
+	if ValidateRecord(r) == nil {
+		t.Fatal("missing retained parameter declarations")
+	}
+}

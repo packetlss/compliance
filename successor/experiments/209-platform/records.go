@@ -21,6 +21,21 @@ func validatePlan(p Plan) error {
 			return fail("plan subject membership")
 		}
 		seen[sp.Subject] = true
+		if len(sp.Parameters) != len(sp.ParameterTypes) {
+			return fail("retained parameter declaration membership")
+		}
+		for id, values := range sp.Parameters {
+			types, ok := sp.ParameterTypes[id]
+			if !ok || len(types) == 0 || len(types) != len(values) {
+				return fail("retained parameter declaration membership")
+			}
+			for key, typ := range types {
+				value, ok := values[key]
+				if !ok || !typed(value, typ) {
+					return fail("retained parameter type")
+				}
+			}
+		}
 		checks := map[string]bool{}
 		for _, c := range sp.Checks {
 			if checks[c.Definition.ID] || c.Definition.ID == "" || !typed(c.Desired, c.Definition.ValueType) || c.FreshSeconds <= 0 || c.Definition.Meaning == "" || len(c.Attribution) == 0 {

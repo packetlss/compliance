@@ -215,6 +215,14 @@ func Resolve(s Snapshot) (Plan, error) {
 			vals[v] = x
 		}
 		sp.Parameters = vals
+		sp.ParameterTypes = map[string]map[string]string{}
+		for id := range vals {
+			types, e := c.parameterTypes(id, map[string]bool{})
+			if e != nil {
+				return p, e
+			}
+			sp.ParameterTypes[id] = types
+		}
 		for _, name := range names {
 			src := sources[name]
 			sp.Sources = append(sp.Sources, Attribution{src.Name, src.Revision})
@@ -390,11 +398,49 @@ func (c catalog) parameter(id string, seen map[string]bool) (map[string]any, err
 			out[k] = x
 		}
 	}
+	types, e := c.parameterTypes(id, map[string]bool{})
+	if e != nil {
+		return nil, e
+	}
+	if len(types) == 0 || len(types) != len(out) {
+		return nil, fail("parameter declarations/value membership")
+	}
+	for key, typ := range types {
+		value, ok := out[key]
+		if !ok || !validType(typ) || !typed(value, typ) {
+			return nil, fail("parameter declaration/value type %s", key)
+		}
+	}
 	return out, nil
 }
-func linked(l Link, vals map[string]map[string]any) (any, error) {
+func (c catalog) parameterTypes(id string, seen map[string]bool) (map[string]string, error) {
+	if seen[id] {
+		return nil, fail("parameter declaration cycle")
+	}
+	seen[id] = true
+	defer delete(seen, id)
+	p, ok := c.parameters[id]
+	if !ok {
+		return nil, fail("missing parameter declaration")
+	}
+	if p.Parent.Parent == "" {
+		return p.Types, nil
+	}
+	if len(p.Types) != 0 {
+		return nil, fail("child cannot redefine parameter declarations")
+	}
+	return c.parameterTypes(p.Parent.Parent, seen)
+}
+func (c catalog) linked(l Link, vals map[string]map[string]any) (any, error) {
 	if l.Parameter == "" || l.Key == "" || !validType(l.Type) {
 		return nil, fail("invalid consumer interface")
+	}
+	types, e := c.parameterTypes(l.Parameter, map[string]bool{})
+	if e != nil {
+		return nil, e
+	}
+	if types[l.Key] != l.Type {
+		return nil, fail("stale parameter consumer interface")
 	}
 	v, ok := vals[l.Parameter][l.Key]
 	if !ok || !typed(v, l.Type) {
@@ -413,7 +459,7 @@ func (c catalog) check(id string, vals map[string]map[string]any) (ResolvedCheck
 			return ResolvedCheck{}, fail("stale final interface")
 		}
 		var e error
-		desired, e = linked(x.DesiredLink, vals)
+		desired, e = c.linked(x.DesiredLink, vals)
 		if e != nil {
 			return ResolvedCheck{}, e
 		}
@@ -421,7 +467,7 @@ func (c catalog) check(id string, vals map[string]map[string]any) (ResolvedCheck
 	if !typed(desired, x.ValueType) {
 		return ResolvedCheck{}, fail("desired type %s", id)
 	}
-	v, e := linked(x.Freshness, vals)
+	v, e := c.linked(x.Freshness, vals)
 	if e != nil {
 		return ResolvedCheck{}, e
 	}

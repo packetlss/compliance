@@ -55,6 +55,7 @@ type Policy struct {
 	Exclusions []Exclusion
 }
 type Parameter struct {
+	Types    map[string]string
 	ID       string
 	Revision string
 	Parent   Guard
@@ -159,15 +160,16 @@ type Selection struct {
 	Sources  []Attribution
 }
 type SubjectPlan struct {
-	Policies    []Selection
-	Parameters  map[string]map[string]any
-	Sources     []Attribution
-	Subject     string
-	Checks      []ResolvedCheck
-	Objectives  []ResolvedObjective
-	Exclusions  []Exclusion
-	Waivers     []Waiver
-	CoverageGap bool
+	ParameterTypes map[string]map[string]string
+	Policies       []Selection
+	Parameters     map[string]map[string]any
+	Sources        []Attribution
+	Subject        string
+	Checks         []ResolvedCheck
+	Objectives     []ResolvedObjective
+	Exclusions     []Exclusion
+	Waivers        []Waiver
+	CoverageGap    bool
 }
 type Plan struct {
 	ID        string
