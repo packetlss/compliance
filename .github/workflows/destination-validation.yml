@@ -288,9 +288,72 @@ jobs:
           /bin/bash scripts/dev gate package
           /bin/bash scripts/dev gate release-preparation
 
+  successor-experiment:
+    name: successor-experiment
+    needs: route
+    if: ${{ needs.route.outputs.experiment == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - name: Execute disposable experiment
+        run: bash successor/experiments/209-platform/check.sh core
+
+  successor-package-linux:
+    name: successor-package-linux
+    needs: route
+    if: ${{ needs.route.outputs.experiment == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - name: Execute disposable experiment
+        run: bash successor/experiments/209-platform/check.sh package
+
+  successor-package-macos:
+    name: successor-package-macos
+    needs: route
+    if: ${{ needs.route.outputs.experiment == 'true' }}
+    runs-on: macos-15
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - name: Execute disposable experiment
+        run: bash successor/experiments/209-platform/check.sh package
+
   successor-foundation:
     name: successor-foundation
-    needs: [route, component-validation, verification-scenarios, installed-release-provenance, macos-portability]
+    needs: [route, component-validation, verification-scenarios, installed-release-provenance, macos-portability, successor-experiment, successor-package-linux, successor-package-macos]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -301,6 +364,9 @@ jobs:
           TARGET: ${{ needs.route.outputs.target }}
           LEGACY: ${{ needs.route.outputs.legacy }}
           EXPERIMENT: ${{ needs.route.outputs.experiment }}
+          EXPERIMENT_CORE: ${{ needs.successor-experiment.result }}
+          EXPERIMENT_LINUX: ${{ needs.successor-package-linux.result }}
+          EXPERIMENT_MACOS: ${{ needs.successor-package-macos.result }}
           COMPONENT: ${{ needs.component-validation.result }}
           SCENARIOS: ${{ needs.verification-scenarios.result }}
           RELEASE: ${{ needs.installed-release-provenance.result }}
@@ -308,10 +374,14 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$ROUTE" == success ]] || { echo "::error::scope/routing did not succeed"; exit 1; }
-          # Phase A admits scope, not application success. Phase B replaces this
-          # refusal with actual needs/results for successor-experiment,
-          # successor-package-linux and successor-package-macos.
-          [[ "$EXPERIMENT" == false ]] || { echo "::error::#209 real experiment jobs are not installed"; exit 1; }
+          case "$EXPERIMENT" in
+            true) experiment_expected=success ;;
+            false) experiment_expected=skipped ;;
+            *) echo "::error::invalid experiment responsibility"; exit 1 ;;
+          esac
+          for result in "$EXPERIMENT_CORE" "$EXPERIMENT_LINUX" "$EXPERIMENT_MACOS"; do
+            [[ "$result" == "$experiment_expected" ]] || { echo "::error::required experiment validation did not succeed"; exit 1; }
+          done
           case "$TARGET:$LEGACY" in
             main:true|successor:true) expected=success ;;
             successor:false) expected=skipped ;;

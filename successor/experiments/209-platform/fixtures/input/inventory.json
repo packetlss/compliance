@@ -1,0 +1,38 @@
+{
+  "Subjects": [
+    {
+      "ID": "S",
+      "Classes": [
+        "standard"
+      ]
+    },
+    {
+      "ID": "C",
+      "Classes": [
+        "container",
+        "access"
+      ]
+    }
+  ],
+  "Groups": [
+    {
+      "ID": "standard",
+      "Class": "standard",
+      "Parents": []
+    },
+    {
+      "ID": "container",
+      "Class": "container",
+      "Parents": []
+    },
+    {
+      "ID": "access",
+      "Class": "access",
+      "Parents": []
+    }
+  ],
+  "Selected": [
+    "S",
+    "C"
+  ]
+}

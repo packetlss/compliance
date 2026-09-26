@@ -1,0 +1,114 @@
+{
+  "Observations": [
+    {
+      "ID": "S-forward",
+      "Subject": "S",
+      "Collector": "synthetic-observer",
+      "At": "2026-09-26T12:00:00Z",
+      "Facts": {
+        "forward": 0
+      }
+    },
+    {
+      "ID": "S-aslr",
+      "Subject": "S",
+      "Collector": "synthetic-observer",
+      "At": "2026-09-26T12:00:00Z",
+      "Facts": {
+        "aslr": 2
+      }
+    },
+    {
+      "ID": "S-audit",
+      "Subject": "S",
+      "Collector": "synthetic-observer",
+      "At": "2026-09-26T12:00:00Z",
+      "Facts": {
+        "audit": true
+      }
+    },
+    {
+      "ID": "S-E",
+      "Subject": "S",
+      "Collector": "synthetic-observer",
+      "At": "2026-09-26T12:00:00Z",
+      "Facts": {
+        "E": true
+      }
+    },
+    {
+      "ID": "S-backup",
+      "Subject": "S",
+      "Collector": "synthetic-observer",
+      "At": "2026-09-26T12:00:00Z",
+      "Facts": {
+        "backup": true
+      }
+    },
+    {
+      "ID": "C-forward",
+      "Subject": "C",
+      "Collector": "synthetic-observer",
+      "At": "2026-09-26T12:00:00Z",
+      "Facts": {
+        "forward": 1
+      }
+    },
+    {
+      "ID": "C-aslr",
+      "Subject": "C",
+      "Collector": "synthetic-observer",
+      "At": "2026-09-26T12:00:00Z",
+      "Facts": {
+        "aslr": 2
+      }
+    },
+    {
+      "ID": "C-audit",
+      "Subject": "C",
+      "Collector": "synthetic-observer",
+      "At": "2026-09-26T12:00:00Z",
+      "Facts": {
+        "audit": false
+      }
+    },
+    {
+      "ID": "C-runtime",
+      "Subject": "C",
+      "Collector": "synthetic-observer",
+      "At": "2026-09-26T12:00:00Z",
+      "Facts": {
+        "runtime": true
+      }
+    },
+    {
+      "ID": "C-backup",
+      "Subject": "C",
+      "Collector": "synthetic-observer",
+      "At": "2026-09-26T12:00:00Z",
+      "Facts": {
+        "backup": true
+      }
+    },
+    {
+      "ID": "C-central",
+      "Subject": "C",
+      "Collector": "synthetic-observer",
+      "At": "2026-09-26T12:00:00Z",
+      "Facts": {
+        "central": true
+      }
+    },
+    {
+      "ID": "C-groups",
+      "Subject": "C",
+      "Collector": "synthetic-observer",
+      "At": "2026-09-26T12:00:00Z",
+      "Facts": {
+        "groups": [
+          "ops"
+        ]
+      }
+    }
+  ]
+}

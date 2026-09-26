@@ -1,0 +1,70 @@
+{
+  "Name": "synthetic-private",
+  "Revision": "1",
+  "Checks": [
+    {
+      "ID": "central",
+      "Revision": "1",
+      "Meaning": "Synthetic central requirement",
+      "Module": "package criterion\ndecision := {\"conclusive\": true, \"satisfied\": input.observed[\"central\"] == input.desired}\n",
+      "Schema": {
+        "central": "boolean"
+      },
+      "Desired": true,
+      "ValueType": "boolean",
+      "Freshness": {
+        "Parameter": "timing",
+        "Key": "seconds",
+        "Type": "integer"
+      }
+    },
+    {
+      "ID": "groups",
+      "Revision": "1",
+      "Meaning": "Synthetic groups requirement",
+      "Module": "package criterion\ndecision := {\"conclusive\": true, \"satisfied\": input.observed[\"groups\"] == input.desired}\n",
+      "Schema": {
+        "groups": "strings"
+      },
+      "Desired": [
+        "admins"
+      ],
+      "ValueType": "strings",
+      "Freshness": {
+        "Parameter": "timing",
+        "Key": "seconds",
+        "Type": "integer"
+      }
+    }
+  ],
+  "Objectives": [
+    {
+      "ID": "access",
+      "Meaning": "Company access requires centrally managed, restricted and audited access",
+      "Baseline": "company-access"
+    }
+  ],
+  "Realizations": [
+    {
+      "ID": "company-access",
+      "Objective": "access",
+      "State": "implemented",
+      "Checks": [
+        "central",
+        "groups",
+        "audit"
+      ]
+    }
+  ],
+  "Assignments": [
+    {
+      "Group": "access",
+      "Objectives": [
+        "access"
+      ],
+      "Realizations": [
+        "company-access"
+      ]
+    }
+  ]
+}
