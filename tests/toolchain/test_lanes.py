@@ -270,6 +270,27 @@ def legacy_required(target_ref, paths):
         with self.assertRaisesRegex(SystemExit, "unadmitted by reviewed B"):
             self.run_readiness(pr=pr, merge_base=self.base, trusted_source=trusted)
 
+    def test_217_documentation_admission_must_exist_in_reviewed_base(self):
+        paths = ("docs/adr/0026-minimal-successor-production-architecture.md",
+                 "docs/adr/README.md")
+        # Model B before #218: H has the two additions, B does not.
+        trusted = SOURCE.read_text()
+        for path in paths:
+            trusted = trusted.replace(f'    "{path}",\n', "")
+        for path in paths:
+            with self.subTest(path=path):
+                pr = self.successor_pr(shared=True)
+                pr["files"].append({"path": path})
+                pr["changedFiles"] += 1
+                self.assertIn("successor-foundation",
+                              dev.required_head_contexts("successor", [path]))
+                with self.assertRaisesRegex(SystemExit, "successor scope refuses"):
+                    self.run_readiness(pr=pr, merge_base=self.base,
+                                       trusted_source=trusted.encode())
+                # Only the same addition in reviewed B makes readiness succeed.
+                result, _, errors, _ = self.run_readiness(pr=pr, merge_base=self.base)
+                self.assertEqual(result, 0, errors)
+
     def test_successor_cannot_reuse_main_integration_or_review(self):
         pr = self.successor_pr()
         result, _, errors, _ = self.run_readiness(
@@ -402,6 +423,33 @@ class LaneRoutingTests(unittest.TestCase):
                 dev.legacy_required("successor", [path])
         with self.assertRaisesRegex(SystemExit, "unsupported integration target"):
             dev.legacy_required("experiment", [])
+
+    def test_217_exact_documentation_paths_and_duties(self):
+        adr = "docs/adr/0026-minimal-successor-production-architecture.md"
+        index = "docs/adr/README.md"
+        foundation = {"successor-foundation"}
+        shared = foundation | dev.REQUIRED_HEAD_CONTEXTS
+        self.assertEqual(dev.required_head_contexts("successor", [adr]), foundation)
+        self.assertEqual(dev.required_head_contexts("successor", [index]), shared)
+        self.assertEqual(dev.required_head_contexts("successor", [adr, index]), shared)
+        for path in (adr, index):
+            self.assertEqual(dev.required_head_contexts("main", [path]),
+                             dev.REQUIRED_HEAD_CONTEXTS)
+
+    def test_217_admission_does_not_bypass_other_adr_or_application_paths(self):
+        admitted = ["docs/adr/0026-minimal-successor-production-architecture.md",
+                    "docs/adr/README.md"]
+        for path in ("docs/adr/0027-another-decision.md",
+                     "docs/adr/0026-another-decision.md",
+                     "docs/adr/0024-objective-assurance-and-parameter-policy.md",
+                     "docs/adr/0005-content-addressed-development-boundaries.md",
+                     "tooling/src/example.py", "successor/production/main.go",
+                     "docs/adr/../ARCHITECTURE.md",
+                     "docs/adr/README.md/child.md"):
+            for paths in ([path], admitted + [path]):
+                with self.subTest(paths=paths), self.assertRaisesRegex(
+                        SystemExit, "successor scope refuses"):
+                    dev.required_head_contexts("successor", paths)
 
     def test_only_named_disposable_experiment_is_admitted_with_real_duties(self):
         paths = ["successor/experiments/209-platform/go.mod",

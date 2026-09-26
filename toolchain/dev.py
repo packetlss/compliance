@@ -381,11 +381,13 @@ SUCCESSOR_EXPERIMENT_CONTEXTS = {
 SUCCESSOR_FILES = {
     "successor/AGENTS.md", "successor/README.md",
     "docs/SUCCESSOR_ARCHITECTURE.md", "docs/adr/0025-trusted-snapshot-successor.md",
+    "docs/adr/0026-minimal-successor-production-architecture.md",
 }
 SHARED_FILES = {
     "AGENTS.md", "README.md", "t3.json", "scripts/dev", "toolchain/dev.py",
     "scripts/validate-repository.sh", "docs/ARCHITECTURE.md",
     "docs/CONTRACT_MATURITY.md", "docs/DEVELOPMENT_WORKFLOW.md", "docs/REPOSITORIES.md",
+    "docs/adr/README.md",
     ".github/ISSUE_TEMPLATE/implementation.md", ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/workflows/destination-validation.yml",
     ".github/workflows/current-main-integration.yml",

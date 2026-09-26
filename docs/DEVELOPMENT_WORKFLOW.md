@@ -199,6 +199,14 @@ configurable impact framework or implicit authorization from a target branch.
 A separately reviewed cross-boundary contract must amend admission and cover every
 affected responsibility before legacy application changes may target successor.
 
+[#218](https://github.com/packetlss/compliance/issues/218), prerequisite to #217,
+admits exactly `docs/adr/0026-minimal-successor-production-architecture.md` as
+successor documentation and `docs/adr/README.md` as shared coordination requiring
+all four legacy responsibilities. It does not author those deliverables or admit
+other ADRs/application paths. Human merge establishes the reviewed B that can admit
+#217; proposed H cannot authorize its own scope. Restart #217 from verified current
+successor after that merge. No general ADR-directory allowance is introduced.
+
 Both scope jobs check out trusted B and classify before any proposed code is
 merged/executed; main unconditionally requires all four legacy responsibilities.
 Readiness loads the fixed classifier file from the same exact target B through
