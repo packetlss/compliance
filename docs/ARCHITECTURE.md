@@ -1,6 +1,22 @@
 # System architecture
 
-This document defines the current system-level architecture for `packetlss/compliance`. The accepted architecture decisions are ADRs 0005–0012 and 0016–0024 (ADRs 0013–0015 are superseded) in `docs/adr/`.
+This document routes system architecture for `packetlss/compliance` and records the
+**implemented legacy architecture** below. The accepted clean-slate successor is
+not implemented by its documentation promotion.
+
+| State / question | Authoritative owner |
+| --- | --- |
+| Accepted successor behavior, persona/Objective safeguards, acceptance stories and unresolved decisions | [Successor architecture](SUCCESSOR_ARCHITECTURE.md) |
+| Replacement rationale, retired guarantees, trust reduction, supersession map and promotion gates | [ADR 0025](adr/0025-trusted-snapshot-successor.md) |
+| Still-implemented legacy behavior | The remainder of this document and its routed component contracts; ADRs 0005–0012 and 0016–0024 (0013–0015 are superseded) |
+| Foundational responsibility and outcome meanings retained by both | [ADR 0023](adr/0023-foundational-semantic-responsibility-boundaries.md) |
+
+All implementation, content-addressing, current-qualification, framework,
+artifact, Python-root/distribution and validation descriptions below concern the
+legacy implementation. They neither select a successor platform nor require its
+retired mechanisms. Conversely, accepted target retirements do not change the
+running legacy contracts. Historical uses of “successor” below concern earlier
+legacy migrations, not ADR 0025.
 
 [Contract maturity](CONTRACT_MATURITY.md) owns freeze/compatibility status;
 [Repositories](REPOSITORIES.md) owns component, release and private-input boundaries;

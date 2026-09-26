@@ -1,6 +1,7 @@
 # Architecture decisions
 
-[System architecture](../ARCHITECTURE.md) explains what Compliance is now.
+[System architecture](../ARCHITECTURE.md) routes implemented legacy behavior and the
+[accepted successor target](../SUCCESSOR_ARCHITECTURE.md), which is not yet implemented.
 [Contract maturity](../CONTRACT_MATURITY.md) defines freeze and compatibility status;
 [Repositories](../REPOSITORIES.md) and [Development Workflow](../DEVELOPMENT_WORKFLOW.md)
 define ownership and engineering practice. ADRs preserve significant decisions,
@@ -8,6 +9,11 @@ rationale and explicit supersession history. Their implementation chronology doe
 not supply active scope; use current GitHub implementation contracts for that.
 
 ## Accepted decisions
+
+- [ADR 0025 — Build a trusted-snapshot successor](0025-trusted-snapshot-successor.md) — accepted direction under [#206](https://github.com/packetlss/compliance/issues/206), documentation/specification only. Owns the compact partial-supersession map, trust reduction and promotion gates. Earlier ADR mechanisms remain authoritative for implemented legacy behavior; ADR 0023's ten semantic invariants survive. No platform or executable experiment is authorized here.
+
+The entries below record the legacy decisions and retained semantic foundation;
+their successor applicability is routed through ADR 0025's supersession map.
 
 - [ADR 0005 — Content-addressed development boundaries](0005-content-addressed-development-boundaries.md)
 - [ADR 0006 — Regulatory assurance remains core; configuration adaptation is external](0006-regulatory-assurance-and-external-adapter-boundary.md)

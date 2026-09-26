@@ -2,7 +2,11 @@
 
 `packetlss/compliance` is the **sole authoritative development and documentation repository for non-sensitive compliance source**.
 
-The current source areas are:
+The accepted [trusted-snapshot successor](docs/SUCCESSOR_ARCHITECTURE.md) is a
+documentation/specification target under [ADR 0025](docs/adr/0025-trusted-snapshot-successor.md),
+not an implemented replacement or a production platform choice. The source areas,
+runtime behavior, packaging and validation described below remain **implemented
+legacy** until explicitly reviewed migration:
 
 - tooling under `tooling/`;
 - reusable `control-library` under `policy-sources/control-library/policies/`;
@@ -73,14 +77,15 @@ Optional tooling test names may follow `scripts/dev check tooling`. Fast checks 
 
 ## Architecture and workflow
 
-Current normative architecture is local:
+Architecture authority is routed locally:
 
 - `AGENTS.md` — persistent repository/agent instructions;
-- `docs/ARCHITECTURE.md` — current system architecture;
+- `docs/ARCHITECTURE.md` — implemented legacy architecture and successor routing;
+- `docs/SUCCESSOR_ARCHITECTURE.md` — accepted target, acceptance stories, open decisions and bounded experiment specification;
 - `docs/REPOSITORIES.md` — logical ownership/repository boundaries;
 - `docs/DEVELOPMENT_WORKFLOW.md` — engineering lifecycle;
 - `docs/CONTRACT_MATURITY.md` — compatibility/freeze rules;
-- `docs/adr/` — accepted ADRs 0005–0012 and 0016–0023 (0013–0015 are superseded);
+- `docs/adr/` — decisions and supersession history, including successor ADR 0025 and retained ADR 0023 semantic foundation;
 - `t3.json` — shared T3 Code worktree setup and validation shortcuts;
 - `docs/history/pre-consolidation.md` — migration/history provenance;
 - `docs/history/retirement-readiness.md` — one-time retirement/cutover evidence.

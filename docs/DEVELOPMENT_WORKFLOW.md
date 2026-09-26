@@ -4,6 +4,16 @@ This document defines the engineering lifecycle for `packetlss/compliance`. It a
 
 The issue, PR, CI, review, and definition-of-done requirements are independent of implementation agent.
 
+These engineering requirements remain in force for successor documentation and
+later work. The toolchain, artifact/provenance and implementation-specific lane
+descriptions below validate the **implemented legacy** tree until a bounded migration
+explicitly replaces them with suitable evidence. [ADR 0025](adr/0025-trusted-snapshot-successor.md#staged-promotion-gates)
+owns successor promotion gates; its target retirements do not change workflows or
+relax any existing required context. The
+[experiment specification](SUCCESSOR_ARCHITECTURE.md#bounded-platform-experiment-specification)
+requires separate authorization before execution. No successor platform is selected
+by the existing Python development setup.
+
 ## Repository authority and handoff
 
 Durable repository artifacts are normative project state. Git is the handoff boundary between design, implementation, review, and future sessions.
@@ -12,7 +22,7 @@ Chat history, T3 thread history, provider session history, AI memory, and scratc
 
 Use each artifact for one role:
 
-- architecture docs — current semantics, invariants, boundaries, ownership, public/cross-component contracts;
+- architecture docs — explicitly routed implemented legacy and accepted successor semantics, invariants, boundaries, ownership and public/cross-component contracts;
 - ADRs — significant decisions, alternatives, rationale and consequences;
 - issues — durable implementation contracts and multi-step coordination;
 - tests — executable behavior/invariant evidence;
