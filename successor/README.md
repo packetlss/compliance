@@ -8,8 +8,11 @@ platform has been selected or implemented here.
 Follow [AGENTS.md](AGENTS.md), the [development lane and activation checklist](../docs/DEVELOPMENT_WORKFLOW.md#successor-lane-activation)
 and the [repository/cutover contract](../docs/REPOSITORIES.md#successor-repository-strategy).
 
-#208 prepares routing on main. Lane activation is pending a human bootstrap merge
-and recorded administrative checkpoint. #209 is blocked until both are complete.
+[PR #210](https://github.com/packetlss/compliance/pull/210) merged the #208 routing
+bootstrap. Before starting successor work, check the recorded activation checkpoint
+in [#208](https://github.com/packetlss/compliance/issues/208), linked from
+[roadmap #85](https://github.com/packetlss/compliance/issues/85). Bootstrap merge
+and branch creation alone do not unblock #209.
 `scripts/dev foundation` runs actual infrastructure tests with Python 3, Git, Bash
 and jq. A pass does not establish application semantics, acceptance stories or
 Linux/native macOS packaged execution; those responsibilities are pending #209.
