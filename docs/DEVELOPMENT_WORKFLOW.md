@@ -183,7 +183,7 @@ Historical pre-freeze readability is not a default required gate unless an expli
 | `successor`, bootstrap-only files | `successor-foundation` | Real foundation tests and scope admission; status `integration-current-successor` |
 | `successor`, listed shared infrastructure/coordination owners | `successor-foundation` **and all four legacy contexts** | Foundation and all four legacy responsibilities; status `integration-current-successor` |
 | `successor`, legacy application/build/fixture or unlisted files | Refuse with paths and contract guidance | Refuse; no successful integration proof |
-| `successor`, `successor/experiments/209-platform/` descendants | `successor-foundation`, `successor-experiment`, `successor-package-linux`, `successor-package-macos`; also all four legacy contexts when shared owners change | Every adopted experiment responsibility plus affected legacy duties; Phase A refuses success until Phase B installs real execution |
+| `successor`, `successor/experiments/209-platform/` descendants | `successor-foundation`, `successor-experiment`, `successor-package-linux`, `successor-package-macos`; also all four legacy contexts when shared owners change | Every adopted experiment responsibility plus affected legacy duties; only a trusted dispatcher containing real execution can prove integration |
 
 The reviewed target B's `toolchain/dev.py` owns the small explicit path sets: successor instructions
 and its architecture/ADR are successor-only; root coordination docs, task templates,
@@ -218,8 +218,10 @@ and executes real routing/readiness/workflow/isolation tests. It also runs on ma
 as supplemental infrastructure evidence. Only explicitly unaffected legacy jobs
 may be skipped for successor-only changes; their names are never used as proof of
 legacy execution. Foundation proves infrastructure only, not application stories,
-acceptance or packaging. Phase A adds no application job. Its aggregation explicitly
-refuses `experiment=true` and invalid aggregate duty values. The route output
+acceptance or packaging. Phase A added no application job and explicitly refused
+`experiment=true`. Phase B executes the three jobs below and aggregates their
+actual results; missing, failed, cancelled or skipped required jobs fail the aggregate.
+Invalid aggregate duty values also fail closed. The route output
 defaults an absent experiment flag to false to support the pre-Phase-A trusted
 classifier, which rejects all application paths before returning success. Phase A
 and later classifiers must emit the experiment flag explicitly.
@@ -250,6 +252,13 @@ verify current target and activation evidence rather than reusing its initial SH
 | `successor-experiment` | Focused/core and real end-to-end evidence for the accepted experiment contract |
 | `successor-package-linux` | Packaged Linux assessment and retained explanation outside checkout, offline and legacy-independent |
 | `successor-package-macos` | Genuine native macOS packaged assessment/history and isolation, without duplicating exhaustive Linux semantic permutations |
+
+Phase B's jobs run `successor/experiments/209-platform/check.sh core` on Linux
+and `check.sh package` on Linux and native macOS. Both workflow files use the same
+entrypoints; integration execution checks out reviewed B and mechanically merges
+exact H in read-only jobs. The separate trusted publisher aggregates those actual
+results without checking out proposed code. The experiment pins its own Go/OPA
+versions; existing legacy toolchain pins and validation responsibilities are unchanged.
 
 Readiness obtains the entire required context set from exact reviewed B, including
 these names for experiment paths. Proposed H cannot waive or self-authorize scope

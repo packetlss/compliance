@@ -1,0 +1,45 @@
+{
+  "Name": "operations",
+  "Revision": "1",
+  "Checks": [
+    {
+      "ID": "backup",
+      "Revision": "1",
+      "Meaning": "Synthetic backup requirement",
+      "Module": "package criterion\ndecision := {\"conclusive\": true, \"satisfied\": input.observed[\"backup\"] == input.desired}\n",
+      "Schema": {
+        "backup": "boolean"
+      },
+      "Desired": true,
+      "ValueType": "boolean",
+      "Freshness": {
+        "Parameter": "timing",
+        "Key": "seconds",
+        "Type": "integer"
+      }
+    }
+  ],
+  "Policies": [
+    {
+      "ID": "operations",
+      "Revision": "1",
+      "Checks": [
+        "backup"
+      ]
+    }
+  ],
+  "Assignments": [
+    {
+      "Group": "standard",
+      "Policies": [
+        "operations"
+      ]
+    },
+    {
+      "Group": "container",
+      "Policies": [
+        "operations"
+      ]
+    }
+  ]
+}

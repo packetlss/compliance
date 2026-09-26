@@ -360,14 +360,14 @@ class WorkflowContractTests(unittest.TestCase):
         workflow = (REPOSITORY_ROOT / ".github/workflows/destination-validation.yml").read_text()
         for context in dev.REQUIRED_HEAD_CONTEXTS:
             self.assertIn(f"name: {context}", workflow)
-        self.assertEqual(workflow.count("github.event.pull_request.head.sha || github.sha"), 14)
+        self.assertEqual(workflow.count("github.event.pull_request.head.sha || github.sha"), 17)
 
     def test_integration_workflow_uses_disposable_combined_candidates_and_isolates_status_writes(self):
         workflow = INTEGRATION_WORKFLOW.read_text()
         self.assertNotIn("pull_request_target", workflow)
         self.assertNotIn("git push", workflow)
-        self.assertEqual(workflow.count("git merge --no-ff --no-edit refs/remotes/integration/head"), 5)
-        self.assertEqual(workflow.count("persist-credentials: false"), 6)
+        self.assertEqual(workflow.count("git merge --no-ff --no-edit refs/remotes/integration/head"), 8)
+        self.assertEqual(workflow.count("persist-credentials: false"), 9)
         self.assertIn("statuses: write", workflow)
         self.assertIn("Publish final status without checking out PR code", workflow)
         for gate in ("scripts/dev gate repository", "scripts/dev gate scenarios", "scripts/dev gate package", "/bin/bash scripts/dev gate package"):
@@ -465,11 +465,22 @@ class LaneRoutingTests(unittest.TestCase):
         self.assertIn("a" * 40, output.getvalue())
         self.assertEqual(run.call_args.args[0], ["git", "ls-remote", "origin", "refs/heads/successor"])
 
-    def test_bootstrap_contains_instructions_only_and_routes_to_existing_owners(self):
+    def test_experiment_is_isolated_and_routes_to_existing_owners(self):
         root = REPOSITORY_ROOT
         paths = subprocess.run(["git", "ls-files", "--cached", "--others", "--exclude-standard", "successor/"],
                                cwd=root, capture_output=True, text=True, check=True).stdout.splitlines()
-        self.assertEqual(set(paths), {"successor/AGENTS.md", "successor/README.md"})
+        owners = {"successor/AGENTS.md", "successor/README.md"}
+        self.assertTrue(owners.issubset(paths))
+        for path in set(paths) - owners:
+            self.assertTrue(dev.experiment_path(path), path)
+            self.assertFalse((root / path).is_symlink())
+            if path.endswith(".go"):
+                content = (root / path).read_text()
+                self.assertNotRegex(content, r'"[^"\n]*(?:tooling|compliance_tooling|fixture.builder)[^"\n]*"')
+        module = root / "successor/experiments/209-platform/go.mod"
+        self.assertIn("github.com/open-policy-agent/opa v1.21.0", module.read_text())
+        self.assertNotIn("replace ", module.read_text())
+        paths = owners
         for path in paths:
             self.assertFalse((root / path).is_symlink())
             content = (root / path).read_text()
@@ -510,6 +521,7 @@ else:
                 PR_NUMBER="210", HEAD=self.head, BASE=self.base, TARGET="main", LEGACY="true", EXPERIMENT="false",
                 ROUTE="success", FOUNDATION="success", COMPONENT="success", SCENARIOS="success",
                 RELEASE="success", MACOS="success", CURRENT_BASE=self.base,
+                EXPERIMENT_CORE="skipped", EXPERIMENT_LINUX="skipped", EXPERIMENT_MACOS="skipped",
                 PR_JSON=json.dumps({"state": "open", "head": {"sha": self.head}, "base": {"ref": "main"}}))
             environment.update(values)
             result = subprocess.run(["bash", "-c", script], cwd=root, env=environment, capture_output=True, text=True)
@@ -531,25 +543,42 @@ else:
             result, _, _ = self.run_script(script, TARGET=target, LEGACY=legacy)
             self.assertNotEqual(result.returncode, 0)
 
-    def test_phase_a_never_claims_application_or_integration_success(self):
+    def test_experiment_aggregation_requires_real_head_and_integration_execution(self):
         destination = (REPOSITORY_ROOT / ".github/workflows/destination-validation.yml").read_text()
-        head_script = workflow_script(destination, "Require every affected responsibility")
         integration = INTEGRATION_WORKFLOW.read_text()
+        head_script = workflow_script(destination, "Require every affected responsibility")
         publish_script = workflow_script(integration, "Publish final status without checking out PR code")
         pr = json.dumps({"state": "open", "head": {"sha": self.head}, "base": {"ref": "successor"}})
         for legacy in ("true", "false"):
             expected = "success" if legacy == "true" else "skipped"
-            for experiment in ("true", "", "invalid"):
-                values = dict(TARGET="successor", LEGACY=legacy, EXPERIMENT=experiment, PR_JSON=pr,
-                              COMPONENT=expected, SCENARIOS=expected, RELEASE=expected, MACOS=expected)
-                result, _, _ = self.run_script(head_script, **values)
-                self.assertNotEqual(result.returncode, 0)
-                result, _, status = self.run_script(publish_script, **values)
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertIn("state=failure", status)
+            values = dict(TARGET="successor", LEGACY=legacy, EXPERIMENT="true", PR_JSON=pr,
+                          COMPONENT=expected, SCENARIOS=expected, RELEASE=expected, MACOS=expected,
+                          EXPERIMENT_CORE="success", EXPERIMENT_LINUX="success", EXPERIMENT_MACOS="success")
+            result, _, _ = self.run_script(head_script, **values)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            _, _, status = self.run_script(publish_script, **values)
+            self.assertIn("state=success", status)
+            for key in ("EXPERIMENT_CORE", "EXPERIMENT_LINUX", "EXPERIMENT_MACOS", "EXPERIMENT"):
+                for state in ("failure", "cancelled", "skipped", "", "invalid"):
+                    candidate = dict(values, **{key: state})
+                    result, _, _ = self.run_script(head_script, **candidate)
+                    self.assertNotEqual(result.returncode, 0, (key, state))
+                    _, _, status = self.run_script(publish_script, **candidate)
+                    self.assertIn("state=failure", status, (key, state))
         for workflow in (destination, integration):
             for name in dev.SUCCESSOR_EXPERIMENT_CONTEXTS:
-                self.assertNotRegex(workflow, rf"(?m)^  {re.escape(name)}:", name)
+                block = workflow_job(workflow, name)
+                self.assertIn("needs.route.outputs.experiment == 'true'", block)
+                self.assertIn("check.sh", block)
+                self.assertIn("persist-credentials: false", block)
+                self.assertNotIn("statuses: write", block)
+                self.assertNotIn("github.token", block)
+                if workflow == integration:
+                    self.assertIn("git merge --no-ff --no-edit", block)
+                    self.assertIn("ref: ${{ needs.resolve.outputs.base }}", block)
+                else:
+                    self.assertIn("ref: ${{ github.event.pull_request.head.sha || github.sha }}", block)
+            self.assertIn("runs-on: macos-15", workflow_job(workflow, "successor-package-macos"))
 
     def test_trusted_resolver_rejects_wrong_dispatch_ref_stale_workflow_and_bad_metadata(self):
         script = workflow_script(INTEGRATION_WORKFLOW.read_text(), "Resolve the open PR and current base")

@@ -352,6 +352,111 @@ jobs:
           /bin/bash scripts/dev gate package
           /bin/bash scripts/dev gate release-preparation
 
+  successor-experiment:
+    name: integration successor-experiment
+    needs: [resolve, route]
+    if: ${{ needs.route.outputs.experiment == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.base }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build disposable combined candidate
+        id: candidate
+        shell: bash
+        env:
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+          HEAD: ${{ needs.resolve.outputs.head }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "refs/pull/$PR_NUMBER/head:refs/remotes/integration/head"
+          [[ "$(git rev-parse refs/remotes/integration/head)" == "$HEAD" ]]
+          git config user.name integration-validation
+          git config user.email integration-validation@example.invalid
+          git merge --no-ff --no-edit refs/remotes/integration/head
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - name: Execute disposable experiment
+        run: bash successor/experiments/209-platform/check.sh core
+
+  successor-package-linux:
+    name: integration successor-package-linux
+    needs: [resolve, route]
+    if: ${{ needs.route.outputs.experiment == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.base }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build disposable combined candidate
+        id: candidate
+        shell: bash
+        env:
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+          HEAD: ${{ needs.resolve.outputs.head }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "refs/pull/$PR_NUMBER/head:refs/remotes/integration/head"
+          [[ "$(git rev-parse refs/remotes/integration/head)" == "$HEAD" ]]
+          git config user.name integration-validation
+          git config user.email integration-validation@example.invalid
+          git merge --no-ff --no-edit refs/remotes/integration/head
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - name: Execute disposable experiment
+        run: bash successor/experiments/209-platform/check.sh package
+
+  successor-package-macos:
+    name: integration successor-package-macos
+    needs: [resolve, route]
+    if: ${{ needs.route.outputs.experiment == 'true' }}
+    runs-on: macos-15
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.base }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build disposable combined candidate
+        id: candidate
+        shell: bash
+        env:
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+          HEAD: ${{ needs.resolve.outputs.head }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "refs/pull/$PR_NUMBER/head:refs/remotes/integration/head"
+          [[ "$(git rev-parse refs/remotes/integration/head)" == "$HEAD" ]]
+          git config user.name integration-validation
+          git config user.email integration-validation@example.invalid
+          git merge --no-ff --no-edit refs/remotes/integration/head
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.27.1'
+          cache: false
+      - name: Execute disposable experiment
+        run: bash successor/experiments/209-platform/check.sh package
+
   successor-foundation:
     name: integration successor-foundation
     needs: [resolve, route]
@@ -388,6 +493,9 @@ jobs:
       - resolve
       - route
       - successor-foundation
+      - successor-experiment
+      - successor-package-linux
+      - successor-package-macos
       - component-validation
       - verification-scenarios
       - installed-release-provenance
@@ -410,6 +518,9 @@ jobs:
           ROUTE: ${{ needs.route.result }}
           LEGACY: ${{ needs.route.outputs.legacy }}
           EXPERIMENT: ${{ needs.route.outputs.experiment }}
+          EXPERIMENT_CORE: ${{ needs.successor-experiment.result }}
+          EXPERIMENT_LINUX: ${{ needs.successor-package-linux.result }}
+          EXPERIMENT_MACOS: ${{ needs.successor-package-macos.result }}
           FOUNDATION: ${{ needs.successor-foundation.result }}
           COMPONENT: ${{ needs.component-validation.result }}
           SCENARIOS: ${{ needs.verification-scenarios.result }}
@@ -429,11 +540,14 @@ jobs:
               [[ "$result" == "$expected" ]] || state=failure
             done
           fi
-          # Phase A must never publish foundation-only experiment success.
-          # Phase B must execute and aggregate successor-experiment,
-          # successor-package-linux and successor-package-macos before replacing
-          # this refusal, on trusted B with unprivileged combined-candidate jobs.
-          [[ "$EXPERIMENT" == false ]] || state=failure
+          case "$EXPERIMENT" in
+            true) experiment_expected=success ;;
+            false) experiment_expected=skipped ;;
+            *) experiment_expected=invalid; state=failure ;;
+          esac
+          for result in "$EXPERIMENT_CORE" "$EXPERIMENT_LINUX" "$EXPERIMENT_MACOS"; do
+            [[ "$result" == "$experiment_expected" ]] || state=failure
+          done
           # Only trusted workflow text executes here; never check out proposed code.
           pr="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")"
           [[ "$(printf '%s' "$pr" | jq -r '.state')" == open ]] || state=failure
